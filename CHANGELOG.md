@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.4.3 — 2026-05-20
+
+### Corrigido
+
+- **Doc do wrapper de body** (`api-conventions.md`, `troubleshooting.md`, `instructions.md`): auditoria empirica derrubou o claim falso de "HTTP 500 silencioso sem wrapper". O Rails do projeto roda com `wrap_parameters: [:json]` global, entao body raiz e auto-wrappado na maioria dos endpoints. Doc reescrita com base em testes curl reais contra os controllers (`kanban_config`, `funnels`, `labels`, `custom_attribute_definitions`, `kanban_items` aceitam ambos os formatos).
+- **Pegadinha do `/contacts`**: documentada nova armadilha real — `POST /contacts` com wrapper `{"contact": {...}}` retorna 200 mas cria contato com campos vazios. Causa: `ContactsController` usa `params.permit(:name, ...)` direto, sem `require(:contact)`. **Sempre enviar body raiz pro `/contacts`**.
+- **`findDocsPath` em `src/resources.ts`**: agora cobre 3 layouts (`dist/docs/resources/` publicado, monorepo legado, `src/docs/` dev) pra evitar `null` quando rodado via `npx`.
+
+### Mudado
+
+- `scripts/extract-endpoints.ts` migrado de `require()` pra `import` (ESM). Adicionadas sub-categorias `Validacao WhatsApp` e `Chat Interno` no mapeamento de slugs.
+
+## 0.4.0 / 0.4.1 / 0.4.2 — 2026-05-19
+
+### Adicionado
+
+- **Completion API** — sugestoes de auto-complete pros parametros das tools (ex: lista `account_id`/`inbox_id` disponiveis). Reduz erro de id inexistente.
+- **Progress notifications** — operacoes longas reportam progresso em tempo real (import de contatos, exports, etc), em vez de ficar em silencio ate terminar.
+- **User-Agent customizado** — requests do MCP agora marcam origem MCP no `audit_log` do LionChat, separando do trafego normal.
+
+## 0.3.2 — 2026-05-19
+
+### Adicionado
+
+- **FlowBuilder enrichment** — Resource `flowbuilder-design-guide` com schema completo de nodes, handles por tipo, layout/positioning e erros comuns + `flowbuilder-patterns` com 10 templates prontos (saudacao, captura, qualificacao, CSAT, IA, etc) + Prompt `create_flow_brainstorm` pra estruturar fluxos antes de criar. LLMs agora tem material concreto pra montar `flow_data` sem chutar.
+
+## 0.3.1 — 2026-05-18
+
+### Adicionado
+
+- **Sprint 3 do MCP Knowledge Enrichment** — +4 Resources (`conversation-flows`, `kanban-deep-dive`, `best-practices`, `troubleshooting`) e +4 Prompts (`inactive_contacts`, `team_load_balance`, `quality_audit`, `whatsapp_template_usage`). Total: 10 Resources + 9 Prompts no servidor.
+
+## 0.3.0 — 2026-05-18
+
+### Adicionado
+
+- **MCP Instructions** carregadas no boot do servidor (~3K tokens) explicando data model, status codes, convenções de API e workflows tipicos pra qualquer LLM que conectar entender o contexto antes de chamar tools.
+- **4 Resources iniciais**: `glossary`, `data-model`, `reports-guide`, `api-conventions`.
+- **4 Prompts iniciais**: `productivity_report`, `stuck_leads`, `weekly_recap`, `customer_health`.
+- **Enriquecimento de 547 descriptions** das tools (48 → 183 chars em media), com `returns`, `common_use_cases` e `related_tools` em cada uma.
+
 ## 0.2.1 — 2026-05-13
 
 ### Adicionado
