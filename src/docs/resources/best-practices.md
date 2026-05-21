@@ -164,3 +164,72 @@ Pergunte primeiro:
 - Enviar mensagem pra cliente
 - Mudar status de várias conversas em massa
 - Alterar configuração de conta/inbox
+
+## Como achar a tool certa quando o nome colide
+
+Os IDs das tools são gerados automaticamente a partir do path e da categoria. Quando dois paths mapeiam pro mesmo nome base, o segundo ganha sufixo `_1`, terceiro `_2`, etc. Isso gera muita colisão — exemplos reais:
+
+- `lionchat_ecommerce_webhooks_list` tem **19 variantes** (Eduzz, Kiwify, Ticto, Custom, etc. + sub-recursos events/retry_preflight)
+- `lionchat_captain_assistants_create` tem **10 variantes** (assistants, scenarios, assistant_responses, tasks/follow_up, copilot_threads...)
+- `lionchat_contacts_create` tem 9 variantes (contato, notas, contact_inboxes, labels...)
+
+### Como decidir qual usar
+
+1. **Leia a `description`** de cada tool — ela explica o que faz, não importa o nome
+2. **Olhe o `path`** — diferencia o que o nome não diferencia (ex: `/contacts/{id}/notes` vs `/contacts`)
+3. **Olhe `category` / `sub`** — agrupa por funcionalidade
+4. Se não souber o path, faça uma busca: liste todas as tools que começam com `lionchat_<base>_` e leia as descriptions
+5. Em caso de dúvida REAL: pergunte ao usuário em vez de chutar
+
+### Padrão de naming convention
+
+| Sufixo | O que sinaliza |
+|---|---|
+| `_list` | Lista paginada do recurso |
+| `_show` | Detalhe de UM recurso por ID |
+| `_create` | Cria recurso (geralmente POST) |
+| `_update` | Atualiza (PUT/PATCH) |
+| `_destroy` | Deleta |
+| `_search` | Busca textual |
+| `_filter` | Filtro complexo via POST body |
+| `<recurso>_<sub>_<acao>` | Acao em sub-recurso (ex: `contacts_labels_create`) |
+| `_1`, `_2`, `_3`... | Colisão — leia descriptions pra desambiguar |
+
+## Native first — antes de criar custom_attribute, cheque se existe campo nativo
+
+LionChat tem vários conceitos com modelos próprios na plataforma. Custom attribute é **último recurso** — útil quando não tem modelo dedicado. Antes de criar um custom_attribute, pergunte:
+
+1. **Esse conceito tem UI dedicada?** Se sim, provavelmente tem campo nativo.
+2. **Outros funis/contas usam isso de forma similar?** Se sim, provavelmente é uma feature nativa.
+3. **A doc menciona o nome desse conceito?** (Ver `glossary.md` → tabela "Quando usar campo nativo vs custom_attribute")
+
+### Tabela rápida de decisão
+
+| Quero | NÃO faça | Faça |
+|---|---|---|
+| Motivo de Ganho/Perda do card | criar custom_attribute "Motivo de Ganho" | popular `kanban_config.win_reasons` |
+| Checklist reusável em vários cards | criar custom_attribute lista | popular `kanban_config.checklist_templates` + automação `apply_checklist_template` |
+| Automação "ao Ganhar → criar card noutro funil" | regra AutomationRule complexa | popular `funnel.settings.automations` com `action: duplicate_to_funnel` |
+| Atributo em todo card | criar 1 custom_attribute pra cada funil | popular `kanban_config.global_custom_attributes` (vale pra todos) |
+| Cadastrar CPF do contato | usar campo do funil | criar `custom_attribute_definitions` model=contact_attribute |
+| Tag "cliente residencial" | criar custom_attribute | criar `Label` |
+| Etapa do funil | criar custom_attribute "Status" | usar `funnel.stages` |
+
+### Por que isso importa
+
+Quando você usa o campo nativo:
+- A UI já tem suporte (dropdown, filtros, relatórios automáticos)
+- Métricas oficiais aparecem nos relatórios
+- Webhooks emitem eventos específicos (`status_changed`, `stage_changed`)
+- Permissões e validações funcionam fora da caixa
+
+Custom attribute em lugar errado vira:
+- Campo perdido na lateral da conversa que ninguém preenche
+- Dado solto que não conecta com automação nem relatório
+- Duplicação com a feature nativa (vendedor confuso entre 2 lugares pra mesma coisa)
+
+### Como descobrir se existe campo nativo
+
+1. Procure no `kanban-deep-dive.md` (Kanban) ou na doc da feature relevante
+2. Liste o config global do recurso (`kanban_config_list`, `voip_settings_list`, etc) — campos `nil`/vazios mas presentes na response = espera input
+3. Olhe `data-model.md` pra colunas jsonb no model — costumam guardar feature nativa

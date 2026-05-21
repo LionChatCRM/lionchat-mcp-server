@@ -75,9 +75,30 @@ NÃO retry imediato — só piora.
 ### 500 Internal Server Error
 Erro do servidor LionChat.
 
+**Causas comuns:**
+- Estrutura interna de lista errada (ex: `win_reasons: ["str"]` em vez de `[{id, title}]`)
+- Tipos errados em campos (string onde espera int, hash onde espera array, etc)
+- Validação de modelo lança exceção não tratada
+- Bug genuíno do servidor
+
 **Ação:**
+- Revisar tipos e estrutura do payload contra `api-conventions.md` e `data-model.md`
 - Retry 1x após 2-5 segundos
-- Se persiste, reportar pro usuário com timestamp/request ID
+- Se persiste: reportar pro usuário com timestamp/request ID
+
+> Nota: o Rails do projeto roda com `wrap_parameters: [:json]` global, então body raiz é auto-wrapped no nome do recurso. Falta de wrapper **não** gera 500 silencioso na maioria dos endpoints — descarte essa hipótese e foque em tipos/estrutura. Detalhes em `api-conventions.md → Wrapper de body`.
+
+### "param is missing or the value is empty: <recurso>"
+Status: 400 (raro)
+
+Aparece em endpoints que rodam `params.require(:algo)` com nome não-padrão (fora da convenção REST que o auto-wrap deduz). Solução: enviar wrapper explícito `{"<recurso>": {...}}`.
+
+### Contato criado com `name`/`phone` vazios após POST /contacts
+Não é 5xx — request volta 200, mas o contato fica sem os dados que você mandou.
+
+**Causa:** body foi enviado com wrapper (`{"contact": {"name": "..."}}`). O `ContactsController` usa `params.permit(:name, ...)` direto na raiz, sem `require(:contact)`. Como o auto-wrap não duplica quando o wrapper já está presente, os campos ficam só dentro de `params[:contact]` e o `permit` na raiz não pega.
+
+**Solução:** mandar body raiz: `{"name": "Fulano", "phone_number": "+5511..."}`.
 
 ### 502 Bad Gateway / 503 Service Unavailable
 Indisponibilidade temporária (deploy, manutenção, sobrecarga).

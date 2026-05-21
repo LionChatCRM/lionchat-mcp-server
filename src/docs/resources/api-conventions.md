@@ -19,6 +19,107 @@ Pra você via MCP: tudo já tá resolvido. O servidor MCP injeta o token correto
 
 Tokens são **por usuário**, não por conta. O mesmo token funciona em qualquer conta que o usuário tem acesso. O scoping por conta acontece via `account_id` no path.
 
+## Wrapper de body — como o Rails interpreta
+
+O projeto roda com `wrap_parameters format: [:json]` no Rails (config global). Na prática:
+
+- Bodies JSON raiz são **auto-wrapped** pelo Rails no nome do recurso (derivado do controller).
+- Mandar `{"enabled": true}` em `PUT /kanban_config` é equivalente a mandar `{"kanban_config": {"enabled": true}}`.
+- Ambas as formas funcionam na maioria dos endpoints. Não existe "HTTP 500 silencioso por falta de wrapper" — esse claim era impreciso.
+
+### Padrão recomendado
+
+Use **body raiz** (sem wrapper). É mais curto, funciona em todos os endpoints listados abaixo, e evita a pegadinha do `/contacts`.
+
+```http
+PUT /api/v1/accounts/43/kanban_config
+Content-Type: application/json
+
+{ "win_reasons": [{"id": "wr-1", "title": "Preço competitivo"}] }
+```
+
+### Comportamento por endpoint (validado empiricamente)
+
+| Endpoint | Raiz | Com wrapper | Observação |
+|---|---|---|---|
+| `POST/PUT /kanban_config` | ✅ | ✅ | qualquer um |
+| `POST/PATCH /funnels` | ✅ | ✅ | qualquer um |
+| `POST/PUT /kanban_items` | ✅ | ✅ | controller usa `require(:kanban_item)` mas auto-wrap resolve |
+| `POST/PATCH /labels` | ✅ | ✅ | qualquer um |
+| `POST/PATCH /custom_attribute_definitions` | ✅ | ✅ | qualquer um |
+| `POST/PATCH /contacts` | ✅ | ⚠️ **drop silencioso** | Controller usa `params.permit(...)` na raiz sem `require(:contact)`. Com wrapper, o auto-wrap não duplica e os campos do body raiz ficam ausentes — o contato é criado com `name` vazio. **USE RAIZ.** |
+| `POST/PATCH /conversations` | ✅ | varia | conversa aceita raiz |
+| `POST /captain/copilot_threads` | ✅ | n/a | só raiz (`message`, `assistant_id`, `conversation_id`) |
+| `POST /voip/settings/create_child_account` | ✅ | n/a | só raiz (`nome`, `login`, `senha`) |
+
+### Quando WRAPPER é obrigatório
+
+Praticamente nunca — exceto se você está testando legacy/curl e quer ser explícito. As tools do MCP geram params com nome `recurso.campo` (ex: `kanban_config.win_reasons`) só pra organizar a UI; no body final qualquer formato roda.
+
+### Listas substituem, não fazem merge
+
+`win_reasons`, `loss_reasons`, `stages`, `linked_conversations`, etc. — quando você manda a lista, ela **substitui** a anterior por inteiro. Pra preservar, leia com GET primeiro e mande a lista completa.
+
+### Estrutura interna das listas
+
+`win_reasons` / `loss_reasons` aceitam array de **objetos** `{id, title}`, NÃO strings:
+
+```json
+{
+  "win_reasons": [
+    {"id": "wr-1", "title": "Preço competitivo"},
+    {"id": "wr-2", "title": "Indicação forte"}
+  ]
+}
+```
+
+Strings simples (`"win_reasons": ["motivo"]`) causam erro de serialização.
+
+## Restrições de formato em campos comuns
+
+Antes de criar/atualizar recurso, lembre dessas regras silenciosas:
+
+### `Label.title` — kebab-case, SEM espaço
+
+Validação: regex `\A[\p{L}\p{N}\-_]+\z` (letras Unicode, números, hífen, underscore). **Espaço quebra**.
+
+```
+✅ "lead-emive"
+✅ "cliente_premium"
+✅ "vip"
+❌ "Lead Emive"        → 422 "Title nao e valido"
+❌ "Lead/Indicação"    → 422
+```
+
+Recomendação: usar kebab-case (`lead-emive`). Na UI o usuário vê o título como digitado.
+
+### `CustomAttributeDefinition.attribute_key` — snake_case (slug)
+
+Aceita: letras, números, underscore, hífen e ponto. Sem espaço. Convenção: snake_case (`motivo_de_ganho`, `data_de_nascimento`).
+
+### Phone numbers — formato E.164
+
+`+<código país><DDD><número>`. Brasil: `+5511999999999` (13 dígitos com 9). Sem espaços, sem parênteses, sem hífen.
+
+WAHA tem endpoint `/integrations/waha/check_phone?phone=+55...` que retorna o número CORRIGIDO (especialmente útil pra fixar o 9º dígito BR).
+
+### `funnel.stages` — keys snake_case
+
+```json
+{
+  "novo_lead": {"name": "Novo Lead", "color": "#3b82f6", "position": 1}
+}
+```
+
+A KEY é o slug interno (`novo_lead`). O `name` é o que aparece na UI ("Novo Lead"). Slug não pode ter espaço — use underscore.
+
+### `KanbanItem.linked_conversations` — array de objetos
+
+```
+✅ [{"display_id": 123}, {"display_id": 456}]
+❌ [123, 456]   → TypeError no as_json (já causou bug em produção)
+```
+
 ## Paginação
 
 ### Query params padrão

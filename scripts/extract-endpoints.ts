@@ -5,8 +5,8 @@
  * Usage: node scripts/extract-endpoints.ts
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // ── Read HTML ───────────────────────────────────────────────
 const htmlPath = path.resolve(
@@ -105,6 +105,8 @@ const SUB_SLUG = {
   'CSAT': 'csat',
   'Atributos Personalizados': 'custom_attributes',
   'Agentes': 'agents',
+  'Validacao WhatsApp': 'waha_validation',
+  'Chat Interno': 'internal_chat',
 };
 
 // ── Action derivation ───────────────────────────────────────

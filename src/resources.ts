@@ -89,9 +89,12 @@ export const RESOURCES: ResourceDef[] = [
 ];
 
 function findDocsPath(filename: string): string | null {
+  // __dirname e dist/ quando publicado (dist/docs/resources/) ou dist/ em dev.
+  // Tenta multiplos layouts pra cobrir build local, npm/npx e source.
   const candidates = [
-    join(__dirname, '../docs/resources', filename),
-    join(__dirname, '../../src/docs/resources', filename),
+    join(__dirname, 'docs/resources', filename),        // dist/docs/resources (publicado)
+    join(__dirname, '../docs/resources', filename),     // legacy / monorepo
+    join(__dirname, '../../src/docs/resources', filename), // source dir em dev
   ];
   for (const p of candidates) {
     if (existsSync(p)) return p;

@@ -154,12 +154,29 @@ Company
 ## Kanban / CRM
 
 ```
+KanbanConfig (1:1 com Account — config global do Kanban)
+├── id (PK)
+├── account_id (FK, unique)
+├── enabled (bool, default true)
+├── webhook_url / webhook_secret / webhook_events (jsonb array)
+├── win_reasons (jsonb array de {id, title})        ← Motivos de Ganho — NATIVO
+├── loss_reasons (jsonb array de {id, title})       ← Motivos de Perda — NATIVO
+├── global_custom_attributes (jsonb array de {name, type, is_list, list_values})
+├── checklist_templates (jsonb array de {id, name, items: [{id, text}]})
+├── config (jsonb: title, default_view, auto_assignment, support_email, dragbar_enabled, ...)
+└── created_at
+
 Funnel
 ├── id (PK)
 ├── account_id (FK)
 ├── name
-├── stages (jsonb: array de { name, color, position })
+├── stages (jsonb: hash com slug_etapa => { name, color, position, description, checklist_templates })
+├── settings (jsonb: { agents: [], goals: [], automations: [{trigger_type, action, action_config, enabled}] })
+├── global_custom_attributes (jsonb array)
+├── meta_events_config (jsonb: won/lost/stages → Meta Pixel/CAPI events)
 ├── archived (bool)
+├── active (bool)
+├── position (int, ordem entre funis)
 └── created_at
 
 KanbanItem

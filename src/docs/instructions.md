@@ -78,6 +78,47 @@ Account (conta/empresa)
 - `display_id`: número visível na UI da conversa (use este pra falar com humanos)
 - `source_id`: ID externo da plataforma origem (ex: `wamid.xxx` do WhatsApp)
 
+### Body wrapper — use raiz por padrão
+
+O Rails tem `wrap_parameters: [:json]` global. Body JSON raiz é auto-wrapped no nome do recurso, então ambas as formas funcionam na maioria dos endpoints:
+
+```json
+PUT /api/v1/accounts/43/kanban_config
+{ "win_reasons": [...] }                          ✅ raiz (recomendado)
+{ "kanban_config": { "win_reasons": [...] } }     ✅ explícito (também OK)
+```
+
+**Exceção importante — `/contacts` SÓ aceita raiz.** Com wrapper, o `name`/`email`/`phone_number` somem silenciosamente e o contato é criado vazio:
+
+```json
+POST /api/v1/accounts/43/contacts
+{ "name": "Fulano", "phone_number": "+5511..." }  ✅
+{ "contact": { "name": "Fulano" } }                ⚠️ cria contato com name vazio
+```
+
+Detalhes completos em `lionchat://docs/api-conventions` → "Wrapper de body".
+
+### Regras de formato silenciosas
+
+- **Label.title**: kebab-case ou snake_case, **SEM espaço**. `"Lead Emive"` ❌ → `"lead-emive"` ✅
+- **win_reasons / loss_reasons**: array de `{id, title}`, NÃO strings
+- **linked_conversations**: array de `{display_id: N}`, NÃO inteiros direto
+- **phone**: E.164 (`+5511...`), sem espaços/parênteses
+- **funnel.stages** keys: snake_case slug
+
+### Native first
+
+Antes de criar um `custom_attribute`, cheque se a feature já tem campo NATIVO:
+
+| Quero | Use o nativo | NÃO crie custom_attribute |
+|---|---|---|
+| Motivos de Ganho/Perda | `kanban_config.win_reasons` / `loss_reasons` | ❌ |
+| Checklist reusável | `kanban_config.checklist_templates` | ❌ |
+| Automação ganho→outro funil | `funnel.settings.automations` action `duplicate_to_funnel` | ❌ |
+| Tag transversal | `Label` | ❌ |
+
+Mais em `lionchat://docs/glossary` → "Quando usar campo nativo vs custom_attribute".
+
 ## 4. Workflows típicos
 
 ### Listar conversas abertas

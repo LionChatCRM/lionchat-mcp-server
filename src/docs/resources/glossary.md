@@ -240,3 +240,45 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 - `display_id`: **sempre use** ao falar com humanos ("conversa #245", "card #12")
 - Pra Conversation: `id` global, `display_id` por conta (mais amigável)
 - Pra Contact, Inbox, etc: só `id` (não tem display_id separado)
+
+## Kanban — Motivos de Ganho e Perda
+
+**Termo:** "Motivo de Ganho" / "Motivo de Perda" / "Win Reason" / "Loss Reason".
+
+**O que é:** lista de razões pré-definidas que o vendedor seleciona ao marcar um card como Ganho ou Descartado/Perdido. Aparece como dropdown na UI no momento da transição. **Compartilhado entre TODOS os funis da conta.**
+
+**Onde fica armazenado:** `kanban_config.win_reasons` e `kanban_config.loss_reasons` (jsonb arrays na tabela `kanban_configs`).
+
+**Formato:** array de objetos `{id, title}`:
+```json
+"win_reasons": [
+  {"id": "wr-1", "title": "Preço competitivo"},
+  {"id": "wr-2", "title": "Indicação forte"}
+]
+```
+
+**Endpoint:** `PUT /api/v1/accounts/{id}/kanban_config` com body wrapped:
+```json
+{"kanban_config": {"win_reasons": [...]}}
+```
+
+**⚠️ NÃO confundir com:**
+- `custom_attribute_definitions` (não use pra motivo — vira campo lateral da conversa, fora do fluxo nativo)
+- Labels (não use — labels são tags transversais, não motivos)
+- `funnel.stages` (não use — etapas são posições no funil, não razões de saída)
+
+## Quando usar campo nativo vs custom_attribute
+
+**Regra geral:** se a feature TEM um campo nativo na plataforma, use o nativo. Custom attribute é último recurso pra coisas que não têm modelo dedicado.
+
+| Caso | Campo nativo | Custom attribute? |
+|---|---|---|
+| Motivo de Ganho/Perda do card | `kanban_config.win_reasons` / `loss_reasons` | ❌ NÃO |
+| Atributo em TODO card | `kanban_config.global_custom_attributes` | só se não couber acima |
+| Atributo de UM card específico | `kanban_item.custom_attributes` (jsonb direto) | já é nativo, não precisa definition |
+| CPF, CNPJ, endereço do cliente | `custom_attribute_definitions` model=contact_attribute | ✅ SIM (não tem nativo) |
+| Tag pro contato (residencial, empresarial) | `labels` | ✅ SIM via Label |
+| Etapa do funil | `funnel.stages` | ❌ NÃO |
+| Tarefa interna do card | `kanban_item.checklist` ou `kanban_config.checklist_templates` | ❌ NÃO |
+| Telefone validado WhatsApp do contato | atributos nativos WhatsApp Chat ID/JID/LID | já criados pelo WAHA automaticamente |
+| Origem do lead (Google Ads, Meta) | `kanban_config.global_custom_attributes` (tipo list) | bom uso de custom_attribute |

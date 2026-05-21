@@ -48,6 +48,63 @@ Stages NÃO são tabela separada. São armazenadas como jsonb dentro do Funnel:
 }
 ```
 
+### KanbanConfig (Configuração Global do Kanban) — CRÍTICO
+
+**Tabela separada do Funnel.** 1:1 com a conta. Guarda configurações que valem pra TODOS os funis. Tem 5 campos jsonb importantes:
+
+| Campo | Tipo | O que guarda |
+|---|---|---|
+| `win_reasons` | jsonb array | **Motivos de Ganho** — `[{id, title}]`. Aparecem como dropdown quando o vendedor marca "Ganho" num card. NATIVO. NÃO usar custom_attribute. |
+| `loss_reasons` | jsonb array | **Motivos de Perda** — mesma estrutura. Aparece ao marcar "Descartado". |
+| `checklist_templates` | jsonb array | Templates de checklist reusáveis — `[{id, name, items: [{id, text}]}]`. Aplicados manualmente ou via automação `apply_checklist_template`. |
+| `global_custom_attributes` | jsonb array | Atributos globais que aparecem em TODOS os cards de TODOS os funis — `[{name, type, is_list, list_values}]`. |
+| `config` | jsonb hash | Configurações gerais (title, default_view, auto_assignment, support_email, dragbar_enabled, etc) |
+| `webhook_url`, `webhook_secret`, `webhook_events` | string/array | Webhook externo do Kanban (recebe eventos `kanban.item.created`, `kanban.item.stage_changed`, etc) |
+
+#### Endpoints
+
+| Método | Path | O que faz |
+|---|---|---|
+| GET | `/api/v1/accounts/{id}/kanban_config` | Lê (cria automaticamente se não existir) |
+| POST | `/api/v1/accounts/{id}/kanban_config` | Cria explícito |
+| PUT | `/api/v1/accounts/{id}/kanban_config` | Atualiza parcial |
+| DELETE | `/api/v1/accounts/{id}/kanban_config` | Remove (não afeta cards/funis) |
+| POST | `/api/v1/accounts/{id}/kanban_config/test_webhook` | Dispara payload de teste |
+
+**GOTCHA — body precisa estar wrapped:**
+
+```json
+PUT /api/v1/accounts/43/kanban_config
+{
+  "kanban_config": {
+    "win_reasons": [
+      {"id": "wr-1", "title": "Preço competitivo"},
+      {"id": "wr-2", "title": "Indicação forte"}
+    ],
+    "loss_reasons": [
+      {"id": "lr-1", "title": "Preço alto"},
+      {"id": "lr-2", "title": "Sem retorno"}
+    ]
+  }
+}
+```
+
+Se mandar `{"win_reasons": [...]}` direto (sem o wrapper `kanban_config`) → **HTTP 500 silencioso**. Strong params do Rails exige `params.require(:kanban_config)`.
+
+**`win_reasons` e `loss_reasons` aceitam array de OBJETOS `{id, title}`, NÃO strings simples.** Strings causam 500. O `id` é qualquer string única (UUID ou slug curto tipo `wr-1`).
+
+**Substituição vs merge:** quando você envia `win_reasons`, a lista inteira é substituída. Pra preservar, leia primeiro com GET e mande a lista completa.
+
+#### ⚠️ Quando NÃO criar como custom_attribute
+
+| Quero | Use | NÃO use |
+|---|---|---|
+| Motivo de Ganho/Perda no card | `kanban_config.win_reasons` / `loss_reasons` | ❌ custom_attribute em conversation/contact |
+| Atributo que aparece em TODO card | `kanban_config.global_custom_attributes` | ❌ custom_attribute de conversation |
+| Atributo só de um contato (CPF, endereço) | `custom_attribute_definitions` model=contact_attribute | ❌ kanban_config |
+| Atributo só de uma conversa (motivo, tag interna) | `custom_attribute_definitions` model=conversation_attribute | ❌ kanban_config |
+| Atributo só de um card | `kanban_item.custom_attributes` (jsonb direto no card) | — |
+
 ### KanbanItem (Card)
 Um card individual dentro de uma etapa.
 
@@ -236,9 +293,56 @@ NÃO existe `contact_id` direto no KanbanItem. Sempre via conversation_display_i
 
 A `conversation_display_id` (singular) ainda é a "principal" — mas todas as `linked_conversations` aparecem na sidebar do card.
 
-## Automações relacionadas a Kanban
+## Automações relacionadas a Kanban — 2 SISTEMAS DIFERENTES
 
-AutomationRule com evento `kanban_item_created`, `kanban_item_moved`, `kanban_item_stage_changed`:
+Existem **dois sistemas paralelos** de automação. Não confundir.
+
+### Sistema 1: `funnel.settings.automations` — DENTRO de um funil específico
+
+Automações que rodam ao mudar o STATUS de um card (Ganho/Perdido) ou criar card. Atuam sobre o card e podem mover/duplicar entre funis. **Configurado por funil**, dentro de `funnel.settings.automations`.
+
+```json
+PUT /api/v1/accounts/43/funnels/43
+{
+  "funnel": {
+    "settings": {
+      "automations": [
+        {
+          "id": "automation_1776517249424",
+          "enabled": true,
+          "trigger_type": "status_changed",
+          "trigger_value": "won",
+          "action": "duplicate_to_funnel",
+          "action_config": {
+            "target_funnel_id": 44,
+            "target_stage": "agendar_instalacao"
+          }
+        },
+        {
+          "trigger_type": "card_created",
+          "trigger_value": "card_created",
+          "action": "apply_checklist_template",
+          "action_config": {
+            "template_id": "ct-onboarding-001"
+          },
+          "enabled": true
+        }
+      ]
+    }
+  }
+}
+```
+
+**Triggers:** `card_created`, `status_changed` (com `trigger_value: "won" | "lost"`), `stage_changed`.
+**Ações:** `duplicate_to_funnel` (criar card noutro funil), `apply_checklist_template`, `assign_agent`, `send_message`, `set_priority`.
+
+Use para: "ao ganhar um card de Vendas → criar automaticamente em Pós-Venda na etapa Agendar Instalação".
+
+### Sistema 2: AutomationRule global — eventos da conta
+
+`AutomationRule` é o motor geral da conta (mensagens, contatos, conversas, e também eventos Kanban). Bem mais genérico, com sistema completo de condições/ações.
+
+Eventos Kanban: `kanban_item_created`, `kanban_item_moved`, `kanban_item_stage_changed`.
 
 ```json
 {
@@ -253,26 +357,79 @@ AutomationRule com evento `kanban_item_created`, `kanban_item_moved`, `kanban_it
 }
 ```
 
+Use para: ações cross-cutting que envolvem conversa/contato/label, ou regras complexas com múltiplas condições.
+
+### Qual usar?
+
+| Cenário | Sistema |
+|---|---|
+| Mover/duplicar card entre funis | **Sistema 1** (`funnel.settings.automations`) |
+| Aplicar template de checklist em card novo | **Sistema 1** |
+| Enviar mensagem ao mover pra etapa | Qualquer um — Sistema 2 é mais flexível |
+| Aplicar label no contato baseado em mudança no card | **Sistema 2** |
+| Ação envolvendo conversa | **Sistema 2** |
+
 ## Bulk operations
 
 - `POST /api/v2/kanban/items/bulk_actions` — operações em massa (mover, atribuir, arquivar)
 - `POST /api/v2/kanban/items/import` — importar CSV de cards
 - `GET /api/v2/kanban/items/export` — exportar funil completo
 
-## Custom attributes em cards
+## Custom attributes em cards — TRÊS LUGARES POSSÍVEIS
 
-Igual contatos, cards têm `custom_attributes` (jsonb):
+Cada card pode receber atributos custom de 3 origens diferentes. **A escolha do lugar muda completamente o resultado:**
+
+### 1. `kanban_item.custom_attributes` (jsonb direto no card)
 
 ```json
 {
   "origem_lead": "Google Ads",
   "campanha": "Black Friday 2026",
-  "score": 85,
-  "produto_interesse": "Plano Pro"
+  "score": 85
 }
 ```
 
-Configurar atributos no Super Admin ou via API `/api/v1/custom_attribute_definitions`.
+- Vai direto no card via `kanban_items_update`
+- Só aparece NESSE card específico
+- Sem typing/validação — qualquer chave/valor
+- Use para: campos específicos de um card, importação rápida sem cadastro prévio
+
+### 2. `kanban_config.global_custom_attributes` (atributos globais do Kanban)
+
+```json
+[
+  {"name": "Origem do Lead", "type": "list", "is_list": true, "list_values": ["Google", "Meta", "Indicação"]},
+  {"name": "Score", "type": "number", "is_list": false}
+]
+```
+
+- Definido no `kanban_config` da conta
+- Aparece em TODOS os cards de TODOS os funis (na sidebar do card)
+- Com tipo (`text`, `number`, `date`, `list`, `boolean`)
+- Use para: atributos que TODO card precisa ter
+
+### 3. `custom_attribute_definitions` (atributos globais de contato/conversa)
+
+```json
+{
+  "attribute_display_name": "CPF",
+  "attribute_display_type": "text",
+  "attribute_model": "contact_attribute"
+}
+```
+
+- Definido via `POST /api/v1/accounts/{id}/custom_attribute_definitions`
+- `attribute_model` = `contact_attribute` (na ficha do contato) ou `conversation_attribute` (na conversa)
+- Aparece na sidebar de TODA conversa (independente de Kanban)
+- Use para: cadastro do contato (CPF, CNPJ, endereço) ou atributos por conversa que NÃO são específicos de card
+
+### Não confunda com Motivos / Templates / Funnel Settings
+
+| Quero | NÃO use isso | Use isso |
+|---|---|---|
+| Motivos de Ganho/Perda | custom_attribute em qualquer lugar | **`kanban_config.win_reasons` / `loss_reasons`** (NATIVO) |
+| Checklist reusável de card | custom_attribute em jsonb | **`kanban_config.checklist_templates`** |
+| Automação ao ganhar | custom_attribute | **`funnel.settings.automations`** (Sistema 1) |
 
 ## Métricas úteis (via GET /api/v2/kanban/items)
 
