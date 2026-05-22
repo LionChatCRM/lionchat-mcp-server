@@ -203,6 +203,36 @@ Conversation
 | `conversation_opened` | Status volta pra open (reabertura) |
 | `conversation_resolved` | Agente resolve |
 | `conversation_pending` | Status muda pra pending |
-| `conversation_updated` | Qualquer update |
+| `conversation_updated` | Acao na conversa — filtrada por `action_types` (UI: "Acao na conversa") |
 | `message_created` | Nova mensagem (incoming ou outgoing) |
 | `first_reply_created` | Primeira resposta humana |
+
+### Subtipos de `conversation_updated` (campo `action_types`)
+
+Ao criar/atualizar uma `automation_rule` com `event_name: 'conversation_updated'`, envie tambem
+o campo `action_types` (array de strings) pra filtrar quais mudancas disparam a regra. Vazio/nulo
+mantem comportamento legado (qualquer mudanca dispara — retrocompat com regras antigas).
+
+| Subtipo | Detectado quando muda |
+|---|---|
+| `label_added` | `label_list` (apos - antes nao vazio) |
+| `label_removed` | `label_list` (antes - apos nao vazio) |
+| `status_changed` | `status` |
+| `priority_changed` | `priority` |
+| `agent_assigned` | `assignee_id` |
+| `team_assigned` | `team_id` |
+| `custom_attribute_changed` | `custom_attributes` |
+| `language_changed` | `additional_attributes.conversation_language` |
+| `ai_agent_assigned` | `captain_assistant_id` |
+
+Exemplo de criacao via API:
+```json
+POST /api/v1/accounts/{account_id}/automation_rules
+{
+  "name": "Notificar quando etiqueta VIP entra",
+  "event_name": "conversation_updated",
+  "action_types": ["label_added"],
+  "conditions": [{"attribute_key": "labels", "filter_operator": "contains", "values": ["vip"]}],
+  "actions": [{"action_name": "send_email_to_team", "action_params": {"team_ids": [1], "message": "VIP!"}}]
+}
+```

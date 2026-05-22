@@ -95,6 +95,28 @@ Se receber `429 Too Many Requests`:
 
 IA é boa pra: triagem, classificação, resumo, sugestão de resposta, análise.
 
+## Botão de pânico: pausar/retomar AI Agente (2026-05-22)
+
+Pra parar IMEDIATAMENTE um AI Agente (todas as conversas dele) sem perder configuração:
+
+```
+lionchat_captain_assistants_update id=<id> paused=true
+```
+
+O campo `paused` é **top-level** (não vai em `config`). Quando `true`:
+- Jobs de resposta automática são curto-circuitados (não chamam o LLM)
+- Follow-ups agendados não disparam
+- Callbacks agendados são limpos
+
+Pra reativar: `paused=false`. Toggle é auditado (`audited only: [:paused]`).
+
+**Janela de inconsistência:** ~5-8s. Jobs que já estão dentro do LLM no momento da pausa enviam a resposta mesmo. Use o botão pra parar **novas** respostas, não pra cancelar uma que já saiu.
+
+## Limite do prompt e cache OpenAI (2026-05-22)
+
+- `config.instructions` (system prompt do agente) aceita até **20.000 caracteres** (antes 10k). Acima de 15k, o frontend mostra aviso "lost in the middle" — prefira colocar instruções críticas no início ou final.
+- **Cache automático** ativo em todos os 15 modelos suportados (GPT-4.1 Nano até GPT-5.2 Pro, o1, o3, o4-mini). Desconto 50-75% no input cachado, sem configuração. Reuso do prompt do agente em múltiplas conversas maximiza a economia.
+
 ## Variáveis de conta (account_variables)
 
 Pra dados que se repetem (slogans, endereços, horários):

@@ -216,6 +216,7 @@ Captain::Assistant
 ├── account_id (FK)
 ├── name
 ├── description
+├── paused (boolean, default false) — botao de panico (2026-05-22). true = pausa respostas, follow-up e callbacks. Auditado. Top-level, NAO mora em config.
 ├── config (jsonb: model, temperature, instructions, feature_memory, feature_faq, ...)
 ├── guardrails (string[])
 ├── response_guidelines (string[])
@@ -248,8 +249,13 @@ AutomationRule
 ├── account_id (FK)
 ├── name
 ├── event_name (conversation_created, conversation_resolved, message_created, conversation_opened, conversation_updated)
+├── action_types (jsonb array) — subtipos de conversation_updated:
+│     label_added, label_removed, status_changed, priority_changed,
+│     agent_assigned, team_assigned, custom_attribute_changed,
+│     language_changed, ai_agent_assigned. Vazio/nulo = retrocompat (dispara em qualquer)
 ├── conditions (jsonb array)
 ├── actions (jsonb array)
+├── inbox_id (FK, opcional — usado em event_name=webhook)
 └── active (bool)
 
 Macro
