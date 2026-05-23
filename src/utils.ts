@@ -77,9 +77,13 @@ export function formatResponse(data: unknown): string {
 
 // AIDEV-NOTE: Route each input param to path/query/body based on endpoint parameter definitions
 // Supports nested body params via dot-notation: `config.temperature` becomes body.config.temperature
+// AIDEV-NOTE: When `bodyWrapper` is set, the entire bodyParams object is nested under that key
+// before returning. Required by Rails strong_params controllers that expect a single root key
+// (e.g. `{ variable: { attribute_key: ... } }` for AccountVariablesController).
 export function separateParams(
   input: Record<string, unknown>,
-  paramDefs: Array<{ name: string; location: string }>
+  paramDefs: Array<{ name: string; location: string }>,
+  bodyWrapper?: string
 ): SeparatedParams {
   const pathParams: Record<string, unknown> = {};
   const queryParams: Record<string, string> = {};
@@ -184,5 +188,13 @@ export function separateParams(
     }
   }
 
-  return { pathParams, queryParams, bodyParams };
+  // AIDEV-NOTE: Wrap body under `bodyWrapper` key ONLY if there's at least one body param.
+  // Edge case: wrapper defined but no body params -> return empty bodyParams (avoid {wrapper:{}}).
+  // Backward-compat: undefined wrapper -> behavior identical to pre-wrapper era.
+  const wrappedBody =
+    bodyWrapper && Object.keys(bodyParams).length > 0
+      ? { [bodyWrapper]: bodyParams }
+      : bodyParams;
+
+  return { pathParams, queryParams, bodyParams: wrappedBody };
 }

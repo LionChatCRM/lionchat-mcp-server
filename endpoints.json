@@ -3742,7 +3742,8 @@
       "lionchat_captain_assistants_list",
       "lionchat_captain_assistants_show",
       "lionchat_captain_assistants_update"
-    ]
+    ],
+    "body_wrapper": "assistant"
   },
   {
     "id": "lionchat_captain_assistants_show",
@@ -3945,7 +3946,8 @@
       "lionchat_captain_assistants_list",
       "lionchat_captain_assistants_create",
       "lionchat_captain_assistants_show"
-    ]
+    ],
+    "body_wrapper": "assistant"
   },
   {
     "id": "lionchat_captain_assistants_destroy",
@@ -5917,7 +5919,8 @@
       "lionchat_captain_assistants_list",
       "lionchat_captain_assistants_create",
       "lionchat_captain_assistants_show"
-    ]
+    ],
+    "body_wrapper": "scenario"
   },
   {
     "id": "lionchat_captain_assistants_show_1",
@@ -6148,7 +6151,8 @@
       "lionchat_captain_assistants_list",
       "lionchat_captain_assistants_create",
       "lionchat_captain_assistants_show"
-    ]
+    ],
+    "body_wrapper": "assistant_response"
   },
   {
     "id": "lionchat_captain_assistants_show_2",
@@ -6446,7 +6450,8 @@
       "lionchat_captain_assistants_list",
       "lionchat_captain_assistants_create",
       "lionchat_captain_assistants_show"
-    ]
+    ],
+    "body_wrapper": "custom_tool"
   },
   {
     "id": "lionchat_captain_assistants_show_3",
@@ -6796,7 +6801,8 @@
       "lionchat_canned_responses_list",
       "lionchat_canned_responses_update",
       "lionchat_canned_responses_destroy"
-    ]
+    ],
+    "body_wrapper": "canned_response"
   },
   {
     "id": "lionchat_canned_responses_update",
@@ -6845,7 +6851,8 @@
       "lionchat_canned_responses_list",
       "lionchat_canned_responses_create",
       "lionchat_canned_responses_destroy"
-    ]
+    ],
+    "body_wrapper": "canned_response"
   },
   {
     "id": "lionchat_canned_responses_destroy",
@@ -7163,7 +7170,8 @@
       "Automação a partir de evento externo",
       "Importação manual via API"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "label"
   },
   {
     "id": "lionchat_labels_show",
@@ -7239,7 +7247,8 @@
       "Alteração de status/estado",
       "Atualização em massa via automação"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "label"
   },
   {
     "id": "lionchat_labels_destroy",
@@ -7760,7 +7769,8 @@
     ],
     "related_tools": [
       "lionchat_tasks_create_1"
-    ]
+    ],
+    "body_wrapper": "account_task"
   },
   {
     "id": "lionchat_tasks_show",
@@ -7915,7 +7925,8 @@
     ],
     "related_tools": [
       "lionchat_tasks_update_1"
-    ]
+    ],
+    "body_wrapper": "account_task"
   },
   {
     "id": "lionchat_tasks_destroy",
@@ -8866,7 +8877,8 @@
       "lionchat_flows_create_1",
       "lionchat_flows_create_2",
       "lionchat_flows_create_3"
-    ]
+    ],
+    "body_wrapper": "flow"
   },
   {
     "id": "lionchat_flows_show",
@@ -8942,7 +8954,8 @@
       "Alteração de status/estado",
       "Atualização em massa via automação"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "flow"
   },
   {
     "id": "lionchat_flows_destroy",
@@ -9900,7 +9913,8 @@
       "lionchat_custom_filters_list",
       "lionchat_custom_filters_show",
       "lionchat_custom_filters_update"
-    ]
+    ],
+    "body_wrapper": "custom_filter"
   },
   {
     "id": "lionchat_custom_filters_show",
@@ -9970,7 +9984,8 @@
       "lionchat_custom_filters_list",
       "lionchat_custom_filters_create",
       "lionchat_custom_filters_show"
-    ]
+    ],
+    "body_wrapper": "custom_filter"
   },
   {
     "id": "lionchat_custom_filters_destroy",
@@ -10371,7 +10386,8 @@
       "Automação a partir de evento externo",
       "Importação manual via API"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "company"
   },
   {
     "id": "lionchat_companies_show",
@@ -10433,7 +10449,8 @@
       "Alteração de status/estado",
       "Atualização em massa via automação"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "company"
   },
   {
     "id": "lionchat_companies_destroy",
@@ -10570,7 +10587,8 @@
       "Automação a partir de evento externo",
       "Importação manual via API"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "offer"
   },
   {
     "id": "lionchat_offers_show",
@@ -10674,7 +10692,8 @@
       "Alteração de status/estado",
       "Atualização em massa via automação"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "offer"
   },
   {
     "id": "lionchat_offers_destroy",
@@ -12157,25 +12176,39 @@
     "category": "Variaveis da Conta",
     "params": [
       {
-        "name": "key",
+        "name": "attribute_display_name",
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "Chave da variável"
+        "description": "Nome exibido da variavel (ex: 'API Key Pagamento')"
+      },
+      {
+        "name": "attribute_key",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Chave normalizada snake_case (ex: 'api_key_pagamento'). Usada como referencia"
+      },
+      {
+        "name": "attribute_description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Descricao opcional do uso da variavel"
+      },
+      {
+        "name": "attribute_display_type",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Tipo do valor: text (padrao), encrypted_text (secret), number, checkbox, list, link, date"
       },
       {
         "name": "value",
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Valor"
-      },
-      {
-        "name": "secret",
-        "type": "boolean",
-        "location": "body",
-        "required": false,
-        "description": "Se é um secret (criptografado)"
+        "description": "Valor da variavel. Para Hash/Array, passar JSON serializado"
       }
     ],
     "returns": "variável de conta criado (com novo ID)",
@@ -12188,7 +12221,8 @@
       "lionchat_account_variables_list",
       "lionchat_account_variables_update",
       "lionchat_account_variables_destroy"
-    ]
+    ],
+    "body_wrapper": "variable"
   },
   {
     "id": "lionchat_account_variables_update",
@@ -12199,11 +12233,18 @@
     "category": "Variaveis da Conta",
     "params": [
       {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID da variável"
+        "name": "attribute_display_name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome exibido da variavel"
+      },
+      {
+        "name": "attribute_description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nova descricao"
       },
       {
         "name": "value",
@@ -12223,7 +12264,8 @@
       "lionchat_account_variables_list",
       "lionchat_account_variables_create",
       "lionchat_account_variables_destroy"
-    ]
+    ],
+    "body_wrapper": "variable"
   },
   {
     "id": "lionchat_account_variables_destroy",
@@ -12282,18 +12324,46 @@
     "category": "Base de Conhecimento",
     "params": [
       {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nome do documento"
+      },
+      {
         "name": "external_link",
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "URL para indexar"
+        "description": "URL externa para indexar (alternativa ao upload)"
       },
       {
-        "name": "file",
+        "name": "pdf_file",
         "type": "file",
         "location": "body",
         "required": false,
-        "description": "Arquivo para indexar"
+        "description": "Arquivo PDF para indexar (multipart upload)"
+      },
+      {
+        "name": "content",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Texto direto do documento"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Descricao do documento"
+      },
+      {
+        "name": "assistant_id",
+        "type": "integer",
+        "location": "body",
+        "required": true,
+        "description": "ID do assistant ao qual associar este documento"
       }
     ],
     "returns": "documento KB criado (com novo ID)",
@@ -12306,7 +12376,8 @@
       "lionchat_captain_documents_list",
       "lionchat_captain_documents_destroy",
       "lionchat_captain_documents_create_1"
-    ]
+    ],
+    "body_wrapper": "document"
   },
   {
     "id": "lionchat_captain_documents_destroy",
@@ -12396,7 +12467,8 @@
       "lionchat_custom_roles_list",
       "lionchat_custom_roles_show",
       "lionchat_custom_roles_update"
-    ]
+    ],
+    "body_wrapper": "custom_role"
   },
   {
     "id": "lionchat_custom_roles_show",
@@ -12466,7 +12538,8 @@
       "lionchat_custom_roles_list",
       "lionchat_custom_roles_create",
       "lionchat_custom_roles_show"
-    ]
+    ],
+    "body_wrapper": "custom_role"
   },
   {
     "id": "lionchat_custom_roles_destroy",
@@ -12549,7 +12622,8 @@
       "lionchat_capacity_policies_list",
       "lionchat_capacity_policies_show",
       "lionchat_capacity_policies_update"
-    ]
+    ],
+    "body_wrapper": "agent_capacity_policy"
   },
   {
     "id": "lionchat_capacity_policies_show",
@@ -12619,7 +12693,8 @@
       "lionchat_capacity_policies_list",
       "lionchat_capacity_policies_create",
       "lionchat_capacity_policies_show"
-    ]
+    ],
+    "body_wrapper": "agent_capacity_policy"
   },
   {
     "id": "lionchat_capacity_policies_destroy",
@@ -12927,7 +13002,8 @@
       "Automação a partir de evento externo",
       "Importação manual via API"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "sla_policy"
   },
   {
     "id": "lionchat_sla_show",
@@ -12996,7 +13072,8 @@
       "Alteração de status/estado",
       "Atualização em massa via automação"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "sla_policy"
   },
   {
     "id": "lionchat_sla_destroy",
@@ -13205,7 +13282,8 @@
       "lionchat_dashboard_apps_list",
       "lionchat_dashboard_apps_show",
       "lionchat_dashboard_apps_update"
-    ]
+    ],
+    "body_wrapper": "dashboard_app"
   },
   {
     "id": "lionchat_dashboard_apps_show",
@@ -13275,7 +13353,8 @@
       "lionchat_dashboard_apps_list",
       "lionchat_dashboard_apps_create",
       "lionchat_dashboard_apps_show"
-    ]
+    ],
+    "body_wrapper": "dashboard_app"
   },
   {
     "id": "lionchat_dashboard_apps_destroy",
@@ -14552,7 +14631,8 @@
       "lionchat_assignment_policies_list",
       "lionchat_assignment_policies_show",
       "lionchat_assignment_policies_update"
-    ]
+    ],
+    "body_wrapper": "assignment_policy"
   },
   {
     "id": "lionchat_assignment_policies_show",
@@ -14629,7 +14709,8 @@
       "lionchat_assignment_policies_list",
       "lionchat_assignment_policies_create",
       "lionchat_assignment_policies_show"
-    ]
+    ],
+    "body_wrapper": "assignment_policy"
   },
   {
     "id": "lionchat_assignment_policies_destroy",
@@ -14890,7 +14971,8 @@
       "Automação a partir de evento externo",
       "Importação manual via API"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "webhook"
   },
   {
     "id": "lionchat_webhooks_update",
@@ -14928,7 +15010,8 @@
       "Alteração de status/estado",
       "Atualização em massa via automação"
     ],
-    "related_tools": []
+    "related_tools": [],
+    "body_wrapper": "webhook"
   },
   {
     "id": "lionchat_webhooks_destroy",
@@ -17052,7 +17135,8 @@
       "lionchat_portals_create_1",
       "lionchat_portals_create_2",
       "lionchat_portals_create_3"
-    ]
+    ],
+    "body_wrapper": "portal"
   },
   {
     "id": "lionchat_portals_show",
@@ -17120,7 +17204,8 @@
     "related_tools": [
       "lionchat_portals_update_1",
       "lionchat_portals_update_2"
-    ]
+    ],
+    "body_wrapper": "portal"
   },
   {
     "id": "lionchat_portals_destroy",
@@ -17754,7 +17839,8 @@
       "lionchat_captain_documents_list",
       "lionchat_captain_documents_create",
       "lionchat_captain_documents_destroy"
-    ]
+    ],
+    "body_wrapper": "document"
   },
   {
     "id": "lionchat_copilot_prompts_list",
@@ -17789,21 +17875,21 @@
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "Titulo do prompt"
+        "description": "Titulo do prompt salvo"
       },
       {
-        "name": "content",
+        "name": "prompt",
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "Conteudo do prompt"
+        "description": "Conteudo do prompt (texto que sera usado pela IA)"
       },
       {
-        "name": "visibility",
-        "type": "string",
+        "name": "position",
+        "type": "integer",
         "location": "body",
         "required": false,
-        "description": "personal ou account"
+        "description": "Posicao na lista (ordem)"
       }
     ],
     "returns": "prompt copilot criado (com novo ID)",
@@ -17816,7 +17902,8 @@
       "lionchat_copilot_prompts_list",
       "lionchat_copilot_prompts_update",
       "lionchat_copilot_prompts_destroy"
-    ]
+    ],
+    "body_wrapper": "copilot_saved_prompt"
   },
   {
     "id": "lionchat_copilot_prompts_update",
@@ -17827,25 +17914,25 @@
     "category": "Prompts Salvos",
     "params": [
       {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID do prompt"
-      },
-      {
         "name": "title",
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Titulo"
+        "description": "Novo titulo"
       },
       {
-        "name": "content",
+        "name": "prompt",
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Conteudo"
+        "description": "Novo conteudo do prompt"
+      },
+      {
+        "name": "position",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Nova posicao"
       }
     ],
     "returns": "prompt copilot atualizado",
@@ -17858,7 +17945,8 @@
       "lionchat_copilot_prompts_list",
       "lionchat_copilot_prompts_create",
       "lionchat_copilot_prompts_destroy"
-    ]
+    ],
+    "body_wrapper": "copilot_saved_prompt"
   },
   {
     "id": "lionchat_copilot_prompts_destroy",
@@ -18534,7 +18622,8 @@
       "lionchat_custom_attributes_list",
       "lionchat_custom_attributes_show",
       "lionchat_custom_attributes_update"
-    ]
+    ],
+    "body_wrapper": "custom_attribute_definition"
   },
   {
     "id": "lionchat_custom_attributes_show",
@@ -18597,7 +18686,8 @@
       "lionchat_custom_attributes_list",
       "lionchat_custom_attributes_create",
       "lionchat_custom_attributes_show"
-    ]
+    ],
+    "body_wrapper": "custom_attribute_definition"
   },
   {
     "id": "lionchat_custom_attributes_destroy",

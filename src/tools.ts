@@ -32,6 +32,9 @@ interface EndpointDef {
   description: string;
   category: string;
   params: EndpointParam[];
+  // AIDEV-NOTE: Optional Rails strong_params wrapper (e.g. "variable", "assistant")
+  // When set, all body params are wrapped under this key before sending the request.
+  body_wrapper?: string;
 }
 
 // AIDEV-NOTE: Tool annotations based on HTTP method — informs MCP client about tool behavior
@@ -281,7 +284,8 @@ function registerSingleTool(
 
         const { pathParams, queryParams, bodyParams } = separateParams(
           paramsWithoutAccount,
-          endpoint.params
+          endpoint.params,
+          endpoint.body_wrapper
         );
 
         const path = substitutePath(
