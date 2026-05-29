@@ -121,10 +121,28 @@ Mais em `lionchat://docs/glossary` → "Quando usar campo nativo vs custom_attri
 
 ## 4. Workflows típicos
 
-### Listar conversas abertas
-```
-lionchat_conversations_list (status: 'open', assignee_type: 'all')
-```
+### Listar / buscar conversas (use `lionchat_conversations_list`)
+
+Combine os filtros conforme o pedido do usuário:
+
+| Usuário pede | Parâmetros |
+|---|---|
+| Conversas abertas | `status: 'open'` (já é o padrão) |
+| Mais recentes / últimas | `sort_by: 'last_activity_at_desc'` (padrão) |
+| Últimas criadas | `sort_by: 'created_at_desc'` |
+| Mais antigas | `sort_by: 'created_at_asc'` |
+| **Não lidas** | `conversation_type: 'unread'` |
+| **Não atendidas** (sem 1ª resposta) | `conversation_type: 'unattended'` |
+| Minhas conversas | `assignee_type: 'me'` |
+| Sem dono / não atribuídas | `assignee_type: 'unassigned'` |
+| Esperando há mais tempo | `sort_by: 'waiting_since_desc'` |
+| Por prioridade | `sort_by: 'priority_desc'` |
+| Todas (qualquer status) | `status: 'all'` |
+
+Notas:
+- Para SÓ a contagem (sem listar), use `lionchat_conversations_meta` com os mesmos filtros (ex: `conversation_type: 'unread'` conta as não lidas).
+- **Não existe filtro nativo de "lidas".** Para isso, liste e considere lidas as conversas com `unread_count == 0` no payload.
+- `lionchat_conversations_unread` é AÇÃO DE ESCRITA (marca como não lida) — NÃO use para buscar.
 
 ### Ver mensagens de uma conversa
 ```

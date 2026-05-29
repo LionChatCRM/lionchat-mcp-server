@@ -872,7 +872,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/conversations/meta",
     "title": "Contadores de Conversas",
-    "description": "Contadores REAL-TIME de conversas (mine_count, assigned_count, unassigned_count, all_count). Use quando o usuário quer SÓ NÚMERO (não lista). Bem mais barato que conversations_list.",
+    "description": "Contadores REAL-TIME de conversas (mine_count, assigned_count, unassigned_count, all_count). Use quando o usuário quer SÓ NÚMERO (não lista). Aceita os mesmos filtros de conversations_list (status, conversation_type, etc) — ex: conversation_type=unread conta as não lidas. Bem mais barato que conversations_list.",
     "category": "Conversas",
     "params": [
       {
@@ -880,21 +880,28 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "open, resolved, pending"
+        "description": "Status: open (padrão), resolved, pending, snoozed ou all"
       },
       {
-        "name": "assignee_id",
-        "type": "integer",
+        "name": "conversation_type",
+        "type": "string",
         "location": "query",
         "required": false,
-        "description": "ID do agente"
+        "description": "Tipo: unread (não lidas), unattended (não atendidas), mention, participating"
+      },
+      {
+        "name": "assignee_type",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Atribuição: me, unassigned, assigned, groups. Omitir = todas"
       },
       {
         "name": "inbox_id",
         "type": "integer",
         "location": "query",
         "required": false,
-        "description": "ID da inbox"
+        "description": "ID da inbox/caixa de entrada"
       },
       {
         "name": "team_id",
@@ -908,7 +915,7 @@
         "type": "array",
         "location": "query",
         "required": false,
-        "description": "Labels"
+        "description": "Labels (tags) — array de títulos"
       }
     ],
     "returns": "{ meta: { mine_count, assigned_count, unassigned_count, all_count } }",
@@ -924,7 +931,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/conversations",
     "title": "Listar Conversas",
-    "description": "Lista conversas com filtros. Lista conversas paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, status, assignee_id, inbox_id, team_id. Retorna meta (contadores) + payload (array de conversa).",
+    "description": "Lista conversas com filtros e ordenação. Paginado (25/página, máx 100). Retorna meta (contadores: mine/assigned/unassigned/all) + payload (array de conversas). Para SÓ contagem use conversations_meta; para busca por texto use conversations_search; para filtros avançados (custom_attributes) use conversations_filter.",
     "category": "Conversas",
     "params": [
       {
@@ -932,28 +939,35 @@
         "type": "integer",
         "location": "query",
         "required": false,
-        "description": "Página"
+        "description": "Página (1-indexado)"
       },
       {
         "name": "status",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "open, resolved, pending, snoozed"
+        "description": "Status: open (aberta, padrão), resolved (resolvida), pending (pendente), snoozed (adiada) ou all (todas)"
       },
       {
-        "name": "assignee_id",
-        "type": "integer",
+        "name": "assignee_type",
+        "type": "string",
         "location": "query",
         "required": false,
-        "description": "ID do agente"
+        "description": "Atribuição: me (minhas conversas), unassigned (sem dono / não atribuídas), assigned (com dono), groups (grupos de WhatsApp). Omitir = todas"
+      },
+      {
+        "name": "conversation_type",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Tipo: unread (NÃO LIDAS), unattended (NÃO ATENDIDAS / sem primeira resposta), mention (onde fui mencionado), participating (que participo). Omitir = sem este filtro"
       },
       {
         "name": "inbox_id",
         "type": "integer",
         "location": "query",
         "required": false,
-        "description": "ID da inbox"
+        "description": "ID da inbox/caixa de entrada (0 = conversas de inboxes deletadas)"
       },
       {
         "name": "team_id",
@@ -967,14 +981,14 @@
         "type": "array",
         "location": "query",
         "required": false,
-        "description": "Labels"
+        "description": "Labels (tags) — array de títulos"
       },
       {
-        "name": "sort_on",
+        "name": "sort_by",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Campo de ordenação"
+        "description": "Ordenação: last_activity_at_desc (MAIS RECENTES, padrão), last_activity_at_asc, created_at_desc (últimas criadas), created_at_asc (mais antigas), priority_desc (prioridade alta primeiro), waiting_since_desc (esperando há mais tempo)"
       }
     ],
     "returns": "meta (contadores globais) + payload (array de conversas)",
@@ -1509,7 +1523,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/conversations/{id}/unread",
     "title": "Marcar como Não Lida",
-    "description": "Marca a conversa como não lida. Cria novo conversa. Obrigatórios: id. Valida unicidade quando aplicável. Retorna o conversa criado com ID atribuído.",
+    "description": "AÇÃO DE ESCRITA: marca uma conversa existente como não lida (volta o badge de não lida). NÃO é busca — para LISTAR conversas não lidas use conversations_list com conversation_type=unread. Recebe o display_id da conversa.",
     "category": "Conversas",
     "params": [
       {
@@ -1517,16 +1531,17 @@
         "type": "integer",
         "location": "path",
         "required": true,
-        "description": "Display ID"
+        "description": "Display ID (ID de exibição) da conversa"
       }
     ],
-    "returns": "conversa criado (com novo ID)",
+    "returns": "A conversa atualizada (agent_last_seen_at zerado)",
     "common_use_cases": [
-      "Cadastro inicial de conversa",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
+      "Marcar conversa como não lida para revisitar depois",
+      "Sinalizar que a conversa precisa de nova atenção"
     ],
-    "related_tools": []
+    "related_tools": [
+      "lionchat_conversations_list"
+    ]
   },
   {
     "id": "lionchat_conversations_create_5",
