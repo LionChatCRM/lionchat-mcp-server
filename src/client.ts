@@ -253,18 +253,27 @@ export class LionChatClient {
           clearTimeout(timeoutId);
         }
 
+        // AIDEV-NOTE: 204 No Content / empty body (e.g. DELETE endpoints) — read text
+        // once and short-circuit BEFORE parsing so an empty body never throws
+        // "Unexpected end of JSON input". The operation succeeded; return clean success.
+        const rawText = await response.text();
+        if (response.status === 204 || rawText.trim() === '') {
+          if (response.ok) {
+            return { success: true, status: response.status };
+          }
+        }
+
         // AIDEV-NOTE: Parse response body
         let responseBody: unknown;
         const contentType = response.headers.get('content-type') ?? '';
         if (contentType.includes('application/json')) {
-          responseBody = await response.json();
+          responseBody = JSON.parse(rawText);
         } else {
-          const text = await response.text();
           // AIDEV-NOTE: Try parsing as JSON even without content-type header
           try {
-            responseBody = JSON.parse(text);
+            responseBody = JSON.parse(rawText);
           } catch {
-            responseBody = text;
+            responseBody = rawText;
           }
         }
 
