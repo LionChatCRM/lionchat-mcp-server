@@ -120,6 +120,13 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 - `Channel::Telegram` — Telegram
 - `Channel::Api` — webhook custom
 - `Channel::Voice` — VoIP / chamadas
+- `Channel::Sms` — SMS (Bandwidth)
+- `Channel::TwilioSms` — SMS / WhatsApp via Twilio
+- `Channel::Line` — LINE
+- `Channel::Tiktok` — TikTok
+- `Channel::TwitterProfile` — Twitter / X
+
+> **WAHA — status de conexão:** para inbox `Channel::Waha`, o estado da sessão fica em `additional_attributes.session_status` (`WORKING`, `SCAN_QR_CODE`, `STARTING`, `STOPPED`, `FAILED`). `WORKING` = WhatsApp conectado. Exposto no serializer da inbox (`_inbox.json.jbuilder`).
 
 ### Campos importantes
 - `id`: ID interno
@@ -198,7 +205,7 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 
 ## Booking (Agendamento)
 
-- `event_type_id`: FK pro tipo de evento (ex: "Demo 30min")
+- `booking_event_type_id`: FK pro tipo de evento (ex: "Demo 30min")
 - `attendee_email`, `attendee_name`, `attendee_phone`
 - `start_time`, `end_time`: ISO 8601
 - `status`: `scheduled`, `cancelled`, `completed`
@@ -276,9 +283,29 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 | Motivo de Ganho/Perda do card | `kanban_config.win_reasons` / `loss_reasons` | ❌ NÃO |
 | Atributo em TODO card | `kanban_config.global_custom_attributes` | só se não couber acima |
 | Atributo de UM card específico | `kanban_item.custom_attributes` (jsonb direto) | já é nativo, não precisa definition |
-| CPF, CNPJ, endereço do cliente | `custom_attribute_definitions` model=contact_attribute | ✅ SIM (não tem nativo) |
+| CPF, RG, CNPJ, endereço, data nasc., gênero do cliente | mecanismo NATIVO cadastral: `PATCH /contacts/{id}/cadastral` (`update_cadastral`) | ❌ NÃO (tem nativo) |
 | Tag pro contato (residencial, empresarial) | `labels` | ✅ SIM via Label |
 | Etapa do funil | `funnel.stages` | ❌ NÃO |
 | Tarefa interna do card | `kanban_item.checklist` ou `kanban_config.checklist_templates` | ❌ NÃO |
 | Telefone validado WhatsApp do contato | atributos nativos WhatsApp Chat ID/JID/LID | já criados pelo WAHA automaticamente |
 | Origem do lead (Google Ads, Meta) | `kanban_config.global_custom_attributes` (tipo list) | bom uso de custom_attribute |
+
+## Dados cadastrais do contato (CPF/RG/CNPJ/endereço/etc.)
+
+**IMPORTANTE:** dados cadastrais brasileiros têm mecanismo NATIVO dedicado — NÃO use `custom_attribute_definitions` (model=`contact_attribute`) pra isso.
+
+**Endpoint nativo:** `PATCH /api/v1/accounts/{id}/contacts/{contact_id}/cadastral` (action `update_cadastral`), servido por `Contacts::CadastralAttributesService`.
+
+**Body:**
+```json
+{ "cpf": "...", "rg": "...", "cnpj": "...", "passport": "...", "date_of_birth": "1990-05-15", "gender": "m",
+  "marital_status": "casado", "profession": "...", "address": { "cep": "...", "street": "...", "number": "...", "complement": "...", "neighborhood": "...", "city": "...", "state": "...", "country": "..." } }
+```
+
+**Onde fica armazenado:** dentro de `contact.additional_attributes` — `gender` e `date_of_birth` na raiz (lidos por Meta CAPI/Google Ads); o resto em `additional_attributes.cadastral` (`cpf, rg, cnpj, passport, profession, marital_status, address`).
+
+**⚠️ Imutabilidade (REGRA ABSOLUTA):** os campos `cpf, rg, cnpj, passport, date_of_birth, gender` são IMUTÁVEIS — só a PRIMEIRA escrita conta. Sobrescrever com valor diferente exige `force_update: true`, que **a IA e integrações NUNCA setam**. Ao receber valor diferente sem `force_update`, o serviço registra `pending_confirmations` (a IA deve perguntar ao cliente e só então chamar de novo com `force_update: true`). Valor igual ao já gravado é ignorado silenciosamente. Apenas o agente humano (via UI) passa `force_update: true` direto do form.
+
+Campos MUTÁVEIS (atualizáveis livremente por IA/integração): `marital_status`, `profession` e todos os campos de `address`.
+
+`custom_attribute_definitions` (model=`contact_attribute`) fica reservado a dado de NEGÓCIO genérico que não tem modelo dedicado (ex: "plano contratado", "nicho do cliente").

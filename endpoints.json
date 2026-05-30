@@ -325,6 +325,95 @@
     ]
   },
   {
+    "id": "lionchat_contacts_update_cadastral",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/contacts/{id}/update_cadastral",
+    "title": "Atualizar Dados Cadastrais do Contato",
+    "description": "Atualiza os dados cadastrais brasileiros do contato (endpoint dedicado, com validação própria de CPF/CNPJ/etc). NÃO use custom_attribute para esses dados — use este endpoint. IMPORTANTE: os campos cpf, rg, cnpj, passport, date_of_birth e gender são IMUTÁVEIS — só aceitam a PRIMEIRA escrita; depois disso a IA NÃO deve tentar sobrescrevê-los (são protegidos contra alteração automática). Os campos mutáveis (podem ser alterados a qualquer momento) são marital_status, profession e address. Envie apenas os campos que deseja gravar.",
+    "category": "Contatos",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do contato"
+      },
+      {
+        "name": "marital_status",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Estado civil (mutável — pode ser alterado a qualquer momento)"
+      },
+      {
+        "name": "profession",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Profissão (mutável — pode ser alterado a qualquer momento)"
+      },
+      {
+        "name": "address",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Endereço (mutável). Objeto com cep, street, number, complement, neighborhood, city, state, country"
+      },
+      {
+        "name": "cpf",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "CPF (IMUTÁVEL — só primeira escrita; a IA não deve sobrescrever)"
+      },
+      {
+        "name": "rg",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "RG (IMUTÁVEL — só primeira escrita; a IA não deve sobrescrever)"
+      },
+      {
+        "name": "cnpj",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "CNPJ (IMUTÁVEL — só primeira escrita; a IA não deve sobrescrever)"
+      },
+      {
+        "name": "passport",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Passaporte (IMUTÁVEL — só primeira escrita; a IA não deve sobrescrever)"
+      },
+      {
+        "name": "date_of_birth",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Data de nascimento (IMUTÁVEL — só primeira escrita; a IA não deve sobrescrever)"
+      },
+      {
+        "name": "gender",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Gênero (IMUTÁVEL — só primeira escrita; a IA não deve sobrescrever)"
+      }
+    ],
+    "returns": "contato atualizado",
+    "common_use_cases": [
+      "Preencher dados cadastrais brasileiros (CPF, endereço) na primeira vez",
+      "Atualizar estado civil ou profissão do contato",
+      "Atualizar o endereço do contato"
+    ],
+    "related_tools": [
+      "lionchat_contacts_update"
+    ]
+  },
+  {
     "id": "lionchat_contacts_destroy",
     "method": "DELETE",
     "path": "/api/v1/accounts/{account_id}/contacts/{id}",
@@ -3508,7 +3597,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/contacts/import_csv",
     "title": "Importar Contatos (Wizard CSV)",
-    "description": "Importa contatos via wizard CSV. **Requer perfil Administrador.**. Cria novo contato. Obrigatórios: file, column_mapping. Valida unicidade quando aplicável. Retorna o contato criado com ID atribuído.",
+    "description": "Importa contatos via wizard CSV (assincrono). **Requer perfil Administrador.** Obrigatórios: file, mappings. Retorna { import_id } para acompanhar o progresso via import_status.",
     "category": "Contatos",
     "params": [
       {
@@ -3516,33 +3605,26 @@
         "type": "file",
         "location": "body",
         "required": true,
-        "description": "Arquivo CSV"
+        "description": "Arquivo CSV (multipart)"
       },
       {
-        "name": "column_mapping",
+        "name": "mappings",
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "JSON com mapeamento de colunas"
-      },
-      {
-        "name": "validate_whatsapp",
-        "type": "boolean",
-        "location": "body",
-        "required": false,
-        "description": "Validar WhatsApp"
+        "description": "JSON mapeando coluna do CSV -> campo do contato. Campos aceitos: name, email, phone_number, company, city, labels, instagram, facebook, linkedin, twitter (demais chaves sao ignoradas)"
       }
     ],
-    "returns": "contato criado (com novo ID)",
+    "returns": "{ import_id } — use import_status para acompanhar o progresso",
     "common_use_cases": [
-      "Cadastro inicial de contato",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
+      "Importacao em massa de contatos a partir de planilha",
+      "Migracao de base de outro sistema",
+      "Atualizacao em lote de contatos existentes"
     ],
     "related_tools": [
-      "lionchat_contacts_create",
-      "lionchat_contacts_create_1",
-      "lionchat_contacts_create_2"
+      "lionchat_contacts_create_7",
+      "lionchat_contacts_show_1",
+      "lionchat_contacts_import"
     ]
   },
   {
@@ -3550,25 +3632,25 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/contacts/import_status/{import_id}",
     "title": "Status de Importação",
-    "description": "Retorna o progresso da importação assíncrona. Retorna detalhes completos de UM contato específico pelo ID. Inclui campos relacionais quando aplicável.",
+    "description": "Retorna o progresso de uma importação de contatos assíncrona (polling). NAO retorna um contato — retorna o andamento do job de import (status, total, processados, criados, atualizados, erros).",
     "category": "Contatos",
     "params": [
       {
         "name": "import_id",
-        "type": "integer",
+        "type": "string",
         "location": "path",
         "required": true,
-        "description": "ID do import"
+        "description": "UUID do import retornado por import_csv"
       }
     ],
-    "returns": "contato (objeto completo com associações)",
+    "returns": "{ status, total, processed, created, updated, error_count, labels_created, errors }",
     "common_use_cases": [
-      "Ver dados completos antes de editar",
-      "Verificar estado atual antes de uma ação",
-      "Mostrar perfil ou ficha de contato"
+      "Acompanhar barra de progresso da importacao",
+      "Verificar se a importacao terminou",
+      "Listar erros de linhas que falharam"
     ],
     "related_tools": [
-      "lionchat_contacts_show"
+      "lionchat_contacts_create_8"
     ]
   },
   {
@@ -4346,180 +4428,6 @@
     ]
   },
   {
-    "id": "lionchat_kanban_v2_list",
-    "method": "GET",
-    "path": "/api/v1/accounts/{account_id}/kanban/items",
-    "title": "Listar Items Kanban (V2)",
-    "description": "Lista items do Kanban com filtros. Lista cards Kanban paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de card Kanban).",
-    "category": "Kanban V2",
-    "params": [],
-    "returns": "meta (contadores globais) + payload (array de cards Kanban)",
-    "common_use_cases": [
-      "Dashboard: contar/exibir cards Kanban",
-      "Buscar com filtros antes de outra operação",
-      "Auditoria/relatório de cards Kanban ativas"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show",
-      "lionchat_kanban_v2_update"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_create",
-    "method": "POST",
-    "path": "/api/v1/accounts/{account_id}/kanban/items",
-    "title": "Criar Item Kanban (V2)",
-    "description": "Cria um novo item no Kanban. Cria novo card Kanban. Obrigatórios: funnel_id, funnel_stage. Valida unicidade quando aplicável. Retorna o card Kanban criado com ID atribuído.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "funnel_id",
-        "type": "integer",
-        "location": "body",
-        "required": true,
-        "description": "ID do funil"
-      },
-      {
-        "name": "funnel_stage",
-        "type": "string",
-        "location": "body",
-        "required": true,
-        "description": "Etapa do funil"
-      },
-      {
-        "name": "conversation_display_id",
-        "type": "integer",
-        "location": "body",
-        "required": false,
-        "description": "Display ID da conversa"
-      },
-      {
-        "name": "item_details",
-        "type": "object",
-        "location": "body",
-        "required": false,
-        "description": "Detalhes do item"
-      }
-    ],
-    "returns": "card Kanban criado (com novo ID)",
-    "common_use_cases": [
-      "Cadastro inicial de card Kanban",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_show",
-      "lionchat_kanban_v2_update"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_show",
-    "method": "GET",
-    "path": "/api/v1/accounts/{account_id}/kanban/items/{id}",
-    "title": "Detalhes Item Kanban (V2)",
-    "description": "Retorna detalhes de um item do Kanban. Retorna detalhes completos de UM card Kanban específico pelo ID. Inclui campos relacionais quando aplicável.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID do item"
-      }
-    ],
-    "returns": "card Kanban (objeto completo com associações)",
-    "common_use_cases": [
-      "Ver dados completos antes de editar",
-      "Verificar estado atual antes de uma ação",
-      "Mostrar perfil ou ficha de card Kanban"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_update"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_update",
-    "method": "PUT",
-    "path": "/api/v1/accounts/{account_id}/kanban/items/{id}",
-    "title": "Atualizar Item Kanban (V2)",
-    "description": "Atualiza um item do Kanban. Atualiza campos do card Kanban existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: funnel_stage, position, item_details.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID do item"
-      },
-      {
-        "name": "funnel_stage",
-        "type": "string",
-        "location": "body",
-        "required": false,
-        "description": "Nova etapa"
-      },
-      {
-        "name": "position",
-        "type": "integer",
-        "location": "body",
-        "required": false,
-        "description": "Nova posicao"
-      },
-      {
-        "name": "item_details",
-        "type": "object",
-        "location": "body",
-        "required": false,
-        "description": "Detalhes"
-      }
-    ],
-    "returns": "card Kanban atualizado",
-    "common_use_cases": [
-      "Edição parcial de card Kanban",
-      "Alteração de status/estado",
-      "Atualização em massa via automação"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_destroy",
-    "method": "DELETE",
-    "path": "/api/v1/accounts/{account_id}/kanban/items/{id}",
-    "title": "Excluir Item Kanban (V2)",
-    "description": "Remove um item do Kanban. Remove card Kanban permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID do item"
-      }
-    ],
-    "returns": "204 No Content",
-    "common_use_cases": [
-      "Limpeza de dados obsoletos",
-      "Deduplicação manual",
-      "Remoção após confirmação do cliente"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
     "id": "lionchat_kanban_v2_list_1",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/kanban/items/{item_id}/attachments",
@@ -4673,319 +4581,6 @@
         "location": "path",
         "required": true,
         "description": "ID do anexo"
-      }
-    ],
-    "returns": "204 No Content",
-    "common_use_cases": [
-      "Limpeza de dados obsoletos",
-      "Deduplicação manual",
-      "Remoção após confirmação do cliente"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_list_2",
-    "method": "GET",
-    "path": "/api/v1/accounts/{account_id}/kanban/funnels",
-    "title": "Listar Funis (V2)",
-    "description": "Lista todos os funis do Kanban. Lista cards Kanban paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de card Kanban).",
-    "category": "Kanban V2",
-    "params": [],
-    "returns": "meta (contadores globais) + payload (array de cards Kanban)",
-    "common_use_cases": [
-      "Dashboard: contar/exibir cards Kanban",
-      "Buscar com filtros antes de outra operação",
-      "Auditoria/relatório de cards Kanban ativas"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_create_2",
-    "method": "POST",
-    "path": "/api/v1/accounts/{account_id}/kanban/funnels",
-    "title": "Criar Funil (V2)",
-    "description": "Cria um novo funil no Kanban. Cria novo card Kanban. Obrigatórios: name, stages. Valida unicidade quando aplicável. Retorna o card Kanban criado com ID atribuído.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "name",
-        "type": "string",
-        "location": "body",
-        "required": true,
-        "description": "Nome do funil"
-      },
-      {
-        "name": "stages",
-        "type": "array",
-        "location": "body",
-        "required": true,
-        "description": "Etapas do funil"
-      }
-    ],
-    "returns": "card Kanban criado (com novo ID)",
-    "common_use_cases": [
-      "Cadastro inicial de card Kanban",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_show_1",
-    "method": "GET",
-    "path": "/api/v1/accounts/{account_id}/kanban/funnels/{id}",
-    "title": "Detalhes Funil (V2)",
-    "description": "Retorna detalhes de um funil. Retorna detalhes completos de UM card Kanban específico pelo ID. Inclui campos relacionais quando aplicável.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID do funil"
-      }
-    ],
-    "returns": "card Kanban (objeto completo com associações)",
-    "common_use_cases": [
-      "Ver dados completos antes de editar",
-      "Verificar estado atual antes de uma ação",
-      "Mostrar perfil ou ficha de card Kanban"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_update_1",
-    "method": "PUT",
-    "path": "/api/v1/accounts/{account_id}/kanban/funnels/{id}",
-    "title": "Atualizar Funil (V2)",
-    "description": "Atualiza um funil. Atualiza campos do card Kanban existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, stages.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID do funil"
-      },
-      {
-        "name": "name",
-        "type": "string",
-        "location": "body",
-        "required": false,
-        "description": "Nome"
-      },
-      {
-        "name": "stages",
-        "type": "array",
-        "location": "body",
-        "required": false,
-        "description": "Etapas"
-      }
-    ],
-    "returns": "card Kanban atualizado",
-    "common_use_cases": [
-      "Edição parcial de card Kanban",
-      "Alteração de status/estado",
-      "Atualização em massa via automação"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_destroy_3",
-    "method": "DELETE",
-    "path": "/api/v1/accounts/{account_id}/kanban/funnels/{id}",
-    "title": "Excluir Funil (V2)",
-    "description": "Remove um funil do Kanban. Remove card Kanban permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID do funil"
-      }
-    ],
-    "returns": "204 No Content",
-    "common_use_cases": [
-      "Limpeza de dados obsoletos",
-      "Deduplicação manual",
-      "Remoção após confirmação do cliente"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_list_3",
-    "method": "GET",
-    "path": "/api/v1/accounts/{account_id}/kanban/stages",
-    "title": "Listar Etapas Kanban",
-    "description": "Lista todas as etapas configuradas. Lista cards Kanban paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de card Kanban).",
-    "category": "Kanban V2",
-    "params": [],
-    "returns": "meta (contadores globais) + payload (array de cards Kanban)",
-    "common_use_cases": [
-      "Dashboard: contar/exibir cards Kanban",
-      "Buscar com filtros antes de outra operação",
-      "Auditoria/relatório de cards Kanban ativas"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_create_3",
-    "method": "POST",
-    "path": "/api/v1/accounts/{account_id}/kanban/stages",
-    "title": "Criar Etapa Kanban",
-    "description": "Cria uma nova etapa no Kanban. Cria novo card Kanban. Obrigatórios: name, funnel_id. Valida unicidade quando aplicável. Retorna o card Kanban criado com ID atribuído.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "name",
-        "type": "string",
-        "location": "body",
-        "required": true,
-        "description": "Nome da etapa"
-      },
-      {
-        "name": "funnel_id",
-        "type": "integer",
-        "location": "body",
-        "required": true,
-        "description": "ID do funil"
-      },
-      {
-        "name": "position",
-        "type": "integer",
-        "location": "body",
-        "required": false,
-        "description": "Posicao"
-      }
-    ],
-    "returns": "card Kanban criado (com novo ID)",
-    "common_use_cases": [
-      "Cadastro inicial de card Kanban",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_show_2",
-    "method": "GET",
-    "path": "/api/v1/accounts/{account_id}/kanban/stages/{id}",
-    "title": "Detalhes Etapa Kanban",
-    "description": "Retorna detalhes de uma etapa. Retorna detalhes completos de UM card Kanban específico pelo ID. Inclui campos relacionais quando aplicável.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID da etapa"
-      }
-    ],
-    "returns": "card Kanban (objeto completo com associações)",
-    "common_use_cases": [
-      "Ver dados completos antes de editar",
-      "Verificar estado atual antes de uma ação",
-      "Mostrar perfil ou ficha de card Kanban"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_update_2",
-    "method": "PUT",
-    "path": "/api/v1/accounts/{account_id}/kanban/stages/{id}",
-    "title": "Atualizar Etapa Kanban",
-    "description": "Atualiza uma etapa do Kanban. Atualiza campos do card Kanban existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, position.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID da etapa"
-      },
-      {
-        "name": "name",
-        "type": "string",
-        "location": "body",
-        "required": false,
-        "description": "Nome"
-      },
-      {
-        "name": "position",
-        "type": "integer",
-        "location": "body",
-        "required": false,
-        "description": "Posicao"
-      }
-    ],
-    "returns": "card Kanban atualizado",
-    "common_use_cases": [
-      "Edição parcial de card Kanban",
-      "Alteração de status/estado",
-      "Atualização em massa via automação"
-    ],
-    "related_tools": [
-      "lionchat_kanban_v2_list",
-      "lionchat_kanban_v2_create",
-      "lionchat_kanban_v2_show"
-    ]
-  },
-  {
-    "id": "lionchat_kanban_v2_destroy_4",
-    "method": "DELETE",
-    "path": "/api/v1/accounts/{account_id}/kanban/stages/{id}",
-    "title": "Excluir Etapa Kanban",
-    "description": "Remove uma etapa do Kanban. Remove card Kanban permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
-    "category": "Kanban V2",
-    "params": [
-      {
-        "name": "id",
-        "type": "integer",
-        "location": "path",
-        "required": true,
-        "description": "ID da etapa"
       }
     ],
     "returns": "204 No Content",
@@ -6265,7 +5860,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/captain/bulk_actions",
     "title": "Acoes em Massa IA",
-    "description": "Executa acoes em massa nos recursos do Captain. Cria novo assistente AI. Obrigatórios: type, ids. Valida unicidade quando aplicável. Retorna o assistente AI criado com ID atribuído.",
+    "description": "Executa uma acao em massa sobre varios recursos do Captain de uma vez (ex: exclusao em lote). NAO cria um assistente. Informe o tipo da acao, os IDs alvo e os campos da operacao.",
     "category": "Assistentes",
     "params": [
       {
@@ -6273,21 +5868,28 @@
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "Tipo da acao"
+        "description": "Tipo da acao em massa (ex: Documents para excluir documentos)"
       },
       {
         "name": "ids",
         "type": "array",
         "location": "body",
         "required": true,
-        "description": "Array de IDs"
+        "description": "Array de IDs dos recursos alvo"
+      },
+      {
+        "name": "fields",
+        "type": "object",
+        "location": "body",
+        "required": true,
+        "description": "Campos da operacao em massa (ex: { action: 'delete' })"
       }
     ],
-    "returns": "assistente AI criado (com novo ID)",
+    "returns": "resultado da acao em massa (lista de respostas por item)",
     "common_use_cases": [
-      "Cadastro inicial de assistente AI",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
+      "Excluir varios documentos da base de conhecimento de uma vez",
+      "Aplicar uma acao em lote a multiplos recursos do Captain",
+      "Operacoes de limpeza em massa"
     ],
     "related_tools": [
       "lionchat_captain_assistants_list",
@@ -7098,6 +6700,133 @@
       "Mostrar perfil ou ficha de time/equipe"
     ],
     "related_tools": []
+  },
+  {
+    "id": "lionchat_teams_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/teams",
+    "title": "Criar Time",
+    "description": "Cria um novo time/equipe na conta. Obrigatório: name. Opcionais: description, allow_auto_assign (distribuição automática de conversas), assignment_mode. Para adicionar agentes ao time depois, use lionchat_team_members_create.",
+    "category": "Times",
+    "params": [
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Nome do time/equipe"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Descrição do time/equipe"
+      },
+      {
+        "name": "allow_auto_assign",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Habilita atribuição automática de conversas aos membros"
+      },
+      {
+        "name": "assignment_mode",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Modo de atribuição de conversas no time"
+      }
+    ],
+    "returns": "time/equipe criado (com novo ID)",
+    "common_use_cases": [
+      "Cadastro inicial de time/equipe",
+      "Organizar agentes por departamento ou função",
+      "Automação a partir de evento externo"
+    ],
+    "related_tools": [
+      "lionchat_team_members_create"
+    ]
+  },
+  {
+    "id": "lionchat_teams_update",
+    "method": "PUT",
+    "path": "/api/v1/accounts/{account_id}/teams/{team_id}",
+    "title": "Atualizar Time",
+    "description": "Atualiza um time/equipe existente. Campos suportados: name, description, allow_auto_assign, assignment_mode. Edita o time em si (não os membros — para membros use lionchat_team_members_update).",
+    "category": "Times",
+    "params": [
+      {
+        "name": "team_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do time"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome do time/equipe"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nova descrição do time/equipe"
+      },
+      {
+        "name": "allow_auto_assign",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Habilita atribuição automática de conversas aos membros"
+      },
+      {
+        "name": "assignment_mode",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Modo de atribuição de conversas no time"
+      }
+    ],
+    "returns": "time/equipe atualizado",
+    "common_use_cases": [
+      "Renomear um time/equipe",
+      "Ligar ou desligar a atribuição automática",
+      "Ajustar descrição ou modo de atribuição"
+    ],
+    "related_tools": [
+      "lionchat_team_members_update"
+    ]
+  },
+  {
+    "id": "lionchat_teams_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/teams/{team_id}",
+    "title": "Excluir Time",
+    "description": "Exclui permanentemente um time/equipe. CUIDADO: ação irreversível — remove o time e seus vínculos com agentes. Para apenas remover agentes mantendo o time, use lionchat_team_members_destroy.",
+    "category": "Times",
+    "params": [
+      {
+        "name": "team_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do time"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Remover time/equipe obsoleto",
+      "Limpeza após reorganização da equipe",
+      "Exclusão após confirmação do cliente"
+    ],
+    "related_tools": [
+      "lionchat_team_members_destroy"
+    ]
   },
   {
     "id": "lionchat_teams_list_1",
@@ -8024,7 +7753,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/account_tasks/{id}/snooze",
     "title": "Adiar Tarefa",
-    "description": "Adia tarefa para nova data. Cria novo tarefa/agenda. Obrigatórios: id, snoozed_until. Valida unicidade quando aplicável. Retorna o tarefa/agenda criado com ID atribuído.",
+    "description": "Adia (snooze) uma tarefa existente para uma nova data, mudando seu status para snoozed. NAO cria uma tarefa nova. Retorna a tarefa atualizada.",
     "category": "Agenda / Tarefas",
     "params": [
       {
@@ -8032,21 +7761,21 @@
         "type": "integer",
         "location": "path",
         "required": true,
-        "description": "ID"
+        "description": "ID da tarefa"
       },
       {
         "name": "snoozed_until",
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "Nova data ISO 8601"
+        "description": "Nova data/hora ISO 8601 ate quando adiar"
       }
     ],
-    "returns": "tarefa/agenda criado (com novo ID)",
+    "returns": "tarefa atualizada (status snoozed)",
     "common_use_cases": [
-      "Cadastro inicial de tarefa/agenda",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
+      "Adiar uma tarefa para depois",
+      "Reagendar lembrete que ainda nao deve aparecer",
+      "Tirar a tarefa da lista ativa temporariamente"
     ],
     "related_tools": []
   },
@@ -8687,7 +8416,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/create_note",
     "title": "Criar Nota",
-    "description": "Cria nota no item. Cria novo nota. Obrigatórios: id, content. Valida unicidade quando aplicável. Retorna o nota criado com ID atribuído.",
+    "description": "Cria nota no item do kanban. Obrigatórios: id, text. Retorna o item com a nota adicionada.",
     "category": "Notas",
     "params": [
       {
@@ -8698,14 +8427,14 @@
         "description": "ID"
       },
       {
-        "name": "content",
+        "name": "text",
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "Conteudo"
+        "description": "Conteudo da nota"
       }
     ],
-    "returns": "nota criado (com novo ID)",
+    "returns": "nota criada (com novo ID)",
     "common_use_cases": [
       "Cadastro inicial de nota",
       "Automação a partir de evento externo",
@@ -9642,11 +9371,11 @@
     ]
   },
   {
-    "id": "lionchat_teams_create",
+    "id": "lionchat_team_members_create",
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/teams/{team_id}/team_members",
     "title": "Adicionar Membros ao Time",
-    "description": "Adiciona membros a um time. Cria novo time/equipe. Obrigatórios: team_id, user_ids. Valida unicidade quando aplicável. Retorna o time/equipe criado com ID atribuído.",
+    "description": "Adiciona agentes (membros) a um time/equipe existente. NÃO cria o time — apenas vincula agentes a ele. Obrigatórios: team_id (path) e user_ids (array de IDs de agentes). Para criar o time em si, use lionchat_teams_create.",
     "category": "Times",
     "params": [
       {
@@ -9673,11 +9402,11 @@
     "related_tools": []
   },
   {
-    "id": "lionchat_teams_update",
+    "id": "lionchat_team_members_update",
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/teams/{team_id}/team_members",
     "title": "Atualizar Membros do Time",
-    "description": "Substitui a lista de membros do time. Atualiza campos do time/equipe existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: user_ids.",
+    "description": "Substitui a lista de membros (agentes) de um time/equipe existente. NÃO altera nome/configuração do time — apenas o conjunto de agentes vinculados. Obrigatórios: team_id (path) e user_ids (nova lista de IDs). Para editar o time em si, use lionchat_teams_update.",
     "category": "Times",
     "params": [
       {
@@ -9704,11 +9433,11 @@
     "related_tools": []
   },
   {
-    "id": "lionchat_teams_destroy",
+    "id": "lionchat_team_members_destroy",
     "method": "DELETE",
     "path": "/api/v1/accounts/{account_id}/teams/{team_id}/team_members",
     "title": "Remover Membros do Time",
-    "description": "Remove membros de um time. Remove time/equipe permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
+    "description": "Remove agentes (membros) de um time/equipe. NÃO apaga o time — apenas desvincula os agentes informados. Obrigatórios: team_id (path) e user_ids (IDs dos agentes a remover). Para excluir o time em si, use lionchat_teams_destroy.",
     "category": "Times",
     "params": [
       {
@@ -12090,7 +11819,7 @@
     "method": "POST",
     "path": "/public/api/v1/booking/{account_id}/{event_slug}/reserve",
     "title": "Reservar Horário",
-    "description": "Reserva um horário. Cria contato, tarefa e confirmação via WhatsApp. Sem autenticação, com rate limiting. Cria novo endpoint público. Obrigatórios: event_slug, name, email, phone, date, slot. Valida unicidade quando aplicável. Retorna o endpoint público criado com ID atribuído.",
+    "description": "Reserva um horário. Cria contato, tarefa e confirmação via WhatsApp. Sem autenticação, com rate limiting. Obrigatórios: event_slug (path), name, email, phone, date, slot. Retorna a reserva confirmada.",
     "category": "Publica",
     "params": [
       {
@@ -12150,11 +11879,11 @@
         "description": "Fuso horário"
       }
     ],
-    "returns": "endpoint público criado (com novo ID)",
+    "returns": "{ status: 'confirmed', booking: { scheduled_at, duration_minutes, event_type, agent_name } }",
     "common_use_cases": [
-      "Cadastro inicial de endpoint público",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
+      "Cliente final reserva um horario na pagina publica de agendamento",
+      "Confirmar agendamento sem login",
+      "Integracao de booking externo via link publico"
     ],
     "related_tools": [
       "lionchat_public_booking_list",
@@ -12391,6 +12120,81 @@
       "lionchat_captain_documents_list",
       "lionchat_captain_documents_destroy",
       "lionchat_captain_documents_create_1"
+    ],
+    "body_wrapper": "document"
+  },
+  {
+    "id": "lionchat_captain_documents_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/captain/documents/{id}",
+    "title": "Detalhe do Documento",
+    "description": "Retorna os detalhes completos de UM documento da base de conhecimento pelo ID (título, conteúdo, descrição, status de indexação e assistant associado).",
+    "category": "Base de Conhecimento",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do documento"
+      }
+    ],
+    "returns": "documento KB (objeto completo)",
+    "common_use_cases": [
+      "Ver dados completos antes de editar",
+      "Verificar status de indexação do documento",
+      "Mostrar o conteúdo atual de um documento manual"
+    ],
+    "related_tools": [
+      "lionchat_captain_documents_list",
+      "lionchat_captain_documents_update"
+    ]
+  },
+  {
+    "id": "lionchat_captain_documents_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/captain/documents/{id}",
+    "title": "Editar Documento",
+    "description": "Edita um documento manual da base de conhecimento. Campos suportados: name (título), content (conteúdo) e description (descrição). Ao alterar o conteúdo, a reindexação acontece automaticamente.",
+    "category": "Base de Conhecimento",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do documento"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo título do documento"
+      },
+      {
+        "name": "content",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo conteúdo do documento (dispara reindexação)"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nova descrição do documento"
+      }
+    ],
+    "returns": "documento KB atualizado",
+    "common_use_cases": [
+      "Corrigir o conteúdo de um documento manual",
+      "Renomear um documento da base de conhecimento",
+      "Ajustar a descrição de um documento"
+    ],
+    "related_tools": [
+      "lionchat_captain_documents_show"
     ],
     "body_wrapper": "document"
   },
@@ -14219,7 +14023,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/migration/preview",
     "title": "Preview de Migracao",
-    "description": "Mostra preview da migracao de conversas entre inboxes. Lista migrações de inbox paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de migração de inbox).",
+    "description": "Calcula uma previa da migracao de conversas da inbox de origem para a inbox de destino (target_inbox_id). NAO retorna lista paginada — retorna contagens: quantas conversas sao migraveis, conflitantes (ja existem no destino) e nao-migraveis (arquivadas como historico). Requer admin.",
     "category": "Migracao de Inbox",
     "params": [
       {
@@ -14228,13 +14032,20 @@
         "location": "path",
         "required": true,
         "description": "ID da inbox de origem"
+      },
+      {
+        "name": "target_inbox_id",
+        "type": "integer",
+        "location": "query",
+        "required": true,
+        "description": "ID da inbox de destino"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de migrações de inbox)",
+    "returns": "{ total_conversations, migratable, conflicting, archived_as_history, contacts_affected }",
     "common_use_cases": [
-      "Dashboard: contar/exibir migrações de inbox",
-      "Buscar com filtros antes de outra operação",
-      "Auditoria/relatório de migrações de inbox ativas"
+      "Conferir o impacto antes de migrar conversas entre inboxes",
+      "Detectar conflitos antes de executar a migracao",
+      "Estimar quantos contatos serao afetados"
     ],
     "related_tools": [
       "lionchat_inboxes_inbox_migration_execute",
@@ -14611,7 +14422,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/assignment_policies",
     "title": "Criar Politica de Atribuicao",
-    "description": "Cria uma nova politica de atribuicao. Cria novo política de atribuição. Obrigatórios: name, strategy. Valida unicidade quando aplicável. Retorna o política de atribuição criado com ID atribuído.",
+    "description": "Cria uma nova politica de atribuicao. Obrigatório: name. Retorna a política de atribuição criada com ID atribuído.",
     "category": "Politicas de Atribuicao",
     "params": [
       {
@@ -14622,21 +14433,49 @@
         "description": "Nome da politica"
       },
       {
-        "name": "strategy",
+        "name": "description",
         "type": "string",
         "location": "body",
-        "required": true,
-        "description": "Estrategia: round_robin, load_balanced, etc"
+        "required": false,
+        "description": "Descricao da politica"
       },
       {
-        "name": "max_conversations",
+        "name": "assignment_order",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Ordem de atribuicao: round_robin ou balanced"
+      },
+      {
+        "name": "conversation_priority",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Prioridade das conversas: earliest_created ou longest_waiting"
+      },
+      {
+        "name": "fair_distribution_limit",
         "type": "integer",
         "location": "body",
         "required": false,
-        "description": "Limite maximo de conversas"
+        "description": "Limite de conversas por agente na distribuicao justa"
+      },
+      {
+        "name": "fair_distribution_window",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Janela de tempo (segundos) da distribuicao justa"
+      },
+      {
+        "name": "enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Politica ativa ou nao"
       }
     ],
-    "returns": "política de atribuição criado (com novo ID)",
+    "returns": "política de atribuição criada (com novo ID)",
     "common_use_cases": [
       "Cadastro inicial de política de atribuição",
       "Automação a partir de evento externo",
@@ -14682,7 +14521,7 @@
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/assignment_policies/{id}",
     "title": "Atualizar Politica de Atribuicao",
-    "description": "Atualiza uma politica de atribuicao. Atualiza campos do política de atribuição existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, strategy, max_conversations.",
+    "description": "Atualiza uma politica de atribuicao. Suporta atualização parcial — só campos enviados são alterados. Campos suportados: name, description, assignment_order, conversation_priority, fair_distribution_limit, fair_distribution_window, enabled.",
     "category": "Politicas de Atribuicao",
     "params": [
       {
@@ -14700,21 +14539,49 @@
         "description": "Nome"
       },
       {
-        "name": "strategy",
+        "name": "description",
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Estrategia"
+        "description": "Descricao da politica"
       },
       {
-        "name": "max_conversations",
+        "name": "assignment_order",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Ordem de atribuicao: round_robin ou balanced"
+      },
+      {
+        "name": "conversation_priority",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Prioridade das conversas: earliest_created ou longest_waiting"
+      },
+      {
+        "name": "fair_distribution_limit",
         "type": "integer",
         "location": "body",
         "required": false,
-        "description": "Limite"
+        "description": "Limite de conversas por agente na distribuicao justa"
+      },
+      {
+        "name": "fair_distribution_window",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Janela de tempo (segundos) da distribuicao justa"
+      },
+      {
+        "name": "enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Politica ativa ou nao"
       }
     ],
-    "returns": "política de atribuição atualizado",
+    "returns": "política de atribuição atualizada",
     "common_use_cases": [
       "Edição parcial de política de atribuição",
       "Alteração de status/estado",
@@ -17833,7 +17700,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/captain/documents/{id}/recrawl",
     "title": "Re-indexar Documento",
-    "description": "Forca re-indexacao de um documento. Cria novo documento KB. Obrigatórios: id. Valida unicidade quando aplicável. Retorna o documento KB criado com ID atribuído.",
+    "description": "Reprocessa e reindexa um documento JA EXISTENTE da base de conhecimento (recrawl). NAO cria um documento novo. Reseta o status do documento e dispara o reprocessamento (crawl/chunks/FAQs). Retorna o mesmo documento atualizado.",
     "category": "Base de Conhecimento",
     "params": [
       {
@@ -17841,14 +17708,14 @@
         "type": "integer",
         "location": "path",
         "required": true,
-        "description": "ID do documento"
+        "description": "ID do documento existente"
       }
     ],
-    "returns": "documento KB criado (com novo ID)",
+    "returns": "documento atualizado (mesmo ID, status reprocessando)",
     "common_use_cases": [
-      "Cadastro inicial de documento KB",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
+      "Reprocessar documento que falhou na indexacao",
+      "Forcar reindexacao apos atualizar a fonte",
+      "Recuperar documento travado em erro"
     ],
     "related_tools": [
       "lionchat_captain_documents_list",
@@ -18403,11 +18270,19 @@
     "id": "lionchat_agent_availability_list",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/agent_availability",
-    "title": "Ver Disponibilidade",
-    "description": "Retorna status de disponibilidade dos agentes. Lista disponibilidades paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de disponibilidade).",
+    "title": "Ver Grade de Disponibilidade",
+    "description": "Retorna a grade semanal de disponibilidade (slots) do agente logado, ou de outro agente via user_id (admin ou agenda publica). Cada slot tem dia da semana e faixa de horario. Tambem retorna timezone e cor da agenda.",
     "category": "Disponibilidade",
-    "params": [],
-    "returns": "meta (contadores globais) + payload (array de disponibilidades)",
+    "params": [
+      {
+        "name": "user_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "ID de outro agente para ver a grade dele (requer admin ou agenda publica). Sem este param, retorna a grade do agente logado"
+      }
+    ],
+    "returns": "{ user_id, agenda_color, timezone, slots: [{ id, day_of_week, start_time, end_time }] }",
     "common_use_cases": [
       "Dashboard: contar/exibir disponibilidades",
       "Buscar com filtros antes de outra operação",
@@ -18423,19 +18298,19 @@
     "id": "lionchat_agent_availability_update",
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/agent_availability",
-    "title": "Atualizar Disponibilidade",
-    "description": "Atualiza status de disponibilidade do agente. Atualiza campos do disponibilidade existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: availability.",
+    "title": "Atualizar Grade de Disponibilidade",
+    "description": "Substitui (replace-all) a grade semanal de disponibilidade do agente logado. Apaga todos os slots atuais e recria com o array enviado. Cada slot define um dia da semana e uma faixa de horario. NAO eh status de presenca (online/offline/busy).",
     "category": "Disponibilidade",
     "params": [
       {
-        "name": "availability",
-        "type": "string",
+        "name": "slots",
+        "type": "array",
         "location": "body",
         "required": true,
-        "description": "online, offline, busy"
+        "description": "Array de slots: [{ day_of_week (0=domingo a 6=sabado), start_time (HH:MM), end_time (HH:MM) }]. Substitui toda a grade existente"
       }
     ],
-    "returns": "disponibilidade atualizado",
+    "returns": "{ user_id, slots: [{ id, day_of_week, start_time, end_time }] }",
     "common_use_cases": [
       "Edição parcial de disponibilidade",
       "Alteração de status/estado",
@@ -18451,11 +18326,26 @@
     "id": "lionchat_agent_availability_list_1",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/agent_availability/check",
-    "title": "Verificar Disponibilidade",
-    "description": "Verifica disponibilidade atual do agente. Lista disponibilidades paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de disponibilidade).",
+    "title": "Verificar Disponibilidade num Horario",
+    "description": "Verifica se um agente esta disponivel num horario especifico, considerando a grade semanal e tarefas conflitantes. Por padrao checa o agente logado; use user_id para checar outro.",
     "category": "Disponibilidade",
-    "params": [],
-    "returns": "meta (contadores globais) + payload (array de disponibilidades)",
+    "params": [
+      {
+        "name": "time",
+        "type": "string",
+        "location": "query",
+        "required": true,
+        "description": "Horario a verificar, em ISO8601 (ex: 2026-05-29T14:00:00-03:00)"
+      },
+      {
+        "name": "user_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "ID do agente a verificar (requer admin ou agenda publica). Sem este param, verifica o agente logado"
+      }
+    ],
+    "returns": "{ available, time, user_id, reason?, conflicting_task?, available_until? }",
     "common_use_cases": [
       "Dashboard: contar/exibir disponibilidades",
       "Buscar com filtros antes de outra operação",
@@ -18471,11 +18361,19 @@
     "id": "lionchat_agent_availability_list_2",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/agent_availability/available_agents",
-    "title": "Agentes Disponiveis",
-    "description": "Lista agentes atualmente disponiveis. Lista disponibilidades paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de disponibilidade).",
+    "title": "Agentes Disponiveis num Horario",
+    "description": "Lista todos os agentes disponiveis num horario especifico (para auto-atribuicao/IA). Requer admin ou bot. Considera a grade semanal de cada agente.",
     "category": "Disponibilidade",
-    "params": [],
-    "returns": "meta (contadores globais) + payload (array de disponibilidades)",
+    "params": [
+      {
+        "name": "time",
+        "type": "string",
+        "location": "query",
+        "required": true,
+        "description": "Horario a verificar, em ISO8601 (ex: 2026-05-29T14:00:00-03:00)"
+      }
+    ],
+    "returns": "{ time, agents: [{ id, name, available_until }] }",
     "common_use_cases": [
       "Dashboard: contar/exibir disponibilidades",
       "Buscar com filtros antes de outra operação",
@@ -18488,11 +18386,11 @@
     ]
   },
   {
-    "id": "lionchat_agents_list",
+    "id": "lionchat_agents_assigned_resources",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/agents/{id}/assigned_resources",
     "title": "Recursos Atribuidos ao Agente",
-    "description": "Lista recursos atribuidos a um agente. Lista agentes paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de agente).",
+    "description": "Lista os recursos (conversas, times, inboxes etc.) vinculados a um agente. Útil antes de excluir o agente para saber se é preciso reatribuir os recursos a outro (ver lionchat_agents_destroy).",
     "category": "Agentes",
     "params": [
       {
@@ -18503,20 +18401,20 @@
         "description": "ID do agente"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de agentes)",
+    "returns": "recursos atribuídos ao agente (has_resources + detalhamento)",
     "common_use_cases": [
-      "Dashboard: contar/exibir agentes",
-      "Buscar com filtros antes de outra operação",
-      "Auditoria/relatório de agentes ativas"
+      "Checar dependências antes de excluir um agente",
+      "Decidir se é necessário reatribuir recursos",
+      "Auditoria de carga de trabalho do agente"
     ],
     "related_tools": []
   },
   {
-    "id": "lionchat_agents_create",
+    "id": "lionchat_agents_bulk_create",
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/agents/bulk_create",
-    "title": "Criar Agentes em Massa",
-    "description": "Cria multiplos agentes de uma vez. Cria novo agente. Obrigatórios: emails. Valida unicidade quando aplicável. Retorna o agente criado com ID atribuído.",
+    "title": "Convidar Agentes em Massa",
+    "description": "Convida vários agentes de uma vez por e-mail. Obrigatório: emails (array de e-mails). Cada agente convidado recebe o convite e entra como agent. Para convidar UM agente com nome/cargo/disponibilidade definidos, use lionchat_agents_create.",
     "category": "Agentes",
     "params": [
       {
@@ -18524,16 +18422,160 @@
         "type": "array",
         "location": "body",
         "required": true,
-        "description": "Array de emails dos novos agentes"
+        "description": "Array de e-mails dos agentes a convidar"
       }
     ],
-    "returns": "agente criado (com novo ID)",
+    "returns": "lista de agentes convidados (com novos IDs)",
     "common_use_cases": [
-      "Cadastro inicial de agente",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
+      "Onboarding de uma equipe inteira de uma vez",
+      "Importação manual de vários agentes via API",
+      "Automação de convites a partir de evento externo"
     ],
-    "related_tools": []
+    "related_tools": [
+      "lionchat_agents_create"
+    ]
+  },
+  {
+    "id": "lionchat_agents_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/agents",
+    "title": "Convidar Agente",
+    "description": "Convida um único agente para a conta. Obrigatório: email. Opcionais: name, role (agent ou administrator), availability, auto_offline. O agente recebe um convite por e-mail. Para convidar vários de uma vez, use lionchat_agents_bulk_create.",
+    "category": "Agentes",
+    "params": [
+      {
+        "name": "email",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "E-mail do agente a convidar"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nome do agente"
+      },
+      {
+        "name": "role",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Papel do agente: agent ou administrator"
+      },
+      {
+        "name": "availability",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Disponibilidade inicial do agente (online, busy, offline)"
+      },
+      {
+        "name": "auto_offline",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Define se o agente fica offline automaticamente por inatividade"
+      }
+    ],
+    "returns": "agente convidado (com novo ID)",
+    "common_use_cases": [
+      "Adicionar um novo agente à equipe",
+      "Convidar um administrador com papel definido",
+      "Cadastro individual de agente via API"
+    ],
+    "related_tools": [
+      "lionchat_agents_bulk_create",
+      "lionchat_agents_update"
+    ]
+  },
+  {
+    "id": "lionchat_agents_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/agents/{id}",
+    "title": "Atualizar Agente",
+    "description": "Atualiza um agente existente. Campos suportados: name, role (agent ou administrator), availability, auto_offline. Use para promover/rebaixar papel ou ajustar disponibilidade.",
+    "category": "Agentes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do agente"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome do agente"
+      },
+      {
+        "name": "role",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo papel: agent ou administrator"
+      },
+      {
+        "name": "availability",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nova disponibilidade (online, busy, offline)"
+      },
+      {
+        "name": "auto_offline",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Define se o agente fica offline automaticamente por inatividade"
+      }
+    ],
+    "returns": "agente atualizado",
+    "common_use_cases": [
+      "Promover um agente a administrador",
+      "Alterar disponibilidade de um agente",
+      "Ajustar o comportamento de offline automático"
+    ],
+    "related_tools": [
+      "lionchat_agents_create"
+    ]
+  },
+  {
+    "id": "lionchat_agents_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/agents/{id}",
+    "title": "Excluir Agente",
+    "description": "Remove um agente da conta. ATENÇÃO: se o agente tiver recursos vinculados (conversas, times, inboxes etc.), o parâmetro reassign_to_agent_id é OBRIGATÓRIO para reatribuir esses recursos a outro agente — sem ele a exclusão é recusada. Use lionchat_agents_assigned_resources antes para checar dependências.",
+    "category": "Agentes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do agente a excluir"
+      },
+      {
+        "name": "reassign_to_agent_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "ID do agente que receberá os recursos. Obrigatório quando o agente possui recursos vinculados."
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Desligar um agente reatribuindo suas conversas",
+      "Limpeza de agentes inativos",
+      "Remoção após confirmação do cliente"
+    ],
+    "related_tools": [
+      "lionchat_agents_assigned_resources"
+    ]
   },
   {
     "id": "lionchat_custom_attributes_list",
@@ -18560,7 +18602,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/custom_attribute_definitions",
     "title": "Criar Definicao de Atributo",
-    "description": "Cria uma nova definicao de atributo personalizado. Cria novo atributo personalizado. Obrigatórios: attribute_display_name, attribute_display_type, attribute_model, attribute_key. Valida unicidade quando aplicável. Retorna o atributo personalizado criado com ID atribuído.",
+    "description": "Cria uma nova definicao de atributo personalizado. **Requer perfil Administrador.** Obrigatórios: attribute_display_name, attribute_display_type, attribute_key. attribute_model tem default 'conversation_attribute' — para um atributo de contato, passe 'contact_attribute'. Retorna o atributo personalizado criado com ID atribuído.",
     "category": "Atributos Personalizados",
     "params": [
       {
@@ -18581,8 +18623,8 @@
         "name": "attribute_model",
         "type": "string",
         "location": "body",
-        "required": true,
-        "description": "Modelo: contact_attribute ou conversation_attribute"
+        "required": false,
+        "description": "Modelo: contact_attribute ou conversation_attribute (default: conversation_attribute)"
       },
       {
         "name": "attribute_key",
@@ -18618,13 +18660,6 @@
         "location": "body",
         "required": false,
         "description": "Dica de formato exibida ao usuario quando regex_pattern falha"
-      },
-      {
-        "name": "default_value",
-        "type": "string",
-        "location": "body",
-        "required": false,
-        "description": "Valor default do atributo"
       }
     ],
     "returns": "atributo personalizado criado (com novo ID)",

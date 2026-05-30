@@ -61,15 +61,15 @@
     ] } },
     { "id": "n3", "type": "wait_response", "position": { "x": 690, "y": 300 }, "data": {
       "label": "Aguarda nome", "waitTime": 15, "waitUnit": "minutes", "validation": "any",
-      "saveTo": "contact_attribute", "saveAttrKey": "nome_completo"
+      "saveTo": "contact_attr", "saveAttrKey": "nome_completo"
     } },
     { "id": "n4", "type": "send_message", "position": { "x": 1010, "y": 300 }, "data": { "label": "Pede email", "messageItems": [
-      { "id": "m2", "type": "text", "content": "Perfeito, {{contact.custom_attributes.nome_completo}}. Qual seu melhor email?" }
+      { "id": "m2", "type": "text", "content": "Perfeito, {{contact.custom_attribute.nome_completo}}. Qual seu melhor email?" }
     ] } },
     { "id": "n5", "type": "wait_response", "position": { "x": 1330, "y": 300 }, "data": {
       "label": "Aguarda email", "waitTime": 15, "waitUnit": "minutes", "validation": "regex",
       "regexPattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", "invalidMessage": "Esse não parece um email válido. Tenta de novo?", "maxRetries": 2,
-      "saveTo": "contact_attribute", "saveAttrKey": "email"
+      "saveTo": "contact_attr", "saveAttrKey": "email"
     } },
     { "id": "n6", "type": "action", "position": { "x": 1650, "y": 300 }, "data": { "label": "Cria card", "items": [
       { "key": "create_kanban_item", "config": { "funnel_id": 1, "funnel_stage": "novo_lead" } },
@@ -99,17 +99,17 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received", "keywords": ["proposta","orçamento"], "match_mode": "contains" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received", "keywords": ["proposta","orçamento"], "match_type": "contains" }] } },
     { "id": "n2", "type": "send_message", "position": { "x": 370, "y": 300 }, "data": { "label": "B - Budget", "messageItems": [{ "id": "m1", "type": "text", "content": "Pra te ajudar melhor, qual a faixa de investimento que vocês têm em mente?\n\n1️⃣ Até R$ 5k\n2️⃣ R$ 5k a R$ 20k\n3️⃣ Acima de R$ 20k" }] } },
-    { "id": "n3", "type": "wait_response", "position": { "x": 690, "y": 300 }, "data": { "label": "Budget", "waitTime": 60, "waitUnit": "minutes", "validation": "options", "acceptedOptions": ["1","2","3"], "saveTo": "contact_attribute", "saveAttrKey": "budget_tier" } },
+    { "id": "n3", "type": "wait_response", "position": { "x": 690, "y": 300 }, "data": { "label": "Budget", "waitTime": 60, "waitUnit": "minutes", "validation": "options", "acceptedOptions": ["1","2","3"], "saveTo": "contact_attr", "saveAttrKey": "budget_tier" } },
     { "id": "n4", "type": "send_message", "position": { "x": 1010, "y": 300 }, "data": { "label": "A - Authority", "messageItems": [{ "id": "m2", "type": "text", "content": "Você é o decisor ou tem outras pessoas envolvidas?" }] } },
-    { "id": "n5", "type": "wait_response", "position": { "x": 1330, "y": 300 }, "data": { "label": "Autoridade", "waitTime": 60, "waitUnit": "minutes", "validation": "any", "saveTo": "contact_attribute", "saveAttrKey": "authority" } },
+    { "id": "n5", "type": "wait_response", "position": { "x": 1330, "y": 300 }, "data": { "label": "Autoridade", "waitTime": 60, "waitUnit": "minutes", "validation": "any", "saveTo": "contact_attr", "saveAttrKey": "authority" } },
     { "id": "n6", "type": "send_message", "position": { "x": 1650, "y": 300 }, "data": { "label": "N - Need", "messageItems": [{ "id": "m3", "type": "text", "content": "Conta um pouco: o que vocês precisam resolver hoje?" }] } },
-    { "id": "n7", "type": "wait_response", "position": { "x": 1970, "y": 300 }, "data": { "label": "Necessidade", "waitTime": 60, "waitUnit": "minutes", "validation": "any", "saveTo": "contact_attribute", "saveAttrKey": "need" } },
+    { "id": "n7", "type": "wait_response", "position": { "x": 1970, "y": 300 }, "data": { "label": "Necessidade", "waitTime": 60, "waitUnit": "minutes", "validation": "any", "saveTo": "contact_attr", "saveAttrKey": "need" } },
     { "id": "n8", "type": "send_message", "position": { "x": 2290, "y": 300 }, "data": { "label": "T - Timing", "messageItems": [{ "id": "m4", "type": "text", "content": "Em quanto tempo precisam ter a solução rodando?\n\n1️⃣ Esse mês\n2️⃣ Próximos 3 meses\n3️⃣ Sem pressa" }] } },
-    { "id": "n9", "type": "wait_response", "position": { "x": 2610, "y": 300 }, "data": { "label": "Prazo", "waitTime": 60, "waitUnit": "minutes", "validation": "options", "acceptedOptions": ["1","2","3"], "saveTo": "contact_attribute", "saveAttrKey": "timing_tier" } },
+    { "id": "n9", "type": "wait_response", "position": { "x": 2610, "y": 300 }, "data": { "label": "Prazo", "waitTime": 60, "waitUnit": "minutes", "validation": "options", "acceptedOptions": ["1","2","3"], "saveTo": "contact_attr", "saveAttrKey": "timing_tier" } },
     { "id": "n10", "type": "condition", "position": { "x": 2930, "y": 300 }, "data": { "label": "Quente?", "conditions": [
-      { "id": "c1", "label": "Lead quente", "field": "contact.custom_attributes.budget_tier", "operator": "not_equal", "value": "1" }
+      { "id": "c1", "label": "Lead quente", "field": "contact.custom_attribute.budget_tier", "operator": "not_equal", "value": "1" }
     ] } },
     { "id": "n11", "type": "action", "position": { "x": 3250, "y": 180 }, "data": { "label": "Quente", "items": [
       { "key": "assign_team", "config": { "team_id": 1 } },
@@ -153,9 +153,9 @@
     { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "conversation_resolved" }] } },
     { "id": "n2", "type": "wait", "position": { "x": 370, "y": 300 }, "data": { "label": "Aguarda 5 min", "waitTime": 5, "waitUnit": "minutes" } },
     { "id": "n3", "type": "send_message", "position": { "x": 690, "y": 300 }, "data": { "label": "Pede nota", "messageItems": [{ "id": "m1", "type": "text", "content": "Antes de fechar: de 1 a 5, como foi seu atendimento?\n\n5 = excelente\n1 = ruim" }] } },
-    { "id": "n4", "type": "wait_response", "position": { "x": 1010, "y": 300 }, "data": { "label": "Nota", "waitTime": 60, "waitUnit": "minutes", "validation": "options", "acceptedOptions": ["1","2","3","4","5"], "saveTo": "attribute", "saveAttrKey": "csat_score" } },
+    { "id": "n4", "type": "wait_response", "position": { "x": 1010, "y": 300 }, "data": { "label": "Nota", "waitTime": 60, "waitUnit": "minutes", "validation": "options", "acceptedOptions": ["1","2","3","4","5"], "saveTo": "conversation_attr", "saveAttrKey": "csat_score" } },
     { "id": "n5", "type": "send_message", "position": { "x": 1330, "y": 300 }, "data": { "label": "Pede comentário", "messageItems": [{ "id": "m2", "type": "text", "content": "Obrigado pela nota! Quer deixar algum comentário?" }] } },
-    { "id": "n6", "type": "wait_response", "position": { "x": 1650, "y": 300 }, "data": { "label": "Comentário", "waitTime": 30, "waitUnit": "minutes", "validation": "any", "saveTo": "attribute", "saveAttrKey": "csat_comment" } },
+    { "id": "n6", "type": "wait_response", "position": { "x": 1650, "y": 300 }, "data": { "label": "Comentário", "waitTime": 30, "waitUnit": "minutes", "validation": "any", "saveTo": "conversation_attr", "saveAttrKey": "csat_comment" } },
     { "id": "n7", "type": "send_message", "position": { "x": 1970, "y": 300 }, "data": { "label": "Encerra", "messageItems": [{ "id": "m3", "type": "text", "content": "Valeu pelo feedback! 🙏" }] } }
   ],
   "edges": [
@@ -214,20 +214,21 @@
     { "id": "n2", "type": "ai", "position": { "x": 370, "y": 300 }, "data": {
       "label": "Classifica", "aiMode": "intent",
       "aiPrompt": "Classifique a intenção da última mensagem do cliente",
-      "aiIntentOptions": ["compra", "suporte", "reclamacao", "duvida"],
-      "aiResponseVar": "intent"
+      "aiIntents": [{ "name": "compra" }, { "name": "suporte" }, { "name": "reclamacao" }, { "name": "duvida" }]
     } },
     { "id": "n3", "type": "action", "position": { "x": 690, "y": 60 }, "data": { "label": "→ Compra", "items": [{ "key": "assign_team", "config": { "team_id": 1 } }, { "key": "add_label", "config": { "labels": ["intent-compra"] } }] } },
     { "id": "n4", "type": "action", "position": { "x": 690, "y": 240 }, "data": { "label": "→ Suporte", "items": [{ "key": "assign_team", "config": { "team_id": 2 } }, { "key": "add_label", "config": { "labels": ["intent-suporte"] } }] } },
     { "id": "n5", "type": "action", "position": { "x": 690, "y": 420 }, "data": { "label": "→ Reclamação", "items": [{ "key": "assign_team", "config": { "team_id": 3 } }, { "key": "change_priority", "config": { "priority": "high" } }, { "key": "add_label", "config": { "labels": ["intent-reclamacao"] } }] } },
-    { "id": "n6", "type": "action", "position": { "x": 690, "y": 600 }, "data": { "label": "→ Dúvida", "items": [{ "key": "assign_captain", "config": { "assistant_id": 1 } }] } }
+    { "id": "n6", "type": "action", "position": { "x": 690, "y": 600 }, "data": { "label": "→ Dúvida", "items": [{ "key": "assign_captain", "config": { "assistant_id": 1 } }] } },
+    { "id": "n7", "type": "action", "position": { "x": 690, "y": 780 }, "data": { "label": "→ Não classificado", "items": [{ "key": "assign_team", "config": { "team_id": 2 } }] } }
   ],
   "edges": [
     { "id": "e1", "source": "n1", "target": "n2", "sourceHandle": "success", "type": "deletable", "animated": true },
     { "id": "e2", "source": "n2", "target": "n3", "sourceHandle": "intent_compra", "type": "deletable", "animated": true },
     { "id": "e3", "source": "n2", "target": "n4", "sourceHandle": "intent_suporte", "type": "deletable", "animated": true },
     { "id": "e4", "source": "n2", "target": "n5", "sourceHandle": "intent_reclamacao", "type": "deletable", "animated": true },
-    { "id": "e5", "source": "n2", "target": "n6", "sourceHandle": "intent_duvida", "type": "deletable", "animated": true }
+    { "id": "e5", "source": "n2", "target": "n6", "sourceHandle": "intent_duvida", "type": "deletable", "animated": true },
+    { "id": "e6", "source": "n2", "target": "n7", "sourceHandle": "no_intent", "type": "deletable", "animated": true }
   ]
 }
 ```
@@ -241,7 +242,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "label_added", "label": "follow-up" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "label_added", "label_names": ["follow-up"] }] } },
     { "id": "n2", "type": "wait", "position": { "x": 370, "y": 300 }, "data": { "label": "Espera 7 dias", "waitTime": 7, "waitUnit": "days" } },
     { "id": "n3", "type": "send_message", "position": { "x": 690, "y": 300 }, "data": { "label": "Template re-engajamento", "messageItems": [
       { "id": "m1", "type": "whatsapp_template", "templateId": 42, "params": ["{{contact.name}}"] }
@@ -298,7 +299,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received", "keywords": ["agendar","reunião"], "match_mode": "contains" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received", "keywords": ["agendar","reunião"], "match_type": "contains" }] } },
     { "id": "n2", "type": "send_message", "position": { "x": 370, "y": 300 }, "data": { "label": "Pede data", "messageItems": [{ "id": "m1", "type": "text", "content": "Em que data você prefere? (formato DD/MM)" }] } },
     { "id": "n3", "type": "wait_response", "position": { "x": 690, "y": 300 }, "data": { "label": "Data", "waitTime": 30, "waitUnit": "minutes", "validation": "regex", "regexPattern": "^\\d{2}/\\d{2}$", "invalidMessage": "Formato inválido. Use DD/MM (ex: 25/05)", "maxRetries": 2, "saveTo": "variable", "saveVariable": "data_pref" } },
     { "id": "n4", "type": "api", "position": { "x": 1010, "y": 300 }, "data": {
@@ -332,7 +333,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "label_added", "label": "urgente" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "label_added", "label_names": ["urgente"] }] } },
     { "id": "n2", "type": "action", "position": { "x": 370, "y": 300 }, "data": { "label": "Dispara webhook", "items": [
       { "key": "send_webhook", "config": {
         "url": "https://hooks.slack.com/services/XXX/YYY/ZZZ",

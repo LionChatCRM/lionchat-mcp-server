@@ -12,20 +12,80 @@ Como interpretar cada um dos endpoints de relatório (`lionchat_reports_*`) e m�
 86400 segundos → "24 horas" ou "1 dia"
 ```
 
-## Endpoints disponíveis (19 total)
+## Mapeamento dos endpoints `lionchat_reports_*`
 
-### 1. `lionchat_reports_summary` — Resumo geral
-**Use quando o usuário pedir:** "como tá o desempenho?", "resumo da semana", "visão geral"
+> ⚠️ **A numeração `_N` é gerada automaticamente e NÃO segue uma ordem lógica.** Use SEMPRE a tabela
+> abaixo pra saber qual ferramenta chamar. Nunca chute pelo número.
 
-**Retorna:**
+| Ferramenta MCP | O que faz |
+|---|---|
+| `lionchat_reports_summary` | Resumo geral da conta (conversations, mensagens, tempos médios) com `previous` |
+| `lionchat_reports_list` | Resumo POR AGENTE (summary/agent) |
+| `lionchat_reports_list_1` | Resumo POR TIME (team) |
+| `lionchat_reports_list_2` | Resumo POR INBOX |
+| `lionchat_reports_list_3` | Resumo POR LABEL |
+| `lionchat_reports_list_4` | Resumo POR CANAL (channel) |
+| `lionchat_reports_list_5` | Série temporal / evolução (timeseries de um `metric`) |
+| `lionchat_reports_list_6` | Resumo do BOT (bot_summary) |
+| `lionchat_reports_list_7` | Exportação de AGENTES em CSV |
+| `lionchat_reports_list_8` | Exportação de INBOXES em CSV |
+| `lionchat_reports_list_9` | Exportação de LABELS em CSV |
+| `lionchat_reports_list_10` | Exportação de TIMES em CSV |
+| `lionchat_reports_list_11` | Lista de conversas do relatório (conversations) |
+| `lionchat_reports_list_12` | Resumo de conversas em CSV (conversations_summary) |
+| `lionchat_reports_list_13` | Conversation Traffic / tráfego por hora (heatmap, CSV) |
+| `lionchat_reports_list_14` | Métricas do BOT detalhadas (bot_metrics) |
+| `lionchat_reports_list_15` | Retrospectiva do ano (year_in_review) |
+| `lionchat_reports_list_16` / `_17` | Relatórios em TEMPO REAL (live_reports: conversation_metrics / grouped) |
+
+**Métricas correlatas (fora da família `reports_*`):**
+
+| Ferramenta MCP | O que faz |
+|---|---|
+| `lionchat_csat_metrics` | Agregado de CSAT (contagem total + distribuição por nota) |
+| `lionchat_csat_list` | Respostas CSAT individuais (paginadas) |
+| `lionchat_csat_download` | CSV de CSAT |
+| `lionchat_sla_metrics` | Agregado de SLA — **ENTERPRISE-ONLY** (total, falhas, hit_rate) |
+| `lionchat_sla_list` | Conversas que estouraram SLA — **ENTERPRISE-ONLY** |
+| `lionchat_sla_download` | CSV de SLA — **ENTERPRISE-ONLY** |
+
+---
+
+## Tabela "qual usar pra cada pergunta"
+
+| Usuário pede... | Ferramenta |
+|---|---|
+| "resumo da semana", "como tá o desempenho?", "visão geral" | `lionchat_reports_summary` |
+| "produtividade por atendente", "ranking de agentes" | `lionchat_reports_list` |
+| "comparar times", "time A vs time B" | `lionchat_reports_list_1` |
+| "qual canal tem mais demanda", "comparar WhatsApp vs Email" | `lionchat_reports_list_2` (inbox) ou `lionchat_reports_list_4` (tipo de canal) |
+| "quantas conversas urgentes", "por etiqueta" | `lionchat_reports_list_3` |
+| "evolução dia a dia", "mês a mês", "gráfico de linha" | `lionchat_reports_list_5` |
+| "como tá o bot resolvendo", "% de handoff pra humano" | `lionchat_reports_list_6` ou `lionchat_reports_list_14` |
+| "exportar planilha de agentes/inboxes/labels/times" | `_7` / `_8` / `_9` / `_10` (CSV) |
+| "horário de pico", "quando tem mais demanda" | `lionchat_reports_list_13` |
+| "quem tá online agora", "carga atual" | `lionchat_reports_list_16` / `_17` (live) |
+| "retrospectiva do ano" | `lionchat_reports_list_15` |
+| "satisfação", "CSAT", "nota dos clientes" | `lionchat_csat_metrics` |
+| "SLA", "cumprimento de prazo" (se a conta tiver Enterprise) | `lionchat_sla_metrics` |
+
+---
+
+## Detalhe dos principais endpoints
+
+### `lionchat_reports_summary` — Resumo geral
+**Use quando:** "como tá o desempenho?", "resumo da semana", "visão geral"
+
+**Retorna (campos confirmados no código):**
 ```json
 {
   "conversations_count": 142,
   "incoming_messages_count": 1250,
   "outgoing_messages_count": 980,
-  "resolutions_count": 98,
   "avg_first_response_time": 245,       // segundos
   "avg_resolution_time": 7200,          // segundos
+  "resolutions_count": 98,
+  "reply_time": 320,                    // segundos
   "previous": { ...mesma estrutura para comparativo... }
 }
 ```
@@ -33,109 +93,111 @@ Como interpretar cada um dos endpoints de relatório (`lionchat_reports_*`) e m�
 **Parâmetros principais:**
 - `type`: `account` (padrão), `agent`, `inbox`, `label`, `team`
 - `since` / `until`: Unix timestamp (segundos) — período
-- `business_hours`: `true` excluí horários fora do expediente
+- `business_hours`: `true` exclui horários fora do expediente
+- `timezone_offset`: deslocamento de fuso (horas) usado no agrupamento
 
-**Exemplo de uso:**
-```
-since = 7 dias atrás
-until = agora
-type = account
-→ retorna resumo dos últimos 7 dias da conta toda
-```
-
-### 2. `lionchat_reports_list` — Por agente
+### `lionchat_reports_list` — Por agente
 **Use quando:** "produtividade por atendente", "ranking de agentes"
 
-Retorna array de métricas, uma por agente. Cada item:
+Retorna array de métricas, **uma por usuário da conta**. Campos confirmados (e SÓ esses):
 ```json
 {
   "id": 6,
-  "name": "Elvis",
   "conversations_count": 23,
-  "avg_first_response_time": 180,
-  "avg_resolution_time": 5400,
-  "csat_score_average": 4.3,
-  "online_at_total": 28800   // segundos online no período
+  "resolved_conversations_count": 18,
+  "avg_resolution_time": 5400,          // segundos (pode vir null)
+  "avg_first_response_time": 180,       // segundos (pode vir null)
+  "avg_reply_time": 320                 // segundos (pode vir null)
 }
 ```
 
-### 3. `lionchat_reports_list_1` — Por time
-**Use quando:** "comparar times", "como está o time Premium vs Standard"
+> ⚠️ **Não existe `name`, `csat_score_average` nem `online_at_total` neste retorno.**
+> - O campo é só `id` (id do agente). Para o nome, cruze com `lionchat_agents_list`.
+> - **CSAT por agente:** use `lionchat_csat_list` com filtro `user_ids=<id>` e calcule a média.
+> - **Tempo online / status:** use `lionchat_agent_availability` ou os live_reports (`_16`/`_17`).
 
-Mesma estrutura por team_id.
+`_1` (time), `_2` (inbox), `_3` (label), `_4` (canal) seguem a mesma ideia de resumo agrupado,
+trocando a chave de agrupamento.
 
-### 4. `lionchat_reports_list_2` — Por inbox
-**Use quando:** "qual canal está com mais demanda", "comparar WhatsApp vs Email"
+### `lionchat_reports_list_5` — Série temporal (timeseries)
+**Use quando:** "dia a dia da última semana", "evolução temporal", "gráfico de linha"
 
-Mesma estrutura por inbox_id.
+Retorna pontos (data + valor) para UM `metric` por vez:
+- `metric` (médias, em segundos): `avg_first_response_time`, `avg_resolution_time`, `reply_time`
+- `metric` (contagens): `conversations_count`, `incoming_messages_count`, `outgoing_messages_count`, `resolutions_count`, `bot_resolutions_count`, `bot_handoffs_count`
+- `group_by`: `hour`, `day`, `week`, `month`, `year`
+- `since` / `until`: período (Unix timestamp em segundos)
+- `business_hours`: `true` faz médias contarem só o horário de atendimento
+- `timezone_offset`: deslocamento de fuso (horas) — afeta como os pontos são agrupados por dia/hora
 
-### 5. `lionchat_reports_list_3` — Por label
-**Use quando:** "quantas conversas urgentes", "comparativo por label"
+### `lionchat_reports_list_6` — Resumo do Bot
+**Use quando:** "como tá o bot resolvendo", "quantos handoffs pra humano"
 
-Mesma estrutura por label.
-
-### 6. `lionchat_reports_list_4` — Por canal
-**Use quando:** "WhatsApp vs Email vs Webchat"
-
-Agrupa por `channel_type`.
-
-### 7. `lionchat_reports_list_5` — Relatórios detalhados
-**Use quando:** "dia a dia da última semana", "evolução temporal"
-
-Retorna timeseries (data + valor) para um metric específico:
-- `metric`: `conversations_count`, `incoming_messages_count`, `outgoing_messages_count`, `resolutions_count`, `avg_first_response_time`, `avg_resolution_time`, `reply_time`, `resolutions_count`
-- `group_by`: `day`, `week`, `month`, `year`
-- `since`/`until`: período
-
-### 8. `lionchat_reports_list_6` — Resumo do Bot
-**Use quando:** "como tá o bot resolvendo", "% de handoff pra humano"
-
+Retorna SOMENTE estes dois campos (não existe taxa pronta):
 ```json
 {
   "bot_resolutions_count": 45,
-  "bot_handoffs_count": 12,
-  "bot_resolution_rate": 0.79
+  "bot_handoffs_count": 12
 }
 ```
+> A "taxa de resolução do bot" NÃO vem pronta. Se o usuário pedir, calcule:
+> `bot_resolutions_count / (bot_resolutions_count + bot_handoffs_count)`.
 
-### 9. `lionchat_reports_list_7` — Conversation Traffic (tráfego)
+### `lionchat_reports_list_13` — Conversation Traffic (tráfego)
 **Use quando:** "horário de pico", "quando tem mais demanda"
 
-Retorna heatmap por hora do dia ou dia da semana:
+Heatmap de volume por hora. Aceita `timezone_offset` (importante: sem ele o pico sai em UTC).
+
+### `lionchat_reports_list_16` / `_17` — Tempo real (live)
+**Use quando:** "quem tá online agora", "carga atual", "conversas abertas no momento"
+
+São os live_reports (`conversation_metrics` e a versão agrupada). Use estes — e não os resumos
+históricos — quando o usuário quiser o agora.
+
+### `lionchat_csat_metrics` — CSAT agregado
+**Use quando:** "satisfação", "nota média dos clientes", "CSAT"
+
+Retorna SOMENTE estes campos (nem média, nem taxa de resposta vêm prontas):
 ```json
-[
-  { "hour": 9, "conversations_count": 18 },
-  { "hour": 10, "conversations_count": 25 },
-  ...
-]
+{
+  "total_count": 80,                    // total de respostas respondidas
+  "ratings_count": { "5": 50, "4": 18, "3": 8, "2": 2, "1": 2 },
+  "total_sent_messages_count": 210      // pesquisas CSAT enviadas no período
+}
 ```
+> **Nota média** = `Σ(nota × ratings_count[nota]) / total_count`.
+> No exemplo: (5×50 + 4×18 + 3×8 + 2×2 + 1×2) / 80 = 352/80 = **4,4**.
+>
+> **Taxa de resposta** = `total_count / total_sent_messages_count`.
+> No exemplo: 80/210 = **38%**.
 
-### 10. `lionchat_reports_list_8` — Agente em tempo real
-**Use quando:** "quem tá online agora", "carga atual"
+**Filtros aceitos:** `user_ids`, `inbox_id`, `team_id`, `rating`, `since`/`until`.
 
+### `lionchat_sla_metrics` — SLA agregado (ENTERPRISE-ONLY)
+**Use quando:** "cumprimento de SLA", "quantos prazos estouraram"
+
+> ⚠️ **Pode não existir na conta.** SLA é recurso Enterprise. Se a chamada falhar/retornar vazio,
+> informe ao usuário que o relatório de SLA não está disponível no plano dele.
+
+Retorna:
 ```json
-[
-  { "id": 6, "name": "Elvis", "status": "online", "open_count": 5, "unattended_count": 2 }
-]
+{
+  "total_applied_slas": 200,
+  "number_of_sla_misses": 9,
+  "hit_rate": "95.5%"                   // STRING com "%", NÃO uma fração
+}
 ```
+> O `hit_rate` já vem calculado como string (ex.: `"95.5%"`, ou `"100%"` quando não há falhas).
+> Não divida nada — apenas exiba o valor.
 
-### 11-15. CSAT
-- `lionchat_csat_metrics`: agregação (média, distribuição)
-- `lionchat_csat_list`: respostas individuais
-- `lionchat_csat_download`: CSV pra download
-
-### 16-18. SLA
-- `lionchat_sla_metrics`: hits / breaches por período
-- `lionchat_sla_list`: SLAs aplicadas a conversas
-- `lionchat_sla_download`: CSV
-
-### 19. `lionchat_reports_list_9` — Aggregated agent overview
-**Use quando:** combinação de tudo: produtividade + CSAT + SLA por agente
+**Filtros aceitos:** `inbox_id`, `team_id`, `sla_policy_id`, `label_list`, `assigned_agent_id`, `since`/`until`.
 
 ## Padrões de interpretação
 
 ### Comparando períodos
-Quando passa `since/until`, a maioria dos endpoints retorna `previous` com o período anterior de mesmo tamanho:
+O `previous` (período anterior de mesmo tamanho) é retornado pelo `lionchat_reports_summary` e pelo
+resumo do bot (`_6`). Os resumos agrupados (agente/time/inbox/label/canal) e a timeseries NÃO trazem
+`previous` — pra comparar, chame o endpoint duas vezes (período atual e período anterior):
 
 ```
 Esta semana: 142 conversas
@@ -154,11 +216,14 @@ Semana anterior: 120 conversas
 ### CSAT
 - Score: 1-5 estrelas
 - Médias típicas: 4.0+ é bom, 3.5-4.0 é OK, abaixo de 3.5 é alerta
-- `csat_response_rate`: % de conversas resolvidas que ganharam resposta CSAT (taxa baixa = pouco feedback)
+- A média e a taxa de resposta NÃO vêm prontas — calcule a partir de `ratings_count`, `total_count`
+  e `total_sent_messages_count` (fórmulas na seção do `lionchat_csat_metrics`)
+- Taxa de resposta = `total_count / total_sent_messages_count` (baixa = pouco feedback)
 
-### SLA
-- `breach_count` alto = problema sério, agentes não cumprindo prazos
-- Sempre olhar `hit_rate` (hits / (hits + breaches)) — meta 95%+
+### SLA (Enterprise-only)
+- `number_of_sla_misses` alto = problema sério, agentes não cumprindo prazos
+- `hit_rate` já vem pronto como STRING com `%` (ex.: `"95.5%"`) — só exibir, meta 95%+
+- Se a conta não tem Enterprise, o relatório de SLA simplesmente não existe
 
 ## Workflows comuns
 
@@ -174,8 +239,8 @@ Semana anterior: 120 conversas
 
 ### "Quem tá com gargalo"
 ```
-1. reports_list_8 (real-time) → quem tá com muita conversa aberta
-2. reports_list (por agente, últimos 7d) → quem tá com avg_first_response alto
+1. reports_list_16/_17 (live) → quem tá com muita conversa aberta agora
+2. reports_list (por agente, últimos 7d) → quem tá com avg_first_response_time alto
 3. Cruzar: agente sobrecarregado E com tempo médio alto
 ```
 
@@ -184,11 +249,23 @@ Semana anterior: 120 conversas
 reports_list_5 com group_by=month, metric=conversations_count, since=12 meses atrás
 ```
 
+### "Tempo por etapa do funil" / "conversão de funil"
+> ⚠️ NÃO existe endpoint nativo de relatório de funil/Kanban. Componha no client-side:
+```
+1. kanban_items_list (do funnel desejado) → traz cada card com funnel_stage e stage_entered_at
+2. Agrupe por funnel_stage e calcule:
+   - tempo por etapa: diferença entre stage_entered_at de etapas consecutivas do mesmo card
+   - conversão: nº de cards que chegaram em cada etapa / nº de cards que entraram na anterior
+3. Apresente como tabela/etapas — avisando que é um cálculo composto, não um relatório oficial
+```
+
 ## Pegadinhas comuns
 
-### ⚠️ Comparar agente "online_at_total"
-Tempo online inclui breaks, almoço, etc. Pra produtividade real, prefira:
-- `conversations_count / online_at_total` = conversas por hora online
+### ⚠️ O relatório por agente NÃO traz CSAT nem tempo online
+`lionchat_reports_list` (por agente) retorna só `id`, contagens e tempos médios.
+- Para **CSAT por agente**: `lionchat_csat_list` com `user_ids=<id>` e calcule a média.
+- Para **status/tempo online**: `lionchat_agent_availability` ou live_reports (`_16`/`_17`).
+- Para o **nome** do agente: cruze o `id` com `lionchat_agents_list`.
 
 ### ⚠️ Avg time pode ser enganador
 Mediana é mais representativa que média (1 conversa que durou 5 dias puxa tudo).
@@ -198,8 +275,10 @@ Mediana é mais representativa que média (1 conversa que durou 5 dias puxa tudo
 A maioria dos endpoints é eventually consistent (cache 5min). Pra info real-time use `conversations_meta`.
 
 ### ⚠️ Comparativos de período
-`previous` tem o MESMO tamanho do período atual. Se since-until = 7d, previous = 7d antes.
-NÃO compare manualmente "esse mês vs mês passado" — passe `since/until` com mês inteiro e use o `previous` retornado.
+No `lionchat_reports_summary` (e no resumo do bot), o `previous` já vem com o MESMO tamanho do período
+atual. Se since-until = 7d, previous = 7d antes. Pra esses dois, passe `since/until` com o período
+inteiro e use o `previous` retornado em vez de comparar na mão.
+Nos demais (agente/time/inbox/label/canal e timeseries) NÃO há `previous` — chame duas vezes.
 
 ## Quando o usuário pede algo MUITO específico que não existe num endpoint
 

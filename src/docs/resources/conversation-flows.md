@@ -195,6 +195,102 @@ Conversation
 2. Tem SLA policy ativando state change?
 3. Veio de external API call?
 
+## Receitas de ação (qual tool usar pra cada coisa)
+
+### ENVIAR MENSAGEM (`conversations_messages_create`)
+
+Endpoint: `POST /api/v1/accounts/{account_id}/conversations/{conversation_id}/messages`
+Os campos vão na **raiz** do payload (NÃO há wrapper). Construídos pelo `Messages::MessageBuilder`.
+
+**Payload mínimo (resposta de texto pro cliente):**
+```json
+{
+  "content": "Olá! Como posso ajudar?",
+  "message_type": "outgoing"
+}
+```
+
+**Campos:**
+
+| Campo | Obrigatório | Detalhe |
+|---|---|---|
+| `content` | sim* | Texto da mensagem (*pode ser vazio se houver `attachments`) |
+| `message_type` | recomendado | `outgoing` (padrão, resposta do agente) ou `incoming`. **`incoming` SÓ é permitido em inbox do tipo API** — em outros canais levanta erro |
+| `private` | não | `true` = nota interna (só agentes veem, não vai pro cliente). Default `false` |
+| `attachments` | não | Array de arquivos (upload) ou `signed_id` (ActiveStorage). Escolhe endpoint de mídia pelo MIME |
+| `content_attributes.in_reply_to` | não | ID da mensagem que está sendo respondida/citada |
+| `template_params` | não | Parâmetros de template WhatsApp (header/body/buttons). JSON |
+| `cc_emails` / `bcc_emails` / `to_emails` | não | SÓ em inbox Email. Lista separada por vírgula |
+
+**Nota interna (não vai pro cliente):**
+```json
+{ "content": "Cliente parece irritado, tratar com cuidado", "private": true }
+```
+
+### AÇÃO → TOOL (mapa rápido)
+
+NÃO confunda com `conversations_update`: o update só altera **prioridade** e **IA Agente**
+(`captain_assistant_id`). Para mudar status, prioridade ou atribuição use as tools abaixo.
+
+| Ação desejada | Tool / endpoint | Parâmetros |
+|---|---|---|
+| Resolver conversa | `toggle_status` (POST `.../toggle_status`) | `status: "resolved"` |
+| Reabrir conversa | `toggle_status` | `status: "open"` |
+| Marcar como pendente | `toggle_status` | `status: "pending"` |
+| Adiar (snooze) | `toggle_status` | `status: "snoozed"` + `snoozed_until` (datetime futuro) |
+| Mudar prioridade | `toggle_priority` (POST `.../toggle_priority`) | `priority`: `urgent`/`high`/`medium`/`low`/`nil` |
+| Atribuir agente | `assignments` (POST `.../assignments`) | `assignee_id` |
+| Atribuir time | `assignments` | `team_id` |
+| Ativar/trocar IA Agente | `conversations_update` (PATCH) | `captain_assistant_id` |
+| Desativar IA Agente | `conversations_update` (PATCH) | `captain_assistant_id: 0` (ou null) |
+
+**IMPORTANTE:** `conversations_update` (PATCH) só aceita `priority` e `captain_assistant_id`
+(ver `permitted_update_params`, conversations_controller.rb). Mandar `status` no update **não muda
+o status** — é ignorado. Use sempre `toggle_status` para status.
+
+**Snooze exige `snoozed_until`:**
+```json
+POST .../conversations/{id}/toggle_status
+{ "status": "snoozed", "snoozed_until": "2026-06-01T09:00:00Z" }
+```
+
+### MARCAR COMO LIDA vs NÃO-LIDA
+
+| Ação | Tool / endpoint | Efeito |
+|---|---|---|
+| Marcar como **lida** | `update_last_seen` (POST `.../update_last_seen`) | Atualiza `agent_last_seen_at`; em canal WAHA dispara check azul no WhatsApp |
+| Marcar como **não-lida** | `conversations_unread` (POST `.../unread`) | Recua o `last_seen` pra antes da última mensagem do cliente — conversa volta a aparecer como não-lida |
+
+Ambas são **ações de escrita** (POST). `unread` é o oposto de `update_last_seen`, não uma consulta.
+
+### AGENDAR MENSAGEM (`scheduled_messages_create`)
+
+Endpoint: `POST /api/v1/accounts/{account_id}/conversations/{conversation_id}/scheduled_messages`
+
+**ATENÇÃO:** diferente do padrão "raiz" das mensagens normais, aqui o payload **EXIGE o wrapper**
+`scheduled_message` (`params.require(:scheduled_message)`).
+
+**Payload:**
+```json
+{
+  "scheduled_message": {
+    "content": "Lembrete: sua consulta é amanhã às 14h",
+    "scheduled_at": "2026-06-01T14:00:00Z",
+    "inbox_id": 12
+  }
+}
+```
+
+| Campo | Obrigatório | Detalhe |
+|---|---|---|
+| `content` | sim | Texto a enviar |
+| `scheduled_at` | sim | Quando enviar (datetime) |
+| `inbox_id` | sim | Caixa de entrada por onde sair |
+| `is_recurrent` | não | `true` ativa recorrência |
+| `period` | não | Período da recorrência (ex.: `daily`, `weekly`) — vira `{ type: ... }` |
+| `recurrence_count` | não | Quantas vezes repetir |
+| `template_params` | não | Parâmetros de template WhatsApp |
+
 ## Eventos importantes (pra automation)
 
 | Evento | Quando dispara |

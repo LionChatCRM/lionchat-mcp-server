@@ -26,6 +26,8 @@ Como criar fluxos do LionChat (FlowBuilder) que abrem certinhos no canvas, sem n
 | Distribuir aleatório entre branches | `randomizer` | - |
 | Atualizar info de grupo WhatsApp (WAHA) | `update_group` | - |
 | Iniciar outro fluxo | `action` com `key: 'start_flow'` OU node `activate_flow` | - |
+| Encerrar ramo / definir retorno de ai_tool | `end` | - |
+| Anotação visual no canvas (não executa) | `note` | - |
 
 ---
 
@@ -52,13 +54,19 @@ Todo node tem essa estrutura base:
   "data": {
     "label": "Início",
     "triggers": [
-      { "type": "message_received", "keywords": ["oi", "ola"], "match_mode": "contains" }
+      { "type": "message_received", "keywords": ["oi", "ola"], "match_type": "contains" }
     ]
   }
 }
 ```
 
-**Triggers válidos:** `message_received`, `conversation_created`, `conversation_resolved`, `label_added`, `label_removed`, `cron`, `webhook`.
+**Triggers válidos:** `message_received`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `cron`, `webhook`.
+
+**Campos de filtro por trigger (IMPORTANTE — nomes exatos):**
+- `message_received`: `keywords` (array) + `match_type` (`'exact'` ou `'contains'`, default `contains`). NÃO use `match_mode` aqui.
+- `conversation_created` / `conversation_reopened`: filtro opcional de keywords via `match_mode` (`'any'`, `'contains'`, `'exact'`, `'customer_initiated'`, `'agent_initiated'`) + `keywords`. Só ESTES dois triggers usam `match_mode`.
+- `label_added` / `label_removed`: `label_names` (array de slugs). NÃO use `label` (singular) — é ignorado.
+- `card_created` / `card_moved`: `funnel_ids` (array) + `funnel_stages` (array de `"funnel_id:stage"`).
 
 **Handles que SAEM:** `success`.
 
@@ -80,11 +88,20 @@ Todo node tem essa estrutura base:
 }
 ```
 
-**Tipos de item válidos:** `text`, `whatsapp_template` (ou `template`), `canned_response`, `user_input` (lista de botões interativos), `delay`, `attachment`, `audio`.
+**Tipos de item válidos:** `text`, `whatsapp_template` (ou `template`), `canned_response`, `user_input` (pausa esperando resposta livre), `delay`, `attachment`, `audio`.
 
 **ATENÇÃO:** usa `messageItems` (NÃO `items`).
 
-**Handles que SAEM:** `success`, `no_response` (quando tem `user_input` com timeout), `error`.
+**Botões interativos:** um item `text` com `buttons_enabled: true` e `buttons: [{ title, value }, ...]` vira mensagem com botões. Ao clicar, o flow roteia pelo handle **`button_<value>`** (ex: botão com `value: "sim"` → handle `button_sim`). Se o cliente digitar texto livre em vez de clicar, cai no handle **`no_response`**. Se houver timeout configurado, cai em **`no_reply_timeout`**.
+
+```json
+{ "id": "m1", "type": "text", "content": "Confirma o agendamento?",
+  "buttons_enabled": true,
+  "buttons": [ { "title": "Sim", "value": "sim" }, { "title": "Não", "value": "nao" } ] }
+```
+→ edges: `sourceHandle: "button_sim"`, `sourceHandle: "button_nao"`, e opcionalmente `"no_response"`.
+
+**Handles que SAEM:** `success` (sem botões); com botões → `button_<value>` (um por botão) + `no_response` (+ `no_reply_timeout` se tiver timeout). Também `error`.
 
 ### 2.3 `wait_response`
 
@@ -101,7 +118,7 @@ Todo node tem essa estrutura base:
     "acceptedOptions": ["1", "2", "3"],
     "invalidMessage": "Por favor responda com 1, 2 ou 3",
     "maxRetries": 3,
-    "saveTo": "attribute",
+    "saveTo": "conversation_attr",
     "saveAttrKey": "escolha_menu"
   }
 }
@@ -109,7 +126,16 @@ Todo node tem essa estrutura base:
 
 **`validation` válidos:** `any`, `options`, `regex`.
 
-**`saveTo` válidos:** `variable` (variável temporária do flow), `attribute` (custom_attributes da CONVERSA), `contact_attribute` (custom_attributes do CONTATO), `""` (não salva).
+**`saveTo` válidos (nomes EXATOS — qualquer outro valor NÃO salva nada):**
+- `variable` — variável temporária do flow (use `saveVariable` pra nomear; senão usa o próprio `saveTo`)
+- `contact_name` — sobrescreve o nome do contato
+- `contact_email` — sobrescreve o email do contato
+- `contact_phone` — sobrescreve o telefone do contato
+- `contact_attr` — custom attribute do CONTATO (precisa de `saveAttrKey`)
+- `conversation_attr` — custom attribute da CONVERSA (precisa de `saveAttrKey`)
+- `""` — não salva
+
+**NÃO existem** `attribute` nem `contact_attribute` — use `conversation_attr` / `contact_attr`.
 
 **Handles que SAEM dependem da validation:**
 - `validation: 'any'` → `success`, `timeout`
@@ -128,18 +154,47 @@ Todo node tem essa estrutura base:
   "data": {
     "label": "Tipo de cliente",
     "conditions": [
-      { "id": "c1", "label": "VIP", "field": "contact.custom_attributes.plano", "operator": "equal", "value": "premium" },
-      { "id": "c2", "label": "Padrão", "field": "contact.custom_attributes.plano", "operator": "equal", "value": "standard" }
+      { "id": "c1", "label": "VIP", "field": "contact.custom_attribute.plano", "operator": "equal", "value": "premium" },
+      { "id": "c2", "label": "Padrão", "field": "contact.custom_attribute.plano", "operator": "equal", "value": "standard" }
     ]
   }
 }
 ```
 
-**Operadores válidos:** `equal` (ou `field_equals`), `not_equal`, `contains`, `not_contains`, `starts_with`, `ends_with`, `greater_than`, `less_than`, `is_present`, `is_blank`, `regex`.
+**ATENÇÃO — atributo customizado é SINGULAR:** `contact.custom_attribute.X` e `conversation.custom_attribute.X` (também `account.custom_attribute.X`). Usar plural `custom_attributes` resolve VAZIO — vale tanto no `field` da condição quanto em mensagens/variáveis `{{...}}`.
+
+**Operadores válidos (lista real do runtime):**
+
+| Operador | Uso |
+|---|---|
+| `equal` (ou `field_equals`) / `not_equal` | igualdade |
+| `contains` / `not_contains` | substring |
+| `starts_with` / `ends_with` | prefixo/sufixo |
+| `is_empty` / `is_not_empty` | vazio/preenchido (NÃO existe `is_present`/`is_blank`) |
+| `greater_than` / `less_than` | comparação numérica |
+| `number_range` | faixa; `value` no formato `"min-max"` (ex `"10-50"`) |
+| `has_length` | comprimento exato (`value` = número) |
+| `is_number` / `is_letter` / `is_email` / `is_phone` | validação de formato |
+| `regex` | padrão regex em `value` |
+| `equal_any` / `not_equal_any` / `contains_any` | multi-valor (usa `values` array) |
+| `business_hours` / `outside_business_hours` | horário comercial |
+| `can_reply` / `can_reply_closed` | janela 24h aberta/fechada |
+| `conversation_has_agent` / `conversation_no_agent` / `conversation_not_agent` | agente atribuído |
+| `contact_has_label` / `contact_no_label` / `conversation_has_label` / `conversation_no_label` | labels |
+| `kanban_exists` / `kanban_in_stage` / `kanban_won` / `kanban_lost` | card no funil (usa `funnel_id` + `stage`) |
+| `card_attr_equals` / `card_attr_contains` | atributo do card (`attrSource: 'card'` + `attr_key`) |
+| `pagetrack_visited` / `pagetrack_event` | LionTrack |
+
+**Restrição por TIPO de atributo (a UI só oferece um subconjunto, e é o que faz sentido):**
+- **Texto/string:** `equal`, `not_equal`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`
+- **Número:** `equal`, `not_equal`, `greater_than`, `less_than`, `number_range`, `is_empty`, `is_not_empty`
+- **Lista/Data:** `equal`, `not_equal`, `contains`, `not_contains`
+
+Use operador numérico (`greater_than`, `less_than`, `number_range`) SÓ em atributo de tipo número.
 
 **Handles que SAEM:** `cond_0`, `cond_1`, `cond_2`, ... (UM POR CONDIÇÃO, pela ordem do array — NÃO use o `id` da condição) + `default` (quando nenhuma bate).
 
-**ATENÇÃO:** o handle é `cond_INDEX` baseado na posição no array, NÃO o `id` da condição. Se você definir `conditions[0].id = "vip"`, mesmo assim o handle é `cond_0`.
+**ATENÇÃO — lógica first-match-wins (if / elsif):** as condições são avaliadas em ordem e PARA na primeira que bate. A ordem do array importa. O handle é `cond_INDEX` baseado na posição, NÃO o `id` da condição. Se `conditions[0].id = "vip"`, o handle ainda é `cond_0`.
 
 ### 2.5 `action`
 
@@ -184,11 +239,27 @@ Todo node tem essa estrutura base:
 | `send_webhook` | `{ url, headers?, body? }` | Dispara webhook externo |
 | `start_flow` | `{ flow_id }` | Inicia outro fluxo |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
-| `update_attribute` | `{ entity: 'contact'\|'conversation'\|'card', key, value }` | Seta custom_attribute |
+| `update_attribute` | `{ attr_source: 'contact'\|'conversation'\|'card', attr_key, attr_value }` | Seta custom_attribute (ver abaixo) |
 | `assign_captain` (ou `assign_captain_assistant`) | `{ assistant_id }` | Atribui IA Captain |
 | `deactivate_captain` | `{}` | Tira a IA da conversa |
 
 **Handles que SAEM:** `success`. Não tem handle `error` — falhas viram warning silencioso e o flow continua.
+
+**`update_attribute` — campos EXATOS:** `attr_source` (`'contact'`, `'conversation'` ou `'card'`), `attr_key` (nome do atributo), `attr_value` (valor). NÃO existem `entity`/`key`/`value` — esses são ignorados e não salvam nada.
+
+**Somar/subtrair NÃO é operação dedicada** — é filtro Liquid no próprio `attr_value`. O valor é resolvido como template antes de salvar. Exemplos:
+
+```json
+{ "key": "update_attribute", "config": {
+  "attr_source": "contact", "attr_key": "numero_tokens",
+  "attr_value": "{{ contact.custom_attribute.numero_tokens | minus: 1 }}"
+} }
+```
+- Subtrair 1 token: `{{ contact.custom_attribute.numero_tokens | minus: 1 }}`
+- Somar 5: `{{ conversation.custom_attribute.pontos | plus: 5 }}`
+- Multiplicar: `| times: 2` · Dividir: `| divided_by: 2`
+
+Lembre: o atributo lido é SINGULAR (`custom_attribute`).
 
 ### 2.6 `api`
 
@@ -223,18 +294,24 @@ Todo node tem essa estrutura base:
   "data": {
     "label": "Classifica intenção",
     "aiMode": "intent",
-    "aiPrompt": "Classifique a intenção da última mensagem como: compra, suporte, reclamacao ou outro",
-    "aiIntentOptions": ["compra", "suporte", "reclamacao", "outro"],
-    "aiResponseVar": "intent_result"
+    "aiPrompt": "Classifique a intenção da última mensagem",
+    "aiIntents": [
+      { "name": "compra" },
+      { "name": "suporte" },
+      { "name": "reclamacao" },
+      { "name": "outro" }
+    ]
   }
 }
 ```
 
 **`aiMode` válidos:** `generate`, `intent`, `sentiment`, `extract`.
 
+**Intent — campo EXATO:** `aiIntents` é um ARRAY DE OBJETOS `{ "name": "..." }`. NÃO use `aiIntentOptions` (array de strings) — é ignorado. A intenção classificada também fica disponível na variável de sessão **`ai_intent`** (use como `{{ai_intent}}` adiante).
+
 **Handles que SAEM dependem do mode:**
 - `generate` → `success`, `error`
-- `intent` → uma saída por opção em `aiIntentOptions` (ex: `intent_compra`, `intent_suporte`) + `error`
+- `intent` → uma saída por intenção (`intent_<name>`, ex: `intent_compra`, `intent_suporte`) **+ `no_intent`** (quando nenhuma bate) + `error`
 - `sentiment` → `positive`, `negative`, `neutral` + `error`
 - `extract` → `success`, `error` (resultado salvo em `aiResponseVar`)
 
@@ -270,7 +347,7 @@ Pra `weekday`, use também `targetWeekday` (0=domingo, 1=segunda... 6=sábado) e
     "label": "Define contexto",
     "variables": [
       { "name": "origem_lead", "value": "Facebook Ads" },
-      { "name": "score", "value": "{{contact.custom_attributes.lead_score}}" }
+      { "name": "score", "value": "{{contact.custom_attribute.lead_score}}" }
     ]
   }
 }
@@ -316,6 +393,38 @@ Atualiza nome/descrição/foto de grupo WhatsApp. Use só quando flow roda em in
 ```
 
 **Handles que SAEM:** `success`, `error`.
+
+### 2.13 `end` (encerra ramo / define retorno do ai_tool)
+
+Node terminal, sem handles de saída. Em flow `conversation` apenas encerra aquele ramo. Em flow `ai_tool` é OBRIGATÓRIO: o `data` do `end` define o que volta pro LLM (modo de saída + template do resultado).
+
+```json
+{ "id": "node-end", "type": "end", "position": { "x": 1330, "y": 300 }, "data": { "label": "Retorno", "mode": "structured" } }
+```
+
+### 2.14 `note` (anotação visual)
+
+Sticky note no canvas, puramente visual. Sem handles, nunca executado (não ligue edges nele). Serve só pra documentar o flow.
+
+```json
+{ "id": "note-1", "type": "note", "position": { "x": 50, "y": 50 }, "data": { "content": "Fluxo de qualificação — revisar mensagens" } }
+```
+
+---
+
+## 2-B. Dois tipos de flow: `conversation` vs `ai_tool`
+
+O campo `flow_type` (definido na criação, IMUTÁVEL depois) decide a natureza do flow:
+
+| | `conversation` (default) | `ai_tool` |
+|---|---|---|
+| Como dispara | Por evento de inbox (trigger no node `start`) | Invocado pelo AI Agente (Captain) como ferramenta |
+| Inboxes | usa `inbox_ids` | **PROIBIDO** ter inboxes (validação barra) |
+| Campos extra | — | `tool_name` (snake_case, `[a-z][a-z0-9_]`, max 50) + `tool_description` (max 500) OBRIGATÓRIOS |
+| Retorno | manda mensagens | retorna dado estruturado ao LLM via node `end` |
+| Nodes permitidos | todos | SÓ: `start`, `end`, `api`, `condition`, `set_variable`, `ai`, `note` |
+
+Se o cliente pediu "uma ferramenta que a IA usa pra consultar X / calcular Y", é `ai_tool`. Se pediu "quando chega mensagem, faça Z", é `conversation`. Na dúvida, `conversation`.
 
 ---
 
@@ -400,6 +509,15 @@ Nodes nunca devem ficar com a mesma coordenada `(x, y)`. Se dois nodes têm posi
 | Edge com `target` apontando pra ID que não existe | Quebra o grafo | Confira que `target` está em `nodes[]` |
 | `channel_type: "WhatsApp"` | Precisa do nome de classe Rails | `"Channel::Whatsapp"`, `"Channel::Waha"`, `"Channel::WebWidget"` |
 | `validation: "option"` (singular) | Não existe | `"options"` (plural) |
+| `custom_attributes` (plural) em `{{...}}` ou `field` | Resolve vazio | `custom_attribute` (singular) |
+| `update_attribute` com `{entity, key, value}` | Campos errados, não salva | `{attr_source, attr_key, attr_value}` |
+| `saveTo: "attribute"` ou `"contact_attribute"` | Não existem, não salva | `"conversation_attr"` / `"contact_attr"` |
+| `is_present` / `is_blank` na condition | Não existem | `is_not_empty` / `is_empty` |
+| `aiIntentOptions` (array de strings) no node ai | Ignorado | `aiIntents: [{name}]` |
+| `match_mode` no `message_received` | Ignorado | `match_type` (`exact`/`contains`) |
+| `label` (singular) em `label_added`/`label_removed` | Ignorado | `label_names: [...]` |
+| operador numérico (`greater_than` etc) em atributo texto | UI não oferece; semântica errada | usar só em atributo número |
+| inboxes em flow `ai_tool` | Validação rejeita | ai_tool não tem inboxes |
 | `waitTime: "60"` (string) | Espera Integer | `waitTime: 60` |
 | `inbox_ids` aninhado em `{flow:{...}}` | No MCP, achata-se sozinho | Passa `inbox_ids: [1, 2]` no nível raiz |
 | Mais de 1 node `start` | Flow precisa ter exatamente 1 ponto de entrada | Só 1 |

@@ -145,6 +145,10 @@ Company
 └── domain
 ```
 
+**`additional_attributes` vs `custom_attributes` no Contato:**
+- `additional_attributes` (jsonb): campos do sistema porém **EDITÁVEIS via API** (`permitted_params` permite `additional_attributes: {}`). Guarda chaves padrão como `city`, `company`, `country_code` — que são as chaves filtráveis em `lib/filters/filter_keys.yml` (tipo `additional_attributes`). NÃO é não-editável.
+- `custom_attributes` (jsonb): dado de negócio livre, definido pelo cliente via Atributos Customizados.
+
 **Padrões de `source_id` por canal:**
 - Waha: `5511999999999@c.us` (1-on-1) ou `120363xxx@g.us` (grupo) ou `XXXX@lid` (LID)
 - WhatsApp Cloud: `5511999999999` (E.164 sem prefixo)
@@ -272,12 +276,22 @@ Macro
 AccountTask (agenda interna)
 ├── id (PK)
 ├── account_id (FK)
-├── user_id (FK → User, assignee)
+├── user_id (FK → User, optional)
+├── created_by (FK → User)
 ├── title
 ├── description
-├── due_at (datetime)
-├── completed_at (datetime, nullable)
-└── color (string)
+├── task_type (string: task/follow_up/call/meeting/video_call/deadline/custom)
+├── priority (string: none/low/medium/high/urgent)
+├── status (enum: pending=0 (default) / completed=1 / cancelled=2 / snoozed=3)
+├── scheduled_at (datetime) — data/hora da tarefa
+├── duration_minutes (int, default por task_type: task/follow_up=15, call=30, meeting/video_call=60)
+├── snoozed_until (datetime, se status=snoozed)
+├── recurrence_type (string nullable: daily/weekly/biweekly/monthly/yearly; nil = tarefa única)
+├── recurrence_count (int nullable, 1-365)
+├── meeting_url (string, sala de reunião call/meeting)
+├── guest_emails (jsonb array, convidados extras — máx 20)
+├── conversation_id / contact_id / linked_kanban_item_id (FK opcionais)
+└── assignees (has_many → User, via account_task_assignments)
 
 BookingEventType (template de agendamento)
 ├── id (PK)

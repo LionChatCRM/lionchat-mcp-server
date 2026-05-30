@@ -21,7 +21,7 @@ A maioria dos endpoints aceita parâmetros pra filtrar antes de retornar:
 |---|---|
 | `conversations_list` | `status` (open/resolved), `assignee_type`, `inbox_id`, `team_id`, `labels`, `q` (busca) |
 | `contacts_list` | `q` (nome/email/telefone), `include_contact_inboxes` |
-| `messages_search` | `q`, `conversation_id`, `before`, `after` |
+| `messages_search` | `q`, `file_type[]`, `private_only`, `page` (busca dentro de UMA conversa) |
 | `kanban_items_list` | `funnel_id`, `funnel_stage`, `assigned_agent_id` |
 | `reports_list_*` | `since`, `until`, `metric`, `type` |
 
@@ -64,8 +64,12 @@ Quando existir endpoint específico, prefira:
 Conversa com 200 mensagens? **Não baixe tudo**:
 
 1. `conversations_show` (1 chamada) → metadata + última mensagem
-2. Se precisa contexto: pegue só as últimas 20-30 mensagens com `before` ou `page`
-3. Pra análise completa, use `conversations_transcript` (formato condensado)
+2. Se precisa contexto: pegue só as últimas 20-30 mensagens com `conversations_messages_list` (use `page`)
+3. Pra análise/resumo completo, use `conversations_messages_list` paginando — é a fonte do texto.
+
+> **Atenção:** `conversations_transcript` NÃO retorna o texto da conversa pra você ler. Ele EXIGE o
+> parâmetro `email` e apenas dispara um e-mail (via `ConversationReplyMailer`) com a transcrição —
+> responde `head :ok`, sem corpo. Para LER ou RESUMIR uma conversa, use `conversations_messages_list`.
 
 ## Operações em massa
 
@@ -78,9 +82,10 @@ NÃO faça 50 PATCH requests individuais — bate rate limit.
 
 ## Rate limiting
 
-LionChat tem rate limit por API token. Limites típicos:
-- ~500 req/min para read
-- ~100 req/min para write
+LionChat tem rate limit por API token (fonte única: `api-conventions.md` → seção Rate Limiting):
+- 1200 req/min para leitura (reads)
+- 600 req/min para escrita (writes)
+- Detecção de loop: 10 chamadas idênticas em 10 seg
 
 Se receber `429 Too Many Requests`:
 - Espere o `Retry-After` header
@@ -157,12 +162,41 @@ Nunca hard-code esses dados em respostas geradas.
 2. `reports_list_*` (agent_overview) com `since=7d_ago`, `until=now`
 3. Sintetize: agente X com Y resoluções, tempo médio Z
 
+### "Enviar mensagem com anexo (imagem/arquivo)"
+1. `upload_create` (a partir de arquivo OU de uma URL) → resposta traz `file_url` e `blob_id`
+2. `conversations_messages_create` passando o `blob_id` (signed_id) dentro do array `attachments`:
+   ```json
+   { "content": "Segue o documento", "message_type": "outgoing", "attachments": ["<blob_id>"] }
+   ```
+   Cada item de `attachments` é o `blob_id` retornado pelo upload. Pode mandar vários.
+3. O mesmo padrão vale pra anexar mídia num card do Kanban (use o `blob_id` no campo de anexo do card).
+
 ## Cuidados com tools de criação
 
 Endpoints `create_*` modificam dados reais. Antes de chamar:
 - Confirme com usuário (se inicialmente pediu "ver", não "fazer")
 - Verifique se o recurso já existe (evite duplicatas)
 - Use `dry_run` quando disponível
+
+### Wrappers de body obrigatórios (exceções à regra "use raiz")
+
+A regra geral é mandar o body na raiz (ver `api-conventions.md`). Mas três endpoints usam
+`params.require(...)` no controller e **exigem o wrapper nomeado** — sem ele dá `400`/`422`:
+
+| Tool | Wrapper obrigatório | Controller |
+|---|---|---|
+| `companies_create` / `companies_update` | `{ "company": { ... } }` | `params.require(:company)` |
+| `canned_responses_create` | `{ "canned_response": { ... } }` | `params.require(:canned_response)` |
+| `scheduled_messages_create` (dentro de conversa) | `{ "scheduled_message": { ... } }` | `params.require(:scheduled_message)` |
+
+Exemplo:
+
+```json
+{ "company": { "name": "Acme", "domain": "acme.com" } }
+```
+
+> Observação: o endpoint `scheduled_messages` de nível raiz (fora de conversa) usa `params.permit`
+> sem wrapper. A exigência de wrapper vale para o criar-dentro-da-conversa.
 
 ## Erros comuns a evitar
 

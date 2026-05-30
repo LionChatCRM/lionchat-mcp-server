@@ -124,8 +124,16 @@ A KEY é o slug interno (`novo_lead`). O `name` é o que aparece na UI ("Novo Le
 
 ### Query params padrão
 
-- `page` (int, 1-indexado, default 1)
-- `per_page` (int, default varia por endpoint, máximo 100 clamp server-side)
+- `page` (int, 1-indexado, default 1) — **sempre respeitado**
+- `per_page` (int, máximo 100 clamp server-side) — **page-size é por-endpoint e às vezes FIXO**
+
+> **Atenção: vários endpoints IGNORAM `per_page` e usam um tamanho fixo.** Exemplos confirmados:
+> - **Conversas** (`conversations_list`): 25 fixo (`CONVERSATION_RESULTS_PER_PAGE`, default 25) — `per_page` é ignorado.
+> - **Contatos** (`contacts_list`): 15 fixo (`RESULTS_PER_PAGE = 15`) — `per_page` é ignorado.
+> - **Busca de mensagens** (`messages_search`): 20 fixo.
+>
+> Nesses casos, NÃO confie em `per_page` pra trazer 100 de uma vez — pagine via `page`
+> (`page=1`, `page=2`, ...) e use `meta.total_count` pra saber quando parar.
 
 ### Resposta típica
 
@@ -156,7 +164,7 @@ Ou para listas grandes (cursors):
 
 ### Estratégia recomendada
 
-- Para listar tudo: **NÃO** itere infinitamente. Sempre limite (`per_page=100` + 1 página é geralmente suficiente).
+- Para listar tudo: **NÃO** itere infinitamente. Quando o endpoint respeita `per_page`, `per_page=100` + 1 página é geralmente suficiente. Quando o page-size é FIXO (conversas=25, contatos=15, busca de msg=20), pagine por `page` e pare ao bater `meta.total_count`.
 - Para "quantos X tem": prefira endpoints `meta` ou `count`.
 - Para encontrar X específico: prefira `search` ou `filter` (server-side).
 
