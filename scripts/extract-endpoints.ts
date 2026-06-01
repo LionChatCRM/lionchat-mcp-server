@@ -254,13 +254,30 @@ const output = endpointsRaw.map(ep => {
   // Filter out account_id from params, lowercase location
   const params = (ep.params || [])
     .filter(p => p.name !== 'account_id')
-    .map(p => ({
-      name: p.name,
-      type: p.type,
-      location: (p.location || '').toLowerCase(),
-      required: !!p.required,
-      description: p.description || '',
-    }));
+    .map(p => {
+      // AIDEV-NOTE: Rails array params arrive as `priorities[]`. The `[]` is invalid
+      // in MCP tool-schema property keys (^[a-zA-Z0-9_.-]{1,64}$), so we expose a clean
+      // `name` to the LLM and stash the wire key in `query_name` (used by separateParams
+      // to keep the `priorities[]=a&priorities[]=b` Rails array convention).
+      const isBracketArray = typeof p.name === 'string' && p.name.endsWith('[]');
+      const cleanName = isBracketArray ? p.name.slice(0, -2) : p.name;
+      const out: {
+        name: string;
+        type: string;
+        location: string;
+        required: boolean;
+        description: string;
+        query_name?: string;
+      } = {
+        name: cleanName,
+        type: p.type,
+        location: (p.location || '').toLowerCase(),
+        required: !!p.required,
+        description: p.description || '',
+      };
+      if (isBracketArray) out.query_name = p.name;
+      return out;
+    });
 
   return {
     id: makeId(ep.sub, ep.m, ep.path),

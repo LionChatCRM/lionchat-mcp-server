@@ -4,7 +4,9 @@
 // AIDEV-NOTE: Separates raw MCP tool input into path/query/body buckets based on endpoint param definitions
 export interface SeparatedParams {
   pathParams: Record<string, unknown>;
-  queryParams: Record<string, string>;
+  // AIDEV-NOTE: Values may be arrays (e.g. priorities[]) — buildQueryString expands
+  // them to repeated keys. Kept as unknown so array query params survive intact.
+  queryParams: Record<string, unknown>;
   bodyParams: Record<string, unknown>;
 }
 
@@ -82,17 +84,23 @@ export function formatResponse(data: unknown): string {
 // (e.g. `{ variable: { attribute_key: ... } }` for AccountVariablesController).
 export function separateParams(
   input: Record<string, unknown>,
-  paramDefs: Array<{ name: string; location: string }>,
+  paramDefs: Array<{ name: string; location: string; query_name?: string }>,
   bodyWrapper?: string
 ): SeparatedParams {
   const pathParams: Record<string, unknown> = {};
-  const queryParams: Record<string, string> = {};
+  const queryParams: Record<string, unknown> = {};
   const bodyParams: Record<string, unknown> = {};
 
   // AIDEV-NOTE: Build a lookup map for O(1) location resolution per param
   const locationMap = new Map<string, string>();
+  // AIDEV-NOTE: Maps clean param name -> wire query key for Rails array params
+  // (e.g. "priorities" -> "priorities[]"). Only set for params with query_name.
+  const queryNameMap = new Map<string, string>();
   for (const def of paramDefs) {
     locationMap.set(def.name, def.location);
+    if (def.query_name) {
+      queryNameMap.set(def.name, def.query_name);
+    }
   }
 
   // AIDEV-NOTE: Helper that places a value into bodyParams, expanding dot-notation
@@ -174,7 +182,14 @@ export function separateParams(
         break;
       case 'query':
         if (value !== null) {
-          queryParams[key] = String(value);
+          const wireKey = queryNameMap.get(key);
+          if (wireKey) {
+            // AIDEV-NOTE: Rails array convention — pass value through (array stays array)
+            // so buildQueryString emits priorities[]=a&priorities[]=b (multi-value support).
+            queryParams[wireKey] = value;
+          } else {
+            queryParams[key] = String(value);
+          }
         }
         break;
       case 'body':

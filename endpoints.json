@@ -2318,7 +2318,8 @@
         "description": "ID"
       },
       {
-        "name": "priorities[]",
+        "name": "priorities",
+        "query_name": "priorities[]",
         "type": "array",
         "location": "query",
         "required": false,
@@ -2586,21 +2587,24 @@
         "description": "Valor máximo"
       },
       {
-        "name": "priorities[]",
+        "name": "priorities",
+        "query_name": "priorities[]",
         "type": "array",
         "location": "query",
         "required": false,
         "description": "Filtrar por prioridades"
       },
       {
-        "name": "statuses[]",
+        "name": "statuses",
+        "query_name": "statuses[]",
         "type": "array",
         "location": "query",
         "required": false,
         "description": "Filtrar por status (open/won/lost)"
       },
       {
-        "name": "user_ids[]",
+        "name": "user_ids",
+        "query_name": "user_ids[]",
         "type": "array",
         "location": "query",
         "required": false,
@@ -3265,14 +3269,16 @@
         "description": "Agente"
       },
       {
-        "name": "priorities[]",
+        "name": "priorities",
+        "query_name": "priorities[]",
         "type": "array",
         "location": "query",
         "required": false,
         "description": "Prioridades"
       },
       {
-        "name": "statuses[]",
+        "name": "statuses",
+        "query_name": "statuses[]",
         "type": "array",
         "location": "query",
         "required": false,
@@ -3349,7 +3355,8 @@
         "description": "ID do funil"
       },
       {
-        "name": "priorities[]",
+        "name": "priorities",
+        "query_name": "priorities[]",
         "type": "array",
         "location": "query",
         "required": false,

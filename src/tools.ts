@@ -22,6 +22,9 @@ interface EndpointParam {
   location: string;
   required: boolean;
   description: string;
+  // AIDEV-NOTE: Wire key for Rails array query params (e.g. "priorities[]"). When set,
+  // the schema exposes the clean `name` but the query string uses `query_name`.
+  query_name?: string;
 }
 
 interface EndpointDef {
