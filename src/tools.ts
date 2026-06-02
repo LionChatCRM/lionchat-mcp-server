@@ -208,6 +208,13 @@ function buildZodSchema(
         );
       continue;
     }
+    // AIDEV-NOTE: B3 (2026-06-02) — file upload não é suportado no MCP v1. Se o param file
+    // for `required`, ele entraria no required[] do schema mas o handler rejeita assim que
+    // for fornecido → tool impossível de chamar. Não expomos file no schema: a tool roda com
+    // os demais params (o aviso fica na descrição; o guard abaixo permanece como defesa).
+    if (param.type === 'file') {
+      continue;
+    }
     shape[param.name] = paramTypeToZod(param);
   }
 
@@ -260,7 +267,9 @@ function registerSingleTool(
         if (hasFile) {
           const fileParams = endpoint.params.filter((p) => p.type === 'file');
           for (const fp of fileParams) {
-            if (params[fp.name] !== undefined && params[fp.name] !== null) {
+            // AIDEV-NOTE: B10 (2026-06-02) — trata "" como "não fornecido" (igual ao remoto
+            // runner.ts), pra os dois conectores terem o mesmo guard de file vazio.
+            if (params[fp.name] !== undefined && params[fp.name] !== null && params[fp.name] !== '') {
               return {
                 content: [
                   {

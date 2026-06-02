@@ -107,67 +107,42 @@ export function separateParams(
   // names into nested objects. Example: `config.temperature` => body.config.temperature
   // Rationale: Rails strong_params expect nested objects (e.g. assistant: { config: {...} })
   // not flat keys with dots. Without this expansion the backend silently drops the field.
-  const assignBody = (name: string, value: unknown): void => {
-    const dotIdx = name.indexOf('.');
-    if (dotIdx <= 0) {
-      // AIDEV-NOTE: Merge plain objects to avoid clobbering when caller mixes
-      // `config: {...}` and `config.X` in the same input (P0 fix 2026-05-05).
-      const existingTop = bodyParams[name];
-      if (
-        value && typeof value === 'object' && !Array.isArray(value) &&
-        existingTop && typeof existingTop === 'object' && !Array.isArray(existingTop)
-      ) {
-        bodyParams[name] = { ...(existingTop as Record<string, unknown>), ...(value as Record<string, unknown>) };
+  // B2 (2026-06-02): deep-merge em CADA nível (não só na raiz). Misturar `item_details: {...}`
+  // (objeto) com `item_details.title` (sub-path) no mesmo input preserva ambos os lados — o
+  // resultado deixa de depender da ordem de Object.entries. Objetos planos fazem merge;
+  // arrays e escalares SUBSTITUEM.
+  const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+    !!v && typeof v === 'object' && !Array.isArray(v);
+
+  const deepMerge = (target: Record<string, unknown>, source: Record<string, unknown>): void => {
+    for (const [k, v] of Object.entries(source)) {
+      const existing = target[k];
+      if (isPlainObject(existing) && isPlainObject(v)) {
+        deepMerge(existing, v);
       } else {
-        bodyParams[name] = value;
+        target[k] = v;
       }
-      return;
     }
-    const root = name.slice(0, dotIdx);
-    const leaf = name.slice(dotIdx + 1);
+  };
+
+  const assignBody = (name: string, value: unknown): void => {
+    // Constrói o objeto aninhado representado pelo nome (a.b.c => {a:{b:{c:value}}}).
+    const parts = name.split('.');
+    let built: unknown = value;
+    for (let i = parts.length - 1; i >= 1; i--) {
+      built = { [parts[i]]: built };
+    }
+    const root = parts[0];
     const existing = bodyParams[root];
-    const target =
-      existing && typeof existing === 'object' && !Array.isArray(existing)
-        ? (existing as Record<string, unknown>)
-        : {};
-    // AIDEV-NOTE: Recurse to support multi-level dot-notation (a.b.c)
-    const nested: Record<string, unknown> = target;
-    const innerDot = leaf.indexOf('.');
-    if (innerDot <= 0) {
-      nested[leaf] = value;
+    if (isPlainObject(built) && isPlainObject(existing)) {
+      deepMerge(existing, built);
+    } else if (isPlainObject(built)) {
+      const container: Record<string, unknown> = {};
+      deepMerge(container, built);
+      bodyParams[root] = container;
     } else {
-      // AIDEV-NOTE: Build deeper nesting by reusing assignBody logic on a temp container
-      const subPath = leaf;
-      const subRoot = subPath.slice(0, innerDot);
-      const subRest = subPath.slice(innerDot + 1);
-      const subExisting = nested[subRoot];
-      const subTarget =
-        subExisting && typeof subExisting === 'object' && !Array.isArray(subExisting)
-          ? (subExisting as Record<string, unknown>)
-          : {};
-      // Iteratively walk the rest of the path
-      let cursor: Record<string, unknown> = subTarget;
-      let remaining = subRest;
-      while (true) {
-        const idx = remaining.indexOf('.');
-        if (idx <= 0) {
-          cursor[remaining] = value;
-          break;
-        }
-        const head = remaining.slice(0, idx);
-        const tail = remaining.slice(idx + 1);
-        const next = cursor[head];
-        const nextObj =
-          next && typeof next === 'object' && !Array.isArray(next)
-            ? (next as Record<string, unknown>)
-            : {};
-        cursor[head] = nextObj;
-        cursor = nextObj;
-        remaining = tail;
-      }
-      nested[subRoot] = subTarget;
+      bodyParams[root] = built;
     }
-    bodyParams[root] = target;
   };
 
   for (const [key, value] of Object.entries(input)) {

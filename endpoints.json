@@ -131,6 +131,7 @@
         "type": "array",
         "location": "query",
         "required": false,
+        "query_name": "labels[]",
         "description": "Filtrar por labels"
       },
       {
@@ -1032,6 +1033,7 @@
         "type": "array",
         "location": "query",
         "required": false,
+        "query_name": "labels[]",
         "description": "Labels (tags) — array de títulos"
       }
     ],
@@ -1098,6 +1100,7 @@
         "type": "array",
         "location": "query",
         "required": false,
+        "query_name": "labels[]",
         "description": "Labels (tags) — array de títulos"
       },
       {
@@ -1995,6 +1998,7 @@
         "type": "array",
         "location": "query",
         "required": false,
+        "query_name": "file_type[]",
         "description": "Tipos de arquivo"
       }
     ],
@@ -3206,7 +3210,7 @@
     "category": "Itens",
     "params": [
       {
-        "name": "q",
+        "name": "query",
         "type": "string",
         "location": "query",
         "required": true,
@@ -10105,6 +10109,7 @@
         "type": "array",
         "location": "query",
         "required": false,
+        "query_name": "includes[]",
         "description": "Filtrar por status: read, snoozed"
       },
       {
@@ -12205,6 +12210,13 @@
     "description": "Atualiza valor de uma variável existente. Atualiza campos do variável de conta existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: value.",
     "category": "Variaveis da Conta",
     "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da variável"
+      },
       {
         "name": "attribute_display_name",
         "type": "string",
@@ -18594,8 +18606,7 @@
       "lionchat_captain_documents_list",
       "lionchat_captain_documents_create",
       "lionchat_captain_documents_destroy"
-    ],
-    "body_wrapper": "document"
+    ]
   },
   {
     "id": "lionchat_copilot_prompts_list",
@@ -18668,6 +18679,13 @@
     "description": "Atualiza um prompt salvo do Copilot (campo prompt). Exige Admin.",
     "category": "Prompts Salvos",
     "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do prompt salvo"
+      },
       {
         "name": "title",
         "type": "string",

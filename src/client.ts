@@ -233,6 +233,12 @@ export class LionChatClient {
     let retries5xx = 0;
     let retriesNetwork = 0;
 
+    // AIDEV-NOTE: B1 — só retentamos 5xx/rede em métodos idempotentes. POST não é
+    // idempotente: reenviar após timeout/502 (quando o Rails JÁ processou) duplicaria
+    // mensagem/contato/conversa. 429 segue retentando p/ todos (é pré-processamento).
+    const httpMethod = (fetchOptions.method || 'GET').toUpperCase();
+    const isIdempotent = ['GET', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].includes(httpMethod);
+
     // AIDEV-NOTE: Max possible attempts = 1 initial + 3 (429) + 1 (5xx) + 1 (network)
     // In practice, only one retry category applies per request
     const maxAttempts = 1 + MAX_RETRIES_429 + MAX_RETRIES_5XX + MAX_RETRIES_NETWORK;
@@ -257,19 +263,21 @@ export class LionChatClient {
         // once and short-circuit BEFORE parsing so an empty body never throws
         // "Unexpected end of JSON input". The operation succeeded; return clean success.
         const rawText = await response.text();
-        if (response.status === 204 || rawText.trim() === '') {
-          if (response.ok) {
-            return { success: true, status: response.status };
-          }
+        const isEmptyBody = response.status === 204 || rawText.trim() === '';
+        if (isEmptyBody && response.ok) {
+          return { success: true, status: response.status };
         }
 
-        // AIDEV-NOTE: Parse response body
+        // AIDEV-NOTE: Parse response body.
+        // B9 — corpo vazio com status de erro: não tenta parsear (JSON.parse('') jogaria
+        // "Unexpected end of JSON input"); deixa responseBody undefined p/ getErrorMessage.
+        // B4 — sempre parseia em try/catch (mesmo com content-type application/json): um
+        // corpo malformado (proxy/CDN/502 parcial) cai no fallback de texto em vez de
+        // jogar SyntaxError cru no LLM.
         let responseBody: unknown;
-        const contentType = response.headers.get('content-type') ?? '';
-        if (contentType.includes('application/json')) {
-          responseBody = JSON.parse(rawText);
+        if (isEmptyBody) {
+          responseBody = undefined;
         } else {
-          // AIDEV-NOTE: Try parsing as JSON even without content-type header
           try {
             responseBody = JSON.parse(rawText);
           } catch {
@@ -299,8 +307,8 @@ export class LionChatClient {
           continue;
         }
 
-        // AIDEV-NOTE: 5xx — retry once after 2s
-        if (response.status >= 500 && retries5xx < MAX_RETRIES_5XX) {
+        // AIDEV-NOTE: 5xx — retry once after 2s (apenas métodos idempotentes; ver B1)
+        if (response.status >= 500 && isIdempotent && retries5xx < MAX_RETRIES_5XX) {
           retries5xx++;
           await sleep(2000);
           continue;
@@ -315,8 +323,8 @@ export class LionChatClient {
           throw err;
         }
 
-        // AIDEV-NOTE: Network/timeout errors — retry once after 2s
-        if (isNetworkError(err) && retriesNetwork < MAX_RETRIES_NETWORK) {
+        // AIDEV-NOTE: Network/timeout errors — retry once after 2s (apenas idempotentes; ver B1)
+        if (isNetworkError(err) && isIdempotent && retriesNetwork < MAX_RETRIES_NETWORK) {
           retriesNetwork++;
           lastError = err;
           await sleep(2000);
