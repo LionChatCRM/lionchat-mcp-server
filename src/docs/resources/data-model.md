@@ -149,6 +149,13 @@ Company
 - `additional_attributes` (jsonb): campos do sistema porém **EDITÁVEIS via API** (`permitted_params` permite `additional_attributes: {}`). Guarda chaves padrão como `city`, `company`, `country_code` — que são as chaves filtráveis em `lib/filters/filter_keys.yml` (tipo `additional_attributes`). NÃO é não-editável.
 - `custom_attributes` (jsonb): dado de negócio livre, definido pelo cliente via Atributos Customizados.
 
+**Dados cadastrais (`additional_attributes.cadastral`):** CPF, CNPJ, RG, passaporte, nascimento,
+gênero, estado civil, profissão e endereço completo moram em `additional_attributes->cadastral`.
+São **IMUTÁVEIS por padrão** (primeira escrita vale) — alterar exige `force_update: true`, que SÓ
+o painel humano usa. IA e integrações NUNCA passam force_update. Endpoint dedicado:
+`PATCH /contacts/{id}/cadastral` (tool `contacts_update_cadastral`). NÃO grave cadastral como
+custom_attribute. Regra absoluta relacionada: NUNCA sobrescrever `phone_number` já preenchido.
+
 **Padrões de `source_id` por canal:**
 - Waha: `5511999999999@c.us` (1-on-1) ou `120363xxx@g.us` (grupo) ou `XXXX@lid` (LID)
 - WhatsApp Cloud: `5511999999999` (E.164 sem prefixo)
@@ -221,10 +228,32 @@ Captain::Assistant
 ├── name
 ├── description
 ├── paused (boolean, default false) — botao de panico (2026-05-22). true = pausa respostas, follow-up e callbacks. Auditado. Top-level, NAO mora em config.
-├── config (jsonb: model, temperature, instructions, feature_memory, feature_faq, ...)
-├── guardrails (string[])
-├── response_guidelines (string[])
+├── config (jsonb) — chaves principais:
+│     model, temperature, instructions (max 20.000 chars), feature_memory, feature_faq,
+│     feature_follow_up (bool), follow_up_steps (array de {after_minutes, prompt} — ATE 3 etapas,
+│       cada uma >= 5 min, soma <= 1440 min/24h; legado follow_up_time+follow_up_prompt = 1 etapa),
+│     activation_label (etiqueta que ativa o agente — unica por conta),
+│     min_response_time / max_response_time (delay humanizado, 1-60s),
+│     disabled_tools (array de IDs de tools desativadas pro assistente),
+│     offer_ids / media_asset_ids / booking_event_type_ids (arrays de IDs vinculados),
+│     products (array legado de produtos)
+├── guardrails (jsonb array de strings — limites duros injetados no prompt, ex: anti-pitch)
+├── response_guidelines (jsonb array de strings — diretrizes de estilo de resposta)
 └── active_conversations_count
+
+⚠️ UPDATE de assistant: `config` faz MERGE PARCIAL (chaves não enviadas são preservadas);
+`guardrails`/`response_guidelines` SUBSTITUEM o array inteiro.
+
+Captain::Scenario (cenários do assistente — instruções inline, sem handoff)
+├── assistant_id (FK)
+├── title / description
+├── instruction (text — tools referenciadas como links markdown [Titulo](tool://id))
+├── tools (jsonb — auto-extraído da instruction)
+├── enabled (bool)
+└── trigger_type (llm_interpreted [default] | on_assistant_activation | on_first_customer_message)
+      ⚠️ trigger_type NAO é editável via API hoje — todo cenário criado por API fica em
+      llm_interpreted (a IA decide aplicar lendo a conversa). Os modos programáticos só
+      via banco/console por enquanto.
 
 Captain::AssistantResponse (FAQ)
 ├── assistant_id (FK)
@@ -360,9 +389,30 @@ MetaLeadIntegration (Facebook Lead Ads)
 ├── account_id (FK)
 ├── page_id
 ├── page_name
+├── business_id / business_name (BM dona da página — rótulo, desde 2026-06 a conexão é POR PÁGINA)
 ├── facebook_page_id (FK polimórfico)
 ├── status (active/token_expired/paused)
 └── meta_lead_forms (has_many)
+
+CustomWebhookIntegration (Webhook Universal — entrada)
+├── account_id (FK)
+├── name / token (URL única) / active
+├── field_mapping (jsonb — suporta caminhos com índice de array: messages.0.content)
+├── event_automation_mapping (jsonb)
+└── flow_id (FK opcional → Flow; presente = webhook EMBUTIDO de flow, oculto da listagem standalone)
+
+LiontrackJourneyStage (regras de fase da Jornada do Lead — feature flag liontrack)
+├── account_id (FK)
+├── stage (nome da fase, ex: Topo/Meio/Fundo/Compra)
+├── url_pattern (match literal de substring, <= 255 chars — SEM regex)
+└── position (int, ordem)
+
+WhatsappCall (Ligação WhatsApp — enterprise, voz via Cloud API)
+├── account_id / conversation_id / contact_id (FKs)
+├── status (ringing/accepted/completed/failed) / direction
+├── duration_seconds / accepted_by_agent_id
+├── custom_name (observação) / favorited (bool)
+└── transcript / transcript_status (pending/processing/completed/failed — IA da conta)
 ```
 
 ## Cardinalidades importantes

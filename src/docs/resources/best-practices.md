@@ -122,6 +122,81 @@ Pra reativar: `paused=false`. Toggle é auditado (`audited only: [:paused]`).
 - `config.instructions` (system prompt do agente) aceita até **20.000 caracteres** (antes 10k). Acima de 15k, o frontend mostra aviso "lost in the middle" — prefira colocar instruções críticas no início ou final.
 - **Cache automático** ativo em todos os 15 modelos suportados (GPT-4.1 Nano até GPT-5.2 Pro, o1, o3, o4-mini). Desconto 50-75% no input cachado, sem configuração. Reuso do prompt do agente em múltiplas conversas maximiza a economia.
 
+## Follow-up automático multi-etapa (2026-06)
+
+O follow-up do AI Agente agora suporta **cadência de até 3 etapas** via `config.follow_up_steps`:
+
+```json
+{ "config": { "feature_follow_up": true, "follow_up_steps": [
+  { "after_minutes": 30,  "prompt": "Pergunte gentilmente se ainda tem interesse" },
+  { "after_minutes": 240, "prompt": "Ofereça tirar dúvidas" },
+  { "after_minutes": 1140, "prompt": "Última tentativa, despeça-se cordialmente" }
+] } }
+```
+
+Regras: cada etapa ≥ 5 min; soma total ≤ 1440 min (24h); máx 3 etapas. Campos legados
+`follow_up_time` + `follow_up_prompt` continuam funcionando como 1 etapa única.
+Dispara quando o CLIENTE fica inativo após resposta da IA. O motor de follow-up é dedicado e
+**só-leitura** (não executa ferramentas, não coleta dado — só redige a mensagem de retomada,
+com saída estruturada garantida). `paused=true` no assistente corta os follow-ups também.
+
+## Guardrails e diretrizes de resposta (2026-06)
+
+Dois arrays no assistente (top-level, fora do config):
+- `guardrails`: limites DUROS — o que a IA nunca pode fazer (ex: "Nunca ofereça desconto",
+  proteção anti-pitch: "Não faça discurso de vendas se o cliente só pediu informação").
+- `response_guidelines`: estilo — como responder (ex: "Respostas curtas, sem emojis").
+
+No UPDATE, esses arrays SUBSTITUEM o valor inteiro (não fazem merge) — leia antes, reenvie completo.
+
+## Coleta de dados pela IA — regra DITO ≠ SALVO (2026-06)
+
+Como a coleta de dados/cenários funciona hoje (importante pra diagnosticar "IA repergunta dado"):
+- A IA salva cada dado NA HORA em que o cliente informa (não acumula pro final).
+- O que vale é o que está PERSISTIDO no contato/conversa — "o cliente já disse" não conta
+  enquanto não salvou (DITO ≠ SALVO). Se salvou, ela NÃO repergunta.
+- Campo enviado no lugar errado é redirecionado (ex: CPF mandado como telefone vai pro cadastral).
+- Cadastrais são imutáveis (primeira escrita vale) — ver data-model, seção Contatos.
+- Cenários são instruções inline no prompt (sem troca de personagem); o raciocínio do cenário
+  fica no "caderninho" da conversa (campo scenario_checklist, visível no card Raciocínio).
+- Sem AI Agente ativo na conversa = NENHUMA resposta de IA (motor V1 aposentado em 2026-06).
+
+## Automações: atributo de Conversa vs de Contato (2026-06)
+
+Atributos customizados podem existir com o MESMO nome nos dois escopos (ex: utm_source).
+Nas condições de automação, desambigue com `custom_attribute_type`:
+
+```json
+{ "attribute_key": "utm_source", "custom_attribute_type": "conversation_attribute",
+  "filter_operator": "equal_to", "values": ["google"] }
+```
+
+Sem o tipo, o filtro pode bater no escopo errado. A UI mostra sufixo "(Conversa)/(Contato)".
+
+## Meta Lead e CAPI (2026-06)
+
+- Conexão Meta Lead agora é **por página selecionada** (a BM virou só rótulo — antes puxava todas
+  as páginas da BM). O GET da integração traz `enrichment_active` e `pending_businesses` (BMs com
+  pendência de permissão).
+- Meta CAPI: o evento `InitiateCheckout` foi RENOMEADO para `begin_checkout`.
+
+## Campanhas: audiência acumulativa (2026-06)
+
+`audience` aceita 3 tipos de seção combináveis: `Label`, `Funnel` (com stages/include_won/include_lost)
+e `ConversationAttribute` ({key, value}). O campo `audience_mode` define a combinação ENTRE seções:
+- `"sum"` (default): união — contato em QUALQUER seção entra
+- `"all"`: interseção — contato precisa atender TODAS as seções preenchidas
+
+SEMPRE rode `campaigns_estimate_audience` com o MESMO audience+audience_mode antes de criar a
+campanha e mostre a contagem ao usuário — estimativa e disparo usam o mesmo motor (não divergem).
+
+## Agendamento (booking): idempotência e limites (2026-06)
+
+- Reservar o MESMO contato+evento+horário de novo retorna a reserva existente (não duplica) —
+  retry de rede é seguro.
+- Rate limit da reserva pública: 10/5min por IP + 20/min por conta (429 ao estourar).
+- Todo agendamento aparece vinculado a uma conversa (cria/reusa a conversa do contato).
+
 ## Variáveis de conta (account_variables)
 
 Pra dados que se repetem (slogans, endereços, horários):

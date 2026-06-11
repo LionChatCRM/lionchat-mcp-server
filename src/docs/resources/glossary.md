@@ -174,11 +174,21 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 
 - `id`: ID interno
 - `name`: nome do agente (ex: "Luna", "Diogo")
+- `paused`: botão de pânico — `true` corta respostas/follow-ups/callbacks na hora (top-level, auditado)
+- `guardrails`: array de limites duros injetados no prompt (ex: anti-pitch)
+- `response_guidelines`: array de diretrizes de estilo de resposta
 - `config.feature_memory`: gera notas no contato ao resolver conversas
 - `config.feature_faq`: gera FAQs sugeridas ao resolver conversas
+- `config.feature_follow_up` + `config.follow_up_steps`: follow-up automático em cadência de até
+  3 etapas (cada ≥5 min, soma ≤24h) quando o cliente some — motor dedicado só-leitura
 - `config.model`: modelo OpenAI usado (gpt-4o, gpt-4o-mini)
 - `config.temperature`: 0.0-1.0
-- `config.instructions`: prompt sistema (Liquid template)
+- `config.instructions`: prompt sistema (Liquid template, até 20.000 chars)
+- `config.activation_label`: etiqueta que ativa o agente na conversa (única por conta)
+- **Cenário (Captain::Scenario)**: instrução situacional inline do assistente; o raciocínio de
+  aplicação fica no "caderninho do cenário" da conversa (scenario_checklist, card Raciocínio)
+- **Regra DITO ≠ SALVO**: a IA só considera coletado o dado que foi PERSISTIDO — salva cada dado
+  na hora e não repergunta o que já salvou
 
 ## Account (Conta)
 
@@ -309,3 +319,33 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 Campos MUTÁVEIS (atualizáveis livremente por IA/integração): `marital_status`, `profession` e todos os campos de `address`.
 
 `custom_attribute_definitions` (model=`contact_attribute`) fica reservado a dado de NEGÓCIO genérico que não tem modelo dedicado (ex: "plano contratado", "nicho do cliente").
+
+## Ligação WhatsApp (WhatsappCall) — voz pela API oficial
+
+Chamada de VOZ feita/recebida pelo WhatsApp (Cloud API, enterprise). **Não confundir com VoIP
+(Zenvia)**, que é ligação TELEFÔNICA comum — são dois produtos distintos com tools distintas:
+- `whatsapp_calls_*` → ligação de voz pelo WhatsApp (histórico, favoritas, observação,
+  transcrição por IA sob demanda)
+- `voip_*` → telefonia Zenvia (ramais, saldo, recarga)
+Campos: `status` (ringing/accepted/completed/failed), `custom_name` (observação), `favorited`,
+`transcript` + `transcript_status`. Ativação por caixa: `enable_whatsapp_calling`.
+
+## Chat interno da equipe (InternalChat)
+
+Mensagens ENTRE agentes da conta (não envolve cliente). Salas `direct` (1:1) ou `multi_user`
+(grupo), com reações, fixadas, anexos e não-lidas. Tools `internal_chat_*`. Não confundir com
+nota privada (que mora DENTRO de uma conversa com cliente).
+
+## LionTrack / Jornada do Lead
+
+Rastreamento de navegação do site (tracking_events, pageviews) + painel "Jornada do Lead" em
+Relatórios: mapa visual de por onde os leads andam (nós = páginas, setas = transições), agrupado
+por FASES configuráveis (LiontrackJourneyStage: padrão de URL → fase, match literal).
+Feature flag `liontrack` (404 sem ela). Relatório: `journey_funnel_reports` (v2), janela máx 30
+dias, URLs sem querystring (LGPD).
+
+## Idiomas da plataforma (2026-06)
+
+A plataforma opera com 6 idiomas: `en`, `es`, `fr`, `it`, `pt`, `pt_BR` (default das contas
+brasileiras: pt_BR). Conta com idioma antigo/descontinuado cai em inglês. Notas internas geradas
+pela IA saem no idioma da conta.

@@ -351,6 +351,88 @@
 
 ---
 
+## 11. Flow disparado por webhook externo (Webhook Universal embutido)
+
+**Caso:** sistema externo (checkout, formulário, ERP) chama uma URL e o flow roda na conversa do contato — etiqueta + mensagem.
+
+**Passo a passo via API (a ordem importa):**
+1. `flows_create` com o flow_data abaixo (sem o item webhook ainda)
+2. `POST /custom_webhook_integrations` com `{ "custom_webhook_integration": { "flow_id": <id> } }` → guarde `id` (integration_id) e a URL retornada
+3. `flows_update` adicionando o item `webhook_received` no start com o `integration_id`
+
+```json
+{
+  "nodes": [
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [
+      { "type": "webhook_received", "config": { "integration_id": 123 } }
+    ] } },
+    { "id": "n2", "type": "action", "position": { "x": 370, "y": 300 }, "data": { "label": "Marca origem", "items": [
+      { "key": "add_conversation_label", "config": { "labels": ["compra-confirmada"] } }
+    ] } },
+    { "id": "n3", "type": "send_message", "position": { "x": 690, "y": 300 }, "data": { "label": "Confirma", "messageItems": [
+      { "id": "m1", "type": "text", "content": "{{contact.name}}, recebemos a confirmação do seu pedido! 🎉" }
+    ] } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "n1", "target": "n2", "sourceHandle": "success", "type": "deletable", "animated": true },
+    { "id": "e2", "source": "n2", "target": "n3", "sourceHandle": "success", "type": "deletable", "animated": true }
+  ]
+}
+```
+
+---
+
+## 12. Ferramenta da IA (ai_tool) mínima — consulta API + retorno estruturado
+
+**Caso:** a IA precisa consultar um sistema externo durante a conversa (ex: status do pedido). Criar via `flow_tools_create` (NÃO `flows_create`), depois vincular ao assistente com `POST /flow_tools/{id}/assistants`.
+
+```json
+{
+  "tool_name": "consultar_pedido",
+  "tool_description": "Consulta o status do pedido do cliente pelo número. Use quando o cliente perguntar do pedido dele.",
+  "flow_data": {
+    "nodes": [
+      { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início" } },
+      { "id": "n2", "type": "api", "position": { "x": 370, "y": 300 }, "data": { "label": "Consulta ERP", "method": "GET", "url": "https://erp.exemplo.com/pedidos/{{numero_pedido}}", "headers": [{ "key": "Authorization", "value": "Bearer {{env.ERP_TOKEN}}" }], "apiResponseVar": "pedido" } },
+      { "id": "n3", "type": "end", "position": { "x": 690, "y": 300 }, "data": { "label": "Retorno", "mode": "structured" } },
+      { "id": "n4", "type": "end", "position": { "x": 690, "y": 480 }, "data": { "label": "Erro", "mode": "structured" } }
+    ],
+    "edges": [
+      { "id": "e1", "source": "n1", "target": "n2", "sourceHandle": "success", "type": "deletable", "animated": true },
+      { "id": "e2", "source": "n2", "target": "n3", "sourceHandle": "success", "type": "deletable", "animated": true },
+      { "id": "e3", "source": "n2", "target": "n4", "sourceHandle": "error", "type": "deletable", "animated": true }
+    ]
+  }
+}
+```
+
+**Lembretes ai_tool:** nó `end` é OBRIGATÓRIO; sem `inbox_ids`; nodes permitidos = `start`, `end`, `api`, `condition`, `set_variable`, `ai`, `randomizer`, `action`, `send_message`, `note` (sem `wait`/`wait_response`/`update_group`); `action` sem keys da aba Sistema (`send_webhook`/`start_flow`). Teste com `POST /flow_tools/{id}/run` antes de vincular ao assistente.
+
+---
+
+## 13. Etiqueta na CONVERSA vs no CONTATO
+
+**Caso:** marcar a conversa atual sem "sujar" o cadastro do contato (ex: assunto desta conversa), ou o inverso (perfil permanente do contato).
+
+```json
+{
+  "nodes": [
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received", "keywords": ["orçamento"], "match_type": "contains" }] } },
+    { "id": "n2", "type": "action", "position": { "x": 370, "y": 300 }, "data": { "label": "Marca", "items": [
+      { "key": "add_conversation_label", "config": { "labels": ["pediu-orcamento"] } },
+      { "key": "add_label", "config": { "labels": ["interessado-em-comprar"] } }
+    ] } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "n1", "target": "n2", "sourceHandle": "success", "type": "deletable", "animated": true }
+  ]
+}
+```
+
+**Regra de bolso:** fato sobre ESTA conversa → `add_conversation_label` / `remove_conversation_label`. Característica permanente do CONTATO → `add_label` / `remove_label`.
+
+---
+
 ## Como usar este catálogo
 
 1. **Identifique o pattern mais próximo** do que o cliente pediu

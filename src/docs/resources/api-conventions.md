@@ -319,13 +319,60 @@ Quando rate-limited:
 }
 ```
 
-### Search
+### Search (overhaul 2026-06-10)
 
-`GET /search?q=texto` — busca cross-entidade (conversations, contacts, messages)
+`GET /search?q=texto` — busca cross-entidade (conversations, contacts, messages, articles, kanban_items)
 
-`GET /search/contacts?q=texto` — só contatos
+`GET /search/contacts?q=texto` — só contatos (idem `/search/conversations`, `/search/messages`, `/search/articles`, `/search/kanban_items`)
 
-`GET /search/conversations?q=texto` — só conversas
+**Multi-termo com E:** `q` aceita String (espaços = AND implícito) ou Array (`q[]=joao&q[]=silva`),
+cap de 5 termos — cada termo precisa bater (cada um mantém seu OR entre campos).
+
+**Busca cadastral:** CPF/CNPJ/RG/endereço/profissão entram na busca de contatos e conversas, com
+match por dígitos que ignora pontuação (`31.104.475/0001-51` == `31104475000151`; mín 3 dígitos).
+Telefone idem. Cards do Kanban são achados pelo contato/conversa vinculados.
+
+**Filtros estruturados:** params `conversation_filters`, `contact_filters`, `kanban_filters`
+(JSON-string na query) aplicam condições no mesmo formato dos endpoints `/filter` — mesma
+validação (allowlist de chaves, operadores por tipo, cap 10 condições). Payload inválido = 422.
+
+```
+GET /search/conversations?q=pix&conversation_filters=[{"attribute_key":"status","filter_operator":"equal_to","values":["open"]}]
+```
+
+### Filtro de contatos por registros vinculados (2026-06-10)
+
+`POST /contacts/filter` ganhou 3 chaves novas que acham o CONTATO pelo que aconteceu com ele:
+- `conversation_search` — por conversa vinculada (status/etiquetas/caixa)
+- atributos da conversa — condição com `custom_attribute_type: "conversation_attribute"`
+- `kanban_card` — por card vinculado (funil/etapa/prioridade/status)
+Combináveis com E/OU e salváveis como segmento (custom_filters).
+
+### Exportação de contatos (2026-06-10)
+
+`POST /contacts/export` (chega por e-mail) agora sai COMPLETO: cadastral achatado (16 colunas),
+etiquetas, empresa/cidade/país, atributos do contato e da conversa (prefixos contato_/conversa_),
+última conversa (nº/status/caixa/responsável/etiquetas/data) e card Kanban (funil/etapa/prioridade/
+status/valor). Filtros/segmento aplicados valem na exportação. Passar `column_names` explícito
+mantém o comportamento antigo (só as colunas pedidas).
+
+### Limites de upload
+
+`GET /upload_limits` retorna o teto em MB por tipo (`image`, `video`, `audio`, `document`,
+`fallback`). Consulte 1x antes de subir anexo grande — evita 422 no meio do fluxo.
+
+### Webhooks de saída — evento novo (2026-06)
+
+`inbox_updated` entrou na lista de eventos assináveis (`webhooks_create/update`): dispara quando
+uma caixa de entrada é autorizada/reautorizada. Entrega só pra quem assinou o evento.
+
+### Webhook Universal (entrada) — arrays no mapeamento (2026-06)
+
+O `field_mapping` do webhook personalizado aceita caminhos com índice de array:
+`messages.0.content`, `itens.1.sku`. Limites do achatamento: profundidade 5, 10 itens por array,
+500 chaves no total. O mapeamento é POSICIONAL — se a ordem do array variar entre eventos, o
+mesmo caminho captura valores diferentes. Campo `flow_id` na criação liga o webhook a um flow
+(webhook embutido — ver resource de fluxos).
 
 ## Headers úteis pra mandar
 

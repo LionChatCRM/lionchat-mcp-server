@@ -63,10 +63,17 @@ Todo node tem essa estrutura base:
 **Triggers válidos:** `message_received`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `cron`, `webhook`.
 
 **Campos de filtro por trigger (IMPORTANTE — nomes exatos):**
-- `message_received`: `keywords` (array) + `match_type` (`'exact'` ou `'contains'`, default `contains`). NÃO use `match_mode` aqui.
+- `message_received`: `keywords` (array, obrigatório, cada termo com mín 3 chars) + `match_type` (`'exact'` ou `'contains'`, default `contains`). NÃO use `match_mode` aqui. Dispara em QUALQUER mensagem do cliente que case (não só na primeira) — só mensagem de cliente dispara, nunca de agente.
 - `conversation_created` / `conversation_reopened`: filtro opcional de keywords via `match_mode` (`'any'`, `'contains'`, `'exact'`, `'customer_initiated'`, `'agent_initiated'`) + `keywords`. Só ESTES dois triggers usam `match_mode`.
 - `label_added` / `label_removed`: `label_names` (array de slugs). NÃO use `label` (singular) — é ignorado.
 - `card_created` / `card_moved`: `funnel_ids` (array) + `funnel_stages` (array de `"funnel_id:stage"`).
+
+**Trigger `webhook` — Webhook Universal EMBUTIDO (novo 2026-06):** o flow pode ser disparado por um webhook próprio, criado automaticamente. Receita via API:
+1. Criar o flow normalmente (`flows_create`).
+2. `POST /custom_webhook_integrations` com `{ "custom_webhook_integration": { "flow_id": <id do flow> } }` — o sistema cria a integração embutida (idempotente: repetir retorna a mesma; nome automático "Flow: <nome>"; auto-mapeia todos os eventos → este flow) e retorna a URL única do webhook.
+3. No node `start`, adicionar item `{ "type": "webhook_received", "config": { "integration_id": <id da integração> } }`.
+4. Salvar o flow (`flows_update`) — o save sincroniza a ativação do webhook embutido (remover o item desativa a integração automaticamente).
+Webhooks embutidos NÃO aparecem na listagem de integrações standalone; excluir o flow destrói o webhook; duplicar o flow NÃO copia o gatilho embutido. Rate limit do endpoint público: 60/min por token.
 
 **Handles que SAEM:** `success`.
 
@@ -142,6 +149,8 @@ Todo node tem essa estrutura base:
 - `validation: 'options'` → `option_<valor>` para cada valor em `acceptedOptions` (ex: `option_1`, `option_2`, `option_sim`) + `timeout`
 - `validation: 'regex'` → `success`, `timeout`
 
+**Timeout AGORA dispara de verdade (corrigido 2026-06-09):** `waitTime` + `waitUnit` agendam o estouro — se o cliente não responder no prazo, o flow segue pelo handle `timeout`. Antes dessa data o backend ignorava o waitTime (flows antigos que dependiam do timeout passaram a funcionar). Sempre ligue um edge no handle `timeout` quando definir waitTime; sem edge, o flow simplesmente para ali no estouro.
+
 **REGRA:** depois de wait_response com options, NUNCA coloque node `condition` pra ramificar — ligue os edges direto nos handles `option_X`.
 
 ### 2.4 `condition`
@@ -162,6 +171,8 @@ Todo node tem essa estrutura base:
 ```
 
 **ATENÇÃO — atributo customizado é SINGULAR:** `contact.custom_attribute.X` e `conversation.custom_attribute.X` (também `account.custom_attribute.X`). Usar plural `custom_attributes` resolve VAZIO — vale tanto no `field` da condição quanto em mensagens/variáveis `{{...}}`.
+
+**Dados cadastrais — forma curta é a canônica (2026-06):** `{{contact.cpf}}`, `{{contact.cnpj}}`, `{{contact.rg}}`, `{{contact.address.number}}`, `{{contact.address.street}}` etc. O backend traduz internamente pra `contact.cadastral.*` (flows antigos com a forma longa continuam resolvendo). NÃO use `contact.attributes.cpf` nem `contact.custom_attribute.cpf` — cadastral NÃO é custom attribute.
 
 **Operadores válidos (lista real do runtime):**
 
@@ -224,11 +235,13 @@ Use operador numérico (`greater_than`, `less_than`, `number_range`) SÓ em atri
 | `assign_team` | `{ team_id }` | Atribui time |
 | `change_status` | `{ status: 'open' \| 'resolved' \| 'pending' \| 'snoozed' }` | Muda status da conversa |
 | `change_priority` | `{ priority: 'urgent' \| 'high' \| 'medium' \| 'low' }` | Muda prioridade |
-| `add_label` | `{ labels: ['slug1', 'slug2'] }` | Adiciona labels |
-| `remove_label` | `{ labels: ['slug'] }` | Remove labels |
+| `add_label` | `{ labels: ['slug1', 'slug2'] }` | Adiciona labels ao CONTATO |
+| `remove_label` | `{ labels: ['slug'] }` | Remove labels do CONTATO |
+| `add_conversation_label` | `{ labels: ['slug'] }` | Adiciona labels à CONVERSA (não ao contato) |
+| `remove_conversation_label` | `{ labels: ['slug'] }` | Remove labels da CONVERSA |
 | `mute_conversation` | `{}` | Silencia notificações |
 | `add_private_note` | `{ content: 'texto' }` | Adiciona nota interna |
-| `create_kanban_item` | `{ funnel_id, funnel_stage, item_details? }` | Cria card no Kanban |
+| `create_kanban_item` | `{ funnel_id, funnel_stage, title?, description? }` | Cria card no Kanban — `funnel_id` e `funnel_stage` OBRIGATÓRIOS; `title`/`description` aceitam variáveis `{{ }}` |
 | `move_kanban_item_to_stage` | `{ funnel_stage }` | Move card (precisa ter card vinculado) |
 | `move_kanban_stage` | `{ funnel_id, funnel_stage }` | Idem |
 | `set_kanban_item_status` | `{ status: 'won' \| 'lost' \| 'active' }` | Marca status do card |
@@ -307,6 +320,8 @@ Lembre: o atributo lido é SINGULAR (`custom_attribute`).
 
 **`aiMode` válidos:** `generate`, `intent`, `sentiment`, `extract`.
 
+**Contexto da conversa:** campo `contextMessages` define quantas mensagens recentes a IA enxerga — valores válidos `25`, `50`, `75`, `100` (ampliado em 2026-06; antes o teto era ~20). Os modos `intent`/`sentiment`/`extract` rodam no motor contido (texto puro, sem persona nem ferramentas — mais barato e sem risco de vazamento); `generate` usa o assistente Captain.
+
 **Intent — campo EXATO:** `aiIntents` é um ARRAY DE OBJETOS `{ "name": "..." }`. NÃO use `aiIntentOptions` (array de strings) — é ignorado. A intenção classificada também fica disponível na variável de sessão **`ai_intent`** (use como `{{ai_intent}}` adiante).
 
 **Handles que SAEM dependem do mode:**
@@ -381,7 +396,7 @@ Atualiza nome/descrição/foto de grupo WhatsApp. Use só quando flow roda em in
 
 **Handles que SAEM:** `success`, `error`.
 
-### 2.12 `activate_flow`
+### 2.12 `activate_flow` (LEGADO — prefira action `start_flow`)
 
 ```json
 {
@@ -393,6 +408,8 @@ Atualiza nome/descrição/foto de grupo WhatsApp. Use só quando flow roda em in
 ```
 
 **Handles que SAEM:** `success`, `error`.
+
+**ATENÇÃO:** este node saiu do menu do editor (legado) — o motor ainda executa flows antigos que o usam, mas em flows NOVOS use `action` com `key: 'start_flow'` e `config: { flow_id }`. Não crie nodes `activate_flow` novos.
 
 ### 2.13 `end` (encerra ramo / define retorno do ai_tool)
 
@@ -422,9 +439,21 @@ O campo `flow_type` (definido na criação, IMUTÁVEL depois) decide a natureza 
 | Inboxes | usa `inbox_ids` | **PROIBIDO** ter inboxes (validação barra) |
 | Campos extra | — | `tool_name` (snake_case, `[a-z][a-z0-9_]`, max 50) + `tool_description` (max 500) OBRIGATÓRIOS |
 | Retorno | manda mensagens | retorna dado estruturado ao LLM via node `end` |
-| Nodes permitidos | todos | SÓ: `start`, `end`, `api`, `condition`, `set_variable`, `ai`, `note` |
+| Nodes permitidos | todos | `start`, `end`, `api`, `condition`, `set_variable`, `ai`, `note`, `randomizer`, `action`, `send_message` |
 
 Se o cliente pediu "uma ferramenta que a IA usa pra consultar X / calcular Y", é `ai_tool`. Se pediu "quando chega mensagem, faça Z", é `conversation`. Na dúvida, `conversation`.
+
+**No flow `ai_tool`, o node `action` NÃO aceita as keys da aba "Sistema"** (`send_webhook` /
+`start_flow`) — elas só valem em flow `conversation`. No `action` de um `ai_tool` use apenas keys
+das abas Conversas / Contatos / Kanban (ex: `add_label`, `change_status`, `update_attribute`,
+`create_kanban_item`). Para gravar atributo no `ai_tool`, use `action` com `update_attribute`
+(o antigo node `save_attribute` foi removido — não existe mais em nenhum tipo de flow).
+
+**Proteção anti-loop por profundidade (2026-06):** quando um flow dispara automação que dispara
+outro flow (cadeia entre motores), cada hand-off incrementa um contador interno (`_activation_depth`).
+No 5º hand-off (`MAX_CHAIN_DEPTH = 5`) a cadeia é cortada silenciosamente. Se um flow "não disparou"
+no fim de uma cadeia automação→flow→automação, suspeite desse limite — é proteção, não bug.
+Não tente contornar criando flows intermediários.
 
 ---
 

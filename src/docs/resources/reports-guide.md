@@ -280,6 +280,26 @@ atual. Se since-until = 7d, previous = 7d antes. Pra esses dois, passe `since/un
 inteiro e use o `previous` retornado em vez de comparar na mão.
 Nos demais (agente/time/inbox/label/canal e timeseries) NÃO há `previous` — chame duas vezes.
 
+## Jornada do Lead (LionTrack) — relatório novo (2026-06)
+
+`GET /api/v2/accounts/{id}/journey_funnel_reports` — mapa agregado de navegação dos
+leads no site ANTES de virarem conversa (nós = páginas, arestas = transições página A → página B,
+agrupado por fases configuradas em `liontrack/journey_stages`).
+
+**Filtros (query):** `since`/`until` (janela MÁX 30 dias — acima disso o servidor corta sozinho),
+`utm_source`, `utm_campaign`, `device_name`, `country`, `contact_id` (trilha de 1 lead),
+`with_conversation=true` (só quem virou conversa).
+
+**Retorno:** `nodes` (página, fase, visitas, visitantes únicos), `edges` (transições com contagem),
+totais. URLs vêm SEM querystring (proteção LGPD — e-mail/CPF em URL nunca aparecem).
+
+**Gates:** feature flag `liontrack` (404 se desligada) + permissão de relatórios (admin ou
+report_manage). As fases são geridas pelas tools `liontrack_journey_stages_*` (padrão de URL →
+fase, match literal de substring, sem regex).
+
+**Perguntas que esse relatório responde:** "por onde os leads entram?", "qual página perde mais
+gente?", "quem veio da campanha X navegou por onde antes de chamar?".
+
 ## Quando o usuário pede algo MUITO específico que não existe num endpoint
 
 Se a pergunta requer cálculos custom (ex: "conversas por agente que duraram mais de X minutos"):

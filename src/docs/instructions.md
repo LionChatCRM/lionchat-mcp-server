@@ -187,6 +187,24 @@ POST /api/v1/accounts/{account_id}/kanban_items
 3. Comparar avg_first_response_time entre agentes
 ```
 
+### Criar campanha de WhatsApp (disparo em massa)
+```
+1. Montar audience: seções Label / Funnel / ConversationAttribute + audience_mode (sum|all)
+2. lionchat_campaigns_estimate_audience (MESMO audience+mode) → mostrar contagem ao usuário
+3. CONFIRMAR com o usuário (é envio em massa — seção 7b)
+4. lionchat_campaigns_create (inbox_id define o tipo: WhatsApp oficial, QR Code/WAHA, SMS, Website)
+5. Acompanhar com lionchat_campaigns_statistics (sent/delivered/read/failed)
+```
+Estrutura do audience: `[{type:'Label', id}, {type:'Funnel', id, stages:[], include_won, include_lost}, {type:'ConversationAttribute', key, value}]`.
+QR Code aceita `template_params` com `delay_min/delay_max/variations` (anti-bloqueio) e `bulk_actions`.
+
+### Criar ferramenta da IA (ai_tool)
+```
+1. lionchat_flow_tools_create (tool_name snake_case + tool_description + flow_data com nó end)
+2. POST /flow_tools/{id}/run pra testar com parâmetros reais
+3. POST /flow_tools/{id}/assistants (assistant_ids) pra vincular ao AI Agente
+```
+
 ### Mudar conta ativa (somente Conector OAuth)
 ```
 1. lionchat_list_my_accounts (ver todas)
@@ -241,12 +259,20 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | Intenção do usuário | Tool certa | Cuidado |
 |---|---|---|
 | Listar / ver não lidas | `lionchat_conversations_list` (`conversation_type: 'unread'`) ou `lionchat_conversations_meta` | NÃO use `lionchat_conversations_unread` — é AÇÃO DE ESCRITA (marca como não-lida) |
-| Buscar por texto (nome, telefone, conteúdo) | `lionchat_conversations_search` / `lionchat_contacts_search` | NÃO baixe tudo com `*_list` e filtre na mão |
+| Buscar por texto (nome, telefone, conteúdo) | `lionchat_conversations_search` / `lionchat_contacts_search` | NÃO baixe tudo com `*_list` e filtre na mão. Busca aceita multi-termo (AND) e dados cadastrais (CPF/CNPJ por dígitos) |
 | Só a contagem / números | `lionchat_conversations_meta` / `lionchat_reports_summary` | Não liste o conteúdo completo |
 | Criar contato | `lionchat_contacts_create` base (path `/contacts`) | NÃO use as variantes `_1` … `_9` |
 | Pausar a IA agora (botão de pânico) | `lionchat_captain_assistants_update` (`paused: true`, top-level) | — |
-| Anexar arquivo a uma mensagem | `lionchat_upload_create` primeiro, depois usar o retorno em `lionchat_conversations_messages_create` | — |
+| Anexar arquivo a uma mensagem | `lionchat_upload_create` primeiro, depois usar o retorno em `lionchat_conversations_messages_create` | Confira `lionchat_upload_limits` se o arquivo for grande |
 | Marcar conversa como **lida** | `lionchat_conversations_update_last_seen` | NÃO use `unread` (esse marca como NÃO-lida) |
+| Criar/gerenciar **campanha** (disparo WhatsApp/SMS) | `lionchat_campaigns_*` (criar, estatísticas) | SEMPRE rode `campaigns_estimate_audience` antes de criar e mostre a contagem. Disparo em massa = confirmação obrigatória (seção 7b) |
+| Criar **flow normal** (responde mensagens na caixa) | `lionchat_flows_create` | Ler design-guide antes (seção 11) |
+| Criar **ferramenta da IA** (flow que o AI Agente invoca) | `lionchat_flow_tools_create` + vincular com `flow_tools` → assistants | NÃO use `flows_create` pra ai_tool. Nó `end` obrigatório. Teste com `flow_tools_run` antes de vincular |
+| Ver **ligações de voz do WhatsApp** (histórico, transcrição) | `lionchat_whatsapp_calls_*` | NÃO confundir com `voip_*` (telefonia Zenvia — ramais/saldo). "Ligação no WhatsApp" = whatsapp_calls |
+| **Jornada do Lead** (por onde o lead navegou no site) | `lionchat_journey_funnel_reports` + fases em `lionchat_liontrack_journey_stages_*` | Janela máx 30 dias; exige feature liontrack |
+| **Exportar contatos** (CSV completo por e-mail) | `lionchat_contacts_export` | Respeita filtros/segmento aplicados |
+| Mensagem pra OUTRO AGENTE (não cliente) | `lionchat_internal_chat_*` (salas e mensagens do time) | NÃO confundir com nota privada (dentro da conversa do cliente) |
+| Achar contato pelo que aconteceu com ele (conversa/card) | `lionchat_contacts_filter` com `linked_records` | Ver api-conventions → registros vinculados |
 
 ## 9. Quando NÃO chamar nenhuma ferramenta
 

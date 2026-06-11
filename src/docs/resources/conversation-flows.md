@@ -291,6 +291,26 @@ Endpoint: `POST /api/v1/accounts/{account_id}/conversations/{conversation_id}/sc
 | `recurrence_count` | não | Quantas vezes repetir |
 | `template_params` | não | Parâmetros de template WhatsApp |
 
+## Flows e cadeias de automação
+
+### Disparo de flow por webhook (Webhook Universal embutido, 2026-06)
+
+Além dos triggers de evento (mensagem recebida, conversa criada, etiqueta, card, cron), um flow
+pode ser disparado por **webhook externo próprio**: cria-se a integração embutida via
+`POST /custom_webhook_integrations` com `flow_id`, e o node `start` ganha um item
+`webhook_received` com o `integration_id`. O sistema gera URL única; qualquer evento postado nela
+resolve contato/conversa (mesmas regras do Webhook Universal) e dispara o flow.
+Receita completa no resource **FlowBuilder — Guia de Design** (seção do trigger `webhook`).
+
+### Proteção anti-loop entre motores (2026-06)
+
+Automações e flows podem se encadear (automação dispara flow, flow dispara automação...).
+Cada hand-off entre motores incrementa uma profundidade interna; no **5º hand-off** a cadeia é
+cortada silenciosamente (`MAX_CHAIN_DEPTH = 5`). Sintoma: "o flow X não disparou" no fim de uma
+cadeia longa. É proteção contra loop infinito — redesenhe a cadeia pra ficar mais curta em vez
+de contornar. Além disso, a IA que trava no anti-loop **avisa um humano** (notificação) em vez de
+ficar muda (2026-06-05).
+
 ## Eventos importantes (pra automation)
 
 | Evento | Quando dispara |

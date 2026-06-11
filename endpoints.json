@@ -632,7 +632,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/contacts/search",
     "title": "Buscar Contatos",
-    "description": "Busca contatos por texto (insensivel a acento) em nome/email/telefone/identifier. Obrigatorio: q.",
+    "description": "Busca contatos por texto (insensivel a acento) em nome/email/telefone/identifier. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
     "category": "Contatos",
     "params": [
       {
@@ -648,6 +648,27 @@
         "location": "query",
         "required": false,
         "description": "Página"
+      },
+      {
+        "name": "conversation_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "contact_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONTATOS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "kanban_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
     "returns": "meta{count,current_page,has_more} + payload (array de contatos)",
@@ -663,7 +684,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/contacts/filter",
     "title": "Filtrar Contatos",
-    "description": "Filtra contatos com condições avançadas (múltiplas condições combinadas com AND/OR, operadores como contains, is_present, days_before, starts_with, e filtro por custom_attributes). Ver a seção Casos de Uso e Filtros para a lista completa de atributos e operadores. Filtragem avançada de contatos via payload de condições. Múltiplos operadores: equal_to, contains, includes, is_present, etc.",
+    "description": "Filtra contatos com condições avançadas (múltiplas condições combinadas com AND/OR, operadores como contains, is_present, days_before, starts_with, e filtro por custom_attributes). Ver a seção Casos de Uso e Filtros para a lista completa de atributos e operadores. Filtragem avançada de contatos via payload de condições. Múltiplos operadores: equal_to, contains, includes, is_present, etc.\n\nNOVO (2026-06): filtro por REGISTROS VINCULADOS — acha o contato pelo que aconteceu com ele: attribute_key 'conversation_search' (conversa vinculada: status/etiquetas/caixa), condicoes com custom_attribute_type 'conversation_attribute' (atributos da conversa) e attribute_key 'kanban_card' (card vinculado: funil/etapa/prioridade/status). Combinaveis com E/OU.",
     "category": "Contatos",
     "params": [
       {
@@ -886,7 +907,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/contacts/export",
     "title": "Exportar Contatos",
-    "description": "Exporta contatos (gera CSV em job async).",
+    "description": "Exporta contatos (gera CSV em job async). NOVO (2026-06): exportacao COMPLETA por padrao — cadastral (16 colunas), etiquetas, empresa/cidade/pais, atributos do contato e da conversa (prefixos contato_/conversa_), ultima conversa e card do Kanban. Passar column_names mantem o formato antigo (so as colunas pedidas).",
     "category": "Contatos",
     "params": [
       {
@@ -1313,7 +1334,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/conversations/search",
     "title": "Buscar Conversas",
-    "description": "Busca conversas por texto (no conteúdo das mensagens). Diferente de filter — pesquisa free-text. Use quando o usuário menciona uma palavra específica que provavelmente apareceu na conversa.",
+    "description": "Busca conversas por texto (no conteúdo das mensagens). Diferente de filter — pesquisa free-text. Use quando o usuário menciona uma palavra específica que provavelmente apareceu na conversa.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
     "category": "Conversas",
     "params": [
       {
@@ -1329,6 +1350,27 @@
         "location": "query",
         "required": false,
         "description": "Página"
+      },
+      {
+        "name": "conversation_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "contact_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONTATOS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "kanban_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
     "returns": "Array de conversas que contêm o texto buscado",
@@ -1962,7 +2004,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/search",
     "title": "Buscar Mensagens",
-    "description": "Busca mensagens por texto dentro de uma conversa. Suporta private_only e file_type.",
+    "description": "Busca mensagens por texto dentro de uma conversa. Suporta private_only e file_type.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
     "category": "Mensagens",
     "params": [
       {
@@ -2000,6 +2042,27 @@
         "required": false,
         "query_name": "file_type[]",
         "description": "Tipos de arquivo"
+      },
+      {
+        "name": "conversation_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "contact_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONTATOS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "kanban_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
     "returns": "payload (array de mensagens, geralmente 25 resultados)",
@@ -2138,7 +2201,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/funnels",
     "title": "Listar Funis",
-    "description": "Lista todos os funis com contagem de itens por etapa (cache 5min). NAO e paginado.",
+    "description": "Lista todos os funis com contagem de itens por etapa (cache 5min). NAO e paginado. ACESSO (2026-06): retorna SO os funis visiveis pro usuario do token (admin, permissao kanban, funil aberto ou participante). Funil nao-visivel da 404 no show.",
     "category": "Funis",
     "params": [],
     "returns": "array de funis (cada um com stage_items_count); sem meta/paginacao",
@@ -2828,7 +2891,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/kanban_items/{id}",
     "title": "Detalhe do Item",
-    "description": "Retorna detalhes. Retorna detalhes completos de UM item Kanban específico pelo ID. Inclui campos relacionais quando aplicável.",
+    "description": "Retorna detalhes. Retorna detalhes completos de UM item Kanban específico pelo ID. Inclui campos relacionais quando aplicável. Resposta inclui selos de permissao (2026-06): can_edit, can_move, can_delete, can_assign (booleans calculados pro usuario do token).",
     "category": "Itens",
     "params": [
       {
@@ -3038,7 +3101,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/move",
     "title": "Mover entre Funis",
-    "description": "Move o card entre funis/etapas. Obrigatorios: id, funnel_id, funnel_stage.",
+    "description": "Move o card entre funis/etapas. Obrigatorios: id, funnel_id, funnel_stage. PERMISSAO (2026-06): mover sem acesso ao funil retorna 403 — confira o campo can_move no show do card antes.",
     "category": "Itens",
     "params": [
       {
@@ -3206,7 +3269,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/kanban_items/search",
     "title": "Buscar Items",
-    "description": "Busca items por título, descrição, nome ou email do cliente. Busca itens Kanban por texto livre. Suporta query parcial em nome/email/telefone. Use para \"encontrar X\" rapidamente.",
+    "description": "Busca items por título, descrição, nome ou email do cliente. Busca itens Kanban por texto livre. Suporta query parcial em nome/email/telefone. Use para \"encontrar X\" rapidamente.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
     "category": "Itens",
     "params": [
       {
@@ -3229,6 +3292,27 @@
         "location": "query",
         "required": false,
         "description": "Excluir cards que ja tem esta conversa vinculada"
+      },
+      {
+        "name": "conversation_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "contact_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONTATOS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "kanban_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
     "returns": "payload (array de itens Kanban, geralmente 25 resultados)",
@@ -3717,7 +3801,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/captain/assistants",
     "title": "Criar Assistente IA",
-    "description": "Cria um assistente de IA. Obrigatorios: name, description. Exige Admin; sujeito ao limite do plano (403 se atingir).",
+    "description": "Cria um assistente de IA. Obrigatorios: name, description. Exige Admin; sujeito ao limite do plano (403 se atingir).\n\nCONFIG (2026-06): config faz MERGE PARCIAL no update. Chaves novas: follow_up_steps (ate 3 etapas [{after_minutes>=5, prompt}], soma<=1440min), disabled_tools, offer_ids, media_asset_ids, booking_event_type_ids, activation_label, min/max_response_time. instructions ate 20.000 chars.",
     "category": "Assistentes",
     "params": [
       {
@@ -3866,6 +3950,13 @@
         "location": "body",
         "required": false,
         "description": "Array de IDs de tipos de agendamento que o agente pode oferecer"
+      },
+      {
+        "name": "paused",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "BOTAO DE PANICO: true pausa TODA a IA do assistente (respostas, follow-ups, callbacks) sem perder config. Top-level, auditado"
       }
     ],
     "returns": "assistente AI criado (com novo ID)",
@@ -3914,7 +4005,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/captain/assistants/{id}",
     "title": "Atualizar Assistente IA",
-    "description": "Atualiza um assistente de IA. Exige Admin. Para pausar use paused:true (top-level).",
+    "description": "Atualiza um assistente de IA. Exige Admin. Para pausar use paused:true (top-level).\n\nCONFIG (2026-06): config faz MERGE PARCIAL no update. Chaves novas: follow_up_steps (ate 3 etapas [{after_minutes>=5, prompt}], soma<=1440min), disabled_tools, offer_ids, media_asset_ids, booking_event_type_ids, activation_label, min/max_response_time. instructions ate 20.000 chars.",
     "category": "Assistentes",
     "params": [
       {
@@ -4070,6 +4161,13 @@
         "location": "body",
         "required": false,
         "description": "Array de IDs de tipos de agendamento que o agente pode oferecer"
+      },
+      {
+        "name": "paused",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "BOTAO DE PANICO: true pausa TODA a IA do assistente (respostas, follow-ups, callbacks) sem perder config. Top-level, auditado"
       }
     ],
     "returns": "assistente AI atualizado",
@@ -7406,7 +7504,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/search",
     "title": "Busca Global",
-    "description": "Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.",
+    "description": "Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
     "category": "Busca",
     "params": [
       {
@@ -7450,6 +7548,27 @@
         "location": "query",
         "required": false,
         "description": "Página"
+      },
+      {
+        "name": "conversation_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "contact_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONTATOS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "kanban_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
     "returns": "payload (array de resultados de busca, geralmente 25 resultados)",
@@ -7465,7 +7584,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/search/conversations",
     "title": "Buscar Conversas",
-    "description": "Busca apenas em conversas por texto.",
+    "description": "Busca apenas em conversas por texto.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
     "category": "Busca",
     "params": [
       {
@@ -7509,6 +7628,13 @@
         "location": "query",
         "required": false,
         "description": "Página"
+      },
+      {
+        "name": "conversation_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados (mesmo formato de conversations_filter). JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
     "returns": "meta (contadores globais) + payload (array de resultados de busca)",
@@ -7527,7 +7653,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/search/contacts",
     "title": "Buscar Contatos",
-    "description": "Busca apenas em contatos por texto.",
+    "description": "Busca apenas em contatos por texto.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
     "category": "Busca",
     "params": [
       {
@@ -7543,6 +7669,13 @@
         "location": "query",
         "required": false,
         "description": "Página"
+      },
+      {
+        "name": "contact_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados (mesmo formato de contacts_filter). JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
     "returns": "meta (contadores globais) + payload (array de resultados de busca)",
@@ -7561,7 +7694,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/search/messages",
     "title": "Buscar Mensagens",
-    "description": "Busca apenas em mensagens por texto.",
+    "description": "Busca apenas em mensagens por texto.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
     "category": "Busca",
     "params": [
       {
@@ -8889,7 +9022,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/flows",
     "title": "Criar Flow",
-    "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'attribute'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = id de cada condicao + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>).",
+    "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create.",
     "category": "Flows",
     "params": [
       {
@@ -8970,7 +9103,7 @@
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/flows/{id}",
     "title": "Atualizar Flow",
-    "description": "Atualiza nome, descricao, caixas de entrada ou dados dos blocos. Mesmo schema de flow_data do tool lionchat_flows_create — consulte a descricao daquele tool para o schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable) e dos edges. RECAP RAPIDO: action items[].config (nao params); send_message messageItems (nao items); wait_response validation='options' gera handles 'option_X' (dispensa condition node); edges sourceHandle DEVE casar com handle real do node source. Atualiza campos do flow existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, inbox_ids, flow_data.",
+    "description": "Atualiza nome, descricao, caixas de entrada ou dados dos blocos. Mesmo schema de flow_data do tool lionchat_flows_create — consulte a descricao daquele tool para o schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable) e dos edges. RECAP RAPIDO: action items[].config (nao params); send_message messageItems (nao items); wait_response validation='options' gera handles 'option_X' (dispensa condition node); edges sourceHandle DEVE casar com handle real do node source. Atualiza campos do flow existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, inbox_ids, flow_data. IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create.",
     "category": "Flows",
     "params": [
       {
@@ -10557,7 +10690,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/companies/search",
     "title": "Buscar Empresas",
-    "description": "Busca empresas por NOME ou DOMINIO. Obrigatorio: q.",
+    "description": "Busca empresas por NOME ou DOMINIO. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
     "category": "Empresas",
     "params": [
       {
@@ -10566,6 +10699,27 @@
         "location": "query",
         "required": true,
         "description": "Termo de busca"
+      },
+      {
+        "name": "conversation_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "contact_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONTATOS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "kanban_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
     "returns": "payload (array de empresas, geralmente 25 resultados)",
@@ -10702,7 +10856,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/offers/search",
     "title": "Buscar Ofertas",
-    "description": "Busca ofertas por TITULO. Obrigatorio: q.",
+    "description": "Busca ofertas por TITULO. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
     "category": "Ofertas",
     "params": [
       {
@@ -10711,6 +10865,27 @@
         "location": "query",
         "required": true,
         "description": "Termo de busca"
+      },
+      {
+        "name": "conversation_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "contact_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CONTATOS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "kanban_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
     "returns": "array de ofertas (sem paginacao)",
@@ -15196,7 +15371,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/webhooks",
     "title": "Criar Webhook",
-    "description": "Cria um webhook. Body exige wrapper webhook. subscriptions restrito a allow-list.",
+    "description": "Cria um webhook. Body exige wrapper webhook. subscriptions restrito a allow-list. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada).",
     "category": "Webhooks",
     "params": [
       {
@@ -15242,7 +15417,7 @@
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/webhooks/{id}",
     "title": "Atualizar Webhook",
-    "description": "Atualiza um webhook existente. Atualiza campos do webhook existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: url, subscriptions.",
+    "description": "Atualiza um webhook existente. Atualiza campos do webhook existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: url, subscriptions. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada).",
     "category": "Webhooks",
     "params": [
       {
@@ -15368,7 +15543,7 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Mapeamento de campos do payload para campos internos (dentro de custom_webhook_integration)"
+        "description": "Mapeamento de campos do payload para campos internos (dentro de custom_webhook_integration). Suporta caminhos com indice de array (messages.0.content) — mapeamento POSICIONAL; limites: profundidade 5, 10 itens/array, 500 chaves"
       },
       {
         "name": "event_automation_mapping",
@@ -15390,6 +15565,13 @@
         "location": "body",
         "required": false,
         "description": "Lista de valores de evento conhecidos (dentro de custom_webhook_integration)"
+      },
+      {
+        "name": "flow_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Webhook EMBUTIDO de flow (2026-06): cria/retorna a integracao vinculada ao flow (idempotente, nome automatico 'Flow: <nome>', auto-mapeia todos os eventos -> o flow, oculta da listagem standalone). Ver receita no resource de flows"
       }
     ],
     "returns": "webhook criado (com novo ID)",
@@ -17461,7 +17643,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/integrations/meta_lead",
     "title": "Listar Paginas Meta Lead Ads",
-    "description": "Lista as integracoes Meta Lead Ads conectadas.",
+    "description": "Lista as integracoes Meta Lead Ads conectadas. NOVO (2026-06): conexao agora e POR PAGINA selecionada (BM virou rotulo); resposta traz enrichment_active e pending_businesses (BMs com pendencia).",
     "category": "Meta Lead Ads",
     "params": [],
     "returns": "{ data: [...integracoes...] }",
@@ -19751,5 +19933,3474 @@
       "Auditoria/relatório de respostas CSAT ativas"
     ],
     "related_tools": []
+  },
+  {
+    "id": "lionchat_campaigns_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/campaigns",
+    "title": "Listar Campanhas",
+    "description": "Lista todas as campanhas da conta: one-off (disparo em massa — WhatsApp oficial, WhatsApp QR Code/WAHA, SMS) e ongoing (chat ao vivo do site). Inclui audiência, regras de disparo e status.",
+    "category": "Campanhas",
+    "params": [],
+    "returns": "{ campaigns: [{ id (display_id), title, message, inbox, campaign_type ('one_off'|'ongoing'), campaign_status ('active'|'completed'), enabled, scheduled_at, audience, trigger_rules, sender, created_at }] }",
+    "common_use_cases": [
+      "Ver campanhas agendadas e concluídas",
+      "Conferir audiência de uma campanha antes de editar"
+    ],
+    "related_tools": [
+      "lionchat_campaigns_show",
+      "lionchat_campaigns_statistics"
+    ]
+  },
+  {
+    "id": "lionchat_campaigns_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/campaigns",
+    "title": "Criar Campanha",
+    "description": "Cria campanha. O TIPO vem da inbox: WhatsApp oficial (Cloud, exige template em template_params), WhatsApp QR Code/WAHA (texto livre + variações anti-bloqueio), SMS/Twilio, ou Website (ongoing — popup de chat por URL/tempo). One-off exige audience. ENVIO EM MASSA: SEMPRE rode estimate_audience com o MESMO audience+audience_mode antes e CONFIRME com o usuário. 422 se inbox incompatível, audience vazio (one-off) ou ConversationAttribute sem key/value.",
+    "category": "Campanhas",
+    "params": [
+      {
+        "name": "title",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Nome da campanha"
+      },
+      {
+        "name": "message",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Mensagem (texto com {{contact.name}} etc; no WhatsApp oficial o conteúdo real vem do template em template_params)"
+      },
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "body",
+        "required": true,
+        "description": "Caixa de entrada que dispara (define o tipo da campanha)"
+      },
+      {
+        "name": "audience",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Critérios de público — array de seções combináveis: { type: 'Label', id } | { type: 'Funnel', id, stages: ['slug_etapa'], include_won: bool, include_lost: bool } | { type: 'ConversationAttribute', key, value } (atributo personalizado da conversa, ex: origem_do_lead=instagram). OBRIGATÓRIO em one-off"
+      },
+      {
+        "name": "audience_mode",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Como combinar as seções do público: 'sum' (união, default — contato em QUALQUER seção entra) ou 'all' (interseção — precisa atender TODAS as seções preenchidas)"
+      },
+      {
+        "name": "scheduled_at",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Quando disparar (ISO 8601). Ausente = imediato. Ignorado em ongoing"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Descrição interna"
+      },
+      {
+        "name": "sender_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Agente remetente (opcional)"
+      },
+      {
+        "name": "enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Ativa (default true)"
+      },
+      {
+        "name": "trigger_only_during_business_hours",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Só dispara em horário comercial"
+      },
+      {
+        "name": "trigger_rules",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Regras de disparo (ongoing/Website): { url, time_on_page }"
+      },
+      {
+        "name": "template_params",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "WhatsApp oficial: { name, namespace, lang_code, parameters }. QR Code/WAHA: { delay_min, delay_max, variations: ['variação 1', ...], bulk_actions: { assignee_id, priority, labels: [] } }"
+      }
+    ],
+    "returns": "{ campaign: {...} } (201)",
+    "common_use_cases": [
+      "Disparo WhatsApp QR Code pra etiqueta VIP com delay anti-bloqueio",
+      "Campanha de template oficial pro funil de vendas",
+      "Popup de chat ao vivo na página de preços"
+    ],
+    "related_tools": [
+      "lionchat_campaigns_estimate_audience",
+      "lionchat_campaigns_statistics"
+    ]
+  },
+  {
+    "id": "lionchat_campaigns_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/campaigns/{id}",
+    "title": "Detalhes da Campanha",
+    "description": "Retorna uma campanha pelo display_id (o número visível na UI, não o id interno). Inclui audience, trigger_rules e template_params completos.",
+    "category": "Campanhas",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "display_id da campanha"
+      }
+    ],
+    "returns": "{ campaign: {...} }",
+    "common_use_cases": [
+      "Conferir configuração antes de editar"
+    ],
+    "related_tools": [
+      "lionchat_campaigns_update"
+    ]
+  },
+  {
+    "id": "lionchat_campaigns_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/campaigns/{id}",
+    "title": "Atualizar Campanha",
+    "description": "Atualiza campanha (mesmos campos do create). Campanha one-off já 'completed' não pode ser editada (422). Mudar audience de campanha agendada vale pro disparo.",
+    "category": "Campanhas",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "display_id da campanha"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome"
+      },
+      {
+        "name": "message",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nova mensagem"
+      },
+      {
+        "name": "audience",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Critérios de público — array de seções combináveis: { type: 'Label', id } | { type: 'Funnel', id, stages: ['slug_etapa'], include_won: bool, include_lost: bool } | { type: 'ConversationAttribute', key, value } (atributo personalizado da conversa, ex: origem_do_lead=instagram)"
+      },
+      {
+        "name": "audience_mode",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Como combinar as seções do público: 'sum' (união, default — contato em QUALQUER seção entra) ou 'all' (interseção — precisa atender TODAS as seções preenchidas)"
+      },
+      {
+        "name": "scheduled_at",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nova data de disparo (ISO 8601)"
+      },
+      {
+        "name": "enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Ativa/desativa sem apagar"
+      }
+    ],
+    "returns": "{ campaign: {...} }",
+    "common_use_cases": [
+      "Corrigir mensagem antes do horário agendado",
+      "Desativar campanha temporariamente"
+    ],
+    "related_tools": [
+      "lionchat_campaigns_estimate_audience"
+    ]
+  },
+  {
+    "id": "lionchat_campaigns_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/campaigns/{id}",
+    "title": "Excluir Campanha",
+    "description": "Remove uma campanha (agendada ou concluída). AÇÃO DESTRUTIVA — confirme com o usuário antes.",
+    "category": "Campanhas",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "display_id da campanha"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Cancelar disparo agendado"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_campaigns_statistics",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/campaigns/{id}/statistics",
+    "title": "Estatísticas da Campanha",
+    "description": "Métricas de entrega de campanha one-off: total, enviadas, entregues, lidas, falhas e taxas (%).",
+    "category": "Campanhas",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "display_id da campanha"
+      }
+    ],
+    "returns": "{ total, sent, delivered, read, failed, delivery_rate, read_rate }",
+    "common_use_cases": [
+      "Acompanhar desempenho do disparo",
+      "Comparar campanhas"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_campaigns_estimate_audience",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/campaigns/estimate_audience",
+    "title": "Estimar Audiência da Campanha",
+    "description": "Conta quantos contatos COM TELEFONE atendem aos critérios ANTES de criar a campanha. Usa o MESMO motor do disparo (estimativa = lista real). SEMPRE chame antes de campaigns_create e mostre o número ao usuário.",
+    "category": "Campanhas",
+    "params": [
+      {
+        "name": "audience",
+        "type": "array",
+        "location": "body",
+        "required": true,
+        "description": "Critérios de público — array de seções combináveis: { type: 'Label', id } | { type: 'Funnel', id, stages: ['slug_etapa'], include_won: bool, include_lost: bool } | { type: 'ConversationAttribute', key, value } (atributo personalizado da conversa, ex: origem_do_lead=instagram)"
+      },
+      {
+        "name": "audience_mode",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Como combinar as seções do público: 'sum' (união, default — contato em QUALQUER seção entra) ou 'all' (interseção — precisa atender TODAS as seções preenchidas)"
+      }
+    ],
+    "returns": "{ count: <int> }",
+    "common_use_cases": [
+      "Validar público antes do disparo",
+      "Comparar união vs interseção dos critérios"
+    ],
+    "related_tools": [
+      "lionchat_campaigns_create"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_campaigns_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/campaigns",
+    "title": "Campanhas de uma Caixa de Entrada",
+    "description": "Lista as campanhas vinculadas a uma inbox específica (útil pra ver campanhas ongoing de um site).",
+    "category": "Campanhas",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada"
+      }
+    ],
+    "returns": "{ campaigns: [...] }",
+    "common_use_cases": [
+      "Ver campanhas ativas de um canal"
+    ],
+    "related_tools": [
+      "lionchat_campaigns_list"
+    ]
+  },
+  {
+    "id": "lionchat_topsend_campaigns_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/topsend_campaigns",
+    "title": "Listar Campanhas SMS/Voz (TopSend)",
+    "description": "Lista campanhas de SMS e voz via TopSend. ADMIN-ONLY. Tipos: SMSSHORT (texto), SMSFLASH (tela), TVOZ (voz), URA (voz + teclas). Status: draft, pending, active, ended, cancelled, failed.",
+    "category": "Campanhas SMS/Voz",
+    "params": [
+      {
+        "name": "status",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtro: draft | pending | active | ended | cancelled | failed"
+      },
+      {
+        "name": "type",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtro: SMSSHORT | SMSFLASH | TVOZ | URA"
+      }
+    ],
+    "returns": "{ campaigns: [{ id, title, campaign_type, status, message, scheduled_at, total_recipients, delivered_count, failed_count, ... }] }",
+    "common_use_cases": [
+      "Ver campanhas SMS em rascunho",
+      "Conferir falhas de disparo de voz"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_topsend_campaigns_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/topsend_campaigns/{id}",
+    "title": "Detalhe da Campanha TopSend",
+    "description": "Detalhe completo de uma campanha SMS/voz: destinatários, áudio, resultados de entrega, ações DTMF. ADMIN-ONLY.",
+    "category": "Campanhas SMS/Voz",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da campanha TopSend"
+      }
+    ],
+    "returns": "{ campaign: {...} }",
+    "common_use_cases": [
+      "Auditar disparo SMS"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_topsend_campaigns_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/topsend_campaigns",
+    "title": "Criar Campanha SMS/Voz (TopSend)",
+    "description": "Cria campanha SMS (SMSSHORT/SMSFLASH) ou voz (TVOZ/URA). ADMIN-ONLY. Destinatários: audience estruturado (Labels/Funnel) OU recipient_numbers manual. TVOZ/URA exigem áudio via audio_id (já na TopSend) ou audio_url (externa) — upload de arquivo não é suportado via MCP. ENVIO EM MASSA: confirme com o usuário. 422 sem destinatários ou voz sem áudio.",
+    "category": "Campanhas SMS/Voz",
+    "params": [
+      {
+        "name": "title",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Nome da campanha"
+      },
+      {
+        "name": "campaign_type",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "SMSSHORT | SMSFLASH | TVOZ | URA"
+      },
+      {
+        "name": "message",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Texto do SMS (até 160 chars) ou roteiro de voz"
+      },
+      {
+        "name": "scheduled_at",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Agendamento (ISO 8601); futuro = pending até o disparo"
+      },
+      {
+        "name": "recipient_numbers",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Números manuais (+5511..., normalizador tolerante). Alternativa a audience"
+      },
+      {
+        "name": "audience",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Seções Label/Funnel (mesmo formato das campanhas) — resolve pros telefones dos contatos"
+      },
+      {
+        "name": "audio_id",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "ID de áudio já enviado à TopSend (TVOZ/URA)"
+      },
+      {
+        "name": "audio_url",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "URL externa do áudio MP3 (TVOZ/URA)"
+      },
+      {
+        "name": "dtmf_actions",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "URA: mapeamento de teclas { '1': { automation_rule_id }, '2': null }"
+      }
+    ],
+    "returns": "{ campaign: { id, status: 'draft'|'pending', ... } }",
+    "common_use_cases": [
+      "SMS pra etiqueta VIP",
+      "Voz de confirmação de consulta agendada"
+    ],
+    "related_tools": [
+      "lionchat_topsend_campaigns_test_connection"
+    ]
+  },
+  {
+    "id": "lionchat_topsend_campaigns_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/topsend_campaigns/{id}",
+    "title": "Excluir Campanha TopSend",
+    "description": "Remove campanha TopSend. SÓ status 'draft' pode ser excluído (422 nos demais). ADMIN-ONLY.",
+    "category": "Campanhas SMS/Voz",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da campanha TopSend"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Descartar rascunho"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_topsend_campaigns_test_connection",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/topsend_campaigns/test_connection",
+    "title": "Testar Conexão TopSend",
+    "description": "Valida a chave de API TopSend configurada na conta. ADMIN-ONLY.",
+    "category": "Campanhas SMS/Voz",
+    "params": [],
+    "returns": "{ success: true } ou { success: false, error }",
+    "common_use_cases": [
+      "Diagnosticar integração antes de criar campanha"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_flow_tools_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/flow_tools",
+    "title": "Listar Ferramentas da IA (ai_tool)",
+    "description": "Lista os flows de tipo ai_tool — ferramentas que o AI Agente (Captain) invoca durante a conversa. ADMIN-ONLY. Inclui vínculos com assistentes.",
+    "category": "Ferramentas da IA",
+    "params": [],
+    "returns": "[{ id, name, tool_name, tool_description, active, flow_type: 'ai_tool', assistant_flow_tools, created_at }]",
+    "common_use_cases": [
+      "Ver ferramentas disponíveis pra vincular a um assistente"
+    ],
+    "related_tools": [
+      "lionchat_flow_tools_create",
+      "lionchat_flows_schema_reference"
+    ]
+  },
+  {
+    "id": "lionchat_flow_tools_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/flow_tools/{id}",
+    "title": "Detalhe da Ferramenta da IA",
+    "description": "Detalhe de um flow ai_tool, incluindo flow_data completo. ADMIN-ONLY.",
+    "category": "Ferramentas da IA",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow tool"
+      }
+    ],
+    "returns": "{ id, name, tool_name, tool_description, active, flow_data, ... }",
+    "common_use_cases": [
+      "Inspecionar antes de editar"
+    ],
+    "related_tools": [
+      "lionchat_flow_tools_update"
+    ]
+  },
+  {
+    "id": "lionchat_flow_tools_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/flow_tools",
+    "title": "Criar Ferramenta da IA (ai_tool)",
+    "description": "Cria flow de tipo ai_tool (a porta CERTA — NÃO use flows_create pra isso). ADMIN-ONLY. CHAME lionchat_flows_schema_reference ANTES: nó 'end' OBRIGATÓRIO, sem inbox_ids, nodes permitidos = start/end/api/condition/set_variable/ai/randomizer/action/send_message/note. Depois de criar: teste com flow_tools_run e vincule ao assistente com flow_tools_assistants_update.",
+    "category": "Ferramentas da IA",
+    "params": [
+      {
+        "name": "tool_name",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Identificador da ferramenta (snake_case, [a-z][a-z0-9_], máx 50) — é o que o LLM enxerga"
+      },
+      {
+        "name": "tool_description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Quando a IA deve usar a ferramenta (máx 500 chars) — seja específico"
+      },
+      {
+        "name": "flow_data",
+        "type": "object",
+        "location": "body",
+        "required": true,
+        "description": "Canvas Vue Flow { nodes, edges } com nó end obrigatório (ver flows_schema_reference)"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nome de exibição (default: tool_name)"
+      },
+      {
+        "name": "active",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Ativa (default true)"
+      }
+    ],
+    "returns": "{ id, tool_name, flow_type: 'ai_tool', ... } (201)",
+    "common_use_cases": [
+      "Ferramenta de consulta a API externa (status de pedido, CEP)",
+      "Cálculo/decisão estruturada pro assistente"
+    ],
+    "related_tools": [
+      "lionchat_flow_tools_run",
+      "lionchat_flow_tools_assistants_update",
+      "lionchat_flows_schema_reference"
+    ]
+  },
+  {
+    "id": "lionchat_flow_tools_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/flow_tools/{id}",
+    "title": "Atualizar Ferramenta da IA",
+    "description": "Atualiza um flow ai_tool (mesmos campos do create). ADMIN-ONLY. Re-teste com flow_tools_run após mudar o flow_data.",
+    "category": "Ferramentas da IA",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow tool"
+      },
+      {
+        "name": "tool_name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo identificador (snake_case)"
+      },
+      {
+        "name": "tool_description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nova descrição"
+      },
+      {
+        "name": "flow_data",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Novo canvas (nó end obrigatório)"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome de exibição"
+      },
+      {
+        "name": "active",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Ativa/desativa"
+      }
+    ],
+    "returns": "{ id, ... }",
+    "common_use_cases": [
+      "Ajustar URL da API consultada",
+      "Refinar a descrição pra IA acertar quando usar"
+    ],
+    "related_tools": [
+      "lionchat_flow_tools_run"
+    ]
+  },
+  {
+    "id": "lionchat_flow_tools_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/flow_tools/{id}",
+    "title": "Excluir Ferramenta da IA",
+    "description": "Remove o flow ai_tool e os vínculos com assistentes. ADMIN-ONLY. DESTRUTIVO — confirme antes; confira os vínculos com flow_tools_assistants_list.",
+    "category": "Ferramentas da IA",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow tool"
+      }
+    ],
+    "returns": "204 No Content",
+    "common_use_cases": [
+      "Remover ferramenta obsoleta"
+    ],
+    "related_tools": [
+      "lionchat_flow_tools_assistants_list"
+    ]
+  },
+  {
+    "id": "lionchat_flow_tools_toggle",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/flow_tools/{id}/toggle",
+    "title": "Ativar/Desativar Ferramenta da IA",
+    "description": "Inverte o estado ativo da ferramenta (desativada = assistentes param de enxergar). ADMIN-ONLY.",
+    "category": "Ferramentas da IA",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow tool"
+      }
+    ],
+    "returns": "{ id, active }",
+    "common_use_cases": [
+      "Pausar ferramenta com problema sem apagar"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_flow_tools_run",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/flow_tools/{id}/run",
+    "title": "Testar Ferramenta da IA (execução manual)",
+    "description": "Executa o flow ai_tool sincronamente com parâmetros explícitos, SEM passar pelo LLM. Cria FlowToolExecution auditável. ADMIN-ONLY, rate limit 60/min. Use SEMPRE antes de vincular ao assistente.",
+    "category": "Ferramentas da IA",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow tool"
+      },
+      {
+        "name": "flow_params",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Parâmetros de entrada do flow, ex: { \"numero_pedido\": \"123\" }"
+      }
+    ],
+    "returns": "{ execution_id, status, output_result, variables, execution_log, error_message, duration_ms }",
+    "common_use_cases": [
+      "Validar a ferramenta com dados reais",
+      "Depurar erro de execução"
+    ],
+    "related_tools": [
+      "lionchat_flow_tool_executions_show"
+    ]
+  },
+  {
+    "id": "lionchat_flow_tools_assistants_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/flow_tools/{id}/assistants",
+    "title": "Assistentes Vinculados à Ferramenta",
+    "description": "Lista quais AI Agentes (Captain::Assistant) usam esta ferramenta. ADMIN-ONLY.",
+    "category": "Ferramentas da IA",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow tool"
+      }
+    ],
+    "returns": "{ assistant_ids: [..], assistants: [{ id, name }] }",
+    "common_use_cases": [
+      "Conferir impacto antes de editar/excluir"
+    ],
+    "related_tools": [
+      "lionchat_flow_tools_assistants_update"
+    ]
+  },
+  {
+    "id": "lionchat_flow_tools_assistants_update",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/flow_tools/{id}/assistants",
+    "title": "Vincular Ferramenta aos Assistentes",
+    "description": "SINCRONIZA a lista de assistentes que usam a ferramenta (substitui a lista inteira — IDs ausentes são DESVINCULADOS). Idempotente; IDs de outra conta são ignorados. ADMIN-ONLY.",
+    "category": "Ferramentas da IA",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow tool"
+      },
+      {
+        "name": "assistant_ids",
+        "type": "array",
+        "location": "body",
+        "required": true,
+        "description": "Lista FINAL de IDs de assistentes (leia a lista atual antes pra não desvincular sem querer)"
+      }
+    ],
+    "returns": "{ assistant_ids: [...] }",
+    "common_use_cases": [
+      "Disponibilizar a ferramenta pro AI Agente",
+      "Remover de um assistente específico"
+    ],
+    "related_tools": [
+      "lionchat_flow_tools_assistants_list"
+    ]
+  },
+  {
+    "id": "lionchat_flow_tools_executions_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/flow_tools/{id}/executions",
+    "title": "Execuções da Ferramenta da IA",
+    "description": "Últimas 50 execuções (manuais e via LLM) com status e duração. ADMIN-ONLY.",
+    "category": "Ferramentas da IA",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow tool"
+      }
+    ],
+    "returns": "[{ id, status, started_at, completed_at, duration_ms, error_message }]",
+    "common_use_cases": [
+      "Monitorar saúde da ferramenta",
+      "Achar execuções com falha"
+    ],
+    "related_tools": [
+      "lionchat_flow_tool_executions_show"
+    ]
+  },
+  {
+    "id": "lionchat_flow_tool_executions_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/flow_tool_executions/{id}",
+    "title": "Detalhe de Execução da Ferramenta",
+    "description": "Detalhe completo de UMA execução: entrada, saída, log passo a passo, variáveis, nós visitados e a resposta da IA na sequência (se houver). PII é redigida automaticamente. ADMIN-ONLY.",
+    "category": "Ferramentas da IA",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da execução (FlowToolExecution)"
+      }
+    ],
+    "returns": "{ id, flow_id, status, input_params, output_result, execution_log, variables, canvas_detail, ai_response, duration_ms, error_message }",
+    "common_use_cases": [
+      "Depurar por que a ferramenta retornou errado pro LLM"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_flows_executions_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/flows/{id}/executions",
+    "title": "Execuções de um Flow",
+    "description": "Histórico de execuções (sessões) de um flow de conversa, com filtros. ADMIN-ONLY, rate limit 60/min. Janela de datas limitada a 90 dias.",
+    "category": "Flows",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow"
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtrar por status: pending | running | completed | failed"
+      },
+      {
+        "name": "from",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Início ISO 8601 (default: 7 dias atrás)"
+      },
+      {
+        "name": "to",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Fim ISO 8601 (default: agora; máx 90 dias de janela)"
+      },
+      {
+        "name": "q",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Busca por nome do contato ou nº da conversa (mín 2 chars)"
+      },
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Página (default 1)"
+      },
+      {
+        "name": "per_page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Itens por página (default 25, máx 100)"
+      }
+    ],
+    "returns": "{ data: [{ id, status, contact_name, conversation_display_id, started_at, completed_at }], meta }",
+    "common_use_cases": [
+      "Diagnosticar 'o flow não disparou'",
+      "Ver quantos clientes passaram pelo flow hoje"
+    ],
+    "related_tools": [
+      "lionchat_flows_show"
+    ]
+  },
+  {
+    "id": "lionchat_flow_versions_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/flows/{flow_id}/versions",
+    "title": "Histórico de Versões do Flow",
+    "description": "Lista o histórico de edições do flow: quem editou, quando, resumo do diff. ADMIN-ONLY.",
+    "category": "Flows",
+    "params": [
+      {
+        "name": "flow_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow"
+      },
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Página"
+      }
+    ],
+    "returns": "{ data: [{ id, version, action, created_at, user, diff_summary }], meta }",
+    "common_use_cases": [
+      "Auditar quem mudou o flow",
+      "Achar versão pra comparar"
+    ],
+    "related_tools": [
+      "lionchat_flow_versions_show"
+    ]
+  },
+  {
+    "id": "lionchat_flow_versions_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/flows/{flow_id}/versions/{id}",
+    "title": "Detalhe de Versão do Flow",
+    "description": "Retorna uma versão específica com o snapshot completo do canvas naquele momento. ADMIN-ONLY.",
+    "category": "Flows",
+    "params": [
+      {
+        "name": "flow_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow"
+      },
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da versão"
+      }
+    ],
+    "returns": "{ id, version, created_at, user, snapshot: { nodes, edges } }",
+    "common_use_cases": [
+      "Ver como o flow era antes de uma mudança"
+    ],
+    "related_tools": [
+      "lionchat_flow_versions_list"
+    ]
+  },
+  {
+    "id": "lionchat_whatsapp_calls_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/whatsapp_calls",
+    "title": "Listar Ligações WhatsApp",
+    "description": "Histórico de ligações de VOZ pelo WhatsApp (API oficial — NÃO confundir com voip_* que é telefonia Zenvia). Sem page = modo popup (por contato/favoritas); com page = histórico completo paginado com filtros.",
+    "category": "Ligacoes WhatsApp",
+    "params": [
+      {
+        "name": "contact_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Ligações de um contato específico"
+      },
+      {
+        "name": "favorites",
+        "type": "boolean",
+        "location": "query",
+        "required": false,
+        "description": "Só favoritas (modo popup)"
+      },
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Página — presença ativa o modo histórico paginado"
+      },
+      {
+        "name": "per",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Itens por página (default 25, máx 100)"
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtro: ringing | accepted | completed | failed"
+      },
+      {
+        "name": "agent_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtro por agente que atendeu"
+      },
+      {
+        "name": "q",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Busca por nome/telefone/observação"
+      }
+    ],
+    "returns": "[{ id, contact_name, phone_number, status, direction, duration_seconds, favorited, custom_name, created_at }] ou { data, meta } no modo paginado",
+    "common_use_cases": [
+      "Ver histórico de ligações de um cliente",
+      "Achar ligações perdidas do dia"
+    ],
+    "related_tools": [
+      "lionchat_whatsapp_calls_show",
+      "lionchat_whatsapp_calls_transcribe"
+    ]
+  },
+  {
+    "id": "lionchat_whatsapp_calls_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/whatsapp_calls/{id}",
+    "title": "Detalhe da Ligação WhatsApp",
+    "description": "Detalhe completo de uma ligação: duração, quem atendeu, gravação, transcrição (se gerada).",
+    "category": "Ligacoes WhatsApp",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da ligação"
+      }
+    ],
+    "returns": "{ id, contact_id, status, direction, duration_seconds, accepted_by_agent_id, custom_name, favorited, transcript, transcript_status }",
+    "common_use_cases": [
+      "Ler a transcrição de uma ligação"
+    ],
+    "related_tools": [
+      "lionchat_whatsapp_calls_transcribe"
+    ]
+  },
+  {
+    "id": "lionchat_whatsapp_calls_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/whatsapp_calls/{id}",
+    "title": "Atualizar Ligação (observação/favorita)",
+    "description": "Define observação (custom_name) e/ou marca como favorita.",
+    "category": "Ligacoes WhatsApp",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da ligação"
+      },
+      {
+        "name": "custom_name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Observação/apelido da ligação"
+      },
+      {
+        "name": "favorited",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Marcar/desmarcar favorita"
+      }
+    ],
+    "returns": "{ id, custom_name, favorited }",
+    "common_use_cases": [
+      "Anotar do que se tratou a ligação"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_whatsapp_calls_toggle_favorite",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/whatsapp_calls/{id}/toggle_favorite",
+    "title": "Alternar Favorita",
+    "description": "Inverte o estado de favorita da ligação.",
+    "category": "Ligacoes WhatsApp",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da ligação"
+      }
+    ],
+    "returns": "{ id, favorited }",
+    "common_use_cases": [
+      "Marcar ligação importante"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_whatsapp_calls_transcribe",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/whatsapp_calls/{id}/transcribe",
+    "title": "Transcrever Ligação com IA",
+    "description": "Dispara a transcrição da gravação por IA (assíncrono — usa a chave de IA da conta, tem custo). Acompanhe pelo transcript_status no show (pending → processing → completed/failed).",
+    "category": "Ligacoes WhatsApp",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da ligação"
+      }
+    ],
+    "returns": "200 OK (job enfileirado)",
+    "common_use_cases": [
+      "Gerar transcrição sob demanda",
+      "Re-transcrever após falha"
+    ],
+    "related_tools": [
+      "lionchat_whatsapp_calls_show"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_enable_whatsapp_calling",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/enable_whatsapp_calling",
+    "title": "Ativar Ligações WhatsApp na Caixa",
+    "description": "Habilita chamadas de voz na inbox WhatsApp oficial (Cloud API com suporte a voz). ADMIN-ONLY. É mudança de config — confirme com o usuário.",
+    "category": "Ligacoes WhatsApp",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Habilitar voz no número oficial"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_disable_whatsapp_calling"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_disable_whatsapp_calling",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/disable_whatsapp_calling",
+    "title": "Desativar Ligações WhatsApp na Caixa",
+    "description": "Desabilita chamadas de voz na inbox. ADMIN-ONLY. É mudança de config — confirme com o usuário.",
+    "category": "Ligacoes WhatsApp",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Desligar voz temporariamente"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_upload_limits_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/upload_limits",
+    "title": "Limites de Upload por Tipo",
+    "description": "Retorna o teto de upload em MB por tipo de arquivo. Consulte antes de subir anexo grande (evita 422).",
+    "category": "Upload",
+    "params": [],
+    "returns": "{ image, video, audio, document, fallback } (valores em MB)",
+    "common_use_cases": [
+      "Validar tamanho antes de anexar arquivo em mensagem"
+    ],
+    "related_tools": [
+      "lionchat_upload_create"
+    ]
+  },
+  {
+    "id": "lionchat_liontrack_journey_stages_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/liontrack/journey_stages",
+    "title": "Listar Fases da Jornada do Lead",
+    "description": "Regras que mapeiam padrão de URL → fase da jornada (Topo/Meio/Fundo/Compra etc). Exige feature liontrack (404 sem ela) e permissão de relatórios.",
+    "category": "LionTrack",
+    "params": [],
+    "returns": "[{ id, stage, url_pattern, position }]",
+    "common_use_cases": [
+      "Conferir fases antes de ler o relatório de jornada"
+    ],
+    "related_tools": [
+      "lionchat_journey_funnel_reports",
+      "lionchat_liontrack_journey_stages_create"
+    ]
+  },
+  {
+    "id": "lionchat_liontrack_journey_stages_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/liontrack/journey_stages",
+    "title": "Criar Fase da Jornada",
+    "description": "Cria regra URL → fase. url_pattern é match LITERAL de trecho da URL (sem regex; ex: '/checkout', '/blog/'). Exige feature liontrack + permissão de relatórios.",
+    "category": "LionTrack",
+    "params": [
+      {
+        "name": "stage",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Nome da fase (ex: 'Topo', 'Fundo', 'Compra')"
+      },
+      {
+        "name": "url_pattern",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Trecho literal da URL que identifica a fase (máx 255)"
+      },
+      {
+        "name": "position",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Ordem da fase no painel"
+      }
+    ],
+    "returns": "{ id, stage, url_pattern, position } (201)",
+    "common_use_cases": [
+      "Mapear '/precos' como Fundo de funil"
+    ],
+    "related_tools": [
+      "lionchat_liontrack_journey_stages_list"
+    ]
+  },
+  {
+    "id": "lionchat_liontrack_journey_stages_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/liontrack/journey_stages/{id}",
+    "title": "Atualizar Fase da Jornada",
+    "description": "Edita uma regra de fase (nome, padrão de URL, ordem).",
+    "category": "LionTrack",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da regra"
+      },
+      {
+        "name": "stage",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome da fase"
+      },
+      {
+        "name": "url_pattern",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo padrão literal"
+      },
+      {
+        "name": "position",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Nova ordem"
+      }
+    ],
+    "returns": "{ id, stage, url_pattern, position }",
+    "common_use_cases": [
+      "Reordenar fases do painel"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_liontrack_journey_stages_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/liontrack/journey_stages/{id}",
+    "title": "Excluir Fase da Jornada",
+    "description": "Remove uma regra de fase (as pageviews continuam — só deixam de ser agrupadas nessa fase).",
+    "category": "LionTrack",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da regra"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Remover fase descontinuada"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_journey_funnel_reports",
+    "method": "GET",
+    "path": "/api/v2/accounts/{account_id}/journey_funnel_reports",
+    "title": "Relatório Jornada do Lead",
+    "description": "Mapa agregado de navegação dos leads no site (nós = páginas, arestas = transições, agrupado por fase). Janela MÁXIMA de 30 dias (acima é cortado). URLs sem querystring (LGPD). Exige feature liontrack + permissão de relatórios.",
+    "category": "LionTrack",
+    "params": [
+      {
+        "name": "since",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Início ISO 8601"
+      },
+      {
+        "name": "until",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Fim ISO 8601 (máx 30 dias após since)"
+      },
+      {
+        "name": "utm_source",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por origem (utm_source)"
+      },
+      {
+        "name": "utm_campaign",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por campanha (utm_campaign)"
+      },
+      {
+        "name": "device_name",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por dispositivo (mobile/desktop)"
+      },
+      {
+        "name": "country",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por país (código ISO 2 letras)"
+      },
+      {
+        "name": "contact_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Trilha de UM lead específico"
+      },
+      {
+        "name": "with_conversation",
+        "type": "boolean",
+        "location": "query",
+        "required": false,
+        "description": "true = só pageviews de quem virou conversa"
+      }
+    ],
+    "returns": "{ nodes: [{ path, stage, visits, unique_visitors }], edges: [{ from, to, count }], totals }",
+    "common_use_cases": [
+      "Por onde os leads entram e onde desistem",
+      "Caminho de quem veio da campanha X"
+    ],
+    "related_tools": [
+      "lionchat_liontrack_journey_stages_list"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_waha_status",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha/status",
+    "title": "Status da Conexão WhatsApp (WAHA)",
+    "description": "Status em tempo real da sessão WhatsApp QR Code da inbox (WORKING = conectado, SCAN_QR_CODE = precisa escanear, STOPPED/FAILED = problema). SÓ LEITURA. Detecta troca de número.",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada WAHA"
+      }
+    ],
+    "returns": "{ status, connected, phone_number, qr_code_available, phone_number_changed }",
+    "common_use_cases": [
+      "Diagnosticar 'mensagens não estão saindo' (sessão caiu?)"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_internal_chat_rooms_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms",
+    "title": "Listar Salas do Chat Interno",
+    "description": "Salas de conversa ENTRE AGENTES da conta (não envolve cliente). Tipos: direct (1:1) e multi_user (grupo). Traz última mensagem e contagem de não lidas. Cada agente vê só as próprias salas.",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "kind",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtro: all (default) | direct | multi_user"
+      },
+      {
+        "name": "q",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Busca por nome da sala ou nome/e-mail de membro"
+      },
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Página (default 1)"
+      },
+      {
+        "name": "per_page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Itens por página (default 50, máx 100)"
+      }
+    ],
+    "returns": "{ rooms: [{ id, kind, name, display_name, last_message, unread_count, member_ids }], counts, meta }",
+    "common_use_cases": [
+      "Ver salas com mensagens não lidas"
+    ],
+    "related_tools": [
+      "lionchat_internal_chat_messages_list",
+      "lionchat_internal_chat_rooms_create"
+    ]
+  },
+  {
+    "id": "lionchat_internal_chat_rooms_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms/{id}",
+    "title": "Detalhe da Sala",
+    "description": "Detalhe de uma sala do chat interno com a lista de membros.",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da sala"
+      }
+    ],
+    "returns": "{ id, kind, name, members: [{ id, name, email, member_role }], unread_count }",
+    "common_use_cases": [
+      "Conferir membros antes de mandar mensagem"
+    ],
+    "related_tools": [
+      "lionchat_internal_chat_messages_create"
+    ]
+  },
+  {
+    "id": "lionchat_internal_chat_rooms_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms",
+    "title": "Criar Sala (ou abrir 1:1 existente)",
+    "description": "Cria sala direct (1:1 — se já existir com aquela pessoa, retorna a existente com was_created=false) ou multi_user (grupo, exige name).",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "kind",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "'direct' (1:1) ou 'multi_user' (grupo)"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nome do grupo (obrigatório em multi_user)"
+      },
+      {
+        "name": "user_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "direct: ID do outro agente"
+      },
+      {
+        "name": "user_ids",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "multi_user: IDs dos membros (criador entra automático)"
+      }
+    ],
+    "returns": "{ id, kind, name, members, was_created }",
+    "common_use_cases": [
+      "Mandar recado pra um colega",
+      "Criar grupo do time de vendas"
+    ],
+    "related_tools": [
+      "lionchat_internal_chat_messages_create"
+    ]
+  },
+  {
+    "id": "lionchat_internal_chat_rooms_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms/{id}",
+    "title": "Renomear Sala / Atualizar Dados",
+    "description": "Renomeia sala multi_user (salas direct não podem ser renomeadas) ou atualiza metadados.",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da sala"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome (não pode ser vazio)"
+      },
+      {
+        "name": "additional_data",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Metadados livres (merge com o existente)"
+      }
+    ],
+    "returns": "{ id, name, additional_data }",
+    "common_use_cases": [
+      "Renomear grupo do time"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_internal_chat_rooms_mark_read",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms/{id}/mark_read",
+    "title": "Marcar Sala como Lida",
+    "description": "Marca todas as mensagens da sala como lidas pro usuário atual.",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da sala"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Zerar contador de não lidas"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_internal_chat_messages_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/messages",
+    "title": "Mensagens da Sala",
+    "description": "Lista mensagens da sala (40 por página, cursor before_id pra carregar mais antigas).",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "room_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da sala"
+      },
+      {
+        "name": "before_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Cursor: carrega mensagens ANTERIORES a este ID"
+      }
+    ],
+    "returns": "{ messages: [{ id, content, attachments, created_at, sender, read_by_all }], meta: { has_more } }",
+    "common_use_cases": [
+      "Ler o histórico antes de responder"
+    ],
+    "related_tools": [
+      "lionchat_internal_chat_messages_create"
+    ]
+  },
+  {
+    "id": "lionchat_internal_chat_messages_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/messages",
+    "title": "Enviar Mensagem no Chat Interno",
+    "description": "Envia mensagem de texto numa sala do chat interno (vai pros AGENTES da sala, nunca pro cliente). Confirme com o usuário antes de enviar em nome dele.",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "room_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da sala"
+      },
+      {
+        "name": "content",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Texto da mensagem"
+      }
+    ],
+    "returns": "{ id, content, created_at, sender }",
+    "common_use_cases": [
+      "Avisar o time sobre um cliente urgente"
+    ],
+    "related_tools": [
+      "lionchat_internal_chat_rooms_list"
+    ]
+  },
+  {
+    "id": "lionchat_internal_chat_messages_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/messages/{id}",
+    "title": "Editar/Reagir/Fixar Mensagem",
+    "description": "Edita o conteúdo (só o autor), adiciona reações ou fixa a mensagem (fixar como aviso exige admin do grupo).",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "room_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da sala"
+      },
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da mensagem"
+      },
+      {
+        "name": "content",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo texto (só o autor; marca como editada)"
+      },
+      {
+        "name": "additional_data",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Reações/fixar: { reactions: { '👍': [user_ids] }, pinned: bool, pinned_mode: 'normal'|'announcement', pinned_expires_at }"
+      }
+    ],
+    "returns": "{ id, content, additional_data }",
+    "common_use_cases": [
+      "Corrigir mensagem enviada",
+      "Fixar aviso importante"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_internal_chat_messages_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/messages/{id}",
+    "title": "Apagar Mensagem do Chat Interno",
+    "description": "Soft delete — só o autor pode apagar; os demais veem que foi apagada (conteúdo preservado pra auditoria).",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "room_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da sala"
+      },
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da mensagem"
+      }
+    ],
+    "returns": "{ id, additional_data: { deleted: true } }",
+    "common_use_cases": [
+      "Remover mensagem enviada por engano"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_internal_chat_members_add",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/members",
+    "title": "Adicionar Membro à Sala",
+    "description": "Adiciona um agente a sala multi_user (exige ser admin da sala; não funciona em direct).",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "room_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da sala"
+      },
+      {
+        "name": "user_id",
+        "type": "integer",
+        "location": "body",
+        "required": true,
+        "description": "ID do agente a adicionar"
+      }
+    ],
+    "returns": "201 Created",
+    "common_use_cases": [
+      "Convidar colega pro grupo"
+    ],
+    "related_tools": [
+      "lionchat_internal_chat_members_remove"
+    ]
+  },
+  {
+    "id": "lionchat_internal_chat_members_remove",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/internal_chat/rooms/{room_id}/members/{user_id}",
+    "title": "Remover Membro da Sala",
+    "description": "Remove um agente da sala multi_user (admin remove qualquer um; agente comum só sai a si mesmo).",
+    "category": "Chat Interno",
+    "params": [
+      {
+        "name": "room_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da sala"
+      },
+      {
+        "name": "user_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do agente a remover"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Sair de um grupo",
+      "Remover membro que saiu do time"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_meta_pixel_integrations_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations",
+    "title": "Listar Integrações Meta CAPI",
+    "description": "Lista os pixels da Meta (Conversions API) configurados na conta. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "[{ id, pixel_id, enabled, test_event_code, funnel_id }]",
+    "common_use_cases": [
+      "Auditar pixels configurados"
+    ],
+    "related_tools": [
+      "lionchat_meta_pixel_integrations_test_event"
+    ]
+  },
+  {
+    "id": "lionchat_meta_pixel_integrations_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations",
+    "title": "Criar Integração Meta CAPI",
+    "description": "Conecta um pixel da Meta (CAPI). Nasce desativado (enabled=false) — após test_event com sucesso, ativa sozinho. ADMIN-ONLY. Evento de checkout: nome atual é 'begin_checkout' (antigo InitiateCheckout).",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "pixel_id",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "ID do pixel Meta"
+      },
+      {
+        "name": "access_token",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Token de acesso CAPI"
+      },
+      {
+        "name": "test_event_code",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Código de teste (Events Manager)"
+      },
+      {
+        "name": "funnel_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Funil vinculado (eventos de ganho/perda)"
+      }
+    ],
+    "returns": "{ id, enabled: false, ... } (201)",
+    "common_use_cases": [
+      "Configurar rastreamento de conversões da Meta"
+    ],
+    "related_tools": [
+      "lionchat_meta_pixel_integrations_test_event"
+    ]
+  },
+  {
+    "id": "lionchat_meta_pixel_integrations_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations/{id}",
+    "title": "Atualizar Integração Meta CAPI",
+    "description": "Atualiza pixel/token/código de teste/funil. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      },
+      {
+        "name": "pixel_id",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo pixel"
+      },
+      {
+        "name": "access_token",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo token"
+      },
+      {
+        "name": "test_event_code",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo código de teste"
+      },
+      {
+        "name": "funnel_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Novo funil"
+      }
+    ],
+    "returns": "{ id, ... }",
+    "common_use_cases": [
+      "Trocar token expirado"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_meta_pixel_integrations_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations/{id}",
+    "title": "Excluir Integração Meta CAPI",
+    "description": "Remove o pixel da conta. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "204 No Content",
+    "common_use_cases": [
+      "Remover pixel desativado"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_meta_pixel_integrations_test_event",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations/{id}/test_event",
+    "title": "Testar Evento Meta CAPI",
+    "description": "Dispara evento de teste REAL contra a API da Meta. 200 OK = integração é ativada automaticamente. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "{ ok, response }",
+    "common_use_cases": [
+      "Validar pixel recém-configurado"
+    ],
+    "related_tools": [
+      "lionchat_meta_pixel_integrations_reset_test_event_window"
+    ]
+  },
+  {
+    "id": "lionchat_meta_pixel_integrations_reset_test_event_window",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations/{id}/reset_test_event_window",
+    "title": "Reabrir Janela de Teste Meta CAPI",
+    "description": "Reabre a janela de teste quando expirou (TTL ~5min/5 usos). Rate limit 10/hora. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "{ ok }",
+    "common_use_cases": [
+      "Continuar testando após expirar"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_ga4_integrations_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/ga4_integrations",
+    "title": "Listar Integrações GA4",
+    "description": "Lista integrações do Google Analytics 4 (Measurement Protocol). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "[{ id, measurement_id, enabled, funnel_id }]",
+    "common_use_cases": [
+      "Auditar rastreamento GA4"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_ga4_integrations_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/ga4_integrations",
+    "title": "Criar Integração GA4",
+    "description": "Conecta GA4 via Measurement ID + API Secret (nasce ativa). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "measurement_id",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Measurement ID (G-XXXX)"
+      },
+      {
+        "name": "api_secret",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "API Secret do data stream"
+      },
+      {
+        "name": "funnel_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Funil vinculado"
+      }
+    ],
+    "returns": "{ id, enabled: true } (201)",
+    "common_use_cases": [
+      "Mandar eventos de funil pro GA4"
+    ],
+    "related_tools": [
+      "lionchat_ga4_integrations_test_connection"
+    ]
+  },
+  {
+    "id": "lionchat_ga4_integrations_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/ga4_integrations/{id}",
+    "title": "Atualizar Integração GA4",
+    "description": "Atualiza credenciais/funil do GA4. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      },
+      {
+        "name": "measurement_id",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo Measurement ID"
+      },
+      {
+        "name": "api_secret",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo API Secret"
+      },
+      {
+        "name": "funnel_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Novo funil"
+      }
+    ],
+    "returns": "{ id, ... }",
+    "common_use_cases": [
+      "Trocar secret"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_ga4_integrations_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/ga4_integrations/{id}",
+    "title": "Excluir Integração GA4",
+    "description": "Remove a integração GA4. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "204 No Content",
+    "common_use_cases": [
+      "Desligar rastreamento GA4"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_ga4_integrations_test_connection",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/ga4_integrations/{id}/test_connection",
+    "title": "Testar Conexão GA4",
+    "description": "Valida Measurement ID + API Secret no endpoint de debug do GA4 (não grava evento). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "{ ok, validation_messages }",
+    "common_use_cases": [
+      "Diagnosticar credenciais GA4"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_google_ads_integrations_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/google_ads_integrations",
+    "title": "Listar Integrações Google Ads",
+    "description": "Lista integrações de conversões do Google Ads. A CONEXÃO inicial é por OAuth no navegador (não dá pra criar via MCP) — aqui dá pra ver, configurar e remover. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "[{ id, customer_id, enabled, conversion_action_map, funnel_id }]",
+    "common_use_cases": [
+      "Conferir mapeamento de conversões"
+    ],
+    "related_tools": [
+      "lionchat_google_ads_integrations_update"
+    ]
+  },
+  {
+    "id": "lionchat_google_ads_integrations_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/google_ads_integrations/{id}",
+    "title": "Detalhe da Integração Google Ads",
+    "description": "Detalhe de uma integração Google Ads. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "{ id, customer_id, login_customer_id, enabled, conversion_action_map }",
+    "common_use_cases": [
+      "Verificar configuração antes de mapear conversões"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_google_ads_integrations_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/google_ads_integrations/{id}",
+    "title": "Atualizar Integração Google Ads",
+    "description": "Define conta de anúncio (customer_id), habilita/desabilita e mapeia eventos → conversion actions. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      },
+      {
+        "name": "customer_id",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Customer ID (sem hífens)"
+      },
+      {
+        "name": "login_customer_id",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Login Customer ID (MCC)"
+      },
+      {
+        "name": "enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Liga/desliga envio de conversões"
+      },
+      {
+        "name": "funnel_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Funil vinculado"
+      },
+      {
+        "name": "conversion_action_map",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Mapa { evento: conversion_action_id }"
+      }
+    ],
+    "returns": "{ id, ... }",
+    "common_use_cases": [
+      "Mapear 'ganho no funil' → conversão do Ads"
+    ],
+    "related_tools": [
+      "lionchat_google_ads_integrations_list_conversion_actions"
+    ]
+  },
+  {
+    "id": "lionchat_google_ads_integrations_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/google_ads_integrations/{id}",
+    "title": "Excluir Integração Google Ads",
+    "description": "Remove a integração. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "204 No Content",
+    "common_use_cases": [
+      "Desconectar conta de anúncios"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_google_ads_integrations_list_customers",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/google_ads_integrations/{id}/list_customers",
+    "title": "Listar Contas Acessíveis do Google Ads",
+    "description": "Lista as contas de anúncio acessíveis pelo login conectado (pra escolher o customer_id). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "{ customers: [{ customer_id, descriptive_name, manager }] }",
+    "common_use_cases": [
+      "Escolher a conta certa num MCC"
+    ],
+    "related_tools": [
+      "lionchat_google_ads_integrations_update"
+    ]
+  },
+  {
+    "id": "lionchat_google_ads_integrations_list_conversion_actions",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/google_ads_integrations/{id}/list_conversion_actions",
+    "title": "Listar Conversion Actions do Google Ads",
+    "description": "Lista as ações de conversão habilitadas na conta de anúncio (pra montar o conversion_action_map). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "{ conversion_actions: [{ id, name, category, status }] }",
+    "common_use_cases": [
+      "Mapear eventos do LionChat pra conversões"
+    ],
+    "related_tools": [
+      "lionchat_google_ads_integrations_update"
+    ]
+  },
+  {
+    "id": "lionchat_conta_azul_integrations_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/conta_azul_integrations",
+    "title": "Listar Integrações Conta Azul",
+    "description": "Lista integrações com o ERP Conta Azul. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "[{ id, name, status, event_mapping }]",
+    "common_use_cases": [
+      "Ver status da conexão Conta Azul"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_conta_azul_integrations_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/conta_azul_integrations/{id}",
+    "title": "Detalhe da Integração Conta Azul",
+    "description": "Detalhe de uma integração Conta Azul (status, mapeamento de eventos). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "{ id, name, status, event_mapping }",
+    "common_use_cases": [
+      "Conferir status de sincronização"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_conta_azul_integrations_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/conta_azul_integrations",
+    "title": "Criar Integração Conta Azul",
+    "description": "Cria a integração (status pending) — a autorização em si é via OAuth: use 'connect' pra gerar o link que o usuário abre no navegador. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nome (default: Conta Azul)"
+      },
+      {
+        "name": "event_mapping",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Mapa de eventos personalizados"
+      }
+    ],
+    "returns": "{ id, status: 'pending' } (201)",
+    "common_use_cases": [
+      "Iniciar conexão com o ERP"
+    ],
+    "related_tools": [
+      "lionchat_conta_azul_integrations_connect"
+    ]
+  },
+  {
+    "id": "lionchat_conta_azul_integrations_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/conta_azul_integrations/{id}",
+    "title": "Atualizar Integração Conta Azul",
+    "description": "Atualiza nome/mapeamento de eventos. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome"
+      },
+      {
+        "name": "event_mapping",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Novo mapa de eventos"
+      }
+    ],
+    "returns": "{ id, ... }",
+    "common_use_cases": [
+      "Ajustar quais eventos viram ação"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_conta_azul_integrations_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/conta_azul_integrations/{id}",
+    "title": "Excluir Integração Conta Azul",
+    "description": "Remove a integração. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Desconectar o ERP"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_conta_azul_integrations_connect",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/conta_azul_integrations/connect",
+    "title": "Gerar Link de Autorização Conta Azul",
+    "description": "Inicia o OAuth: retorna authorize_url pro USUÁRIO abrir no navegador e autorizar (state expira em 15 min). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "{ authorize_url, state }",
+    "common_use_cases": [
+      "Mandar o link de autorização pro usuário"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_conta_azul_integrations_disconnect",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/conta_azul_integrations/{id}/disconnect",
+    "title": "Desconectar Conta Azul",
+    "description": "Marca a integração como desconectada (pausa a sincronização sem apagar a configuração). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Pausar sincronização"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_conta_azul_integrations_sync_now",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/conta_azul_integrations/{id}/sync_now",
+    "title": "Sincronizar Conta Azul Agora",
+    "description": "Enfileira sincronização manual imediata (assíncrona — resposta confirma o agendamento, não o resultado). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "{ enqueued: true }",
+    "common_use_cases": [
+      "Forçar sync após mudança no ERP"
+    ],
+    "related_tools": [
+      "lionchat_conta_azul_integrations_events"
+    ]
+  },
+  {
+    "id": "lionchat_conta_azul_integrations_events",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/conta_azul_integrations/{id}/events",
+    "title": "Eventos da Conta Azul",
+    "description": "Últimos 50 eventos de sincronização (status, erros). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "[{ id, event_type, processing_status, error_message, created_at }]",
+    "common_use_cases": [
+      "Diagnosticar sync com falha"
+    ],
+    "related_tools": [
+      "lionchat_conta_azul_integrations_retry_event"
+    ]
+  },
+  {
+    "id": "lionchat_conta_azul_integrations_retry_event",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/conta_azul_integrations/{id}/events/{event_id}/retry",
+    "title": "Reprocessar Evento Conta Azul",
+    "description": "Reprocessa um evento com falha/pulado. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      },
+      {
+        "name": "event_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do evento"
+      }
+    ],
+    "returns": "{ success: true }",
+    "common_use_cases": [
+      "Retentar evento que falhou"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_omie_integrations_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/omie_integrations",
+    "title": "Listar Integrações Omie",
+    "description": "Lista integrações com o ERP Omie (0 ou 1 por conta). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "[{ id, name, status, enabled_categories }]",
+    "common_use_cases": [
+      "Ver se a Omie está conectada"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_omie_integrations_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/omie_integrations/{id}",
+    "title": "Detalhe da Integração Omie",
+    "description": "Detalhe da integração Omie (status, categorias habilitadas, mapeamento). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "{ id, name, status, omie_company_name, enabled_categories, event_mapping }",
+    "common_use_cases": [
+      "Conferir categorias de eventos ativas"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_omie_integrations_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/omie_integrations",
+    "title": "Criar Integração Omie",
+    "description": "Conecta a Omie com app_key + app_secret (testa a conexão automaticamente). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "app_key",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "App Key da Omie"
+      },
+      {
+        "name": "app_secret",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "App Secret da Omie"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nome (default: Omie)"
+      },
+      {
+        "name": "omie_company_name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nome da empresa na Omie"
+      },
+      {
+        "name": "enabled_categories",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Categorias: receivables, payables, sales, purchase_orders, contracts, clients, fiscal"
+      },
+      {
+        "name": "event_mapping",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Mapa de eventos"
+      }
+    ],
+    "returns": "{ id, status } (201)",
+    "common_use_cases": [
+      "Conectar o ERP Omie"
+    ],
+    "related_tools": [
+      "lionchat_omie_integrations_test_connection"
+    ]
+  },
+  {
+    "id": "lionchat_omie_integrations_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/omie_integrations/{id}",
+    "title": "Atualizar Integração Omie",
+    "description": "Atualiza credenciais/categorias/mapeamento (credencial nova dispara novo teste de conexão). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      },
+      {
+        "name": "app_key",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nova App Key"
+      },
+      {
+        "name": "app_secret",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo App Secret"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome"
+      },
+      {
+        "name": "enabled_categories",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Novas categorias"
+      },
+      {
+        "name": "event_mapping",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Novo mapa"
+      }
+    ],
+    "returns": "{ id, ... }",
+    "common_use_cases": [
+      "Trocar credenciais da Omie"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_omie_integrations_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/omie_integrations/{id}",
+    "title": "Excluir Integração Omie",
+    "description": "Remove a integração. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Desconectar a Omie"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_omie_integrations_disconnect",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/omie_integrations/{id}/disconnect",
+    "title": "Desconectar Omie",
+    "description": "Marca como desconectada (pausa sem apagar). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Pausar a integração"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_omie_integrations_test_connection",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/omie_integrations/{id}/test_connection",
+    "title": "Testar Conexão Omie",
+    "description": "Testa as credenciais contra a API da Omie (síncrono). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "{ ok, company, error? }",
+    "common_use_cases": [
+      "Diagnosticar credenciais"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_omie_integrations_toggle_category",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/omie_integrations/{id}/toggle_category",
+    "title": "Ativar/Desativar Categoria Omie",
+    "description": "Liga/desliga uma categoria de eventos da Omie. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      },
+      {
+        "name": "category",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "receivables | payables | sales | purchase_orders | contracts | clients | fiscal"
+      },
+      {
+        "name": "enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": true,
+        "description": "true liga, false desliga"
+      }
+    ],
+    "returns": "{ enabled_categories: [...] }",
+    "common_use_cases": [
+      "Processar só contas a receber"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_omie_integrations_events",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/omie_integrations/{id}/events",
+    "title": "Eventos da Omie",
+    "description": "Últimos 50 eventos de webhook recebidos da Omie. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      }
+    ],
+    "returns": "[{ id, category, event_type, processing_status, error_message }]",
+    "common_use_cases": [
+      "Diagnosticar evento que não virou ação"
+    ],
+    "related_tools": [
+      "lionchat_omie_integrations_retry_event"
+    ]
+  },
+  {
+    "id": "lionchat_omie_integrations_retry_event",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/omie_integrations/{id}/events/{event_id}/retry",
+    "title": "Reprocessar Evento Omie",
+    "description": "Reprocessa um evento com falha. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração"
+      },
+      {
+        "name": "event_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do evento"
+      }
+    ],
+    "returns": "{ success: true }",
+    "common_use_cases": [
+      "Retentar evento da Omie"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_slack_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/integrations/slack",
+    "title": "Trocar Canal do Slack",
+    "description": "Muda o canal Slack que recebe as notificações (a conexão inicial é OAuth no navegador). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "reference_id",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "ID do canal Slack de destino"
+      }
+    ],
+    "returns": "{ hook }",
+    "common_use_cases": [
+      "Apontar notificações pra outro canal"
+    ],
+    "related_tools": [
+      "lionchat_integrations_slack_list_all_channels"
+    ]
+  },
+  {
+    "id": "lionchat_integrations_slack_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/integrations/slack",
+    "title": "Desconectar Slack",
+    "description": "Remove a integração Slack. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Desligar notificações no Slack"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_slack_list_all_channels",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/integrations/slack/list_all_channels",
+    "title": "Listar Canais do Slack",
+    "description": "Lista os canais do workspace Slack conectado (pra escolher o destino). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "[{ id, name, is_private }]",
+    "common_use_cases": [
+      "Escolher canal antes de trocar"
+    ],
+    "related_tools": [
+      "lionchat_integrations_slack_update"
+    ]
+  },
+  {
+    "id": "lionchat_integrations_linear_teams",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/integrations/linear/teams",
+    "title": "Listar Times do Linear",
+    "description": "Lista os times do workspace Linear conectado.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "{ data: [{ id, name, key }] }",
+    "common_use_cases": [
+      "Escolher time antes de criar issue"
+    ],
+    "related_tools": [
+      "lionchat_integrations_linear_create_issue"
+    ]
+  },
+  {
+    "id": "lionchat_integrations_linear_team_entities",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/integrations/linear/team_entities",
+    "title": "Entidades de um Time Linear",
+    "description": "Projetos, estados, labels e membros de um time Linear.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "team_id",
+        "type": "string",
+        "location": "query",
+        "required": true,
+        "description": "ID do time Linear"
+      }
+    ],
+    "returns": "{ data: { projects, states, labels, users } }",
+    "common_use_cases": [
+      "Preencher campos da issue"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_linear_create_issue",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/integrations/linear/create_issue",
+    "title": "Criar Issue no Linear",
+    "description": "Cria issue no Linear a partir de uma conversa (registra atividade na conversa).",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "body",
+        "required": true,
+        "description": "display_id da conversa"
+      },
+      {
+        "name": "team_id",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "ID do time Linear"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Título da issue"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Descrição"
+      },
+      {
+        "name": "project_id",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Projeto"
+      },
+      {
+        "name": "assignee_id",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Responsável no Linear"
+      },
+      {
+        "name": "priority",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Prioridade (1-4)"
+      },
+      {
+        "name": "state_id",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Estado inicial"
+      },
+      {
+        "name": "label_ids",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Labels do Linear"
+      }
+    ],
+    "returns": "{ data: { id, identifier, title, url } }",
+    "common_use_cases": [
+      "Abrir bug reportado pelo cliente direto no Linear"
+    ],
+    "related_tools": [
+      "lionchat_integrations_linear_link_issue"
+    ]
+  },
+  {
+    "id": "lionchat_integrations_linear_link_issue",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/integrations/linear/link_issue",
+    "title": "Vincular Issue Existente do Linear",
+    "description": "Vincula uma issue Linear já existente à conversa.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "body",
+        "required": true,
+        "description": "display_id da conversa"
+      },
+      {
+        "name": "issue_id",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "ID da issue Linear"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Título (exibição)"
+      }
+    ],
+    "returns": "{ data }",
+    "common_use_cases": [
+      "Ligar conversa a um bug já aberto"
+    ],
+    "related_tools": [
+      "lionchat_integrations_linear_search_issue"
+    ]
+  },
+  {
+    "id": "lionchat_integrations_linear_unlink_issue",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/integrations/linear/unlink_issue",
+    "title": "Desvincular Issue do Linear",
+    "description": "Remove o vínculo entre a issue e a conversa.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "body",
+        "required": true,
+        "description": "display_id da conversa"
+      },
+      {
+        "name": "link_id",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "ID do vínculo"
+      },
+      {
+        "name": "issue_id",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "ID da issue"
+      }
+    ],
+    "returns": "{ data }",
+    "common_use_cases": [
+      "Corrigir vínculo errado"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_linear_search_issue",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/integrations/linear/search_issue",
+    "title": "Buscar Issues no Linear",
+    "description": "Busca issues do Linear por termo.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "q",
+        "type": "string",
+        "location": "query",
+        "required": true,
+        "description": "Termo de busca"
+      }
+    ],
+    "returns": "{ data: [{ id, identifier, title }] }",
+    "common_use_cases": [
+      "Achar a issue pra vincular"
+    ],
+    "related_tools": [
+      "lionchat_integrations_linear_link_issue"
+    ]
+  },
+  {
+    "id": "lionchat_integrations_linear_linked_issues",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/integrations/linear/linked_issues",
+    "title": "Issues Vinculadas à Conversa",
+    "description": "Lista as issues Linear vinculadas a uma conversa.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "query",
+        "required": true,
+        "description": "display_id da conversa"
+      }
+    ],
+    "returns": "{ data: [{ id, identifier, title, status }] }",
+    "common_use_cases": [
+      "Conferir se o problema do cliente já tem issue"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_linear_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/integrations/linear",
+    "title": "Desconectar Linear",
+    "description": "Remove a integração Linear. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Desligar o Linear"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_notion_search_pages",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/integrations/notion/search_pages",
+    "title": "Buscar Páginas do Notion",
+    "description": "Busca páginas no workspace Notion conectado.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "q",
+        "type": "string",
+        "location": "query",
+        "required": true,
+        "description": "Termo de busca"
+      }
+    ],
+    "returns": "[{ id, title, url }]",
+    "common_use_cases": [
+      "Achar página pra importar como conhecimento"
+    ],
+    "related_tools": [
+      "lionchat_integrations_notion_import_pages"
+    ]
+  },
+  {
+    "id": "lionchat_integrations_notion_import_pages",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/integrations/notion/import_pages",
+    "title": "Importar Páginas do Notion",
+    "description": "Importa páginas do Notion como documentos/artigos (base de conhecimento).",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "page_ids",
+        "type": "array",
+        "location": "body",
+        "required": true,
+        "description": "IDs das páginas Notion a importar"
+      }
+    ],
+    "returns": "[documentos importados]",
+    "common_use_cases": [
+      "Sincronizar docs do Notion pra IA"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_notion_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/integrations/notion",
+    "title": "Desconectar Notion",
+    "description": "Remove a integração Notion. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Desligar o Notion"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_shopify_orders",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/integrations/shopify/orders",
+    "title": "Pedidos da Loja Shopify",
+    "description": "Lista pedidos da loja Shopify conectada (pra contexto de atendimento).",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "limit",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Limite de resultados"
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Status do pedido"
+      }
+    ],
+    "returns": "[pedidos]",
+    "common_use_cases": [
+      "Ver pedidos do cliente durante o atendimento"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_shopify_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/integrations/shopify",
+    "title": "Desconectar Shopify",
+    "description": "Remove a integração Shopify. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Desligar a Shopify"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_dyte_create_meeting",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/integrations/dyte/create_a_meeting",
+    "title": "Criar Videochamada (Dyte)",
+    "description": "Cria uma sala de videochamada Dyte vinculada à conversa.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "body",
+        "required": true,
+        "description": "display_id da conversa"
+      }
+    ],
+    "returns": "{ meeting_id, meeting_link }",
+    "common_use_cases": [
+      "Iniciar vídeo com o cliente"
+    ],
+    "related_tools": [
+      "lionchat_integrations_dyte_add_participant"
+    ]
+  },
+  {
+    "id": "lionchat_integrations_dyte_add_participant",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/integrations/dyte/add_participant_to_meeting",
+    "title": "Adicionar Participante à Videochamada",
+    "description": "Adiciona um participante a uma reunião Dyte existente.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "meeting_id",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "ID da reunião"
+      },
+      {
+        "name": "participant_name",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Nome do participante"
+      }
+    ],
+    "returns": "{ participant_id, auth_token }",
+    "common_use_cases": [
+      "Incluir mais alguém na call"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_apps_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/integrations/apps",
+    "title": "Listar Apps de Integração",
+    "description": "Catálogo de apps de integração da conta (OpenAI, Slack, Dialogflow, etc) com status de conexão.",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "[{ id, name, description, enabled, hooks }]",
+    "common_use_cases": [
+      "Descobrir o que dá pra conectar",
+      "Ver o que já está conectado"
+    ],
+    "related_tools": [
+      "lionchat_integrations_hooks_create"
+    ]
+  },
+  {
+    "id": "lionchat_integrations_apps_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/integrations/apps/{id}",
+    "title": "Detalhe do App de Integração",
+    "description": "Detalhe de um app específico (ex: 'openai') com seus hooks configurados.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "string",
+        "location": "path",
+        "required": true,
+        "description": "ID do app (ex: openai, slack, dialogflow)"
+      }
+    ],
+    "returns": "{ id, name, hooks: [...] }",
+    "common_use_cases": [
+      "Ver configuração da integração OpenAI"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_hooks_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/integrations/hooks/{id}",
+    "title": "Detalhe de um Hook de Integração",
+    "description": "Detalhe de um hook (instância de integração — ex: a chave OpenAI da conta). ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do hook"
+      }
+    ],
+    "returns": "{ id, app_id, status, settings, inbox_id }",
+    "common_use_cases": [
+      "Conferir config antes de atualizar"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_hooks_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/integrations/hooks",
+    "title": "Criar Hook de Integração",
+    "description": "Conecta um app (ex: OpenAI — valida a api_key na hora; chave inválida nem salva). ADMIN-ONLY. É mudança de config — confirme com o usuário.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "app_id",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "ID do app (openai, slack, dialogflow, ...)"
+      },
+      {
+        "name": "settings",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Config do app — OpenAI: { api_key, fallback_api_keys: [chaves reservas] }"
+      },
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Restringir a uma inbox"
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "enabled | disabled"
+      }
+    ],
+    "returns": "{ id, app_id, status } (201)",
+    "common_use_cases": [
+      "Configurar a chave OpenAI da conta"
+    ],
+    "related_tools": [
+      "lionchat_integrations_hooks_update"
+    ]
+  },
+  {
+    "id": "lionchat_integrations_hooks_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/integrations/hooks/{id}",
+    "title": "Atualizar Hook de Integração",
+    "description": "Atualiza settings/status do hook (chaves OpenAI revalidadas ao trocar). ADMIN-ONLY. Confirme com o usuário.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do hook"
+      },
+      {
+        "name": "settings",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Novas settings"
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "enabled | disabled"
+      }
+    ],
+    "returns": "{ id, ... }",
+    "common_use_cases": [
+      "Trocar chave OpenAI",
+      "Adicionar chaves reservas (fallback)"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_integrations_hooks_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/integrations/hooks/{id}",
+    "title": "Excluir Hook de Integração",
+    "description": "Remove o hook (ex: desconecta OpenAI — a IA da conta PARA de responder). DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do hook"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Desconectar um app"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_contacts_tracking_events_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/tracking_events",
+    "title": "Eventos de Navegação do Contato (LionTrack)",
+    "description": "Linha do tempo de rastreamento do contato no site: pageviews e eventos (UTMs, dispositivo, duração). Base da Jornada do Lead. URLs vêm SEM querystring (LGPD).",
+    "category": "LionTrack",
+    "params": [
+      {
+        "name": "contact_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do contato"
+      },
+      {
+        "name": "only_pageviews",
+        "type": "boolean",
+        "location": "query",
+        "required": false,
+        "description": "true = só pageviews (trilha de navegação da Jornada do Lead)"
+      },
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Página"
+      }
+    ],
+    "returns": "{ events: [{ event_name, page_url, page_title, utm_source, utm_campaign, device, created_at }], meta }",
+    "common_use_cases": [
+      "Ver por onde o lead navegou antes de chamar",
+      "Conferir origem (UTM) de um contato"
+    ],
+    "related_tools": [
+      "lionchat_journey_funnel_reports"
+    ]
   }
 ]

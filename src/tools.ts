@@ -396,81 +396,149 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-06-11)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
+═══ DOIS TIPOS DE FLOW ═══
+- conversation (default): dispara por evento de inbox. Criar via lionchat_flows_create.
+- ai_tool: ferramenta que o AI Agente invoca. Criar via lionchat_flow_tools_create (NAO flows_create!),
+  com tool_name (snake_case, max 50) + tool_description (max 500). SEM inbox_ids. No 'end' OBRIGATORIO.
+  Nodes permitidos em ai_tool: start, end, api, condition, set_variable, ai, randomizer, action,
+  send_message, note (SEM wait, wait_response, update_group). No action de ai_tool NAO use keys da
+  aba Sistema (send_webhook/start_flow). Vincular ao assistente: POST /flow_tools/{id}/assistants.
+  Testar: POST /flow_tools/{id}/run.
+
 ═══ NODE GERAL ═══
-{ "id": "string-unico", "type": "start|send_message|wait_response|condition|action|api|set_variable|wait|randomizer|update_group|ai|end", "position": {"x":0,"y":0}, "data": { ... } }
+{ "id": "string-unico", "type": "start|send_message|wait_response|condition|action|api|set_variable|wait|randomizer|update_group|ai|end|note", "position": {"x":0,"y":0}, "data": { ... } }
+(activate_flow existe como node LEGADO — nao crie novos; use action start_flow)
 
 ═══ NODE TYPES + source handles ═══
 
 ▸ start
-  data: { label }
-  (sem handles — start tem so output default pro proximo node)
+  data: { label, triggers: [...] }
+  Triggers: message_received (keywords[] min 3 chars + match_type 'contains'|'exact' — dispara em
+    QUALQUER msg do cliente que case), conversation_created/conversation_reopened (match_mode +
+    keywords opcionais), conversation_resolved, label_added/label_removed (label_names[] — NAO
+    'label' singular), card_created/card_moved (funnel_ids[] + funnel_stages[] 'funnel_id:stage'),
+    cron, webhook.
+  WEBHOOK EMBUTIDO (Webhook Universal): 1) criar flow; 2) POST /custom_webhook_integrations com
+    {custom_webhook_integration:{flow_id}} (idempotente, retorna URL unica); 3) flows_update com
+    item {type:'webhook_received', config:{integration_id}} no data.items do start. Remover o item
+    desativa o webhook. Excluir flow destroi o webhook. Duplicar flow NAO copia o gatilho.
+  Handle: "success".
 
 ▸ send_message
   data: { label, messageItems: [
     { id, type:"text", content },
-    { id, type:"image", url, caption },
-    { id, type:"template", template_name, ... }
+    { id, type:"delay", seconds },
+    { id, type:"whatsapp_template", templateId, params },
+    { id, type:"canned_response"|"user_input"|"attachment"|"audio", ... }
   ]}
-  Handles: "success", "no_response" (se timeout), "error", "window_closed" (WhatsApp API Official).
-  Se messageItem text com buttons_enabled=true: gera "button_{value}" por botao.
+  ATENCAO: messageItems (NAO items).
+  Botoes: item text com buttons_enabled=true + buttons:[{title,value}] gera handle "button_{value}"
+  por botao + "no_response" (texto livre em vez de clique) + "no_reply_timeout" (se timeout).
+  Handles sem botoes: "success", "error".
 
 ▸ wait_response
   data: {
-    label, waitTime, waitUnit: "minutes"|"seconds",
+    label, waitTime, waitUnit: "minutes"|"seconds"|"hours",
     validation: "any"|"options"|"regex",
     acceptedOptions: ["1","2"],     // se validation='options'
     regexPattern,                    // se validation='regex'
     invalidMessage, maxRetries,
-    saveTo: "variable"|"attribute"|"",
-    saveVariable, saveAttrKey
+    saveTo: "variable"|"contact_name"|"contact_email"|"contact_phone"|"contact_attr"|"conversation_attr"|"",
+    saveVariable, saveAttrKey        // saveAttrKey obrigatorio p/ contact_attr e conversation_attr
   }
+  saveTo "attribute"/"contact_attribute" NAO EXISTEM — nao salvam nada.
+  TIMEOUT DISPARA DE VERDADE (corrigido 2026-06-09): waitTime estourou -> handle "timeout"
+  (ou "option_{val}_timeout" no modo options). Sempre ligue um edge no timeout.
   Handles validation='options': "option_{val}" por opcao + "timeout"
   Handles outros: "success" + "timeout"
   IMPORTANTE: validation='options' ja roteia por opcao — NAO precisa condition depois.
 
 ▸ condition
   data: { label, conditions: [
-    { id, label, field, operator, value, valueType }
+    { id, label, field, operator, value }
   ]}
-  Handles: id de cada condicao + "default" (fallback).
+  Handles: "cond_0", "cond_1", ... (POSICAO no array, NAO o id da condicao!) + "default".
+  First-match-wins: avalia em ordem e PARA na primeira que bate.
+  Operadores: equal/not_equal, contains/not_contains, starts_with/ends_with,
+    is_empty/is_not_empty (NAO existe is_present/is_blank), greater_than/less_than,
+    number_range ("min-max"), regex, equal_any/contains_any (values[]),
+    business_hours/outside_business_hours, can_reply/can_reply_closed,
+    conversation_has_agent/no_agent, contact_has_label/conversation_has_label,
+    kanban_exists/kanban_in_stage/kanban_won/kanban_lost, pagetrack_visited/pagetrack_event.
+  Operador numerico SO em atributo numero.
 
 ▸ action
-  data: { label, items: [
-    { key, config: {...} }
-  ]}
+  data: { label, items: [ { key, config: {...} } ] }
   ATENCAO: items[].config NAO items[].params.
   Keys validas:
     Conversa: assign_agent({agent_id}), assign_team({team_id}),
-      change_status({status,snooze_option}), change_priority({priority}),
-      mute_conversation({}), add_private_note({content}),
-      send_email_transcript({email}), deactivate_flow({}),
+      change_status({status: open|resolved|pending|snoozed}), change_priority({priority}),
+      mute_conversation({}), add_private_note({content}), send_email_transcript({email}),
+      add_conversation_label({labels:[...]}), remove_conversation_label({labels:[...]}),  // etiqueta NA CONVERSA
       assign_captain({assistant_id}), deactivate_captain({})
-    Contato: add_label({labels:[...]}), remove_label({labels:[...]}),
-      update_attribute({attr_source,attr_key,attr_value})
-    Kanban: create_kanban_item({funnel_id,funnel_stage,...}),
-      move_kanban_stage({funnel_id,funnel_stage}),
-      set_won({funnel_id}), set_lost({funnel_id,lost_reason}),
-      assign_agent_card({funnel_id,agent_id}),
-      add_card_note({funnel_id,text})
-  Handles: "success", "error"
+    Contato: add_label({labels:[...]}), remove_label({labels:[...]}),  // etiqueta NO CONTATO
+      update_attribute({attr_source:'contact'|'conversation'|'card', attr_key, attr_value})
+        — campos EXATOS (NAO entity/key/value). Somar/subtrair via Liquid no attr_value:
+        "{{ contact.custom_attribute.pontos | plus: 1 }}"
+    Kanban: create_kanban_item({funnel_id, funnel_stage, title?, description?})
+        — funnel_id e funnel_stage OBRIGATORIOS; title/description aceitam {{ }},
+      move_kanban_stage({funnel_id,funnel_stage}), set_kanban_item_status({status:won|lost|active}),
+      set_won({}), set_lost({reason?}), assign_agent_card({agent_id}), add_card_note({content})
+    Sistema (SO flow conversation): send_webhook({url,headers?,body?}), start_flow({flow_id}),
+      deactivate_flow({})
+  Handles: "success" (sem handle error — falha vira warning e o flow continua).
 
 ▸ api
   data: { label, method, url, headers:[{key,value}], body, apiResponseVar }
   Handles: "success", "error"
 
+▸ ai
+  data: { label, aiMode: "generate"|"intent"|"sentiment"|"extract", aiPrompt,
+    aiIntents: [{name}],            // se intent — ARRAY DE OBJETOS (NAO array de strings)
+    aiResponseVar,                   // se extract
+    contextMessages: 25|50|75|100 }  // quantas msgs a IA enxerga
+  Handles intent: "intent_{name}" por intencao + "no_intent" + "error" (var {{ai_intent}} disponivel)
+  Handles sentiment: "positive", "negative", "neutral" + "error"
+  Handles generate/extract: "success", "error"
+
 ▸ set_variable
   data: { label, variables: [{name,value}] }
+  Handle: "success"
 
 ▸ wait
-  data: { label, waitTime, waitUnit }
+  data: { label, waitTime, waitUnit: seconds|minutes|hours|days|weekday }
+  weekday: + targetWeekday (0=dom..6=sab) + targetHour (0-23)
+  Handle: "success"
 
 ▸ randomizer
-  data: { label, branches:[{id,percent}] }
-  Handles: id de cada branch.
+  data: { label, mode:"branches", branches:[{id,label,weight}] }
+  Handles: o id de cada branch.
+
+▸ update_group (WAHA, conversa de grupo apenas)
+  Handles: "success", "error"
+
+▸ end
+  Terminal, sem handles de saida. Em conversation: encerra o ramo. Em ai_tool: OBRIGATORIO —
+  data define o retorno estruturado pro LLM (suporta saida Liquid com {{ }}).
+
+▸ note
+  Sticky note visual. Sem handles, nunca executa, nao ligue edges.
+
+═══ VARIAVEIS {{ }} ═══
+contact.name, contact.email, contact.phone, contact.custom_attribute.X (SINGULAR — plural resolve vazio)
+CADASTRAL forma curta (canonica): contact.cpf, contact.cnpj, contact.rg, contact.address.street,
+  contact.address.number, ... (NAO e custom_attribute!)
+conversation.id, conversation.status, conversation.team_id, conversation.agent_id,
+  conversation.labels, conversation.custom_attribute.X
+account.custom_attribute.X, env.CHAVE, {{var_criada_no_set_variable}}, {{ai_intent}}, {{api_response_var}}
+
+═══ ANTI-LOOP ═══
+Cadeias automacao<->flow tem profundidade maxima 5 hand-offs (MAX_CHAIN_DEPTH). No 5o a cadeia e
+cortada em silencio. "Flow nao disparou" no fim de cadeia longa = essa protecao.
 
 ═══ EDGES ═══
 [{ "id", "source", "target", "sourceHandle", "type":"deletable", "animated":true }]
@@ -480,10 +548,14 @@ sourceHandle OBRIGATORIO casar com handle exposto pelo node source.
 1. action items[].config (nao params)
 2. send_message messageItems (nao items)
 3. wait_response validation='options' roteia por handle 'option_X' — NAO use condition depois
-4. sourceHandle precisa ser o handle REAL do node source ('success', 'option_1', 'timeout', 'no_response', 'c1' do condition, etc)
+4. condition usa 'cond_0'/'cond_1' (INDICE) + 'default' — NUNCA o id da condicao ('c1' QUEBRA)
 5. inbox_ids no MCP vai no nivel raiz; no PUT bruto vai em {flow:{inbox_ids:[]}}
 6. send_message com buttons gera 'button_{value}' (value do botao, nao titulo)
-7. condition.field aceita liquid: '{{conversation.team_id}}', '{{contact.attributes.cpf}}', '{{var_nome}}'
+7. condition.field/mensagens aceitam liquid: '{{conversation.team_id}}', '{{contact.custom_attribute.plano}}',
+   '{{contact.cpf}}' (cadastral curto), '{{var_nome}}' — NUNCA '{{contact.attributes.X}}'
+8. saveTo 'attribute'/'contact_attribute' nao existem — use 'contact_attr'/'conversation_attr'
+9. ai_tool via flow_tools_create (flows_create rejeita/cria do tipo errado); no end obrigatorio
+10. node sem position empilha tudo em (0,0) — sempre informe e nunca repita (x,y)
 
 ═══ EXEMPLO MINIMO — Menu 3 opcoes ═══
 {
@@ -510,8 +582,8 @@ sourceHandle OBRIGATORIO casar com handle exposto pelo node source.
     }}
   ],
   "edges":[
-    {"id":"e1","source":"s1","target":"m1","type":"deletable","animated":true},
-    {"id":"e2","source":"m1","target":"w1","type":"deletable","animated":true},
+    {"id":"e1","source":"s1","target":"m1","sourceHandle":"success","type":"deletable","animated":true},
+    {"id":"e2","source":"m1","target":"w1","sourceHandle":"success","type":"deletable","animated":true},
     {"id":"e3","source":"w1","sourceHandle":"option_1","target":"a1","type":"deletable","animated":true},
     {"id":"e4","source":"w1","sourceHandle":"option_2","target":"a2","type":"deletable","animated":true},
     {"id":"e5","source":"w1","sourceHandle":"option_3","target":"a3","type":"deletable","animated":true}

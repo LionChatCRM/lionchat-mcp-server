@@ -201,6 +201,34 @@ Padrões que causam:
 - Não cache de dados estáticos
 - Loop sem `break` apropriado
 
+## Cenários de produto (diagnóstico rápido, 2026-06)
+
+### "Mensagens pro contato X não chegam no WhatsApp (WAHA)" — contato mudo
+Causa clássica: cache de LID inválido no contato. Desde 2026-06-10 há **self-healing**: o LID
+é validado (formato `digitos@lid`), o cache invalida sozinho se o número conectado ou o canal
+mudarem, e o envio re-resolve o LID na primeira falha. Se ainda assim falhar: confira
+`additional_attributes.waha_whatsapp_lid` do contato e o status da sessão
+(`GET /inboxes/{id}/waha/status`).
+
+### "Cliente mandou um contato (vCard) e não apareceu nada"
+Corrigido em 2026-06-09: vCard agora vira anexo `file_type: "contact"` na mensagem (nome +
+telefone extraídos). Em versões antigas a mensagem era descartada.
+
+### "IA parou de responder / erro de OpenAI"
+- Mensagens de erro agora distinguem **sem saldo** (insufficient_quota) de **limite de taxa** (429).
+- A conta pode ter **chaves OpenAI reservas** (fallback automático com cooldown — configurado na
+  integração OpenAI, campo fallback_api_keys). Se a principal falha, a reserva assume sozinha.
+- A chave é validada na hora de salvar a integração (chave inválida nem salva).
+- Se a transcrição de um áudio falha, a IA **não responde no escuro** — ela espera intervenção
+  em vez de responder sem saber o que o cliente disse.
+- Sem AI Agente ativo na conversa = nenhuma resposta de IA (motor antigo V1 foi aposentado).
+- IA travada pelo anti-loop avisa um humano via notificação (não fica muda).
+
+### "Editei o evento no Google Calendar e não sincronizou"
+Auto-cura desde 2026-06-09: o vigia horário re-arma o "watch" morto de conexões saudáveis
+sozinho (sem reconectar a conta). Se persistir >1h, aí sim investigar a conexão
+(`google_calendar` tools — campo watch_expiration).
+
 ## Webhooks como alternativa a polling
 
 Se você precisa monitorar mudanças em conversas/mensagens, NÃO faça polling:

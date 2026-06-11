@@ -253,6 +253,25 @@ Funil "Vendas"
 
 Endpoint: `GET /api/v2/kanban/items/counts` retorna contagem + soma por etapa.
 
+## Controle de acesso por funil (2026-06-10)
+
+Funis agora têm visibilidade por usuário. Um funil é visível pra alguém quando:
+- é admin da conta, OU
+- tem permissão `kanban_view`/`kanban_manage` (custom role), OU
+- o funil está aberto a todos, OU
+- a pessoa participa do funil (está em `settings.agents` ou tem card atribuído)
+
+**Efeitos práticos nas tools:**
+- `funnels_list` retorna SÓ os funis visíveis pro usuário do token
+- `funnels_show` / `stage_stats` de funil não-visível → **404** (não "lista vazia")
+- A resposta dos cards traz selos de permissão calculados no backend:
+  `can_edit`, `can_move`, `can_delete`, `can_assign` (booleans)
+- `kanban_items_move` sem permissão → **403** com mensagem traduzida (antes dava 500/sucesso falso)
+- Cards embutidos na tela da conversa também respeitam a visibilidade
+
+**Pro MCP:** antes de tentar mover/editar card, confira os campos `can_*` do show — se `can_move`
+é false, explique ao usuário que ele não tem acesso àquele funil em vez de tentar mesmo assim.
+
 ## Funil arquivado vs ativo
 
 - `archived = true`: funil escondido da UI principal. Cards ainda existem mas não aparecem nas listas
