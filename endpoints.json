@@ -23402,5 +23402,473 @@
     "related_tools": [
       "lionchat_journey_funnel_reports"
     ]
+  },
+  {
+    "id": "lionchat_wavoip_status",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/wavoip/status",
+    "title": "Status da Ligação WP (Wavoip)",
+    "description": "Status do device Wavoip da caixa QR Code: conectado, vencimento, QR pra parear. Flag wavoip_calling.",
+    "category": "Ligacao WP (Wavoip)",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (WhatsApp QR Code)"
+      }
+    ],
+    "returns": "{ status, due_date, qr_url, num_channels }",
+    "common_use_cases": [
+      "Diagnosticar ligação que não conecta"
+    ],
+    "related_tools": [
+      "lionchat_wavoip_connect"
+    ]
+  },
+  {
+    "id": "lionchat_wavoip_calls",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/wavoip/calls",
+    "title": "Histórico de Ligações WP",
+    "description": "Histórico de ligações de voz da caixa (Wavoip), com gravação e transcrição quando configuradas. Membro da caixa pode ver.",
+    "category": "Ligacao WP (Wavoip)",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (WhatsApp QR Code)"
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtro por status"
+      },
+      {
+        "name": "agent_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Por agente"
+      },
+      {
+        "name": "date_from",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Início ISO 8601"
+      },
+      {
+        "name": "date_to",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Fim ISO 8601"
+      },
+      {
+        "name": "favorited",
+        "type": "boolean",
+        "location": "query",
+        "required": false,
+        "description": "Só favoritas"
+      },
+      {
+        "name": "q",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Busca por nome/telefone"
+      }
+    ],
+    "returns": "{ calls: [...], meta }",
+    "common_use_cases": [
+      "Ver ligações do dia",
+      "Achar gravação de uma ligação"
+    ],
+    "related_tools": [
+      "lionchat_wavoip_settings_update"
+    ]
+  },
+  {
+    "id": "lionchat_wavoip_token",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/wavoip/token",
+    "title": "Token do Device Wavoip (agente)",
+    "description": "Token do device pro agente discar/atender no widget. Membro da caixa.",
+    "category": "Ligacao WP (Wavoip)",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (WhatsApp QR Code)"
+      }
+    ],
+    "returns": "{ token }",
+    "common_use_cases": [
+      "Destravar o discador de um agente"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_wavoip_connect",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/wavoip/connect",
+    "title": "Conectar Ligação WP",
+    "description": "Cria o device Wavoip da caixa (checa limite do plano wavoip_voice_inboxes; custo R$70/device/mês). ADMIN. Mudança de config — confirme com o usuário.",
+    "category": "Ligacao WP (Wavoip)",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (WhatsApp QR Code)"
+      }
+    ],
+    "returns": "{ status, qr_url }",
+    "common_use_cases": [
+      "Ativar voz numa caixa QR Code"
+    ],
+    "related_tools": [
+      "lionchat_wavoip_status"
+    ]
+  },
+  {
+    "id": "lionchat_wavoip_disconnect",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/wavoip/disconnect",
+    "title": "Desconectar Ligação WP",
+    "description": "Deleta o device Wavoip (cancela a cobrança). ADMIN. DESTRUTIVO — confirme antes.",
+    "category": "Ligacao WP (Wavoip)",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (WhatsApp QR Code)"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Desativar voz e parar cobrança"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_wavoip_settings_update",
+    "method": "PUT",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/wavoip/settings",
+    "title": "Configurar Gravação/Transcrição (Wavoip)",
+    "description": "Define gravação e transcrição automática das ligações da caixa. ADMIN.",
+    "category": "Ligacao WP (Wavoip)",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (WhatsApp QR Code)"
+      },
+      {
+        "name": "record_all_calls",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Gravar todas as ligações"
+      },
+      {
+        "name": "auto_transcribe",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Transcrever automaticamente com IA"
+      },
+      {
+        "name": "transcription_provider",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "groq | openai"
+      }
+    ],
+    "returns": "{ settings }",
+    "common_use_cases": [
+      "Ligar gravação + transcrição automática"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_contacts_documents_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents",
+    "title": "Documentos do Contato",
+    "description": "Central de arquivos do contato: uploads diretos + espelho dos anexos dos cards Kanban + das conversas (só imagem/documento). Dedup por arquivo.",
+    "category": "Documentos do Contato",
+    "params": [
+      {
+        "name": "contact_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do contato"
+      }
+    ],
+    "returns": "{ documents: [{ id, name, source (upload|kanban|conversation), favorited, url, created_at }] }",
+    "common_use_cases": [
+      "Ver todos os arquivos de um cliente num lugar só"
+    ],
+    "related_tools": [
+      "lionchat_contacts_documents_create"
+    ]
+  },
+  {
+    "id": "lionchat_contacts_documents_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents",
+    "title": "Adicionar Documento ao Contato",
+    "description": "Upload direto de arquivo pro contato (via MCP: use lionchat_upload_create antes e passe a URL/signed_id, se suportado — upload multipart direto não é suportado).",
+    "category": "Documentos do Contato",
+    "params": [
+      {
+        "name": "contact_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do contato"
+      },
+      {
+        "name": "file",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Arquivo (signed_id do upload ou URL)"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nome de exibição"
+      }
+    ],
+    "returns": "{ document } (201)",
+    "common_use_cases": [
+      "Guardar contrato/documento do cliente"
+    ],
+    "related_tools": [
+      "lionchat_upload_create"
+    ]
+  },
+  {
+    "id": "lionchat_contacts_documents_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents/{id}",
+    "title": "Renomear/Favoritar Documento",
+    "description": "Renomeia ou favorita um documento direto do contato.",
+    "category": "Documentos do Contato",
+    "params": [
+      {
+        "name": "contact_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do contato"
+      },
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do documento"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome"
+      },
+      {
+        "name": "favorited",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Favoritar"
+      }
+    ],
+    "returns": "{ document }",
+    "common_use_cases": [
+      "Organizar arquivos do cliente"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_contacts_documents_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents/{id}",
+    "title": "Excluir Documento do Contato",
+    "description": "Exclui documento de upload direto. DESTRUTIVO — confirme antes. (Anexos de conversa são só-leitura.)",
+    "category": "Documentos do Contato",
+    "params": [
+      {
+        "name": "contact_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do contato"
+      },
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do documento"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Remover arquivo errado"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_contacts_documents_mirror",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents/mirror",
+    "title": "Ajustar Documento Espelhado",
+    "description": "Define nome/favorito de um anexo espelhado (de card Kanban/conversa) sem alterar o original.",
+    "category": "Documentos do Contato",
+    "params": [
+      {
+        "name": "contact_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do contato"
+      },
+      {
+        "name": "attachment_id",
+        "type": "integer",
+        "location": "body",
+        "required": true,
+        "description": "ID do anexo espelhado"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nome de exibição"
+      },
+      {
+        "name": "favorited",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Favoritar"
+      }
+    ],
+    "returns": "{ document }",
+    "common_use_cases": [
+      "Renomear arquivo vindo do card"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_contacts_documents_destroy_mirror",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents/mirror/{attachment_id}",
+    "title": "Excluir Anexo Espelhado (card)",
+    "description": "Exclui o anexo do CARD Kanban espelhado na aba Documentos (anexos de conversa não podem). DESTRUTIVO — confirme antes.",
+    "category": "Documentos do Contato",
+    "params": [
+      {
+        "name": "contact_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do contato"
+      },
+      {
+        "name": "attachment_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do anexo do card"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Limpar arquivo do card"
+    ],
+    "related_tools": []
+  },
+  {
+    "id": "lionchat_inboxes_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{id}",
+    "title": "Atualizar Caixa de Entrada",
+    "description": "Atualiza configurações da caixa (nome, saudação, atribuição automática, atributos extras). MUDANÇA DE CONFIG — confirme com o usuário antes. additional_attributes.mark_as_seen (bool, default true, SÓ WhatsApp oficial, 2026-06-11): envia o visto/check azul quando o agente abre a conversa — desligar em coexistência app+API. ATENÇÃO: enviar additional_attributes substitui o objeto; para WAHA prefira não mexer nesse campo (config sensível).",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo nome"
+      },
+      {
+        "name": "greeting_enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Saudação automática ligada"
+      },
+      {
+        "name": "greeting_message",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Texto da saudação"
+      },
+      {
+        "name": "enable_auto_assignment",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Atribuição automática"
+      },
+      {
+        "name": "additional_attributes",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Atributos extras (ex: { mark_as_seen: false } no WhatsApp oficial)"
+      }
+    ],
+    "returns": "{ inbox }",
+    "common_use_cases": [
+      "Desligar o visto numa caixa em coexistência",
+      "Trocar saudação da caixa"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_show"
+    ]
   }
 ]
