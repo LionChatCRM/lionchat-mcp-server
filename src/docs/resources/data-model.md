@@ -413,6 +413,16 @@ WhatsappCall (Ligação WhatsApp — enterprise, voz via Cloud API)
 ├── duration_seconds / accepted_by_agent_id
 ├── custom_name (observação) / favorited (bool)
 └── transcript / transcript_status (pending/processing/completed/failed — IA da conta)
+
+WavoipSetting (Ligação WP em caixa QR Code — 1 por inbox, 2026-06-11)
+├── inbox_id (FK) / device_id / device_token (cripto) / status / due_date
+├── record_all_calls (bool) / auto_transcribe (bool) / transcription_provider (groq|openai)
+└── feature flag wavoip_calling; limite de plano wavoip_voice_inboxes; R$70/device/mês
+
+ContactDocument (aba Documentos do contato, 2026-06-11)
+├── 3 fontes agregadas: upload direto + espelho dos cards Kanban + espelho das conversas (só image/file)
+├── dedup por checksum (arquivo repetido conta 1x no storage)
+└── ações: preview, download, renomear, favoritar, excluir (conversas são só-leitura)
 ```
 
 ## Cardinalidades importantes

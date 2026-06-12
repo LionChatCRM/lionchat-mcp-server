@@ -320,15 +320,21 @@ Campos MUTÁVEIS (atualizáveis livremente por IA/integração): `marital_status
 
 `custom_attribute_definitions` (model=`contact_attribute`) fica reservado a dado de NEGÓCIO genérico que não tem modelo dedicado (ex: "plano contratado", "nicho do cliente").
 
-## Ligação WhatsApp (WhatsappCall) — voz pela API oficial
+## Ligações — TRÊS sistemas distintos (não confundir!)
 
-Chamada de VOZ feita/recebida pelo WhatsApp (Cloud API, enterprise). **Não confundir com VoIP
-(Zenvia)**, que é ligação TELEFÔNICA comum — são dois produtos distintos com tools distintas:
-- `whatsapp_calls_*` → ligação de voz pelo WhatsApp (histórico, favoritas, observação,
-  transcrição por IA sob demanda)
-- `voip_*` → telefonia Zenvia (ramais, saldo, recarga)
-Campos: `status` (ringing/accepted/completed/failed), `custom_name` (observação), `favorited`,
-`transcript` + `transcript_status`. Ativação por caixa: `enable_whatsapp_calling`.
+| Sistema | O que é | Tools | Canal |
+|---|---|---|---|
+| **Ligação WP (Wavoip)** | Voz pelo WhatsApp em caixa **QR Code/WAHA** — QR conecta um "device" Wavoip; widget de discagem, gravação e transcrição automática | `wavoip_*` (por inbox: status/token/calls/connect/disconnect/settings) | WhatsApp QR Code |
+| **WhatsApp Calling (Cloud)** | Voz pelo WhatsApp na **API oficial** (enterprise) | `whatsapp_calls_*` + enable/disable_whatsapp_calling | WhatsApp oficial |
+| **VoIP (Zenvia)** | Telefonia COMUM (ramais, saldo, recarga) | `voip_*` | Telefone |
+
+Quando o usuário falar "ligação", descubra o canal: caixa QR Code → Wavoip; caixa oficial →
+whatsapp_calls; telefone fixo/ramal → VoIP Zenvia.
+
+**Wavoip (2026-06-11):** config por inbox (`record_all_calls`, `auto_transcribe`,
+`transcription_provider` groq|openai), feature flag `wavoip_calling`, limite por plano
+`wavoip_voice_inboxes`, R$70/device/mês. Conectar/configurar = admin; discar/histórico = membro
+da caixa. WhatsappCall (Cloud): `status`, `custom_name`, `favorited`, `transcript`/`transcript_status`.
 
 ## Chat interno da equipe (InternalChat)
 

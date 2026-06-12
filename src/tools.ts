@@ -421,7 +421,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     QUALQUER msg do cliente que case), conversation_created/conversation_reopened (match_mode +
     keywords opcionais), conversation_resolved, label_added/label_removed (label_names[] — NAO
     'label' singular), card_created/card_moved (funnel_ids[] + funnel_stages[] 'funnel_id:stage'),
-    cron, webhook.
+    cron, webhook. NOVO message_sent (2026-06-11): par do message_received pra mensagens de
+    SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
+    'desativar IA' com esse trigger sem keywords = a propria resposta da IA dispara o flow.
   WEBHOOK EMBUTIDO (Webhook Universal): 1) criar flow; 2) POST /custom_webhook_integrations com
     {custom_webhook_integration:{flow_id}} (idempotente, retorna URL unica); 3) flows_update com
     item {type:'webhook_received', config:{integration_id}} no data.items do start. Remover o item

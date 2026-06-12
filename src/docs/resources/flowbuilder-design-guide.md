@@ -60,7 +60,9 @@ Todo node tem essa estrutura base:
 }
 ```
 
-**Triggers válidos:** `message_received`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `cron`, `webhook`.
+**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `cron`, `webhook`.
+
+**Trigger `message_sent` (novo 2026-06-11):** par do message_received, mas pra mensagens de SAÍDA — dispara quando atendente, celular (eco do WhatsApp) ou a própria IA/flow envia mensagem (nota privada NÃO dispara). Config: `keywords` (opcional) + `match_type` (`contains`|`exact`). Caso de uso clássico: "quando eu responder do celular, desligar a IA". ATENÇÃO: mensagem da IA também dispara — se a ação for desativar a IA, use keywords que só humanos digitam ou aceite que a primeira resposta da IA aciona o flow. Protegido por anti-loop (profundidade 5) e sessão única por conversa+flow; nunca alimenta `waiting_input`.
 
 **Campos de filtro por trigger (IMPORTANTE — nomes exatos):**
 - `message_received`: `keywords` (array, obrigatório, cada termo com mín 3 chars) + `match_type` (`'exact'` ou `'contains'`, default `contains`). NÃO use `match_mode` aqui. Dispara em QUALQUER mensagem do cliente que case (não só na primeira) — só mensagem de cliente dispara, nunca de agente.
