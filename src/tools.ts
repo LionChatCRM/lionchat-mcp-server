@@ -396,7 +396,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-06-11)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-06-16)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -445,8 +445,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 ▸ wait_response
   data: {
     label, waitTime, waitUnit: "minutes"|"seconds"|"hours",
-    validation: "any"|"options"|"regex",
+    validation: "any"|"number"|"email"|"phone"|"options"|"varied_options"|"regex",
     acceptedOptions: ["1","2"],     // se validation='options'
+    optionGroups: [{ id, terms:["sim","claro"], matchType:"contains"|"equals" }], // se validation='varied_options'
     regexPattern,                    // se validation='regex'
     invalidMessage, maxRetries,
     saveTo: "variable"|"contact_name"|"contact_email"|"contact_phone"|"contact_attr"|"conversation_attr"|"",
@@ -455,9 +456,15 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   saveTo "attribute"/"contact_attribute" NAO EXISTEM — nao salvam nada.
   TIMEOUT DISPARA DE VERDADE (corrigido 2026-06-09): waitTime estourou -> handle "timeout"
   (ou "option_{val}_timeout" no modo options). Sempre ligue um edge no timeout.
+  Respostas invalidas alem de maxRetries -> handle "retries_exhausted" (distinto do timeout de silencio;
+    se nao houver edge nele, cai no "timeout").
   Handles validation='options': "option_{val}" por opcao + "timeout"
+  Handles validation='varied_options': "option_{group_id}" por grupo (optionGroups) + "timeout"
   Handles outros: "success" + "timeout"
-  IMPORTANTE: validation='options' ja roteia por opcao — NAO precisa condition depois.
+  options/varied_options normalizam a resposta (sem acento/maiuscula); varied_options usa matchType por
+    grupo ('contains' padrao ou 'equals'). saveTo contact_email/contact_phone exige validation 'email'/'phone'
+    (valor invalido NAO grava; telefone vira E.164) — pra texto livre use saveTo "variable".
+  IMPORTANTE: validation='options'/'varied_options' ja roteia por opcao/grupo — NAO precisa condition depois.
 
 ▸ condition
   data: { label, conditions: [

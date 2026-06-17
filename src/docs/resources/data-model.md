@@ -58,8 +58,15 @@ Channel::Waha / Channel::Whatsapp / Channel::WebWidget / ...
 
 InboxMember (junction Inbox ↔ User)
 ├── inbox_id
-└── user_id
+├── user_id
+└── auto_assignable (bool) — true = membro comum (entra na distribuição automática);
+                              false = supervisor (vê TUDO da caixa, fora do rodízio)
 ```
+
+> **Supervisor de caixa:** o flag `inbox_members.auto_assignable = false` marca o membro como
+> supervisor. Ele enxerga todas as conversas/cards da caixa, mas o round-robin nunca atribui
+> conversas a ele. As tools `lionchat_inbox_members_create/update` separam `user_ids[]` (membros
+> comuns) de `supervisor_ids[]` (supervisores); a resposta expõe `is_supervisor` por agente.
 
 ## Conversação e Mensagens
 

@@ -180,6 +180,28 @@ Sem o tipo, o filtro pode bater no escopo errado. A UI mostra sufixo "(Conversa)
   pendência de permissão).
 - Meta CAPI: o evento `InitiateCheckout` foi RENOMEADO para `begin_checkout`.
 
+### Meta CAPI — moeda do valor (2026-06)
+
+O disparo da conversão aceita `currency` (código ISO, ex: `BRL`, `USD`); default `BRL`. Dá pra
+escolher a moeda no próprio disparo e também na config do funil (valor padrão herdado pelos cards
+daquele funil). Sempre confirme a moeda com o usuário se o valor não for em reais.
+
+### Meta Lead — resiliência da ativação e backfill (2026-06)
+
+A ativação ficou tolerante a falhas — não trava mais por causa de um lead de exemplo (sample) com
+formato estranho: o erro de sample é tolerado e a ativação segue. Outros ganhos de robustez:
+
+- **Auto-retry de limite:** quando bate o rate limit da Meta, tenta de novo sozinho com espera, em
+  vez de falhar de cara.
+- **Botão "7 dias" (backfill):** puxa leads recentes que ficaram pra trás. Parâmetro `days` (default
+  7, máximo 30). A resposta traz `mode`: `bulk` (puxa em lote pela API) ou `replay` (reprocessa
+  eventos já recebidos). Recupera inclusive leads que tinham sido ignorados antes.
+- **Sem `pages_manage_ads`:** funciona mesmo sem essa permissão específica da Meta.
+- **Log legível** dos eventos (em vez de dump cru) e suporte a **múltiplas BMs**.
+
+**Pro MCP:** ao acionar o backfill, informe ao usuário o `mode` retornado e quantos dias foram
+puxados. Se a ativação reclamar de sample, NÃO é bloqueio — a integração ainda fica ativa.
+
 ## Campanhas: audiência acumulativa (2026-06)
 
 `audience` aceita 3 tipos de seção combináveis: `Label`, `Funnel` (com stages/include_won/include_lost)

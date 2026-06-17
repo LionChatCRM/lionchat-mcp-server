@@ -300,6 +300,33 @@ fase, match literal de substring, sem regex).
 **Perguntas que esse relatório responde:** "por onde os leads entram?", "qual página perde mais
 gente?", "quem veio da campanha X navegou por onde antes de chamar?".
 
+## Origem dos Leads — relatório novo (2026-06)
+
+`GET /api/v2/accounts/{id}/lead_origin_reports` (tool `lionchat_lead_origin_reports`) — agrega de
+ONDE vieram os leads, cruzando os campos `origin_*` das conversas com os leads órfãos (que ainda não
+viraram conversa). É um relatório de LEITURA puro — não cria nem altera nada.
+
+**Filtros (query, todos opcionais):** `since` / `until` (ISO 8601; default = 30 dias atrás → agora),
+`funnel_id`, `platform`, `kind`, `campaign`, `adset`, `group_by`.
+
+**Retorno:**
+- `period` — janela efetiva considerada.
+- `totals` — `conversations`, `classified` (com origem identificada), `unclassified` (sem origem),
+  `orphan_leads` (leads sem conversa ainda), `unique_leads` (deduplicados por TELEFONE),
+  `won_leads` (leads em cards de estágio de Ganho) e `conversion_rate`.
+- Arrays de quebra: `by_platform`, `by_kind`, `by_campaign`, `by_adset`, `by_creative`. Cada linha
+  tem `{value, conversations, won, conversion_rate}`.
+
+**Conceitos importantes:**
+- `won` = cards parados em etapas de GANHO do funil (fechados como sucesso).
+- `unique_leads` deduplica por telefone (mesmo lead que falou várias vezes conta 1).
+- "orphan lead" = lead capturado (ex: Meta Lead) que ainda não tem conversa associada.
+
+**Gates:** permissão de relatórios (admin ou report_manage).
+
+**Perguntas que esse relatório responde:** "qual plataforma trouxe mais leads?", "qual campanha/
+conjunto converteu melhor?", "quantos leads únicos vieram esse mês e quantos fecharam?".
+
 ## Quando o usuário pede algo MUITO específico que não existe num endpoint
 
 Se a pergunta requer cálculos custom (ex: "conversas por agente que duraram mais de X minutos"):

@@ -77,6 +77,14 @@ Todo node tem essa estrutura base:
 4. Salvar o flow (`flows_update`) — o save sincroniza a ativação do webhook embutido (remover o item desativa a integração automaticamente).
 Webhooks embutidos NÃO aparecem na listagem de integrações standalone; excluir o flow destrói o webhook; duplicar o flow NÃO copia o gatilho embutido. Rate limit do endpoint público: 60/min por token.
 
+**TRAVA DE GATILHO DUPLICADO (2026-06-16) — leia ANTES de ativar/criar flow ativo:** o sistema BLOQUEIA ter dois flows ATIVOS com o MESMO gatilho na MESMA inbox e mesmo `conversation_mode` (evita o evento disparar dois flows). Colisão = mesmo tipo de gatilho + config cruzando (mesmas keywords/funil/labels/url/etc) + inbox compartilhada + mesmo modo. EXCEÇÕES que podem coexistir: `webhook_received` e `manual_trigger`.
+- Ao **ativar** (`flows_toggle` inativo→ativo) ou **criar já ativo**: qualquer conflito é barrado.
+- Ao **editar** um flow já ativo: só conflito NOVO é barrado (duplicados que já existiam são preservados).
+- A API responde **422** com `{ "error_code": "flow_trigger_conflict", "conflicts": [{ flow_id, flow_name, trigger_type, inbox_id, inbox_name }] }`.
+- Existe `POST /flows/check_conflicts` (mesma assinatura, NÃO salva) pra checar antes.
+
+**Como a IA deve agir:** antes de ativar um flow, confira via `flows_list` se já não há outro flow ativo no mesmo gatilho+inbox. Se receber 422 `flow_trigger_conflict`, NÃO fique reativando — EXPLIQUE o conflito ao usuário (nome do flow conflitante + caixa) e ofereça desativar o outro flow ou ajustar o gatilho/keywords.
+
 **Handles que SAEM:** `success`.
 
 ### 2.2 `send_message`
@@ -133,7 +141,20 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 }
 ```
 
-**`validation` válidos:** `any`, `options`, `regex`.
+**`validation` válidos:** `any`, `options`, `varied_options`, `regex`, `email`, `phone`, `number`.
+
+**`options` normaliza a resposta (2026-06-16):** a comparação com `acceptedOptions` é feita sem acento e sem maiúscula (`I18n.transliterate` + downcase + strip nos dois lados). "São Paulo", "sao paulo" e "SAO PAULO" casam todos.
+
+**`varied_options` — uma opção, vários jeitos de escrever (2026-06-16):** use quando a MESMA opção pode vir em sinônimos/variações (ex: "sim", "claro", "quero" → tudo é "sim"). Em vez de `acceptedOptions`, configure `optionGroups`: cada grupo tem uma lista de termos e um `matchType` PRÓPRIO (`contains` padrão, ou `equals`). Use `equals` quando o termo curto colidiria — ex: o termo "1" com `contains` casaria "12"; com `equals` não. Roteia por uma saída dedicada por grupo: `option_<group_id>` (uma por grupo, não por termo). Mesma normalização do `options` (sem acento/maiúscula). Fallback de matchType: se um grupo não tiver `matchType`, usa o `optionsMatchType` do node (modo global antigo); sem isso, `contains`.
+
+```json
+{ "validation": "varied_options",
+  "optionGroups": [
+    { "id": "sim", "terms": ["sim", "claro", "quero", "pode ser"], "matchType": "contains" },
+    { "id": "nao", "terms": ["nao", "não", "agora nao"], "matchType": "contains" }
+  ] }
+```
+→ edges: `sourceHandle: "option_sim"`, `sourceHandle: "option_nao"` (+ `timeout` + `retries_exhausted`).
 
 **`saveTo` válidos (nomes EXATOS — qualquer outro valor NÃO salva nada):**
 - `variable` — variável temporária do flow (use `saveVariable` pra nomear; senão usa o próprio `saveTo`)
@@ -146,14 +167,22 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 
 **NÃO existem** `attribute` nem `contact_attribute` — use `conversation_attr` / `contact_attr`.
 
+**Salvar e-mail/telefone/nome do contato com segurança (2026-06-16):** o valor é normalizado antes de gravar (telefone → E.164 via `+55`; e-mail → strip). O cadastro do contato REVERTE silenciosamente um e-mail/telefone inválido (não dá erro, mas não muda). Por isso os destinos `contact_email`/`contact_phone`/`contact_name` SÓ devem ser usados com a validação que combina:
+- `saveTo: "contact_email"` → use `validation: "email"`
+- `saveTo: "contact_phone"` → use `validation: "phone"`
+- `saveTo: "contact_name"` → `any` serve
+No editor visual esses destinos só aparecem quando a validação bate (computed `allowedSaveTargets`). Os destinos `variable`/`contact_attr`/`conversation_attr` aceitam QUALQUER valor (sem essa restrição).
+
 **Handles que SAEM dependem da validation:**
-- `validation: 'any'` → `success`, `timeout`
-- `validation: 'options'` → `option_<valor>` para cada valor em `acceptedOptions` (ex: `option_1`, `option_2`, `option_sim`) + `timeout`
-- `validation: 'regex'` → `success`, `timeout`
+- `validation: 'any'` (e `regex`/`email`/`phone`/`number`) → `success`, `timeout`, `retries_exhausted`
+- `validation: 'options'` → `option_<valor>` para cada valor em `acceptedOptions` (ex: `option_1`, `option_2`, `option_sim`) + `timeout` + `retries_exhausted`
+- `validation: 'varied_options'` → `option_<group_id>` para cada grupo em `optionGroups` (ex: `option_sim`, `option_nao`) + `timeout` + `retries_exhausted`
+
+**`timeout` vs `retries_exhausted` (DISTINTOS):** `timeout` = cliente ficou em silencio (estourou `waitTime`). `retries_exhausted` = cliente respondeu, mas errou a validacao mais que `maxRetries` vezes. Ligue cada um ao caminho desejado. Se `retries_exhausted` nao tiver edge, ha fallback p/ o edge de `timeout`; sem nenhum dos dois, o flow encerra ao esgotar as tentativas.
 
 **Timeout AGORA dispara de verdade (corrigido 2026-06-09):** `waitTime` + `waitUnit` agendam o estouro — se o cliente não responder no prazo, o flow segue pelo handle `timeout`. Antes dessa data o backend ignorava o waitTime (flows antigos que dependiam do timeout passaram a funcionar). Sempre ligue um edge no handle `timeout` quando definir waitTime; sem edge, o flow simplesmente para ali no estouro.
 
-**REGRA:** depois de wait_response com options, NUNCA coloque node `condition` pra ramificar — ligue os edges direto nos handles `option_X`.
+**REGRA:** depois de wait_response com `options` OU `varied_options`, NUNCA coloque node `condition` pra ramificar — ligue os edges direto nos handles `option_X` (em `varied_options`, `X` é o `id` do grupo).
 
 ### 2.4 `condition`
 
@@ -459,6 +488,26 @@ Não tente contornar criando flows intermediários.
 
 ---
 
+## 2-C. Variáveis — de onde vêm e onde aparecem
+
+Variáveis de sessão (`{{nome}}`) são CRIADAS por alguns nodes e ficam disponíveis pros nodes seguintes. O autocomplete `{{` no editor é **ciente do grafo (graph-aware)**: num node, ele só lista variáveis definidas por nodes UPSTREAM (no caminho de execução até ali) — não sugere variável que ainda não existe no ponto da execução. Use isso como regra: só referencie `{{var}}` se algum node ANTES dele (no caminho) a tiver criado.
+
+Fontes de variável (quem cria o quê):
+
+| Node | Variável(is) criada(s) |
+|---|---|
+| `set_variable` | cada item de `data.variables[].name` |
+| `wait_response` com `saveTo: 'variable'` | o nome em `data.saveVariable` |
+| `ai` mode `generate` / `custom` | `aiResponseVar` (default `ai_response`) |
+| `ai` mode `intent` | `ai_intent` |
+| `ai` mode `sentiment` | `ai_sentiment` |
+| `ai` mode `extract` | cada `aiExtractParams[].name` (uma variável por parâmetro) |
+| `api` | `apiResponseVar` (+ `apiResponseVar`_status) e campos do JSON de resposta |
+
+Variáveis salvas em atributo (`saveTo: 'contact_attr'`/`'conversation_attr'`, ou node `action` `update_attribute`) NÃO viram variável de sessão `{{var}}` — leia-as via `{{contact.custom_attribute.X}}` / `{{conversation.custom_attribute.X}}` (singular).
+
+---
+
 ## 3. Edges
 
 ```json
@@ -540,6 +589,9 @@ Nodes nunca devem ficar com a mesma coordenada `(x, y)`. Se dois nodes têm posi
 | Edge com `target` apontando pra ID que não existe | Quebra o grafo | Confira que `target` está em `nodes[]` |
 | `channel_type: "WhatsApp"` | Precisa do nome de classe Rails | `"Channel::Whatsapp"`, `"Channel::Waha"`, `"Channel::WebWidget"` |
 | `validation: "option"` (singular) | Não existe | `"options"` (plural) |
+| `varied_options` com `acceptedOptions` | Modo errado de config | `optionGroups: [{ id, terms, matchType }]` |
+| `saveTo: "contact_phone"`/`"contact_email"` com `validation: "any"` | Cadastro reverte valor inválido em silêncio | Combine com `validation: "phone"`/`"email"` |
+| Ativar 2 flows no mesmo gatilho+inbox+modo | 422 `flow_trigger_conflict` (exceto webhook/manual) | Desative o outro flow ou mude o gatilho |
 | `custom_attributes` (plural) em `{{...}}` ou `field` | Resolve vazio | `custom_attribute` (singular) |
 | `update_attribute` com `{entity, key, value}` | Campos errados, não salva | `{attr_source, attr_key, attr_value}` |
 | `saveTo: "attribute"` ou `"contact_attribute"` | Não existem, não salva | `"conversation_attr"` / `"contact_attr"` |
@@ -572,5 +624,7 @@ Antes de chamar `flows_create` ou `flows_update`, valide mentalmente:
 - [ ] Todo `sourceHandle` é um handle real exposto pelo node source (seção 2)
 - [ ] `channel_type` é classe Rails (`Channel::Waha` etc)
 - [ ] `inbox_ids` (se enviado) tem inboxes do mesmo `channel_type`
-- [ ] Não tem `condition` redundante depois de `wait_response` com options
+- [ ] Não tem `condition` redundante depois de `wait_response` com `options`/`varied_options`
+- [ ] `wait_response` que salva e-mail/telefone do contato usa a validação correspondente (`email`/`phone`)
+- [ ] Antes de ATIVAR: nenhum outro flow ativo no mesmo gatilho+inbox+modo (senão vem 422 `flow_trigger_conflict`)
 - [ ] Layout: nodes em ordem visual da esquerda pra direita, sem sobreposição

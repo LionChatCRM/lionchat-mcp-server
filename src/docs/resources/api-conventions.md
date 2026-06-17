@@ -198,6 +198,10 @@ Ou para listas grandes (cursors):
 - `includes` / `excludes` (relacionamentos)
 - `before` / `after` (datas)
 
+> **Contatos — busca parcial por nome/ID externo:** no `POST /contacts/filter`, os campos `name` e
+> `identifier` aceitam `contains` / `does_not_contain` (match parcial, case-insensitive). Use isso
+> pra "contatos cujo nome contém X" sem precisar do valor exato.
+
 ## Formatos de Data
 
 ### Quando enviar (input)
@@ -373,6 +377,28 @@ O `field_mapping` do webhook personalizado aceita caminhos com índice de array:
 500 chaves no total. O mapeamento é POSICIONAL — se a ordem do array variar entre eventos, o
 mesmo caminho captura valores diferentes. Campo `flow_id` na criação liga o webhook a um flow
 (webhook embutido — ver resource de fluxos).
+
+### Import de histórico do WhatsApp Cloud (2026-06)
+
+Caixas WhatsApp Cloud API podem importar o histórico de conversas via QR Code. Tools sob
+`/inboxes/:inbox_id/whatsapp_history`:
+
+- `lionchat_inboxes_whatsapp_history_start` — `POST` com param `days` (quantos dias de histórico
+  puxar). Inicia o processo.
+- `lionchat_inboxes_whatsapp_history_status` — `GET`, retorna `{state, qr, days, progress, stats,
+  error}`. Estados na ordem: `idle` → `scan_qr` → `importing` → `migrating` → `cleaning` →
+  `done` (ou `failed`). Quando `state = scan_qr`, o campo `qr` traz o código pra escanear.
+- `lionchat_inboxes_whatsapp_history_cancel` — `POST`, aborta o import em andamento.
+
+**Gates:** admin-only + feature flag `qr_history_import`. SÓ funciona em caixa WhatsApp Cloud API
+(`Channel::Whatsapp`) — não confundir com a importação de histórico do WAHA (QR Code não-oficial),
+que é outro mecanismo.
+
+### Ver histórico anterior do contato (2026-06)
+
+Dentro de uma conversa há um botão que mostra as CONVERSAS ANTERIORES do mesmo contato NA MESMA
+caixa. Não há endpoint novo pra isso — pra reproduzir via API, liste as conversas do contato
+filtrando pelo `inbox_id` (`conversations_list` / `conversations_filter` por contato + caixa).
 
 ## Headers úteis pra mandar
 

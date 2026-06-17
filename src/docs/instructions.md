@@ -57,6 +57,16 @@ Account (conta/empresa)
 - `agent` (atendente comum)
 - `administrator` (admin/dono)
 
+### Supervisor de caixa (InboxMember.auto_assignable)
+
+Independente do `role`, um membro de caixa pode ser **supervisor**: vê TODAS as conversas e cards
+daquela caixa, mas fica FORA da distribuição automática (round-robin nunca atribui a ele). É o flag
+`inbox_members.auto_assignable` (false = supervisor, true = membro comum). As tools
+`lionchat_inbox_members_create/update` separam `user_ids[]` (comuns) de `supervisor_ids[]`
+(supervisores); a resposta traz `is_supervisor` por agente. Lembre: agente não-admin só enxerga as
+caixas das quais participa — exceção é estar atribuído a um card, que libera só aquela conversa (ver
+`lionchat://docs/kanban-deep-dive`).
+
 ## 3. Convenções da API
 
 ### Datas
@@ -273,6 +283,11 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | **Exportar contatos** (CSV completo por e-mail) | `lionchat_contacts_export` | Respeita filtros/segmento aplicados |
 | Mensagem pra OUTRO AGENTE (não cliente) | `lionchat_internal_chat_*` (salas e mensagens do time) | NÃO confundir com nota privada (dentro da conversa do cliente) |
 | Achar contato pelo que aconteceu com ele (conversa/card) | `lionchat_contacts_filter` com `linked_records` | Ver api-conventions → registros vinculados |
+| **Origem dos leads** (de onde vieram, por plataforma/campanha/conjunto) | `lionchat_lead_origin_reports` | Relatório de leitura; filtros `platform`/`campaign`/`adset`; `won` = cards em Ganho; leads únicos por telefone |
+| **Bloquear/desbloquear** contato | `lionchat_conversations_toggle_block` (`blocked: true|false`) | Gera pílula de atividade e descarta mensagens futuras do contato; NÃO resolve a conversa |
+| **Importar histórico** de caixa WhatsApp Cloud (QR) | `lionchat_inboxes_whatsapp_history_start` / `_status` / `_cancel` | Admin-only + flag `qr_history_import`; só caixa oficial. Acompanhe `state` no `_status` |
+| **Definir supervisor** de caixa | `lionchat_inbox_members_create` / `_update` com `supervisor_ids[]` | Supervisor vê TUDO da caixa mas fica fora do rodízio (ver abaixo) |
+| Saber se a IA deve TOCAR a ligação WP (Wavoip) / marcar recusada | `lionchat_wavoip_should_ring` / `lionchat_wavoip_flag_rejected` | Controle fino do toque de chamada na caixa QR Code |
 
 ## 9. Quando NÃO chamar nenhuma ferramenta
 

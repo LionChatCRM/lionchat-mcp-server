@@ -272,6 +272,32 @@ Funis agora têm visibilidade por usuário. Um funil é visível pra alguém qua
 **Pro MCP:** antes de tentar mover/editar card, confira os campos `can_*` do show — se `can_move`
 é false, explique ao usuário que ele não tem acesso àquele funil em vez de tentar mesmo assim.
 
+## Controle de acesso por CAIXA (conversas + cards) e a "ponte" da conversa atribuída (2026-06)
+
+Além da visibilidade por funil (acima), há um controle de acesso POR CAIXA que vale tanto pro
+Kanban quanto pras CONVERSAS. Um agente NÃO-admin só vê as conversas e os cards das caixas das quais
+ele é membro (membro comum OU supervisor — ver "Supervisor de caixa" no glossário). Admin vê tudo.
+
+**A ponte (exceção pontual):** estar ATRIBUÍDO a um card dá acesso PONTUAL à conversa daquele card,
+mesmo que o agente não seja membro da caixa. A ponte vale pra:
+- a conversa PRINCIPAL do card (`conversation_display_id`), e
+- as conversas em `linked_conversations`.
+
+O que a ponte libera: ABRIR e RESPONDER aquela conversa específica. O que a ponte NÃO libera: a
+caixa inteira (o agente continua sem ver as outras conversas/cards daquela caixa). A atribuição é a
+qualquer agente no card (`assigned_agents`), não só ao responsável da conversa.
+
+**Efeitos práticos nas tools (lado conversas):**
+- `conversations_list` / `conversations_search` retornam SÓ conversas de caixas acessíveis (mais as
+  liberadas pela ponte de card atribuído).
+- `conversations_show` / `conversations_messages_*` de conversa inacessível → **404**.
+- Buscar card por ID ou rodar ação em massa (`kanban_bulk_bulk_actions`, export) numa caixa
+  inacessível → **404** (a ação não vaza cards de caixa que o agente não pode ver).
+
+**Pro MCP:** se uma conversa/card "some" da listagem ou dá 404 pra um agente que jura que existe,
+provavelmente é acesso por caixa — explique que ele só vê as caixas das quais participa, e que o
+acesso a uma conversa solta vem de estar atribuído ao card dela.
+
 ## Funil arquivado vs ativo
 
 - `archived = true`: funil escondido da UI principal. Cards ainda existem mas não aparecem nas listas

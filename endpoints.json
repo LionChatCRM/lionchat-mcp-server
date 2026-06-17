@@ -2004,7 +2004,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/search",
     "title": "Buscar Mensagens",
-    "description": "Busca mensagens por texto dentro de uma conversa. Suporta private_only e file_type.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+    "description": "Busca mensagens por texto dentro de uma conversa. Suporta private_only e file_type.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha.",
     "category": "Mensagens",
     "params": [
       {
@@ -7694,7 +7694,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/search/messages",
     "title": "Buscar Mensagens",
-    "description": "Busca apenas em mensagens por texto.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+    "description": "Busca apenas em mensagens por texto.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha.",
     "category": "Busca",
     "params": [
       {
@@ -12325,7 +12325,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/account_variables",
     "title": "Criar Variável",
-    "description": "Cria uma nova variável da conta. Se secret=true, valor é criptografado. Cria novo variável de conta. Obrigatórios: key. Valida unicidade quando aplicável. Retorna o variável de conta criado com ID atribuído.",
+    "description": "Cria uma nova variável da conta. Para valor secreto/criptografado, use attribute_display_type=secret (o apelido legado encrypted_text também funciona). Cria novo variável de conta. Obrigatórios: key. Valida unicidade quando aplicável. Retorna o variável de conta criado com ID atribuído.",
     "category": "Variaveis da Conta",
     "params": [
       {
@@ -12354,7 +12354,7 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Tipo do valor: text (padrao), encrypted_text (secret), number, checkbox, list, link, date"
+        "description": "Tipo do valor: text (padrão), secret (valor secreto — guardado criptografado), number, checkbox, list, link, date. Apelido legado: encrypted_text é aceito e convertido para secret automaticamente. Tipo fora dessa lista retorna 422."
       },
       {
         "name": "value",
@@ -19211,7 +19211,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/inbox_members",
     "title": "Definir Membros da Inbox",
-    "description": "Define os agentes membros da inbox (substitui a lista). Para adicionar incrementalmente, leia a lista atual e mescle.",
+    "description": "Define os agentes membros da inbox (substitui a lista). Para adicionar incrementalmente, leia a lista atual e mescle. Use supervisor_ids[] para marcar supervisores (veem tudo, fora da distribuicao automatica); a resposta traz is_supervisor por agente.",
     "category": "Membros de Inbox",
     "params": [
       {
@@ -19227,6 +19227,13 @@
         "location": "body",
         "required": true,
         "description": "Array de IDs dos agentes"
+      },
+      {
+        "name": "supervisor_ids",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "IDs dos membros que entram como SUPERVISORES da caixa: veem TODAS as conversas/cards dela, mas ficam FORA da distribuicao automatica (round-robin). Quem nao estiver aqui (e estiver em user_ids) vira agente normal. A resposta traz is_supervisor por agente."
       }
     ],
     "returns": "lista de agentes atualizada",
@@ -19274,7 +19281,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/inbox_members",
     "title": "Atualizar Membros da Inbox",
-    "description": "Atualiza os agentes membros da inbox (substitui a lista).",
+    "description": "Atualiza os agentes membros da inbox (substitui a lista). Use supervisor_ids[] para marcar supervisores (veem tudo, fora da distribuicao automatica); a resposta traz is_supervisor por agente.",
     "category": "Membros de Inbox",
     "params": [
       {
@@ -19290,6 +19297,13 @@
         "location": "body",
         "required": true,
         "description": "Nova lista de IDs"
+      },
+      {
+        "name": "supervisor_ids",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "IDs dos membros que entram como SUPERVISORES da caixa: veem TODAS as conversas/cards dela, mas ficam FORA da distribuicao automatica (round-robin). Quem nao estiver aqui (e estiver em user_ids) vira agente normal. A resposta traz is_supervisor por agente."
       }
     ],
     "returns": "lista de agentes atualizada",
@@ -23869,6 +23883,253 @@
     ],
     "related_tools": [
       "lionchat_inboxes_show"
+    ]
+  },
+  {
+    "id": "lionchat_lead_origin_reports",
+    "method": "GET",
+    "path": "/api/v2/accounts/{account_id}/lead_origin_reports",
+    "title": "Relatório de Origem dos Leads",
+    "description": "SÓ LEITURA. Agregado de origem dos leads/conversas: de qual plataforma, tipo, campanha, conjunto de anúncios e criativo vieram, com totais e taxa de conversão. Janela padrão: últimos 30 dias. Cruza os atributos origin_* das conversas + leads órfãos (contatos sem conversa); 'won' = cards em estágios de ganho do Kanban; leads únicos deduplicados por telefone. Permite drill-down por níveis (plataforma → tipo → campanha → conjunto → criativo).",
+    "category": "Relatorios",
+    "params": [
+      {
+        "name": "since",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Início ISO 8601 (padrão: 30 dias atrás)"
+      },
+      {
+        "name": "until",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Fim ISO 8601 (padrão: agora)"
+      },
+      {
+        "name": "funnel_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por funil do Kanban"
+      },
+      {
+        "name": "platform",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por plataforma de origem"
+      },
+      {
+        "name": "kind",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por tipo de origem"
+      },
+      {
+        "name": "campaign",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por campanha"
+      },
+      {
+        "name": "adset",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por conjunto de anúncios"
+      },
+      {
+        "name": "group_by",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Agrupamento do resultado: platform, kind, campaign, adset ou creative"
+      }
+    ],
+    "returns": "{ period, totals: { conversations, classified, unclassified, orphan_leads, unique_leads, won_leads, conversion_rate }, by_platform, by_kind, by_campaign, by_adset, by_creative }",
+    "common_use_cases": [
+      "Ver de onde vêm os leads (campanha, anúncio, plataforma)",
+      "Medir taxa de conversão por origem",
+      "Comparar desempenho de campanhas/criativos"
+    ],
+    "related_tools": [
+      "lionchat_journey_funnel_reports"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_whatsapp_history_start",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_history/start",
+    "title": "Importar Histórico WhatsApp Cloud (Iniciar)",
+    "description": "AÇÃO DE ESCRITA. Inicia a importação do histórico de conversas antigas para uma caixa WhatsApp Cloud (API oficial), lendo um QR Code (coexistência — não desconecta o número oficial). Só admin + requer a feature qr_history_import. Acompanhe pelo status.",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa WhatsApp Cloud"
+      },
+      {
+        "name": "days",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Quantidade de dias de histórico a importar (valor inválido cai para 30)"
+      }
+    ],
+    "returns": "{ state, qr, days }",
+    "common_use_cases": [
+      "Trazer o histórico antigo ao migrar para WhatsApp oficial"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_whatsapp_history_status",
+      "lionchat_inboxes_whatsapp_history_cancel"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_whatsapp_history_status",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_history/status",
+    "title": "Importar Histórico WhatsApp Cloud (Status)",
+    "description": "SÓ LEITURA. Status da importação de histórico da caixa WhatsApp Cloud: estado, QR Code (quando precisa parear), progresso e estatísticas. Estados: idle → scan_qr → importing → migrating → cleaning → done/failed.",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa WhatsApp Cloud"
+      }
+    ],
+    "returns": "{ state, qr, days, progress, stats, error }",
+    "common_use_cases": [
+      "Acompanhar o andamento da importação",
+      "Pegar o QR Code para parear"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_whatsapp_history_start",
+      "lionchat_inboxes_whatsapp_history_cancel"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_whatsapp_history_cancel",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_history/cancel",
+    "title": "Importar Histórico WhatsApp Cloud (Cancelar)",
+    "description": "AÇÃO DE ESCRITA. Cancela uma importação de histórico em andamento na caixa WhatsApp Cloud.",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa WhatsApp Cloud"
+      }
+    ],
+    "returns": "{ state }",
+    "common_use_cases": [
+      "Interromper uma importação demorada ou iniciada por engano"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_whatsapp_history_start",
+      "lionchat_inboxes_whatsapp_history_status"
+    ]
+  },
+  {
+    "id": "lionchat_conversations_toggle_block",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/conversations/{id}/toggle_block",
+    "title": "Bloquear / Desbloquear Contato",
+    "description": "AÇÃO DE ESCRITA. Bloqueia ou desbloqueia o CONTATO da conversa. Quando bloqueado, as mensagens RECEBIDAS desse contato passam a ser descartadas na entrada (não criam conversa/mensagem) e fica registrada uma pílula de atividade. NÃO resolve a conversa. Recebe o display_id da conversa. (Alternativa: setar o atributo blocked via lionchat_contacts_update.)",
+    "category": "Conversas",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "Display ID (ID de exibição) da conversa"
+      },
+      {
+        "name": "blocked",
+        "type": "boolean",
+        "location": "body",
+        "required": true,
+        "description": "true = bloquear o contato; false = desbloquear"
+      }
+    ],
+    "returns": "A conversa atualizada (contato com blocked = true/false)",
+    "common_use_cases": [
+      "Bloquear um contato abusivo/spam",
+      "Desbloquear um contato bloqueado por engano"
+    ],
+    "related_tools": [
+      "lionchat_contacts_update"
+    ]
+  },
+  {
+    "id": "lionchat_wavoip_should_ring",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/wavoip/should_ring",
+    "title": "Deve Tocar? (Wavoip)",
+    "description": "SÓ LEITURA. Diz se a ligação WhatsApp (Wavoip) deve tocar para ESTE agente, segundo a regra de toque (responsável pela conversa + presença/disponibilidade do agente). Usado pela tela de atendimento para decidir o toque/ringback.",
+    "category": "Ligacao WP (Wavoip)",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (WhatsApp QR Code)"
+      }
+    ],
+    "returns": "{ ring: boolean }",
+    "common_use_cases": [
+      "Decidir se toca o telefone do agente numa ligação recebida"
+    ],
+    "related_tools": [
+      "lionchat_wavoip_status",
+      "lionchat_wavoip_flag_rejected"
+    ]
+  },
+  {
+    "id": "lionchat_wavoip_flag_rejected",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/wavoip/flag_rejected",
+    "title": "Sinalizar Recusa (Wavoip)",
+    "description": "AÇÃO DE ESCRITA. Marca que o agente RECUSOU a ligação WhatsApp (Wavoip) de um número, para o webhook registrar o desfecho como recusada (flag de curta duração). Use ao recusar uma ligação recebida.",
+    "category": "Ligacao WP (Wavoip)",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (WhatsApp QR Code)"
+      },
+      {
+        "name": "phone",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Telefone do número da ligação recusada"
+      }
+    ],
+    "returns": "200 OK",
+    "common_use_cases": [
+      "Registrar que a ligação foi recusada pelo agente"
+    ],
+    "related_tools": [
+      "lionchat_wavoip_should_ring",
+      "lionchat_wavoip_calls"
     ]
   }
 ]

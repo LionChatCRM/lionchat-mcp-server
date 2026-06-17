@@ -108,6 +108,21 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 - `source_id`: ID do contato no canal (ex: `5511999999999@c.us` no WhatsApp WAHA)
 - Um contato pode ter vários ContactInboxes (um por canal)
 
+### Bloqueio de contato (`blocked`)
+
+**Termo:** "bloquear contato" / "contato bloqueado".
+
+**O que é:** marca o contato como bloqueado. Quando bloqueado, mensagens recebidas dele são
+DESCARTADAS na entrada (não criam conversa nem notificam). Bloquear NÃO resolve a conversa atual.
+
+**Como aplicar via tools:**
+- Forma dedicada: `lionchat_conversations_toggle_block` — `POST .../conversations/:id/toggle_block`
+  com body `{blocked: true|false}`. Bloqueia/desbloqueia o contato DAQUELA conversa e gera uma
+  pílula de atividade ("contato bloqueado") na timeline.
+- Forma alternativa: o atributo `blocked` no update de contato (`lionchat_contacts_update`) também
+  liga/desliga o bloqueio — mas SEM a pílula de atividade. Prefira `toggle_block` quando estiver
+  no contexto de uma conversa.
+
 ## Inbox (Caixa de Entrada / Canal)
 
 ### `channel_type`
@@ -135,6 +150,23 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 - `enable_auto_assignment`: se está atribuindo automaticamente
 - `working_hours_enabled`: se respeita horário de atendimento
 - `greeting_enabled` / `greeting_message`: mensagem de boas-vindas
+
+### Supervisor de caixa (InboxMember.auto_assignable = false)
+
+**Termo:** "Supervisor de caixa" / "supervisor da caixa de entrada".
+
+**O que é:** um membro da caixa marcado como supervisor. Ele VÊ TODAS as conversas e cards
+daquela caixa (visão completa), mas fica FORA da distribuição automática (round-robin) — ou seja,
+o sistema nunca atribui conversas novas a ele automaticamente. Serve pra gestor/líder que precisa
+acompanhar tudo sem entrar na fila de atendimento.
+
+**Onde fica armazenado:** flag `inbox_members.auto_assignable` (boolean). Membro comum =
+`auto_assignable: true` (entra no rodízio); supervisor = `auto_assignable: false` (vê tudo, fora
+do rodízio).
+
+**Como definir/ler via tools:** `lionchat_inbox_members_create` e `lionchat_inbox_members_update`
+aceitam `supervisor_ids[]` além de `user_ids[]` — os IDs em `supervisor_ids` viram supervisores;
+os de `user_ids` viram membros comuns. A resposta traz `is_supervisor` (boolean) por agente.
 
 ## KanbanItem (Card do CRM)
 
@@ -349,6 +381,13 @@ Relatórios: mapa visual de por onde os leads andam (nós = páginas, setas = tr
 por FASES configuráveis (LiontrackJourneyStage: padrão de URL → fase, match literal).
 Feature flag `liontrack` (404 sem ela). Relatório: `journey_funnel_reports` (v2), janela máx 30
 dias, URLs sem querystring (LGPD).
+
+## Meta CAPI — moeda do evento de conversão (2026-06)
+
+Ao disparar uma conversão pro Meta (Conversions API), o valor agora carrega uma moeda. Parâmetro
+`currency` (código ISO, ex: `BRL`, `USD`); default `BRL` quando omitido. A moeda pode ser escolhida
+tanto no disparo individual da conversão quanto na configuração do funil (valor padrão herdado pelos
+cards daquele funil).
 
 ## Idiomas da plataforma (2026-06)
 

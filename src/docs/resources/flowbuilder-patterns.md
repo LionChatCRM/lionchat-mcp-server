@@ -433,6 +433,55 @@
 
 ---
 
+## 14. Sim/Não com sinônimos (varied_options) + salvar e-mail com segurança
+
+**Caso:** cliente pode responder "sim" de vários jeitos ("claro", "quero", "pode ser") — `varied_options` agrupa tudo numa só saída. Depois pede o e-mail e salva no cadastro com a validação certa (`email`), pra não ser revertido em silêncio.
+
+```json
+{
+  "nodes": [
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "conversation_created" }] } },
+    { "id": "n2", "type": "send_message", "position": { "x": 370, "y": 300 }, "data": { "label": "Oferece", "messageItems": [
+      { "id": "m1", "type": "text", "content": "Quer receber nossas novidades por e-mail?" }
+    ] } },
+    { "id": "n3", "type": "wait_response", "position": { "x": 690, "y": 300 }, "data": {
+      "label": "Quer?", "waitTime": 30, "waitUnit": "minutes", "validation": "varied_options",
+      "optionGroups": [
+        { "id": "sim", "terms": ["sim", "claro", "quero", "pode ser", "aceito"], "matchType": "contains" },
+        { "id": "nao", "terms": ["nao", "não", "agora nao", "passo"], "matchType": "contains" }
+      ],
+      "invalidMessage": "Responda com sim ou não, por favor.", "maxRetries": 2, "saveTo": ""
+    } },
+    { "id": "n4", "type": "send_message", "position": { "x": 1010, "y": 180 }, "data": { "label": "Pede e-mail", "messageItems": [
+      { "id": "m2", "type": "text", "content": "Show! Qual seu melhor e-mail?" }
+    ] } },
+    { "id": "n5", "type": "wait_response", "position": { "x": 1330, "y": 180 }, "data": {
+      "label": "Captura e-mail", "waitTime": 15, "waitUnit": "minutes", "validation": "email",
+      "invalidMessage": "Esse e-mail não parece válido, pode conferir?", "maxRetries": 2,
+      "saveTo": "contact_email"
+    } },
+    { "id": "n6", "type": "send_message", "position": { "x": 1650, "y": 180 }, "data": { "label": "Confirma", "messageItems": [
+      { "id": "m3", "type": "text", "content": "Pronto, anotei aqui. Obrigado!" }
+    ] } },
+    { "id": "n7", "type": "send_message", "position": { "x": 1010, "y": 420 }, "data": { "label": "Tudo bem", "messageItems": [
+      { "id": "m4", "type": "text", "content": "Sem problema! Qualquer coisa é só chamar." }
+    ] } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "n1", "target": "n2", "sourceHandle": "success", "type": "deletable", "animated": true },
+    { "id": "e2", "source": "n2", "target": "n3", "sourceHandle": "success", "type": "deletable", "animated": true },
+    { "id": "e3", "source": "n3", "target": "n4", "sourceHandle": "option_sim", "type": "deletable", "animated": true },
+    { "id": "e4", "source": "n3", "target": "n7", "sourceHandle": "option_nao", "type": "deletable", "animated": true },
+    { "id": "e5", "source": "n4", "target": "n5", "sourceHandle": "success", "type": "deletable", "animated": true },
+    { "id": "e6", "source": "n5", "target": "n6", "sourceHandle": "success", "type": "deletable", "animated": true }
+  ]
+}
+```
+
+**Lembretes:** em `varied_options` o handle é `option_<id do grupo>` (não por termo); use `matchType: "equals"` quando um termo curto colidiria (ex: "1" casando "12" com `contains`). Pra salvar telefone use `validation: "phone"` + `saveTo: "contact_phone"`.
+
+---
+
 ## Como usar este catálogo
 
 1. **Identifique o pattern mais próximo** do que o cliente pediu
@@ -440,6 +489,6 @@
 3. **Substitua os IDs e valores reais** (team_id, funnel_id, assistant_id, templateId, URLs, etc) — confira antes via `teams_list`, `funnels_list`, `captain_assistants_list`, `inboxes_whatsapp_templates_list`
 4. **Adicione campos do flow**: `name`, `description`, `channel_type` (`Channel::Waha` etc), `inbox_ids`
 5. **Chame `flows_create`** com o payload completo
-6. Após criar, **ative** com `flows_toggle` se o cliente quiser que rode já
+6. Após criar, **ative** com `flows_toggle` se o cliente quiser que rode já. ATENÇÃO (2026-06-16): se já existir outro flow ATIVO com o mesmo gatilho na mesma inbox (e mesmo modo), a ativação retorna **422 `flow_trigger_conflict`** — exceto `webhook_received`/`manual_trigger`, que podem coexistir. Não fique reativando: explique o conflito ao usuário (qual flow + qual caixa) e ofereça desativar o outro ou mudar o gatilho. Dá pra checar antes com `POST /flows/check_conflicts` (não salva). Detalhes no `flowbuilder-design-guide` (seção 2.1, "Trava de gatilho duplicado").
 
 Se a necessidade não bate com nenhum pattern, monte do zero seguindo o **`flowbuilder-design-guide`** — mas use estes templates como referência de layout/handle/schema válidos.
