@@ -1055,7 +1055,7 @@
         "location": "query",
         "required": false,
         "query_name": "labels[]",
-        "description": "Labels (tags) — array de títulos"
+        "description": "Labels (tags) — array de titulos. Conta conversas marcadas com a etiqueta E conversas cujo CONTATO tem a etiqueta (uniao)."
       }
     ],
     "returns": "{ meta: { mine_count, assigned_count, unassigned_count, all_count } }",
@@ -1122,7 +1122,7 @@
         "location": "query",
         "required": false,
         "query_name": "labels[]",
-        "description": "Labels (tags) — array de títulos"
+        "description": "Labels (tags) — array de titulos. Traz conversas marcadas com a etiqueta E conversas cujo CONTATO tem a etiqueta (uniao). Cada conversa retorna 'labels' (da conversa) e 'contact_labels' (do contato)."
       },
       {
         "name": "sort_by",
@@ -2063,6 +2063,13 @@
         "location": "query",
         "required": false,
         "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "favorited",
+        "type": "boolean",
+        "location": "query",
+        "required": false,
+        "description": "Apenas mensagens favoritadas (true). Favorito GLOBAL — vale para todos os atendentes."
       }
     ],
     "returns": "payload (array de mensagens, geralmente 25 resultados)",
@@ -2075,6 +2082,39 @@
       "lionchat_conversations_messages_list",
       "lionchat_conversations_messages_create",
       "lionchat_conversations_messages_update"
+    ]
+  },
+  {
+    "id": "lionchat_conversations_messages_toggle_favorite",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/{id}/toggle_favorite",
+    "title": "Favoritar/Desfavoritar Mensagem",
+    "description": "Inverte o estado de favorita de uma mensagem (favorito GLOBAL — todos os atendentes veem a mesma estrela; atualiza em tempo real). Toggle puro: nao recebe corpo, so alterna. Use o filtro favorited=true na busca de mensagens para listar as favoritadas.",
+    "category": "Mensagens",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "Display ID da conversa"
+      },
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da mensagem"
+      }
+    ],
+    "returns": "Mensagem serializada com o novo estado em 'favorited' (booleano)",
+    "common_use_cases": [
+      "Marcar uma mensagem importante para todos os atendentes",
+      "Desfavoritar uma mensagem"
+    ],
+    "related_tools": [
+      "lionchat_conversations_messages_search",
+      "lionchat_conversations_messages_list"
     ]
   },
   {
@@ -7504,7 +7544,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/search",
     "title": "Busca Global",
-    "description": "Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+    "description": "Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). Sempre retorna todos os tipos: conversations, contacts, messages, articles e kanban_items. Mensagens trazem previous_message/next_message.",
     "category": "Busca",
     "params": [
       {
@@ -7571,7 +7611,7 @@
         "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
-    "returns": "payload (array de resultados de busca, geralmente 25 resultados)",
+    "returns": "Resultado por tipo: conversations, contacts, messages, articles e kanban_items (cards do Kanban). Cada mensagem inclui previous_message/next_message (contexto vizinho).",
     "common_use_cases": [
       "Localizar resultado de busca pelo nome",
       "Buscar pelo email/telefone parcial",
@@ -10755,11 +10795,60 @@
     "category": "Ofertas",
     "params": [
       {
-        "name": "offer",
-        "type": "object",
+        "name": "title",
+        "type": "string",
         "location": "body",
         "required": true,
-        "description": "Wrapper com { title, value, currency, type (product/service), description, prices: [{label, value, currency, description, checkout_url}], links: [{label, url}], image }. value auto-derivado do menor prices[].value quando prices presente."
+        "description": "Titulo da oferta/produto"
+      },
+      {
+        "name": "value",
+        "type": "number",
+        "location": "body",
+        "required": false,
+        "description": "Valor base"
+      },
+      {
+        "name": "currency",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Moeda (ex: BRL)"
+      },
+      {
+        "name": "image",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "URL da imagem"
+      },
+      {
+        "name": "type",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Tipo da oferta"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Descricao da oferta"
+      },
+      {
+        "name": "prices",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Lista de precos/planos: [{label,value,currency,description,checkout_url}]"
+      },
+      {
+        "name": "links",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Lista de links: [{label,url}]"
       }
     ],
     "returns": "oferta criado (com novo ID)",
@@ -10811,11 +10900,60 @@
         "description": "ID da oferta"
       },
       {
-        "name": "offer",
-        "type": "object",
+        "name": "title",
+        "type": "string",
         "location": "body",
-        "required": true,
-        "description": "Wrapper com { title, value, currency, type, description, prices, links, image, remove_image }. Todos os campos opcionais."
+        "required": false,
+        "description": "Titulo da oferta/produto"
+      },
+      {
+        "name": "value",
+        "type": "number",
+        "location": "body",
+        "required": false,
+        "description": "Valor base"
+      },
+      {
+        "name": "currency",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Moeda (ex: BRL)"
+      },
+      {
+        "name": "image",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "URL da imagem"
+      },
+      {
+        "name": "type",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Tipo da oferta"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Descricao da oferta"
+      },
+      {
+        "name": "prices",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Lista de precos/planos: [{label,value,currency,description,checkout_url}]"
+      },
+      {
+        "name": "links",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Lista de links: [{label,url}]"
       }
     ],
     "returns": "oferta atualizado",
@@ -19708,11 +19846,60 @@
     "category": "Atributos Personalizados",
     "params": [
       {
-        "name": "custom_attribute_definition",
-        "type": "object",
+        "name": "attribute_display_name",
+        "type": "string",
         "location": "body",
         "required": true,
-        "description": "Wrapper com { attribute_display_name, attribute_display_type (text/number/link/date/list/checkbox), attribute_model (contact_attribute/conversation_attribute, default conversation_attribute), attribute_key (slug snake_case), attribute_description, attribute_values (para tipo list), regex_pattern, regex_cue }"
+        "description": "Nome de exibicao do atributo (ex: 'Perfil')"
+      },
+      {
+        "name": "attribute_display_type",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Tipo de exibicao: text, number, link, date, list, checkbox, currency, percent ou secret"
+      },
+      {
+        "name": "attribute_key",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Slug unico em snake_case (ex: 'perfil')"
+      },
+      {
+        "name": "attribute_model",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "contact_attribute ou conversation_attribute (default conversation_attribute)"
+      },
+      {
+        "name": "attribute_description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Descricao do atributo"
+      },
+      {
+        "name": "attribute_values",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Opcoes quando o tipo for list (ex: ['MCMV','SBPE','Investidor'])"
+      },
+      {
+        "name": "regex_pattern",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Regex de validacao (opcional)"
+      },
+      {
+        "name": "regex_cue",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Dica do formato esperado (opcional)"
       }
     ],
     "returns": "atributo personalizado criado (com novo ID)",
@@ -19772,11 +19959,60 @@
         "description": "ID da definicao"
       },
       {
-        "name": "custom_attribute_definition",
-        "type": "object",
+        "name": "attribute_display_name",
+        "type": "string",
         "location": "body",
-        "required": true,
-        "description": "Wrapper com os mesmos campos do create { attribute_display_name, attribute_display_type, attribute_model, attribute_key, attribute_description, attribute_values, regex_pattern, regex_cue }"
+        "required": false,
+        "description": "Nome de exibicao do atributo"
+      },
+      {
+        "name": "attribute_display_type",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Tipo de exibicao: text, number, link, date, list, checkbox, currency, percent ou secret"
+      },
+      {
+        "name": "attribute_key",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Slug unico em snake_case"
+      },
+      {
+        "name": "attribute_model",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "contact_attribute ou conversation_attribute"
+      },
+      {
+        "name": "attribute_description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Descricao do atributo"
+      },
+      {
+        "name": "attribute_values",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Opcoes quando o tipo for list"
+      },
+      {
+        "name": "regex_pattern",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Regex de validacao (opcional)"
+      },
+      {
+        "name": "regex_cue",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Dica do formato esperado (opcional)"
       }
     ],
     "returns": "atributo personalizado atualizado",

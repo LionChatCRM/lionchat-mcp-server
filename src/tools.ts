@@ -445,14 +445,20 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 ▸ wait_response
   data: {
     label, waitTime, waitUnit: "minutes"|"seconds"|"hours",
-    validation: "any"|"number"|"email"|"phone"|"options"|"varied_options"|"regex",
+    groupInputsSeconds: 0|10|15|20|25|30|40,   // 0=off (padrao). Agrupa baloes picados do cliente antes de validar (debounce)
+    validation: "any"|"number"|"email"|"phone"|"options"|"varied_options"|"regex"|"cpf"|"cnpj"|"cpf_cnpj"|"date"|"rg"|"profession",
     acceptedOptions: ["1","2"],     // se validation='options'
     optionGroups: [{ id, terms:["sim","claro"], matchType:"contains"|"equals" }], // se validation='varied_options'
     regexPattern,                    // se validation='regex'
     invalidMessage, maxRetries,
-    saveTo: "variable"|"contact_name"|"contact_email"|"contact_phone"|"contact_attr"|"conversation_attr"|"",
+    saveTo: "variable"|"contact_name"|"contact_email"|"contact_phone"|"contact_cpf"|"contact_cnpj"|"contact_document"|"contact_birthdate"|"contact_rg"|"contact_profession"|"contact_attr"|"conversation_attr"|"",
     saveVariable, saveAttrKey        // saveAttrKey obrigatorio p/ contact_attr e conversation_attr
   }
+  CPF/CNPJ validam digito verificador (documento falso -> invalidMessage). Alvos cadastrais so com a validation
+    correspondente: cpf=>contact_cpf, cnpj=>contact_cnpj, cpf_cnpj=>contact_document (decide pelos digitos),
+    date=>contact_birthdate (dd/mm/aaaa->ISO), rg=>contact_rg, profession=>contact_profession. Campo cadastral
+    ja preenchido NAO e sobrescrito (imutavel). saveTo contact_attr/conversation_attr: se o atributo tiver tipo
+    (number/currency/percent/date/list ou text+regex), a resposta tambem e validada/formatada por esse tipo.
   saveTo "attribute"/"contact_attribute" NAO EXISTEM — nao salvam nada.
   TIMEOUT DISPARA DE VERDADE (corrigido 2026-06-09): waitTime estourou -> handle "timeout"
   (ou "option_{val}_timeout" no modo options). Sempre ligue um edge no timeout.
