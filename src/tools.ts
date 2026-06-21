@@ -476,14 +476,22 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   data: { label, conditions: [
     { id, label, field, operator, value }
   ]}
+  Agrupar E/OU: cada saida pode trocar a regra plana por rules[]+logic:
+    { id, label, logic: "and"|"or", rules: [ {field,operator,value}, ... ] }
+    logic ausente = "and"; ate 10 regras por saida; sem rules = grupo de 1 (retrocompat).
+    label = nome OPCIONAL da saida (cosmetico, aparece no canvas; NAO muda roteamento).
+    As regras de um grupo podem ser de tipos diferentes (atributo + status + etiqueta + SLA...).
   Handles: "cond_0", "cond_1", ... (POSICAO no array, NAO o id da condicao!) + "default".
   First-match-wins: avalia em ordem e PARA na primeira que bate.
   Operadores: equal/not_equal, contains/not_contains, starts_with/ends_with,
     is_empty/is_not_empty (NAO existe is_present/is_blank), greater_than/less_than,
     number_range ("min-max"), regex, equal_any/contains_any (values[]),
-    business_hours/outside_business_hours, can_reply/can_reply_closed,
-    conversation_has_agent/no_agent, contact_has_label/conversation_has_label,
-    kanban_exists/kanban_in_stage/kanban_won/kanban_lost, pagetrack_visited/pagetrack_event.
+    business_hours/outside_business_hours (campos opcionais days[0=dom..6=sab]/start_hour/end_hour),
+    can_reply/can_reply_closed, conversation_has_agent/no_agent,
+    contact_has_label/conversation_has_label,
+    kanban_exists/kanban_in_stage/kanban_won/kanban_lost, pagetrack_visited/pagetrack_event,
+    sla_check (SO value, codigo fixo: frt_breached/frt_ok/nrt_breached/nrt_ok/rt_breached/rt_ok/has_sla/no_sla;
+      frt=primeira resp, nrt=proxima, rt=resolucao; _ok exige politica de SLA aplicada).
   Operador numerico SO em atributo numero.
 
 ▸ action
