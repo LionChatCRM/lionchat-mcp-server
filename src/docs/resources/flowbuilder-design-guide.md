@@ -141,7 +141,7 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 }
 ```
 
-**`validation` válidos:** `any`, `options`, `varied_options`, `regex`, `email`, `phone`, `number`.
+**`validation` válidos:** `any`, `options`, `varied_options`, `regex`, `email`, `phone`, `number`, `cpf`, `cnpj`, `cpf_cnpj`, `date`, `rg`, `profession`. As validações cadastrais (`cpf`/`cnpj`/`cpf_cnpj`/`date`/`rg`/`profession`) conferem o formato e, no CPF/CNPJ, o dígito verificador — resposta inválida volta pra `invalidMessage` (respeita `maxRetries`).
 
 **`options` normaliza a resposta (2026-06-16):** a comparação com `acceptedOptions` é feita sem acento e sem maiúscula (`I18n.transliterate` + downcase + strip nos dois lados). "São Paulo", "sao paulo" e "SAO PAULO" casam todos.
 
@@ -161,11 +161,21 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 - `contact_name` — sobrescreve o nome do contato
 - `contact_email` — sobrescreve o email do contato
 - `contact_phone` — sobrescreve o telefone do contato
+- `contact_cpf` — campo cadastral CPF (exige `validation: "cpf"`)
+- `contact_cnpj` — campo cadastral CNPJ (exige `validation: "cnpj"`)
+- `contact_document` — CPF ou CNPJ, decide pelo nº de dígitos (exige `validation: "cpf_cnpj"`)
+- `contact_birthdate` — data de nascimento (exige `validation: "date"`; cliente digita dd/mm/aaaa, salva ISO)
+- `contact_rg` — campo cadastral RG (exige `validation: "rg"`)
+- `contact_profession` — campo cadastral Profissão (exige `validation: "profession"`)
 - `contact_attr` — custom attribute do CONTATO (precisa de `saveAttrKey`)
 - `conversation_attr` — custom attribute da CONVERSA (precisa de `saveAttrKey`)
 - `""` — não salva
 
+**Campos cadastrais (2026-06):** os destinos `contact_cpf/cnpj/document/birthdate/rg/profession` gravam pelo `CadastralAttributesService` (valida, normaliza e RESPEITA imutabilidade — campo sensível já preenchido NÃO é sobrescrito). Cada um só funciona com a validação correspondente (mesma regra do `allowedSaveTargets` da UI). No editor visual eles só aparecem quando a validação bate.
+
 **NÃO existem** `attribute` nem `contact_attribute` — use `conversation_attr` / `contact_attr`.
+
+**Agrupar mensagens picadas (debounce, 2026-06):** opcional `groupInputsSeconds` (Integer; `0`/ausente = desligado; ex. 10–40). Quando > 0, o flow espera esse tempo após cada mensagem do cliente, concatena os balões num texto só e só então valida; cada nova mensagem reinicia o relógio. Útil quando o cliente quebra a resposta em vários balões. Ex.: `"data": { ..., "validation": "cpf", "saveTo": "contact_cpf", "groupInputsSeconds": 15 }`.
 
 **Salvar e-mail/telefone/nome do contato com segurança (2026-06-16):** o valor é normalizado antes de gravar (telefone → E.164 via `+55`; e-mail → strip). O cadastro do contato REVERTE silenciosamente um e-mail/telefone inválido (não dá erro, mas não muda). Por isso os destinos `contact_email`/`contact_phone`/`contact_name` SÓ devem ser usados com a validação que combina:
 - `saveTo: "contact_email"` → use `validation: "email"`
@@ -201,6 +211,20 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 }
 ```
 
+**Agrupar várias regras numa saída — E / OU (2026-06):** cada item de `conditions` (cada saída `cond_N`) pode, em vez de uma regra plana, agrupar VÁRIAS regras com `rules[]` + `logic`:
+
+```json
+{ "id": "c1", "label": "Cliente do Centro VIP", "logic": "and", "rules": [
+    { "field": "contact.custom_attribute.bairro", "operator": "contains", "value": "centro" },
+    { "field": "contact.custom_attribute.plano", "operator": "equal", "value": "premium" }
+] }
+```
+
+- `logic`: `"and"` (todas têm que ser verdadeiras) ou `"or"` (basta uma). Ausente = `"and"`.
+- Cada item de `rules[]` tem a MESMA forma de uma regra plana (`field`/`operator`/`value`/`values`/`attr_key`/`attrSource`/`funnel_id`/`stage`...). Limite: 10 regras por saída.
+- **Retrocompat:** uma saída SEM `rules` (só `field`/`operator`/`value` direto) continua valendo = grupo de 1 regra. Pode misturar saídas planas e agrupadas no mesmo node.
+- `label` é o NOME (opcional) da saída — só cosmético, aparece no rótulo do canvas. NÃO afeta roteamento (continua por ÍNDICE `cond_N`, first-match-wins). As regras de um grupo podem ser de tipos diferentes (atributo + status + etiqueta + SLA...).
+
 **ATENÇÃO — atributo customizado é SINGULAR:** `contact.custom_attribute.X` e `conversation.custom_attribute.X` (também `account.custom_attribute.X`). Usar plural `custom_attributes` resolve VAZIO — vale tanto no `field` da condição quanto em mensagens/variáveis `{{...}}`.
 
 **Dados cadastrais — forma curta é a canônica (2026-06):** `{{contact.cpf}}`, `{{contact.cnpj}}`, `{{contact.rg}}`, `{{contact.address.number}}`, `{{contact.address.street}}` etc. O backend traduz internamente pra `contact.cadastral.*` (flows antigos com a forma longa continuam resolvendo). NÃO use `contact.attributes.cpf` nem `contact.custom_attribute.cpf` — cadastral NÃO é custom attribute.
@@ -226,6 +250,7 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 | `kanban_exists` / `kanban_in_stage` / `kanban_won` / `kanban_lost` | card no funil (usa `funnel_id` + `stage`) |
 | `card_attr_equals` / `card_attr_contains` | atributo do card (`attrSource: 'card'` + `attr_key`) |
 | `pagetrack_visited` / `pagetrack_event` | LionTrack |
+| `sla_check` | status do SLA da conversa (usa `value` = código fixo; ver abaixo) |
 
 **Restrição por TIPO de atributo (a UI só oferece um subconjunto, e é o que faz sentido):**
 - **Texto/string:** `equal`, `not_equal`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`
@@ -233,6 +258,19 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 - **Lista/Data:** `equal`, `not_equal`, `contains`, `not_contains`
 
 Use operador numérico (`greater_than`, `less_than`, `number_range`) SÓ em atributo de tipo número.
+
+**SLA — operador `sla_check` (2026-06):** verifica se a conversa está dentro/fora do prazo de SLA. A regra NÃO usa `field`, só `value` (código fixo):
+
+| `value` | Verdadeiro quando |
+|---|---|
+| `frt_breached` / `frt_ok` | primeira resposta estourou / dentro do prazo |
+| `nrt_breached` / `nrt_ok` | próxima resposta estourou / dentro do prazo |
+| `rt_breached` / `rt_ok` | resolução estourou / dentro do prazo |
+| `has_sla` / `no_sla` | tem / não tem política de SLA aplicada |
+
+Ex.: `{ "operator": "sla_check", "value": "frt_breached" }`. "Estourado" = o monitor de SLA registrou o furo (job periódico, não em tempo real). As opções `_ok` exigem que a conversa TENHA uma política de SLA aplicada (sem política, só `has_sla`/`no_sla` dão resultado). Combina com E/OU (ex.: `sla_check frt_breached` **E** status aberto).
+
+**Horário comercial — `business_hours` / `outside_business_hours` (campos próprios):** além do operador, a regra aceita `days` (array de dias da semana, 0=domingo..6=sábado; ausente = todos os dias), `start_hour` e `end_hour` (0-23; padrão 9 e 18). Ex.: `{ "operator": "business_hours", "days": [1,2,3,4,5], "start_hour": 9, "end_hour": 18 }` = seg–sex, 9h–18h.
 
 **Handles que SAEM:** `cond_0`, `cond_1`, `cond_2`, ... (UM POR CONDIÇÃO, pela ordem do array — NÃO use o `id` da condição) + `default` (quando nenhuma bate).
 

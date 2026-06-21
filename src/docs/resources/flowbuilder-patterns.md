@@ -480,6 +480,36 @@
 
 **Lembretes:** em `varied_options` o handle é `option_<id do grupo>` (não por termo); use `matchType: "equals"` quando um termo curto colidiria (ex: "1" casando "12" com `contains`). Pra salvar telefone use `validation: "phone"` + `saveTo: "contact_phone"`.
 
+## 15. Condição agrupada (E/OU) + SLA — escalar atrasados
+
+**Caso:** quando a conversa furou o SLA de primeira resposta **E** ainda está aberta, escala pro supervisor; quem está no prazo segue o fluxo normal. Mostra três recursos novos: regras agrupadas (`rules`/`logic`), o operador `sla_check` e o nome de saída (`label`).
+
+```json
+{
+  "nodes": [
+    { "id": "start", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "trigger": "conversation_created" } },
+    { "id": "n2", "type": "condition", "position": { "x": 370, "y": 300 }, "data": { "label": "Atrasado?", "conditions": [
+      { "id": "c1", "label": "SLA estourado e aberta", "logic": "and", "rules": [
+        { "operator": "sla_check", "value": "frt_breached" },
+        { "field": "conversation.status", "operator": "equal", "value": "open" }
+      ] }
+    ] } },
+    { "id": "n3", "type": "action", "position": { "x": 690, "y": 180 }, "data": { "label": "Etiqueta Atrasado", "actionType": "add_conversation_label", "labels": ["atrasado"] } },
+    { "id": "n4", "type": "send_message", "position": { "x": 690, "y": 420 }, "data": { "label": "Segue normal", "messageType": "text", "content": "Obrigado por aguardar! Em que posso ajudar?" } },
+    { "id": "end", "type": "end", "position": { "x": 1010, "y": 300 }, "data": { "label": "Fim" } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "start", "target": "n2" },
+    { "id": "e2", "source": "n2", "sourceHandle": "cond_0", "target": "n3" },
+    { "id": "e3", "source": "n2", "sourceHandle": "default", "target": "n4" },
+    { "id": "e4", "source": "n3", "target": "end" },
+    { "id": "e5", "source": "n4", "target": "end" }
+  ]
+}
+```
+
+**Lembretes:** a saída agrupada continua sendo `cond_0` (uma saída por item de `conditions`, não por regra). `sla_check` só dá resultado de prazo se a conversa tiver uma Política de SLA aplicada; senão use `has_sla`/`no_sla`. Para "OU" troque `"logic": "and"` por `"or"`.
+
 ---
 
 ## Como usar este catálogo
