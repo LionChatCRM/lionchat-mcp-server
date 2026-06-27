@@ -166,6 +166,16 @@ Como a coleta de dados/cenários funciona hoje (importante pra diagnosticar "IA 
 - O admin pode FIXAR o parâmetro de uma ferramenta no cenário (campo scenario.tool_bindings): quais mídias enviar, qual funil+etapa do card, quais agendas no agendamento. "Deixar a IA decidir" = binding vazio.
 - Quando UM cenário fixa a tool, a execução vira determinística (a IA não escolhe): mídia e kanban são aplicados pós-turno pelo BindingResolver (ordem texto→ação, sem duplicar, idempotente); o agendamento força/restringe a agenda mas a IA ainda define data/hora.
 - Via MCP: scenarios_create/update persiste binding de send_media_asset e create_kanban_item/move_kanban_item (re-escopados por conta). O binding de create_booking NÃO é aceito pela API — pra limitar agendas via MCP, use config.booking_event_type_ids no assistente (captain_assistants_update).
+- Receita pra criar/editar cenário com binding via MCP (scenarios_create / scenarios_update): (1) o corpo vai SEMPRE embrulhado em `scenario`; (2) a instrução PRECISA mencionar a ferramenta como link markdown `[Rótulo](tool://slug)` — menção crua `(tool://slug)` NÃO conta e o binding é descartado no salvamento; (3) envie `tool_bindings` com o shape: `send_media_asset` → `{ "asset_ids": [Int] }`, `create_kanban_item`/`move_kanban_item` → `{ "funnel_id": Int, "stage": "<chave da etapa>" }`. Não precisa mandar `tools` (é auto-extraído da instrução e sobrescrito). `create_booking` NÃO entra em tool_bindings pela API.
+
+## Variáveis {{ }} nas instruções do AI Agente (2026-06)
+
+As instruções aceitam variáveis Liquid `{{ }}` que chegam JÁ PREENCHIDAS com os dados reais do contato/conversa do atendimento — vale pra instrução base do assistente (`config.instructions`) e pra instrução de cada cenário (`scenario.instruction`). O texto é gravado como está (sem sanitização); cap de 20.000 chars na base.
+
+- Contato: `{{contact.name}}`, `{{contact.first_name}}`, `{{contact.last_name}}`, `{{contact.email}}`, `{{contact.phone}}`, `{{contact.cpf}}`, `{{contact.cnpj}}`, `{{contact.rg}}`, `{{contact.date_of_birth}}`, `{{contact.profession}}`, `{{contact.address.city}}` (e `.cep`/`.street`/`.number`/`.neighborhood`/`.state`...), `{{contact.custom_attribute.<chave>}}`.
+- Conversa: `{{conversation.display_id}}`, `{{conversation.custom_attribute.<chave>}}`.
+- Variável sem valor sai vazia (não quebra). Texto SEM `{{` sai idêntico (preserva o cache do prompt) — só use variável quando agregar.
+- ATENÇÃO: variável de CONTA NÃO funciona aqui — `{{account.custom_attribute.<chave>}}` (slogan, endereço...) sai VAZIA dentro das instruções do AI Agente (o contexto só tem `contact` e `conversation`, proteção contra vazar secret). Pra um valor fixo da empresa no prompt, escreva o valor literal no texto.
 
 ## Conhecimento passivo da IA: FAQ + artigos (RAG) (2026-06)
 
@@ -242,10 +252,12 @@ campanha e mostre a contagem ao usuário — estimativa e disparo usam o mesmo m
 
 ## Variáveis de conta (account_variables)
 
-Pra dados que se repetem (slogans, endereços, horários):
-- `account_variables_create` UMA vez
-- Use em templates com `{{slogan}}`, `{{endereco}}`
-- Atualiza UMA vez, propaga pra todo lugar
+Pra dados fixos que se repetem (slogans, endereços, horários):
+- `account_variables_create` UMA vez — campos: `attribute_display_name` (rótulo), `attribute_key` (a chave usada no `{{ }}`), `attribute_display_type` (`text`; use `secret` pra token/senha), `value`. Admin-only.
+- Use em templates com a sintaxe COMPLETA `{{ account.custom_attribute.<attribute_key> }}` (ex: `{{ account.custom_attribute.slogan }}`). NÃO existe atalho `{{slogan}}` solto — sem o prefixo `account.custom_attribute.` não resolve.
+- Resolve em: mensagens, respostas prontas, campanhas e automações. NÃO resolve nas instruções do AI Agente (base/cenário) — ali só `contact.*` e `conversation.*`.
+- `secret` nunca aparece em template (sai vazio); só resolve em nós API Request do FlowBuilder.
+- Atualiza UMA vez, propaga pra todo lugar.
 
 Nunca hard-code esses dados em respostas geradas.
 

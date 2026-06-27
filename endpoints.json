@@ -5761,6 +5761,20 @@
         "location": "body",
         "required": false,
         "description": "Toggle ativo/inativo (default true)"
+      },
+      {
+        "name": "tools",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Lista de slugs das ferramentas do cenario (ex: [\"send_media_asset\",\"create_kanban_item\"]). NORMALMENTE NAO precisa enviar: e DERIVADO automaticamente das mencoes [Rotulo](tool://slug) na instrucao e SOBRESCRITO no salvamento. Quem governa e o texto da instrucao."
+      },
+      {
+        "name": "tool_bindings",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Parametro FIXADO por ferramenta (admin pre-define em vez de a IA escolher). Shapes aceitos: send_media_asset -> { \"asset_ids\": [Int] }; create_kanban_item e move_kanban_item -> { \"funnel_id\": Int, \"stage\": \"<chave da etapa>\" }. create_booking NAO e aceito aqui (para restringir agendas use config.booking_event_type_ids no assistente via captain_assistants_update). O binding so COLA se a ferramenta estiver mencionada como [Rotulo](tool://slug) na instrucao; senao e podado no salvamento. IDs de outra conta sao descartados (re-escopo por conta)."
       }
     ],
     "returns": "assistente AI criado (com novo ID)",
@@ -5860,6 +5874,20 @@
         "location": "body",
         "required": false,
         "description": "Toggle ativo/inativo"
+      },
+      {
+        "name": "tools",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Lista de slugs das ferramentas do cenario (ex: [\"send_media_asset\",\"create_kanban_item\"]). NORMALMENTE NAO precisa enviar: e DERIVADO automaticamente das mencoes [Rotulo](tool://slug) na instrucao e SOBRESCRITO no salvamento. Quem governa e o texto da instrucao."
+      },
+      {
+        "name": "tool_bindings",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Parametro FIXADO por ferramenta (admin pre-define em vez de a IA escolher). Shapes aceitos: send_media_asset -> { \"asset_ids\": [Int] }; create_kanban_item e move_kanban_item -> { \"funnel_id\": Int, \"stage\": \"<chave da etapa>\" }. create_booking NAO e aceito aqui (para restringir agendas use config.booking_event_type_ids no assistente via captain_assistants_update). O binding so COLA se a ferramenta estiver mencionada como [Rotulo](tool://slug) na instrucao; senao e podado no salvamento. IDs de outra conta sao descartados (re-escopo por conta)."
       }
     ],
     "returns": "assistente AI atualizado",
@@ -5872,7 +5900,8 @@
       "lionchat_captain_assistants_list",
       "lionchat_captain_assistants_create",
       "lionchat_captain_assistants_show"
-    ]
+    ],
+    "body_wrapper": "scenario"
   },
   {
     "id": "lionchat_captain_assistants_destroy_1",
