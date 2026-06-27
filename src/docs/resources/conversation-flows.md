@@ -118,6 +118,10 @@ Se `captain_assistant_id` foi setado (manual ou via automação):
 - Chama LLM com prompt do assistant + histórico
 - LLM pode invocar tools (FAQ, update_contact, create_booking, etc)
 - Resposta vira `Message` outgoing com `sender_type: Captain::Assistant`
+- Conhecimento passivo: a IA recebe FAQ + artigos relevantes no prompt sem chamar ferramenta (só se houver conteúdo).
+- Cenário pode FIXAR o parâmetro de uma tool (mídia/funil-etapa/agenda) → execução determinística (mídia/kanban pós-turno via BindingResolver).
+- Tool que falha aciona o anti-loop (aviso escalonado + tetos 5/tool e 25/turno).
+- Comentários do Instagram: chegam como mensagens (content_attributes.image_type='ig_comment' + in_reply_to_comment_id). Pra responder um comentário via API, mande a mensagem na conversa com content_attributes { reply_mode: 'private'|'public', in_reply_to_comment_id }. O AI Agente responde só DM (não comenta em post).
 
 **Quando IA é desativada manualmente:**
 - Agente clica em "Desativar AI" → `captain_assistant_id` vira null

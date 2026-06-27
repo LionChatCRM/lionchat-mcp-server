@@ -221,6 +221,15 @@ os de `user_ids` viram membros comuns. A resposta traz `is_supervisor` (boolean)
   aplicação fica no "caderninho do cenário" da conversa (scenario_checklist, card Raciocínio)
 - **Regra DITO ≠ SALVO**: a IA só considera coletado o dado que foi PERSISTIDO — salva cada dado
   na hora e não repergunta o que já salvou
+- **Cenário com parâmetro fixo (tool_bindings)**: o admin pode fixar o parâmetro de uma ferramenta do cenário — quais mídias enviar, qual funil+etapa criar/mover o card, quais agendas usar no agendamento. Com 1 cenário fixando a tool, a execução é DETERMINÍSTICA (a IA não escolhe): mídia/kanban rodam pós-turno (BindingResolver); o agendamento força/restringe a agenda mas a IA ainda escolhe a data/hora.
+- **Conhecimento passivo (RAG)**: a IA recebe automaticamente no prompt a FAQ e os artigos da Central de Ajuda relevantes para a mensagem — só quando a conta tem esse conteúdo (sem conteúdo = zero custo). Pode oferecer o link do artigo ao cliente. As ferramentas "Buscar FAQ"/"Buscar Artigos" são automáticas (não aparecem nem se ligam na tela de ferramentas).
+- **Anti-loop de ferramentas**: se uma ferramenta (webhook/custom tool ou flow) falha, a IA recebe aviso escalonado (1ª falha = tente 1x; 2ª = pare e siga/transfira) e para sozinha; tetos de 5 chamadas/ferramenta e 25/turno por mensagem.
+
+## Copilot (Copiloto do atendente)
+
+- Motor PRÓPRIO: usa account.custom_attributes['copilot_model'] e ['copilot_temperature'] (padrão 0.3), independente do agente conversacional. O agente selecionado dá só a base de conhecimento. Prompt base em copilot_instructions (admin, até 5000 chars). Config via endpoint captain/copilot_settings.
+- AGE na conversa aberta no painel (sem opt-in), dentro da permissão do atendente. Tools reversíveis (kanban, etiqueta, nota, prioridade, atribuir, resolver, contato/atributos) executam na hora; tools que falam com o cliente (enviar mídia, agendar mensagem, criar/reagendar agendamento) viram PROPOSTA e só executam quando o atendente confirma. Transferência/handoff/flows ficam de fora.
+- Histórico POR CONVERSA (copilot_threads.conversation_display_id): cada conversa mantém o seu Copiloto, não mistura.
 
 ## Account (Conta)
 

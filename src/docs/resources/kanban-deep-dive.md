@@ -164,6 +164,12 @@ Um card individual dentro de uma etapa.
 
 Múltiplos agentes podem ter o mesmo card. `source` pode ser `manual`, `automation`, `inherited_from_conversation`.
 
+**Agente do card vira participante das conversas (2026-06):** atribuir um agente a um card do Kanban
+(via `kanban_agents` ou ao vincular uma conversa) agora também o adiciona como PARTICIPANTE de todas
+as conversas do card (a principal `conversation_display_id` + as de `linked_conversations`). É a 4ª
+forma de virar participante — aditivo e idempotente (não duplica nem remove os participantes que já
+existiam).
+
 ### linked_conversations — IMPORTANTE
 
 ```json

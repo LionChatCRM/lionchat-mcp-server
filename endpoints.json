@@ -7206,7 +7206,7 @@
     "description": "Lista todas as labels da conta. Lista labels/etiquetas paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de label/etiqueta).",
     "category": "Labels",
     "params": [],
-    "returns": "{ payload: array de labels } (sem meta)",
+    "returns": "{ payload: array de labels, cada label com conversations_count e contacts_count (uso em conversas/contatos) }",
     "common_use_cases": [
       "Dashboard: contar/exibir labels/etiquetas",
       "Buscar com filtros antes de outra operação",
@@ -12052,7 +12052,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/voip/calls",
     "title": "Iniciar Chamada",
-    "description": "Inicia uma chamada telefônica para um contato via Zenvia. Requer configuração VoIP ativa. Obrigatorios: contact_id.",
+    "description": "Inicia uma chamada telefônica para um contato via Zenvia. Requer configuração VoIP ativa. Obrigatorios: contact_id. Passe provider='vtcall' pra discar pelo PABX VTCall.",
     "category": "Chamadas",
     "params": [
       {
@@ -12075,6 +12075,13 @@
         "location": "body",
         "required": false,
         "description": "Número de origem"
+      },
+      {
+        "name": "provider",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Roteia o disparo: 'vtcall' disca pelo PABX VTCall (sem bina); ausente/outro = Zenvia"
       }
     ],
     "returns": "chamada VoIP criada",
@@ -14813,7 +14820,15 @@
     "title": "Conectar Google Calendar",
     "description": "Inicia o fluxo de conexao com Google Calendar. Lista configs Google Calendar paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config Google Calendar).",
     "category": "Google Calendar",
-    "params": [],
+    "params": [
+      {
+        "name": "return_to",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Pra onde voltar apos o OAuth (ex: 'agenda'); fora da whitelist = padrao"
+      }
+    ],
     "returns": "meta (contadores globais) + payload (array de configs Google Calendar)",
     "common_use_cases": [
       "Dashboard: contar/exibir configs Google Calendar",
@@ -24066,7 +24081,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/inboxes/{id}",
     "title": "Atualizar Caixa de Entrada",
-    "description": "Atualiza configurações da caixa (nome, saudação, atribuição automática, atributos extras). MUDANÇA DE CONFIG — confirme com o usuário antes. additional_attributes.mark_as_seen (bool, default true, SÓ WhatsApp oficial, 2026-06-11): envia o visto/check azul quando o agente abre a conversa — desligar em coexistência app+API. ATENÇÃO: enviar additional_attributes substitui o objeto; para WAHA prefira não mexer nesse campo (config sensível).",
+    "description": "Atualiza configurações da caixa (nome, saudação, atribuição automática, atributos extras). MUDANÇA DE CONFIG — confirme com o usuário antes. additional_attributes.mark_as_seen (bool, default true, SÓ WhatsApp oficial, 2026-06-11): envia o visto/check azul quando o agente abre a conversa — desligar em coexistência app+API. ATENÇÃO: enviar additional_attributes substitui o objeto; para WAHA prefira não mexer nesse campo (config sensível). Email (sincronizacao de mao dupla, admin, via objeto channel): two_way_sync_enabled, sync_sent, sync_deletions, sync_read, delete_strategy.",
     "category": "Caixas de Entrada",
     "params": [
       {
@@ -24366,6 +24381,240 @@
     "related_tools": [
       "lionchat_wavoip_should_ring",
       "lionchat_wavoip_calls"
+    ]
+  },
+  {
+    "id": "lionchat_vtcall_settings_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/voip/vtcall_settings",
+    "title": "Config VTCall (PABX)",
+    "description": "Mostra a configuracao do PABX VTCall da conta (servidor, gravacao, transcricao). Liberado pro agente saber se o botao de discar VTCall esta disponivel.",
+    "category": "Chamadas",
+    "params": [],
+    "returns": "{ configured, active, vtcall_server, gravar_audio, ai_summary_source, transcription_provider, transcription_language, has_transcription_key, auto_transcribe, current_user_has_ramal, webhook_url (admin) }",
+    "common_use_cases": [
+      "Saber se o VTCall esta configurado/ativo antes de discar",
+      "Conferir gravacao/transcricao da conta"
+    ],
+    "related_tools": [
+      "lionchat_vtcall_settings_update",
+      "lionchat_voip_calls_create"
+    ]
+  },
+  {
+    "id": "lionchat_vtcall_settings_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/voip/vtcall_settings",
+    "title": "Salvar Config VTCall",
+    "description": "Salva a configuracao do PABX VTCall (admin). active e derivado no servidor (liga so quando ha servidor + token).",
+    "category": "Chamadas",
+    "params": [
+      {
+        "name": "vtcall_server",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Servidor do PABX VTCall"
+      },
+      {
+        "name": "vtcall_token",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Token de autenticacao do PABX"
+      },
+      {
+        "name": "gravar_audio",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Gravar audio das ligacoes"
+      },
+      {
+        "name": "auto_transcribe",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Transcrever automaticamente"
+      },
+      {
+        "name": "transcription_provider",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Provedor de transcricao"
+      },
+      {
+        "name": "transcription_api_key",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Chave da transcricao"
+      },
+      {
+        "name": "transcription_language",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Idioma da transcricao"
+      },
+      {
+        "name": "ai_summary_source",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Fonte do resumo por IA"
+      }
+    ],
+    "returns": "{ success: true } ou { error }",
+    "common_use_cases": [
+      "Configurar o PABX VTCall da conta"
+    ],
+    "related_tools": [
+      "lionchat_vtcall_settings_show",
+      "lionchat_vtcall_settings_test_connection"
+    ]
+  },
+  {
+    "id": "lionchat_vtcall_settings_test_connection",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/voip/vtcall_settings/test_connection",
+    "title": "Testar Conexao VTCall",
+    "description": "Testa a conexao com o servidor VTCall configurado (admin).",
+    "category": "Chamadas",
+    "params": [],
+    "returns": "{ success: bool, error? }",
+    "common_use_cases": [
+      "Validar servidor/token do VTCall apos salvar"
+    ],
+    "related_tools": [
+      "lionchat_vtcall_settings_update"
+    ]
+  },
+  {
+    "id": "lionchat_vtcall_ramals_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/voip/vtcall_ramals",
+    "title": "Listar Ramais VTCall",
+    "description": "Lista os agentes da conta com o ramal de cada um no VTCall (admin). 1 ramal por agente.",
+    "category": "Chamadas",
+    "params": [],
+    "returns": "{ agents: [{ user_id, name, email, ramal, ramal_id }] }",
+    "common_use_cases": [
+      "Montar a tela de mapeamento agente->ramal"
+    ],
+    "related_tools": [
+      "lionchat_vtcall_ramals_create"
+    ]
+  },
+  {
+    "id": "lionchat_vtcall_ramals_create",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/voip/vtcall_ramals",
+    "title": "Definir Ramal VTCall",
+    "description": "Define/atualiza o ramal de um agente no VTCall (upsert por user_id, admin).",
+    "category": "Chamadas",
+    "params": [
+      {
+        "name": "user_id",
+        "type": "integer",
+        "location": "body",
+        "required": true,
+        "description": "ID do agente"
+      },
+      {
+        "name": "ramal",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Numero do ramal"
+      }
+    ],
+    "returns": "{ success: true, id }",
+    "common_use_cases": [
+      "Atribuir um ramal a um agente"
+    ],
+    "related_tools": [
+      "lionchat_vtcall_ramals_list",
+      "lionchat_vtcall_ramals_destroy"
+    ]
+  },
+  {
+    "id": "lionchat_vtcall_ramals_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/voip/vtcall_ramals/{id}",
+    "title": "Remover Ramal VTCall",
+    "description": "Remove o ramal de um agente no VTCall (admin).",
+    "category": "Chamadas",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do registro de ramal"
+      }
+    ],
+    "returns": "{ success: true }",
+    "common_use_cases": [
+      "Tirar o ramal de um agente"
+    ],
+    "related_tools": [
+      "lionchat_vtcall_ramals_list"
+    ]
+  },
+  {
+    "id": "lionchat_copilot_settings_show",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/captain/copilot_settings",
+    "title": "Config do Copiloto",
+    "description": "Mostra a config do motor do Copiloto do atendente (modelo, temperatura, prompt base). Admin-only.",
+    "category": "Assistentes",
+    "params": [],
+    "returns": "{ model, temperature, instructions }",
+    "common_use_cases": [
+      "Ver modelo/temperatura/prompt base do Copiloto"
+    ],
+    "related_tools": [
+      "lionchat_copilot_settings_update"
+    ]
+  },
+  {
+    "id": "lionchat_copilot_settings_update",
+    "method": "PATCH",
+    "path": "/api/v1/accounts/{account_id}/captain/copilot_settings",
+    "title": "Salvar Config do Copiloto",
+    "description": "Salva modelo, temperatura e prompt base do Copiloto (admin). Motor proprio, independente do agente conversacional (padrao temperatura 0.3).",
+    "category": "Assistentes",
+    "params": [
+      {
+        "name": "model",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Modelo de IA"
+      },
+      {
+        "name": "temperature",
+        "type": "number",
+        "location": "body",
+        "required": false,
+        "description": "Temperatura (0.0-2.0; padrao 0.3)"
+      },
+      {
+        "name": "instructions",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Prompt base do Copiloto (ate 5000 chars)"
+      }
+    ],
+    "returns": "{ model, temperature, instructions }",
+    "common_use_cases": [
+      "Ajustar o comportamento do Copiloto da conta"
+    ],
+    "related_tools": [
+      "lionchat_copilot_settings_show"
     ]
   }
 ]

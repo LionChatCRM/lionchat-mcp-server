@@ -163,6 +163,11 @@ o painel humano usa. IA e integrações NUNCA passam force_update. Endpoint dedi
 `PATCH /contacts/{id}/cadastral` (tool `contacts_update_cadastral`). NÃO grave cadastral como
 custom_attribute. Regra absoluta relacionada: NUNCA sobrescrever `phone_number` já preenchido.
 
+**Lead só com CPF (2026-06):** um lead só com CPF (sem telefone/email) agora vira contato real
+pesquisável — o CPF fica em `identifier` (único) com fallback em `additional_attributes.cadastral.cpf`.
+A identificação por CPF acontece na ingestão de webhooks (pagamento, Meta Lead Ads, webhook
+universal); a superfície REST de contatos não mudou.
+
 **Padrões de `source_id` por canal:**
 - Waha: `5511999999999@c.us` (1-on-1) ou `120363xxx@g.us` (grupo) ou `XXXX@lid` (LID)
 - WhatsApp Cloud: `5511999999999` (E.164 sem prefixo)
@@ -242,6 +247,8 @@ Captain::Assistant
 │     activation_label (etiqueta que ativa o agente — unica por conta),
 │     min_response_time / max_response_time (delay humanizado, 1-60s),
 │     disabled_tools (array de IDs de tools desativadas pro assistente),
+│     (faq_lookup/search_articles NÃO são desligáveis — auto-gerenciadas: carregam só quando há
+│       FAQ/documento ou artigo publicado, e são escondidas do endpoint captain_assistants_tools)
 │     offer_ids / media_asset_ids / booking_event_type_ids (arrays de IDs vinculados),
 │     products (array legado de produtos)
 ├── guardrails (jsonb array de strings — limites duros injetados no prompt, ex: anti-pitch)
@@ -257,10 +264,16 @@ Captain::Scenario (cenários do assistente — instruções inline, sem handoff)
 ├── instruction (text — tools referenciadas como links markdown [Titulo](tool://id))
 ├── tools (jsonb — auto-extraído da instruction)
 ├── enabled (bool)
-└── trigger_type (llm_interpreted [default] | on_assistant_activation | on_first_customer_message)
-      ⚠️ trigger_type NAO é editável via API hoje — todo cenário criado por API fica em
-      llm_interpreted (a IA decide aplicar lendo a conversa). Os modos programáticos só
-      via banco/console por enquanto.
+├── trigger_type (llm_interpreted [default] | on_assistant_activation | on_first_customer_message)
+│     ⚠️ trigger_type NAO é editável via API hoje — todo cenário criado por API fica em
+│     llm_interpreted (a IA decide aplicar lendo a conversa). Os modos programáticos só
+│     via banco/console por enquanto.
+└── tool_bindings (jsonb — parâmetro FIXADO pelo admin por tool; "IA decide" = ausente/vazio)
+      send_media_asset → { asset_ids: [Int] } | create_kanban_item / move_kanban_item →
+        { funnel_id: Int, stage: "<key>" } | create_booking → { event_type_ids: [Int] }
+      Obs: via API/MCP, scenarios_update SÓ persiste send_media_asset/create_kanban_item/
+        move_kanban_item. O binding create_booking é só de UI/runtime — NÃO round-trippa pela API.
+        Use config.booking_event_type_ids no assistente pra restringir agendas via MCP.
 
 Captain::AssistantResponse (FAQ)
 ├── assistant_id (FK)

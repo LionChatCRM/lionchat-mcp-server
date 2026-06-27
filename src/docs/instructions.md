@@ -23,6 +23,7 @@ Account (conta/empresa)
  ├─ Funnel (funil Kanban) → FunnelStage (etapas)
  ├─ AutomationRule (regras de automação)
  ├─ Captain::Assistant (AI Agente / IA de atendimento)
+ │   └─ Captain::Scenario (instrução situacional; pode FIXAR parâmetro de tool em tool_bindings)
  ├─ AccountTask (agenda/tarefas)
  └─ Booking (agendamento de demonstração/reunião)
 ```
@@ -288,6 +289,8 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | **Importar histórico** de caixa WhatsApp Cloud (QR) | `lionchat_inboxes_whatsapp_history_start` / `_status` / `_cancel` | Admin-only + flag `qr_history_import`; só caixa oficial. Acompanhe `state` no `_status` |
 | **Definir supervisor** de caixa | `lionchat_inbox_members_create` / `_update` com `supervisor_ids[]` | Supervisor vê TUDO da caixa mas fica fora do rodízio (ver abaixo) |
 | Saber se a IA deve TOCAR a ligação WP (Wavoip) / marcar recusada | `lionchat_wavoip_should_ring` / `lionchat_wavoip_flag_rejected` | Controle fino do toque de chamada na caixa QR Code |
+| Restringir agendas que a IA oferece | `lionchat_captain_assistants_update` (`config.booking_event_type_ids: [Int]`) | binding de agenda por cenário NÃO é settable via API |
+| Configurar o Copiloto (modelo/temperatura/prompt base) | `lionchat_copilot_settings_update` | admin-only; copiloto tem motor próprio (padrão temp 0.3) |
 
 ## 9. Quando NÃO chamar nenhuma ferramenta
 

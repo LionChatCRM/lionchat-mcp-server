@@ -161,6 +161,27 @@ Como a coleta de dados/cenários funciona hoje (importante pra diagnosticar "IA 
   fica no "caderninho" da conversa (campo scenario_checklist, visível no card Raciocínio).
 - Sem AI Agente ativo na conversa = NENHUMA resposta de IA (motor V1 aposentado em 2026-06).
 
+## Cenários com parâmetro fixo e execução determinística (2026-06)
+
+- O admin pode FIXAR o parâmetro de uma ferramenta no cenário (campo scenario.tool_bindings): quais mídias enviar, qual funil+etapa do card, quais agendas no agendamento. "Deixar a IA decidir" = binding vazio.
+- Quando UM cenário fixa a tool, a execução vira determinística (a IA não escolhe): mídia e kanban são aplicados pós-turno pelo BindingResolver (ordem texto→ação, sem duplicar, idempotente); o agendamento força/restringe a agenda mas a IA ainda define data/hora.
+- Via MCP: scenarios_create/update persiste binding de send_media_asset e create_kanban_item/move_kanban_item (re-escopados por conta). O binding de create_booking NÃO é aceito pela API — pra limitar agendas via MCP, use config.booking_event_type_ids no assistente (captain_assistants_update).
+
+## Conhecimento passivo da IA: FAQ + artigos (RAG) (2026-06)
+
+- A IA já recebe no prompt a FAQ e os artigos da Central de Ajuda relevantes para a mensagem atual — automaticamente, sem chamar ferramenta. Só acontece quando há conteúdo cadastrado (FAQ/documento aprovado ou artigo publicado); sem conteúdo não gasta token nem embedding.
+- As ferramentas "Buscar FAQ" e "Buscar Artigos" são auto-gerenciadas: ligam sozinhas conforme o conteúdo e somem da tela de ferramentas (não são desligáveis por disabled_tools). Diagnóstico "IA não usa a base": confira se há FAQ APROVADA/documento, ou artigo PUBLICADO na Central de Ajuda.
+- A IA pode oferecer ao cliente o link do artigo (precisa de Portal com slug e domínio/FRONTEND_URL).
+
+## Anti-loop de ferramentas (custo) (2026-06)
+
+- Ferramentas (webhooks/custom tools e flows) que falham agora param sozinhas: a IA recebe aviso escalonado (1ª falha = no máximo 1 retry; 2ª+ da mesma tool = pare e siga sem ela ou transfira). Tetos por turno: 5 chamadas por ferramenta e 25 no total; ao estourar, a IA dá halt e cria nota mencionando um humano (sem desligar a IA).
+
+## Copilot age na conversa (2026-06)
+
+- O Copiloto do atendente tem motor próprio (modelo/temperatura da conta, padrão 0.3; prompt base em copilot_instructions), configurável em captain/copilot_settings (admin).
+- Ele EXECUTA ações na conversa aberta, dentro da permissão do atendente: ações reversíveis (kanban, etiqueta, nota, prioridade, atribuir, resolver, contato) na hora; ações que falam com o cliente (mídia, agendar mensagem, agendamento) viram proposta que o atendente confirma/cancela. Histórico é por conversa.
+
 ## Automações: atributo de Conversa vs de Contato (2026-06)
 
 Atributos customizados podem existir com o MESMO nome nos dois escopos (ex: utm_source).
