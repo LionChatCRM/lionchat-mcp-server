@@ -14521,6 +14521,13 @@
         "location": "body",
         "required": true,
         "description": "Componentes do template"
+      },
+      {
+        "name": "variable_mapping",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Opcional. Mapeia variaveis {{N}} do corpo a campos do sistema para auto-preenchimento no envio (NAO vai para a Meta, fica salvo localmente). Chave = posicao da variavel (\"1\", \"2\"...), valor = objeto {source, field, label}. Ex: {\"1\": {\"source\": \"contact\", \"field\": \"name.split.first\", \"label\": \"Primeiro nome\"}}. Variavel sem mapping continua manual (digitada no envio). Fontes/campos: contact/name (Nome completo), contact/name.split.first (Primeiro nome), contact/name.split[1..] (Sobrenome), contact/phone_number, contact/email, conversation/assignee.name (Atendente), conversation/team.name (Equipe), account/name, ou contact/custom_attributes.CHAVE para campo personalizado."
       }
     ],
     "returns": "template WhatsApp criado (com novo ID)",
@@ -14640,6 +14647,13 @@
         "location": "body",
         "required": false,
         "description": "Componentes atualizados"
+      },
+      {
+        "name": "variable_mapping",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Opcional. Mapeia variaveis {{N}} a campos do sistema para auto-preenchimento no envio (NAO vai para a Meta). Chave = posicao da variavel (\"1\", \"2\"...), valor = objeto {source, field, label}. Ex: {\"1\": {\"source\": \"contact\", \"field\": \"name.split.first\", \"label\": \"Primeiro nome\"}}. Mesmas fontes/campos do endpoint de criacao."
       }
     ],
     "returns": "{ success: true }",
@@ -14652,6 +14666,33 @@
       "lionchat_inboxes_whatsapp_templates_list",
       "lionchat_inboxes_whatsapp_templates_create",
       "lionchat_inboxes_whatsapp_templates_destroy"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_sync_templates",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/sync_templates",
+    "title": "Sincronizar Templates WhatsApp",
+    "description": "Sincroniza (puxa) os templates de WhatsApp da Meta para a caixa, atualizando nome, corpo e status no LionChat. SOMENTE Channel::Whatsapp Cloud. Use logo apos criar/editar um template via API: a criacao retorna so id/status e o conteudo so aparece na tela depois deste sync.",
+    "category": "Templates WhatsApp",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da inbox"
+      }
+    ],
+    "returns": "{ message: 'Template sync initiated successfully' } — dispara o job de sincronizacao",
+    "common_use_cases": [
+      "Tornar visivel um template recem-criado via API (sai do estado vazio)",
+      "Atualizar status (aprovado/recusado) dos templates"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_whatsapp_templates_create",
+      "lionchat_inboxes_whatsapp_templates_create_2",
+      "lionchat_inboxes_whatsapp_templates_list"
     ]
   },
   {

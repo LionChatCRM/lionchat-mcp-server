@@ -261,6 +261,48 @@ Pra dados fixos que se repetem (slogans, endereços, horários):
 
 Nunca hard-code esses dados em respostas geradas.
 
+## Templates WhatsApp com variáveis do sistema (auto-preenchimento) (2026-06)
+
+Ao criar/editar um template WhatsApp (`inboxes_whatsapp_templates_create` / `_create_2`), o corpo usa
+variáveis posicionais `{{1}}`, `{{2}}`. Por padrão elas são **manuais** (o atendente digita o valor no
+envio). Pra deixar uma variável **auto-preenchida** com um campo do contato/conversa, mande o parâmetro
+opcional `variable_mapping` junto.
+
+- Formato: objeto com chave = posição da variável (`"1"`, `"2"`...) e valor = `{ source, field, label }`.
+- Só entram no mapping as que devem auto-preencher; as demais `{{N}}` continuam manuais.
+- O `variable_mapping` é salvo localmente (NÃO vai pra Meta) e usado no momento do envio.
+
+Exemplo — `{{1}}` vira o primeiro nome do contato:
+
+```json
+{
+  "components": [
+    { "type": "BODY", "text": "Olá {{1}}! Sua oferta de {{2}} está ativa.",
+      "example": { "body_text": [["Maria", "20%"]] } }
+  ],
+  "variable_mapping": {
+    "1": { "source": "contact", "field": "name.split.first", "label": "Primeiro nome" }
+  }
+}
+```
+
+Fontes/campos disponíveis (`source` / `field`):
+
+| Variável | source | field |
+|---|---|---|
+| Nome completo | contact | name |
+| Primeiro nome | contact | name.split.first |
+| Sobrenome | contact | name.split[1..] |
+| Telefone | contact | phone_number |
+| E-mail | contact | email |
+| Atendente | conversation | assignee.name |
+| Equipe | conversation | team.name |
+| Nome da conta | account | name |
+| Campo personalizado | contact | custom_attributes.CHAVE |
+
+Lembrete: todo template recém-criado pelo MCP só mostra o texto na tela depois de **sincronizar**
+(o MCP cria na Meta, mas o "puxar de volta" o conteúdo é o que a tela faz com o botão Sincronizar).
+
 ## Status codes a respeitar
 
 | Code | O que fazer |
