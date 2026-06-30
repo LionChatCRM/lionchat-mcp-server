@@ -248,7 +248,7 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 | `conversation_has_agent` / `conversation_no_agent` / `conversation_not_agent` | agente atribuído |
 | `contact_has_label` / `contact_no_label` / `conversation_has_label` / `conversation_no_label` | labels |
 | `kanban_exists` / `kanban_in_stage` / `kanban_won` / `kanban_lost` | card no funil (usa `funnel_id` + `stage`) |
-| `card_attr_equals` / `card_attr_contains` | atributo do card (`attrSource: 'card'` + `attr_key`) |
+| `card_attr_equals` / `card_attr_contains` | atributo do card (`attrSource: 'card'` + `attr_key`; aceita `card_source: 'trigger'` p/ ler o card que iniciou o flow) |
 | `pagetrack_visited` / `pagetrack_event` | LionTrack |
 | `sla_check` | status do SLA da conversa (usa `value` = código fixo; ver abaixo) |
 
@@ -326,6 +326,8 @@ Ex.: `{ "operator": "sla_check", "value": "frt_breached" }`. "Estourado" = o mon
 | `deactivate_captain` | `{}` | Tira a IA da conversa |
 
 **Handles que SAEM:** `success`. Não tem handle `error` — falhas viram warning silencioso e o flow continua.
+
+**`card_source` (blocos de card) — opcional:** as ações de card aceitam `card_source`: `'funnel'` (default — procura o card pelo `funnel_id`) ou `'trigger'` (usa o card que DISPAROU o flow, em flows iniciados por `card_created`/`card_moved`/`card_won`/`card_lost`). Com `'trigger'`, `funnel_id` deixa de ser obrigatório — EXCETO em `move_kanban_stage`/`create_kanban_item`, cujo funil/etapa são o DESTINO. Sem card-gatilho disponível, a ação é pulada (não cai no fallback de funil). Aplica-se a `move_kanban_stage`, `set_won`/`set_lost`/`set_open`, `assign_agent_card`, `add_card_note`, `update_attribute` (com `attr_source: 'card'`) e às condições `card_attr_equals`/`card_attr_contains` (gravando `card_source` na própria regra).
 
 **`update_attribute` — campos EXATOS:** `attr_source` (`'contact'`, `'conversation'` ou `'card'`), `attr_key` (nome do atributo), `attr_value` (valor). NÃO existem `entity`/`key`/`value` — esses são ignorados e não salvam nada.
 
