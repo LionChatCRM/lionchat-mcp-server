@@ -1901,6 +1901,13 @@
         "location": "body",
         "required": false,
         "description": "Arquivos anexos"
+      },
+      {
+        "name": "content_attributes",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Atributos livres da mensagem (objeto). Chaves uteis: coex_backup=true => envia fora da janela de 24h via sessao WAHA so-envio (caixa Cloud em coexistencia); reply_mode='public'|'private' + in_reply_to_comment_id => responde a um comentario do Instagram; in_reply_to => cita/responde outra mensagem pelo id."
       }
     ],
     "returns": "mensagem criada",
@@ -2295,7 +2302,7 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Configurações"
+        "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). Cada automacao: {id, enabled, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value (id da etapa p/ stage_moved; status p/ status_change; vazio p/ card_created), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (ex.: move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations)."
       },
       {
         "name": "funnel.global_custom_attributes",
@@ -2374,7 +2381,7 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Configurações"
+        "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). Cada automacao: {id, enabled, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value (id da etapa p/ stage_moved; status p/ status_change; vazio p/ card_created), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (ex.: move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations)."
       }
     ],
     "returns": "funil atualizado",
@@ -3997,6 +4004,13 @@
         "location": "body",
         "required": false,
         "description": "BOTAO DE PANICO: true pausa TODA a IA do assistente (respostas, follow-ups, callbacks) sem perder config. Top-level, auditado"
+      },
+      {
+        "name": "config.follow_up_skip_conditions",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Condicoes para a IA NAO fazer follow-up (ate 3). Array de objetos, ex.: {type, operator, attribute, value, labels:[]}."
       }
     ],
     "returns": "assistente AI criado (com novo ID)",
@@ -4208,6 +4222,13 @@
         "location": "body",
         "required": false,
         "description": "BOTAO DE PANICO: true pausa TODA a IA do assistente (respostas, follow-ups, callbacks) sem perder config. Top-level, auditado"
+      },
+      {
+        "name": "config.follow_up_skip_conditions",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Condicoes para a IA NAO fazer follow-up (ate 3). Array de objetos, ex.: {type, operator, attribute, value, labels:[]}."
       }
     ],
     "returns": "assistente AI atualizado",
@@ -6191,7 +6212,15 @@
     "title": "Listar Threads Copilot",
     "description": "Lista as threads do Copilot.",
     "category": "Assistentes",
-    "params": [],
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtra as threads do Copiloto pela conversa (conversation_display_id)."
+      }
+    ],
     "returns": "meta (contadores globais) + payload (array de assistentes AI)",
     "common_use_cases": [
       "Dashboard: contar/exibir assistentes AI",
@@ -18172,9 +18201,73 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/kanban_config",
     "title": "Criar Configuracao Kanban",
-    "description": "Cria a configuracao do Kanban. Cria novo config Kanban. Valida unicidade quando aplicável. Retorna o config Kanban criado com ID atribuído.",
+    "description": "Cria a configuracao do Kanban da conta (singleton). Aceita: checklist_templates (templates de checklist reutilizaveis aplicados aos cards), win_reasons/loss_reasons (motivos de ganho/perda), global_custom_attributes (atributos dos cards), config (preferencias) e webhook (url/secret/events).",
     "category": "Config Kanban",
-    "params": [],
+    "params": [
+      {
+        "name": "kanban_config.checklist_templates",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Templates de checklist reutilizaveis aplicaveis aos cards. Formato: [{id, name, items:[{id, text}]}]"
+      },
+      {
+        "name": "kanban_config.win_reasons",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Motivos de ganho do funil. Formato: [{id, title}]"
+      },
+      {
+        "name": "kanban_config.loss_reasons",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Motivos de perda do funil. Formato: [{id, title}]"
+      },
+      {
+        "name": "kanban_config.global_custom_attributes",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Atributos personalizados globais dos cards. Formato: [{name, type, is_list, list_values:[]}]"
+      },
+      {
+        "name": "kanban_config.config",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Preferencias do Kanban: title, default_view, auto_assignment, notifications_enabled, support_email, support_phone, support_chat_hours, support_chat_enabled, dragbar_enabled, quick_message_enabled, list_view_enabled, agenda_view_enabled"
+      },
+      {
+        "name": "kanban_config.enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Habilita/desabilita a config (afeta o webhook)"
+      },
+      {
+        "name": "kanban_config.webhook_url",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "URL do webhook do Kanban"
+      },
+      {
+        "name": "kanban_config.webhook_secret",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Segredo HMAC do webhook"
+      },
+      {
+        "name": "kanban_config.webhook_events",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Eventos do webhook habilitados (array de strings)"
+      }
+    ],
     "returns": "config Kanban criado (com novo ID)",
     "common_use_cases": [
       "Cadastro inicial de config Kanban",
@@ -18192,9 +18285,73 @@
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/kanban_config",
     "title": "Atualizar Configuracao Kanban",
-    "description": "Atualiza a configuracao do Kanban. Atualiza campos do config Kanban existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados.",
+    "description": "Atualiza a configuracao do Kanban da conta. Atualizacao parcial — so os campos enviados mudam. Use para criar/editar checklist_templates (templates de checklist dos cards), win_reasons/loss_reasons (motivos de ganho/perda), global_custom_attributes (atributos dos cards), config (preferencias) e webhook (url/secret/events).",
     "category": "Config Kanban",
-    "params": [],
+    "params": [
+      {
+        "name": "kanban_config.checklist_templates",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Templates de checklist reutilizaveis aplicaveis aos cards. Formato: [{id, name, items:[{id, text}]}]"
+      },
+      {
+        "name": "kanban_config.win_reasons",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Motivos de ganho do funil. Formato: [{id, title}]"
+      },
+      {
+        "name": "kanban_config.loss_reasons",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Motivos de perda do funil. Formato: [{id, title}]"
+      },
+      {
+        "name": "kanban_config.global_custom_attributes",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Atributos personalizados globais dos cards. Formato: [{name, type, is_list, list_values:[]}]"
+      },
+      {
+        "name": "kanban_config.config",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Preferencias do Kanban: title, default_view, auto_assignment, notifications_enabled, support_email, support_phone, support_chat_hours, support_chat_enabled, dragbar_enabled, quick_message_enabled, list_view_enabled, agenda_view_enabled"
+      },
+      {
+        "name": "kanban_config.enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Habilita/desabilita a config (afeta o webhook)"
+      },
+      {
+        "name": "kanban_config.webhook_url",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "URL do webhook do Kanban"
+      },
+      {
+        "name": "kanban_config.webhook_secret",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Segredo HMAC do webhook"
+      },
+      {
+        "name": "kanban_config.webhook_events",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Eventos do webhook habilitados (array de strings)"
+      }
+    ],
     "returns": "config Kanban atualizado",
     "common_use_cases": [
       "Edição parcial de config Kanban",
@@ -24362,6 +24519,84 @@
     "related_tools": [
       "lionchat_inboxes_whatsapp_history_start",
       "lionchat_inboxes_whatsapp_history_status"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_coex_backup_connect",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/coex_backup/connect",
+    "title": "Conectar Saida de Emergencia (Coex)",
+    "description": "Provisiona/conecta a sessao WAHA so-envio (retorna QR) de uma caixa WhatsApp Cloud em coexistencia, usada para enviar texto fora da janela de 24h. Requer admin + feature 'coexistence_backup_send' + caixa Cloud em coexistencia.",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (inbox)"
+      }
+    ],
+    "returns": "Estado da sessao de emergencia (state, qr, connected)",
+    "common_use_cases": [
+      "Ativar o envio fora da janela de 24h numa caixa Cloud",
+      "Exibir o QR para parear o numero de emergencia"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_coex_backup_status",
+      "lionchat_inboxes_coex_backup_disconnect"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_coex_backup_status",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/coex_backup/status",
+    "title": "Status da Saida de Emergencia (Coex)",
+    "description": "Retorna o estado da sessao WAHA so-envio da caixa (state, qr, connected). Nunca levanta erro. Requer admin + feature 'coexistence_backup_send'.",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (inbox)"
+      }
+    ],
+    "returns": "{ state, qr, connected }",
+    "common_use_cases": [
+      "Verificar se a saida de emergencia esta conectada",
+      "Buscar o QR atual durante o pareamento"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_coex_backup_connect",
+      "lionchat_inboxes_coex_backup_disconnect"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_coex_backup_disconnect",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/coex_backup/disconnect",
+    "title": "Desconectar Saida de Emergencia (Coex)",
+    "description": "Desconecta/destroi a sessao WAHA so-envio da caixa Cloud em coexistencia. Requer admin + feature 'coexistence_backup_send'.",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (inbox)"
+      }
+    ],
+    "returns": "Resultado da desconexao",
+    "common_use_cases": [
+      "Desligar o envio fora da janela de 24h",
+      "Limpar a sessao de emergencia da caixa"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_coex_backup_connect",
+      "lionchat_inboxes_coex_backup_status"
     ]
   },
   {
