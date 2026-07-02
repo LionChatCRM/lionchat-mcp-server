@@ -261,6 +261,57 @@ Pra dados fixos que se repetem (slogans, endereços, horários):
 
 Nunca hard-code esses dados em respostas geradas.
 
+## Variável dinâmica: atributo do contato escolhe a variável da conta (2026-07)
+
+Receita pra quando a mensagem precisa puxar um valor que DEPENDE de um campo do contato.
+Exemplo clássico: contato tem `unidade_de_atendimento` (Sorocaba) e a mensagem deve trazer
+o endereço DAQUELA unidade sem o atendente escolher nada.
+
+A técnica é busca indireta (indirect lookup) em Liquid: montar o NOME da variável da conta
+usando o VALOR do atributo do contato e buscar por colchete `account.custom_attribute[chave]`.
+
+### Peças a criar (todas têm tool no MCP)
+
+1. Atributo de contato tipo lista (`custom_attributes_create`): ex. `unidade_de_atendimento`
+   com valores `sorocaba`, `tatuape`... (slugs limpos: sem acento, sem espaço).
+2. Uma variável da conta por opção (`account_variables_create`), nomeada `prefixo_` + valor:
+   `endereco_sorocaba`, `endereco_tatuape`...
+3. Resposta pronta (`canned_responses_create`) usando a sintaxe abaixo.
+
+### Sintaxe que funciona
+
+```text
+Seu atendimento será na unidade {{contact.custom_attribute.unidade_de_atendimento}}.
+Endereço: {% assign chave = "endereco_" | append: contact.custom_attribute.unidade_de_atendimento | downcase %}{% echo account.custom_attribute[chave] %}
+```
+
+### Regras críticas (confirmadas no código)
+
+- A parte dinâmica DEVE usar `{% assign %}` + `{% echo %}` (tags `{% %}`), NUNCA `{{ }}`:
+  a caixa de mensagem substitui/apaga `{{ }}` desconhecido antes de enviar; tags `{% %}`
+  passam intactas e o backend (Liquid 5) resolve na criação da mensagem.
+- Variáveis simples conhecidas (ex. `{{contact.custom_attribute.unidade_de_atendimento}}`)
+  podem ficar em `{{ }}` normalmente.
+- Casamento da chave: o valor do atributo, em minúsculo, precisa bater EXATAMENTE com o
+  final do nome da variável da conta (`sorocaba` -> `endereco_sorocaba`). Por isso os
+  valores da lista devem ser slugs sem acento/espaço. O `| downcase` cobre maiúsculas,
+  mas NÃO remove acento nem espaço.
+- NÃO envolva o trecho Liquid em crase/backticks: código entre crases vira `{% raw %}`
+  (não processa) — a mensagem sairia com o código literal.
+- Variável da conta tipo `secret` sai VAZIA em mensagem (bloqueio de segurança; só resolve
+  em nó API Request do FlowBuilder).
+- Onde resolve: mensagens outgoing, respostas prontas, campanhas e automações. NÃO resolve
+  nas instruções do AI Agente.
+- Se a chave montada não existir, o `{% echo %}` sai vazio (sem erro). Teste com um contato
+  de cada valor da lista antes de entregar.
+
+### Padrão geral (serve pra qualquer caso)
+
+- Atributo do contato = o seletor (unidade, plano, cidade...).
+- Variáveis da conta = a tabela de valores (`endereco_X`, `preco_X`, `link_X`...).
+- Mensagem monta a chave: `"prefixo_" | append: valor_do_contato | downcase` e busca com
+  `account.custom_attribute[chave]`.
+
 ## Templates WhatsApp com variáveis do sistema (auto-preenchimento) (2026-06)
 
 Ao criar/editar um template WhatsApp (`inboxes_whatsapp_templates_create` / `_create_2`), o corpo usa

@@ -7163,7 +7163,7 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Modo de atribuição de conversas no time"
+        "description": "Modo de atribuicao de conversas no time. Valores: 'online_only' (padrao — so atribui a agentes com status online no momento) ou 'include_offline' (rodizio entre TODOS os agentes do time, mesmo offline)."
       }
     ],
     "returns": "time/equipe criado (com novo ID)",
@@ -7217,7 +7217,7 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Modo de atribuição de conversas no time"
+        "description": "Modo de atribuicao de conversas no time. Valores: 'online_only' (padrao — so atribui a agentes com status online no momento) ou 'include_offline' (rodizio entre TODOS os agentes do time, mesmo offline)."
       }
     ],
     "returns": "time/equipe atualizado",
@@ -12957,6 +12957,13 @@
         "location": "body",
         "required": false,
         "description": "Nome"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nova descricao do cargo"
       },
       {
         "name": "permissions",
@@ -19903,6 +19910,26 @@
     ]
   },
   {
+    "id": "lionchat_agents_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/agents",
+    "title": "Listar Agentes",
+    "description": "Lista todos os agentes (usuarios) da conta. Retorna id, name, email, availability_status, confirmed, role (agent ou administrator) e, no Enterprise, custom_role_id (ID do cargo personalizado aplicado ao agente, ou null). Use para descobrir os IDs dos agentes antes de atualizar papel/cargo, reatribuir recursos ou auditar a equipe.",
+    "category": "Agentes",
+    "params": [],
+    "returns": "array de agentes (id, name, email, role, custom_role_id, availability_status, confirmed)",
+    "common_use_cases": [
+      "Descobrir o ID de um agente antes de atualizar ou remover",
+      "Auditar quem e administrador, agente puro ou tem cargo personalizado",
+      "Listar a equipe para aplicar um cargo personalizado em massa"
+    ],
+    "related_tools": [
+      "lionchat_agents_update",
+      "lionchat_agents_create",
+      "lionchat_custom_roles_list"
+    ]
+  },
+  {
     "id": "lionchat_agents_create",
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/agents",
@@ -19944,6 +19971,13 @@
         "location": "body",
         "required": false,
         "description": "Define se o agente fica offline automaticamente por inatividade"
+      },
+      {
+        "name": "custom_role_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "ID do cargo personalizado (custom role) a aplicar ja no convite. Requer Enterprise. Use lionchat_custom_roles_list para obter os IDs. Envie junto com role=agent (cargo personalizado e sempre nivel agente)."
       }
     ],
     "returns": "agente convidado (com novo ID)",
@@ -19958,11 +19992,37 @@
     ]
   },
   {
+    "id": "lionchat_agents_resend_invitation",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/agents/{id}/resend_invitation",
+    "title": "Reenviar Convite do Agente",
+    "description": "Reenvia o e-mail de convite (confirmacao de acesso) para um agente que ainda nao confirmou a conta. Retorna erro se o agente ja estiver confirmado. Rate limit: 1 envio por minuto por agente (429 com retry_after se chamar cedo demais).",
+    "category": "Agentes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do agente"
+      }
+    ],
+    "returns": "message: sent + email do agente | 422 se ja confirmado | 429 se rate-limited",
+    "common_use_cases": [
+      "Agente novo nao recebeu ou perdeu o e-mail de convite",
+      "Reativar acesso de agente que nunca confirmou a conta"
+    ],
+    "related_tools": [
+      "lionchat_agents_list",
+      "lionchat_agents_create"
+    ]
+  },
+  {
     "id": "lionchat_agents_update",
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/agents/{id}",
     "title": "Atualizar Agente",
-    "description": "Atualiza um agente existente. Campos suportados: name, role (agent ou administrator), availability, auto_offline. Use para promover/rebaixar papel ou ajustar disponibilidade.",
+    "description": "Atualiza um agente existente. Campos suportados: name, role (agent ou administrator), availability, auto_offline e custom_role_id (aplica um cargo personalizado no Enterprise). Use para promover/rebaixar papel, ajustar disponibilidade ou aplicar um cargo personalizado.",
     "category": "Agentes",
     "params": [
       {
@@ -19999,16 +20059,26 @@
         "location": "body",
         "required": false,
         "description": "Define se o agente fica offline automaticamente por inatividade"
+      },
+      {
+        "name": "custom_role_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "ID do cargo personalizado (custom role) a aplicar ao agente. Requer Enterprise. IMPORTANTE: o backend aplica este campo em TODA atualizacao do agente — se voce atualizar um agente que tem cargo personalizado SEM enviar custom_role_id, o cargo sera REMOVIDO. Ao editar um agente que tem cargo, envie sempre o custom_role_id junto. Use lionchat_custom_roles_list para obter os IDs dos cargos."
       }
     ],
     "returns": "agente atualizado",
     "common_use_cases": [
       "Promover um agente a administrador",
       "Alterar disponibilidade de um agente",
-      "Ajustar o comportamento de offline automático"
+      "Ajustar o comportamento de offline automático",
+      "Aplicar um cargo personalizado (custom role) a um agente"
     ],
     "related_tools": [
-      "lionchat_agents_create"
+      "lionchat_agents_create",
+      "lionchat_agents_list",
+      "lionchat_custom_roles_list"
     ]
   },
   {
