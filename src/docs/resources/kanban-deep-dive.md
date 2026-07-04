@@ -350,7 +350,7 @@ Existem **dois sistemas paralelos** de automação. Não confundir.
 
 ### Sistema 1: `funnel.settings.automations` — DENTRO de um funil específico
 
-Automações que rodam ao mudar o STATUS de um card (Ganho/Perdido) ou criar card. Atuam sobre o card e podem mover/duplicar entre funis. **Configurado por funil**, dentro de `funnel.settings.automations`.
+Automações que rodam ao criar um card, mover de etapa ou mudar o STATUS (Ganho/Perdido). Atuam sobre o card e podem mover/duplicar entre funis. **Configurado por funil**, dentro de `funnel.settings.automations`.
 
 ```json
 PUT /api/v1/accounts/43/funnels/43
@@ -361,22 +361,23 @@ PUT /api/v1/accounts/43/funnels/43
         {
           "id": "automation_1776517249424",
           "enabled": true,
-          "trigger_type": "status_changed",
+          "trigger_type": "status_change",
           "trigger_value": "won",
-          "action": "duplicate_to_funnel",
+          "action": "duplicate_item",
           "action_config": {
-            "target_funnel_id": 44,
-            "target_stage": "agendar_instalacao"
+            "funnel_id": 44,
+            "stage": "agendar_instalacao"
           }
         },
         {
+          "id": "automation_1776517249425",
+          "enabled": true,
           "trigger_type": "card_created",
           "trigger_value": "card_created",
           "action": "apply_checklist_template",
           "action_config": {
             "template_id": "ct-onboarding-001"
-          },
-          "enabled": true
+          }
         }
       ]
     }
@@ -384,10 +385,35 @@ PUT /api/v1/accounts/43/funnels/43
 }
 ```
 
-**Triggers:** `card_created`, `status_changed` (com `trigger_value: "won" | "lost"`), `stage_changed`.
-**Ações:** `duplicate_to_funnel` (criar card noutro funil), `apply_checklist_template`, `assign_agent`, `send_message`, `set_priority`.
+**Triggers (`trigger_type` + `trigger_value` — SEMPRE preencher os dois):**
 
-Use para: "ao ganhar um card de Vendas → criar automaticamente em Pós-Venda na etapa Agendar Instalação".
+| trigger_type | trigger_value |
+|---|---|
+| `card_created` | `"card_created"` (literal — NUNCA vazio) |
+| `status_change` | `"won"` ou `"lost"` |
+| `stage_moved` | chave da etapa de DESTINO no hash `funnel.stages` (ex. `"agendar_instalacao"` — a chave, NÃO o campo `id` interno) |
+
+**Ações (`action` + `action_config`):**
+
+| action | action_config | Observação |
+|---|---|---|
+| `move_to_stage` | `{stage}` | NUNCA executa com trigger `stage_moved` (anti-loop do backend) |
+| `assign_agent` | `{agent_id}` | Agente precisa ter acesso ao funil, senão é ignorado |
+| `create_note` | `{note_text}` | Cria nota no card com autor "Sistema" |
+| `notify_team` | `{message}` | HOJE só registra em log interno — não notifica ninguém de verdade |
+| `duplicate_item` | `{funnel_id, stage}` | Cria cópia noutro funil/etapa; título ganha sufixo "(cópia)" |
+| `send_webhook` | `{webhook_url}` | POST com payload completo do card (fire-and-forget) |
+| `apply_checklist_template` | `{template_id}` | Template de `kanban_config.checklist_templates`; aditivo (appenda) |
+| `update_checklist` | `{checklist_updates: [{checklist_item_id, completed, text}]}` | Não aparece na UI — só via API |
+
+**Regras críticas (gravar diferente disso = automação perdida ou morta):**
+
+- `trigger_value` vazio ou `enabled: false` → a UI DESCARTA a automação no próximo "Salvar" do usuário. Nunca grave automação desabilitada "pra ativar depois".
+- Nomes de trigger/action fora das tabelas acima (ex.: `status_changed`, `duplicate_to_funnel`, `send_message`, `set_priority` — NÃO existem) são salvos mas NUNCA disparam, sem erro nenhum.
+- `id` no formato `automation_<timestamp_ms>` — a UI usa pra editar/remover a automação.
+- Trigger `card_created` + ação `duplicate_item` funciona (backend tem anti-loop), mas a UI esconde essa combinação.
+
+Use para: "ao ganhar um card de Vendas → criar automaticamente em Pós-Venda na etapa Agendar Instalação" (`status_change`/`won` + `duplicate_item`).
 
 ### Sistema 2: AutomationRule global — eventos da conta
 

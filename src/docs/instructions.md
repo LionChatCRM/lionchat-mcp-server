@@ -129,7 +129,7 @@ Antes de criar um `custom_attribute`, cheque se a feature já tem campo NATIVO:
 |---|---|---|
 | Motivos de Ganho/Perda | `kanban_config.win_reasons` / `loss_reasons` | ❌ |
 | Checklist reusável | `kanban_config.checklist_templates` | ❌ |
-| Automação ganho→outro funil | `funnel.settings.automations` action `duplicate_to_funnel` | ❌ |
+| Automação ganho→outro funil | `funnel.settings.automations` action `duplicate_item` | ❌ |
 | Tag transversal | `Label` | ❌ |
 
 Mais em `lionchat://docs/glossary` → "Quando usar campo nativo vs custom_attribute".

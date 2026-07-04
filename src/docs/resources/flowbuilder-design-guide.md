@@ -243,7 +243,7 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 | `is_number` / `is_letter` / `is_email` / `is_phone` | validação de formato |
 | `regex` | padrão regex em `value` |
 | `equal_any` / `not_equal_any` / `contains_any` | multi-valor (usa `values` array) |
-| `business_hours` / `outside_business_hours` | horário comercial |
+| `business_hours` / `outside_business_hours` | horário comercial (par: dentro/fora). `business_hours` aceita `start_hour`/`end_hour` (0-23), `days` (array 0=Dom..6=Sab, ausente=todos) e **`timezone`** (IANA, ex.: `America/Sao_Paulo` — default se ausente). **REGRA:** a saída `outside_business_hours` HERDA `start_hour`/`end_hour`/`days`/`timezone` da `business_hours` ANTERIOR no array — pode deixá-los ausentes na "fora" (o backend preenche). O horário é avaliado no `timezone` (não em UTC) |
 | `can_reply` / `can_reply_closed` | janela 24h aberta/fechada |
 | `conversation_has_agent` / `conversation_no_agent` / `conversation_not_agent` | agente atribuído |
 | `contact_has_label` / `contact_no_label` / `conversation_has_label` / `conversation_no_label` | labels |

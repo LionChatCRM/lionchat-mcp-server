@@ -488,7 +488,7 @@ LionChat tem vários conceitos com modelos próprios na plataforma. Custom attri
 |---|---|---|
 | Motivo de Ganho/Perda do card | criar custom_attribute "Motivo de Ganho" | popular `kanban_config.win_reasons` |
 | Checklist reusável em vários cards | criar custom_attribute lista | popular `kanban_config.checklist_templates` + automação `apply_checklist_template` |
-| Automação "ao Ganhar → criar card noutro funil" | regra AutomationRule complexa | popular `funnel.settings.automations` com `action: duplicate_to_funnel` |
+| Automação "ao Ganhar → criar card noutro funil" | regra AutomationRule complexa | popular `funnel.settings.automations` com `action: duplicate_item` |
 | Atributo em todo card | criar 1 custom_attribute pra cada funil | popular `kanban_config.global_custom_attributes` (vale pra todos) |
 | Cadastrar CPF do contato | usar campo do funil | criar `custom_attribute_definitions` model=contact_attribute |
 | Tag "cliente residencial" | criar custom_attribute | criar `Label` |
