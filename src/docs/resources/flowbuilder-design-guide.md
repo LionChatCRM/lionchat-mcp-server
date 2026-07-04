@@ -120,6 +120,14 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 
 **Handles que SAEM:** `success` (sem botões); com botões → `button_<value>` (um por botão) + `no_response` + `error`.
 
+**Timeout dos botões (opcional, no MESMO item de botões):**
+- `buttons_timeout` (número) + `buttons_timeout_unit` (`"minutes"` | `"hours"` | `"days"`) → tempo de espera sem resposta. Só com `buttons_timeout > 0` existe o handle `no_reply_timeout`.
+- `buttons_timeout_action`: `"advance"` (padrão) | `"remind"`.
+  - `"advance"`: ao esgotar o tempo, segue o handle `no_reply_timeout` (ex: manda pro atendimento humano).
+  - `"remind"`: manda UM lembrete (`buttons_reminder_text`) e CONTINUA aguardando o clique no MESMO menu; se ainda não responder, segue o `no_reply_timeout`. O clique (no menu original OU no lembrete) continua o flow normalmente.
+- `buttons_reminder_text` (string) → texto do lembrete (só no modo `remind`; vazio = reenvia o conteúdo original).
+- **REGRA do modo `remind`:** `buttons_timeout_unit` NÃO pode ser `"days"` e horas ≤ 23 — o lembrete precisa caber na janela de 24h do WhatsApp oficial. No modo `"advance"`, qualquer unidade/valor é permitido.
+
 > ⚠️ **SAÍDAS CONDICIONAIS — NUNCA ligue edge nelas sem ativar a condição.** Estas saídas SÓ existem
 > quando a config abaixo está presente. Ligar edge nelas sem isso cria uma **aresta fantasma** (linha
 > que sai do nada no canvas, não roteia nada):

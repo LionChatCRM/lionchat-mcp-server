@@ -443,6 +443,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   ATENCAO: messageItems (NAO items).
   Botoes: item text com buttons_enabled=true + buttons:[{title,value}] gera handle "button_{value}"
   por botao + "no_response" (texto livre em vez de clique) + "no_reply_timeout" (se timeout).
+  Timeout (opcional, mesmo item): buttons_timeout + buttons_timeout_unit (minutes|hours|days).
+  buttons_timeout_action: "advance" (padrao, segue no_reply_timeout ao esgotar) | "remind" (manda 1
+  lembrete buttons_reminder_text e CONTINUA esperando; depois segue no_reply_timeout). No modo remind
+  a unidade NAO pode ser days e horas <= 23 (janela 24h do WhatsApp).
   Handles sem botoes: "success", "error".
 
 ▸ wait_response
