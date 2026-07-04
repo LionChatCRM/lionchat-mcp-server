@@ -121,7 +121,7 @@ Um card individual dentro de uma etapa.
 | `custom_attributes` | jsonb — campos custom (igual contatos) |
 | `assigned_agents` | jsonb array de agentes responsáveis |
 | `activities` | jsonb array — log de atividades |
-| `checklist` | jsonb array de tarefas dentro do card |
+| `checklist` | jsonb array de tarefas dentro do card (item: `text`/`completed`/`position` + `group_id`/`group_name` opcionais para agrupar) |
 | `timer_started_at`, `timer_duration` | Timer interno do card |
 
 ### item_details (detalhes do card)
@@ -224,22 +224,51 @@ Tipos comuns: `created`, `stage_changed`, `agent_assigned`, `agent_removed`, `no
 
 ## Checklist (tarefas dentro do card)
 
+Array plano de itens. Cada item pode (opcionalmente) pertencer a um grupo via `group_id` +
+`group_name`. Item SEM `group_id` = avulso (solto, fora de qualquer grupo).
+
 ```json
 [
   {
     "id": "abc-123",
-    "title": "Enviar proposta por email",
-    "checked": true,
-    "completed_at": "2026-05-15T10:00:00Z",
-    "completed_by": 5
+    "text": "Enviar proposta por email",
+    "completed": true,
+    "position": 0,
+    "group_id": "grp-uuid-1",
+    "group_name": "Modelo Comercial"
   },
   {
     "id": "abc-124",
-    "title": "Agendar follow-up",
-    "checked": false
+    "text": "Agendar follow-up",
+    "completed": false,
+    "position": 1,
+    "group_id": "grp-uuid-1",
+    "group_name": "Modelo Comercial"
+  },
+  {
+    "id": "abc-125",
+    "text": "Ligar amanhã",
+    "completed": false,
+    "position": 2
   }
 ]
 ```
+
+Campos: `text` (não `title`), `completed` (não `checked`), `position` (ordem), e o par opcional
+`group_id`/`group_name`. `group_name` é um snapshot (não muda se o modelo for renomeado depois).
+
+### Checklist por grupo (importante pro MCP)
+
+- Cada **modelo de checklist aplicado** vira um **grupo independente**: todos os itens do modelo
+  recebem o mesmo `group_id` + `group_name`. Aplicar o mesmo modelo duas vezes = dois grupos.
+- **Aplicar um modelo como grupo via MCP:** gere um `group_id` único (ex.: um UUID) e chame
+  `lionchat_kanban_items_kanban_checklist_create` uma vez por item, passando o MESMO `group_id`
+  e `group_name` em todos. (Não existe uma tool de "aplicar modelo inteiro de uma vez" — é o loop.)
+- **Marcar/desmarcar** item: `lionchat_kanban_items_kanban_checklist_create_1` (toggle).
+- **Remover um grupo inteiro** de uma vez: `lionchat_kanban_items_kanban_checklist_group_destroy`
+  (body `group_id`). Remover um item só: `..._checklist_destroy`.
+- No card do quadro, cada grupo mostra sua própria barra de progresso (com 3+ grupos, o card fica
+  enxuto por padrão e expande sob demanda).
 
 Útil pra workflows internos. Não confundir com `tasks` (que é módulo separado de tarefas globais).
 
@@ -403,7 +432,7 @@ PUT /api/v1/accounts/43/funnels/43
 | `notify_team` | `{message}` | HOJE só registra em log interno — não notifica ninguém de verdade |
 | `duplicate_item` | `{funnel_id, stage}` | Cria cópia noutro funil/etapa; título ganha sufixo "(cópia)" |
 | `send_webhook` | `{webhook_url}` | POST com payload completo do card (fire-and-forget) |
-| `apply_checklist_template` | `{template_id}` | Template de `kanban_config.checklist_templates`; aditivo (appenda) |
+| `apply_checklist_template` | `{template_id}` | Template de `kanban_config.checklist_templates`; aditivo (appenda) — cada aplicação vira um grupo (carimba `group_id`/`group_name` nos itens) |
 | `update_checklist` | `{checklist_updates: [{checklist_item_id, completed, text}]}` | Não aparece na UI — só via API |
 
 **Regras críticas (gravar diferente disso = automação perdida ou morta):**

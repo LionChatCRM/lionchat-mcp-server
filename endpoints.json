@@ -11768,7 +11768,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/create_checklist_item",
     "title": "Criar Checklist",
-    "description": "Adiciona item ao checklist. Cria novo item de checklist. Obrigatórios: id, text. Valida unicidade quando aplicável. Retorna o item de checklist criado com ID atribuído.",
+    "description": "Adiciona um item ao checklist do card. Obrigatórios: id (card), text. Opcionais: group_id + group_name para colocar o item dentro de um grupo (ex.: um modelo de checklist). Sem group_id o item entra como AVULSO. Para montar/aplicar um grupo, envie o MESMO group_id (e group_name) em todos os itens daquele grupo. Retorna o card completo.",
     "category": "Checklist",
     "params": [
       {
@@ -11784,10 +11784,25 @@
         "location": "body",
         "required": true,
         "description": "Texto"
+      },
+      {
+        "name": "group_id",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Opcional. ID do grupo (string única por grupo, ex.: um UUID). Itens com o mesmo group_id formam um grupo. Ausente = item avulso."
+      },
+      {
+        "name": "group_name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Opcional. Nome do grupo exibido no card (ex.: nome do modelo de checklist). Enviar junto com group_id."
       }
     ],
     "returns": "card completo (com o item de checklist)",
     "common_use_cases": [
+      "Aplicar um modelo de checklist como grupo (mesmo group_id/group_name em todos os itens)",
       "Cadastro inicial de item de checklist",
       "Automação a partir de evento externo",
       "Importação manual via API"
@@ -11830,8 +11845,8 @@
     "id": "lionchat_kanban_items_kanban_checklist_create_1",
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/toggle_checklist_item",
-    "title": "Toggle Item",
-    "description": "Marca/desmarca item do checklist. Cria novo item de checklist. Obrigatórios: id, checklist_item_id. Valida unicidade quando aplicável. Retorna o item de checklist criado com ID atribuído.",
+    "title": "Marcar/Desmarcar Item",
+    "description": "Marca ou desmarca (alterna) um item do checklist como concluído. Obrigatórios: id (card), checklist_item_id. Retorna o card com o item alternado.",
     "category": "Checklist",
     "params": [
       {
@@ -11851,9 +11866,9 @@
     ],
     "returns": "card completo (item de checklist alternado)",
     "common_use_cases": [
-      "Cadastro inicial de item de checklist",
-      "Automação a partir de evento externo",
-      "Importação manual via API"
+      "Marcar uma tarefa do checklist como concluída",
+      "Desmarcar uma tarefa concluída por engano",
+      "Automação a partir de evento externo"
     ],
     "related_tools": [
       "lionchat_kanban_items_list",
@@ -11935,6 +11950,41 @@
     "related_tools": [
       "lionchat_kanban_items_list",
       "lionchat_kanban_items_create",
+      "lionchat_kanban_items_show"
+    ]
+  },
+  {
+    "id": "lionchat_kanban_items_kanban_checklist_group_destroy",
+    "method": "DELETE",
+    "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/delete_checklist_group",
+    "title": "Remover Grupo de Checklist",
+    "description": "Remove de uma vez TODOS os itens de um grupo de checklist do card. Obrigatórios: id (card), group_id. Os itens avulsos e os demais grupos permanecem intactos. CUIDADO: irreversível.",
+    "category": "Checklist",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do card (kanban_item)"
+      },
+      {
+        "name": "group_id",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "ID do grupo (o group_id compartilhado pelos itens) a remover"
+      }
+    ],
+    "returns": "card completo (sem o grupo)",
+    "common_use_cases": [
+      "Remover um modelo de checklist aplicado por engano",
+      "Limpar um grupo de tarefas inteiro de uma vez",
+      "Trocar um grupo por outro"
+    ],
+    "related_tools": [
+      "lionchat_kanban_items_kanban_checklist_create",
+      "lionchat_kanban_items_kanban_checklist_list",
       "lionchat_kanban_items_show"
     ]
   },

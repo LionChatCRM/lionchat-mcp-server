@@ -214,16 +214,18 @@ KanbanItem
 ├── custom_attributes (jsonb)
 ├── assigned_agents (jsonb array)
 ├── linked_conversations (jsonb array de { display_id })
-├── checklist (jsonb)
+├── checklist (jsonb array de itens — NAO e tabela separada; ver abaixo)
 ├── activities (jsonb)
 ├── timer_started_at / timer_duration
 └── created_at
 
-KanbanChecklist
-├── kanban_item_id (FK)
-├── title
+Item do checklist (elemento do array jsonb `checklist`)
+├── id (uuid string)
+├── text
 ├── completed (bool)
-└── position
+├── position
+├── group_id (opcional — itens com o mesmo group_id formam um grupo; ausente = avulso)
+└── group_name (opcional — nome do grupo, snapshot do modelo aplicado)
 
 KanbanNote
 ├── kanban_item_id (FK)
