@@ -277,7 +277,7 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | Anexar arquivo a uma mensagem | `lionchat_upload_create` primeiro, depois usar o retorno em `lionchat_conversations_messages_create` | Confira `lionchat_upload_limits` se o arquivo for grande |
 | Marcar conversa como **lida** | `lionchat_conversations_update_last_seen` | NÃO use `unread` (esse marca como NÃO-lida) |
 | Criar/gerenciar **campanha** (disparo WhatsApp/SMS) | `lionchat_campaigns_*` (criar, estatísticas) | SEMPRE rode `campaigns_estimate_audience` antes de criar e mostre a contagem. Disparo em massa = confirmação obrigatória (seção 7b) |
-| Criar **flow normal** (responde mensagens na caixa) | `lionchat_flows_create` | Ler design-guide antes (seção 11) |
+| Criar **flow normal** (responde mensagens na caixa) | `lionchat_flows_create` | Ler design-guide antes (seção 11). Escolha `conversation_mode`: `individual` (1-a-1, default) ou `group` (grupo WhatsApp — só aqui existe o node `update_group`; sem LionTrack). Imutável após criar |
 | Criar **ferramenta da IA** (flow que o AI Agente invoca) | `lionchat_flow_tools_create` + vincular com `flow_tools` → assistants | NÃO use `flows_create` pra ai_tool. Nó `end` obrigatório. Teste com `flow_tools_run` antes de vincular |
 | Ver **ligações de voz do WhatsApp** (histórico, transcrição) | `lionchat_whatsapp_calls_*` | NÃO confundir com `voip_*` (telefonia Zenvia — ramais/saldo). "Ligação no WhatsApp" = whatsapp_calls |
 | **Jornada do Lead** (por onde o lead navegou no site) | `lionchat_journey_funnel_reports` + fases em `lionchat_liontrack_journey_stages_*` | Janela máx 30 dias; exige feature liontrack |

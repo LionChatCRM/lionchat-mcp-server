@@ -400,8 +400,11 @@ function registerFlowsSchemaReferenceTool(server: McpServer): void {
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
-═══ DOIS TIPOS DE FLOW ═══
+═══ DOIS TIPOS DE FLOW (e o modo do conversation) ═══
 - conversation (default): dispara por evento de inbox. Criar via lionchat_flows_create.
+  conversation_mode: 'individual' (1-a-1, default) ou 'group' (grupo WhatsApp). IMUTAVEL apos criar.
+  So 'group' aceita o node update_group (Configurar Grupo: nome/foto/permissoes). 'group' NAO tem
+  gatilhos/condicoes de LionTrack (pagetrack). Na UI aparecem como 3 opcoes: Mensagem / Grupo / IA Agente.
 - ai_tool: ferramenta que o AI Agente invoca. Criar via lionchat_flow_tools_create (NAO flows_create!),
   com tool_name (snake_case, max 50) + tool_description (max 500). SEM inbox_ids. No 'end' OBRIGATORIO.
   Nodes permitidos em ai_tool: start, end, api, condition, set_variable, ai, randomizer, action,
@@ -551,7 +554,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   data define o retorno estruturado pro LLM (suporta saida Liquid com {{ }}).
 
 ▸ note
-  Sticky note visual. Sem handles, nunca executa, nao ligue edges.
+  Sticky note visual (bloco colorido de anotacao). Sem handles, nunca executa, nao ligue edges.
+  data: title (cabecalho), body (corpo), color (yellow|teal|blue|violet|pink|orange|slate, default yellow),
+  width (px, default 320, min 200), height (px, default 200, min 80). ATENCAO: texto vai em title+body,
+  NUNCA em 'content' (usar content grava nota vazia). Disponivel nos 2 tipos de flow.
 
 ═══ VARIAVEIS {{ }} ═══
 contact.name, contact.email, contact.phone, contact.custom_attribute.X (SINGULAR — plural resolve vazio)

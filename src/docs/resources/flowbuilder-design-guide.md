@@ -498,12 +498,30 @@ Node terminal, sem handles de saída. Em flow `conversation` apenas encerra aque
 { "id": "node-end", "type": "end", "position": { "x": 1330, "y": 300 }, "data": { "label": "Retorno", "mode": "structured" } }
 ```
 
-### 2.14 `note` (anotação visual)
+### 2.14 `note` (anotação visual / sticky note colorido)
 
-Sticky note no canvas, puramente visual. Sem handles, nunca executado (não ligue edges nele). Serve só pra documentar o flow.
+Sticky note no canvas (aquele bloco colorido riscado na tela pra rotular/agrupar). Puramente visual: sem handles, NUNCA executado (não ligue edges nele). Disponível nos DOIS tipos de flow (`conversation` e `ai_tool`).
+
+Campos do `data`:
+
+| Campo | Valores | Default |
+|---|---|---|
+| `title` | texto do cabeçalho da nota | vazio |
+| `body` | texto do corpo | vazio |
+| `color` | `yellow`, `teal`, `blue`, `violet`, `pink`, `orange`, `slate` | `yellow` |
+| `width` | largura em px (mín. 200) | 320 |
+| `height` | altura em px (mín. 80) | 200 |
+
+**ATENÇÃO:** o texto vai em `title` + `body`, NÃO em `content`. Usar `content` num node `note` grava
+uma nota VAZIA na tela (a interface ignora a chave). `content` só é chave de OUTRAS coisas (item `text`
+do `send_message`, ação `add_private_note`, ação `add_card_note`) — nunca do sticky note.
+
+`position` é o canto superior esquerdo da nota; como ela é maior que um node comum, posicione-a ATRÁS
+do grupo de nodes que ela rotula (ex.: um pouco acima e à esquerda do primeiro node do trecho).
 
 ```json
-{ "id": "note-1", "type": "note", "position": { "x": 50, "y": 50 }, "data": { "content": "Fluxo de qualificação — revisar mensagens" } }
+{ "id": "note-1", "type": "note", "position": { "x": 40, "y": 40 },
+  "data": { "title": "Qualificação", "body": "Revisar mensagens antes de publicar", "color": "violet", "width": 360, "height": 180 } }
 ```
 
 ---
@@ -532,6 +550,29 @@ das abas Conversas / Contatos / Kanban (ex: `add_label`, `change_status`, `updat
 outro flow (cadeia entre motores), cada hand-off incrementa um contador interno (`_activation_depth`).
 No 5º hand-off (`MAX_CHAIN_DEPTH = 5`) a cadeia é cortada silenciosamente. Se um flow "não disparou"
 no fim de uma cadeia automação→flow→automação, suspeite desse limite — é proteção, não bug.
+
+## 2-C. Flow `conversation`: individual vs grupo (`conversation_mode`)
+
+Todo flow `conversation` tem um `conversation_mode`: `individual` (default — conversa 1-a-1) ou `group`
+(grupo de WhatsApp). Definido na CRIAÇÃO e **IMUTÁVEL depois** (não dá pra converter um no outro; pra trocar,
+crie outro flow). Não confundir com `flow_type` — um flow `ai_tool` não tem `conversation_mode`.
+
+Na tela o usuário vê isso como TRÊS opções ao criar: "Mensagem" (= `conversation` + `individual`),
+"Grupo" (= `conversation` + `group`) e "IA Agente" (= `ai_tool`).
+
+**A diferença entre individual e grupo é quais nodes/abas ficam disponíveis:**
+
+| | individual (Mensagem) | group (Grupo) |
+|---|---|---|
+| Node `update_group` (Configurar Grupo: nome, foto, permissões — WAHA) | NÃO existe | **SÓ aqui** |
+| Gatilhos e condições de **LionTrack** (visita de página / evento do site) | disponíveis | **NÃO** (grupo não tem um contato único navegando) |
+| Todos os outros nodes (`send_message`, `wait_response`, `condition`, `action`, `api`, `ai`, `set_variable`, `wait`, `randomizer`, `note`, `end`) | iguais | iguais |
+
+Regras práticas ao montar via API:
+- Só use o node `update_group` se o flow foi criado com `conversation_mode: "group"`. Colocá-lo num flow
+  individual é rejeitado pela validação.
+- Não use gatilho/condição de LionTrack (pagetrack) em flow de grupo.
+- Na dúvida entre os dois, é `individual` (o default).
 Não tente contornar criando flows intermediários.
 
 ---
