@@ -118,7 +118,15 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 ```
 → edges: `sourceHandle: "button_sim"`, `sourceHandle: "button_nao"`, e opcionalmente `"no_response"`.
 
-**Handles que SAEM:** `success` (sem botões); com botões → `button_<value>` (um por botão) + `no_response` (+ `no_reply_timeout` se tiver timeout). Também `error`.
+**Handles que SAEM:** `success` (sem botões); com botões → `button_<value>` (um por botão) + `no_response` + `error`.
+
+> ⚠️ **SAÍDAS CONDICIONAIS — NUNCA ligue edge nelas sem ativar a condição.** Estas saídas SÓ existem
+> quando a config abaixo está presente. Ligar edge nelas sem isso cria uma **aresta fantasma** (linha
+> que sai do nada no canvas, não roteia nada):
+> - **`no_reply_timeout`** → só existe se o item de botões tiver **`buttons_timeout` > 0** (tempo de espera configurado).
+> - **`window_closed`** → só existe em **flow de WhatsApp API oficial** com item sujeito à janela de 24h (texto/áudio/anexo/resposta pronta).
+>
+> Regra: se você NÃO configurou o timeout, **NÃO** crie edge `no_reply_timeout`. Se não é API oficial, **NÃO** crie edge `window_closed`.
 
 ### 2.3 `wait_response`
 
@@ -573,6 +581,15 @@ Variáveis salvas em atributo (`saveTo: 'contact_attr'`/`'conversation_attr'`, o
 - `out`, `output`, `next` (use o nome real do handle)
 - `option1` sem underscore (use `option_1`)
 
+**Handles CONDICIONAIS — só existem sob a config certa. Não ligue edge sem ativar a condição:**
+- `no_reply_timeout` → só com `buttons_timeout > 0` no item de botões.
+- `window_closed` → só em flow WhatsApp API oficial com item de janela.
+- `button_<value>` → um por botão que EXISTE; se remover o botão, remova o edge.
+- `option_<x>` → um por opção em `acceptedOptions`; idem.
+- `cond_0..N` → um por condição no array; se tirar uma condição, o `cond_N` do fim some.
+- `intent_<name>` → um por intent no `ai` mode intent.
+Ligar edge num handle condicional inexistente = **aresta fantasma** (sai do nada no canvas, não roteia).
+
 ---
 
 ## 4. Layout e positioning
@@ -627,6 +644,8 @@ Nodes nunca devem ficar com a mesma coordenada `(x, y)`. Se dois nodes têm posi
 | Node `condition` depois de `wait_response` com options | Redundante e atrapalha | Ligue `option_X` direto no próximo node |
 | Edge sem `sourceHandle` | Frontend não consegue rotear | Sempre informe |
 | Edge com `target` apontando pra ID que não existe | Quebra o grafo | Confira que `target` está em `nodes[]` |
+| Edge `sourceHandle: "no_reply_timeout"` sem `buttons_timeout > 0` | Handle não existe sem timeout → aresta fantasma (linha saindo do nada no canvas) | Só crie esse edge se configurar o timeout no item de botões |
+| Edge `sourceHandle: "window_closed"` fora de flow WhatsApp API oficial | Handle só existe na API oficial → aresta fantasma | Só crie em flow oficial com item de janela |
 | `channel_type: "WhatsApp"` | Precisa do nome de classe Rails | `"Channel::Whatsapp"`, `"Channel::Waha"`, `"Channel::WebWidget"` |
 | `validation: "option"` (singular) | Não existe | `"options"` (plural) |
 | `varied_options` com `acceptedOptions` | Modo errado de config | `optionGroups: [{ id, terms, matchType }]` |
@@ -660,6 +679,7 @@ Antes de chamar `flows_create` ou `flows_update`, valide mentalmente:
 - [ ] Nenhum par de nodes tem a mesma posição `(x, y)`
 - [ ] Todo node tem `data` com campos do schema do tipo
 - [ ] Todo node não-start tem pelo menos 1 edge chegando (`edge.target = node.id`)
+- [ ] Todo `edge.sourceHandle` é um handle que o node source EXPÕE NAQUELA config (sem handle condicional inexistente: `no_reply_timeout` só com timeout, `window_closed` só API oficial, `button_<value>`/`option_<x>`/`cond_N`/`intent_<name>` só se o botão/opção/condição/intent existir)
 - [ ] Todo edge tem `source`, `target` e `sourceHandle`
 - [ ] Todo `sourceHandle` é um handle real exposto pelo node source (seção 2)
 - [ ] `channel_type` é classe Rails (`Channel::Waha` etc)
