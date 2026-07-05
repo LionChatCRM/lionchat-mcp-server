@@ -334,6 +334,7 @@ Ex.: `{ "operator": "sla_check", "value": "frt_breached" }`. "Estourado" = o mon
 | `set_lost` | `{ reason? }` | Atalho pra perdido |
 | `assign_agent_card` | `{ agent_id }` | Atribui agente ao card |
 | `add_card_note` | `{ content }` | Nota no card |
+| `add_card_checklist` | `{ template_id, funnel_id?, card_source? }` | Aplica um MODELO de checklist ao card (vira um grupo). `template_id` de `kanban_config.checklist_templates`. Um modelo por bloco (repita o bloco pra mais de um) |
 | `send_webhook` | `{ url, headers?, body? }` | Dispara webhook externo |
 | `start_flow` | `{ flow_id }` | Inicia outro fluxo |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
@@ -343,7 +344,7 @@ Ex.: `{ "operator": "sla_check", "value": "frt_breached" }`. "Estourado" = o mon
 
 **Handles que SAEM:** `success`. Não tem handle `error` — falhas viram warning silencioso e o flow continua.
 
-**`card_source` (blocos de card) — opcional:** as ações de card aceitam `card_source`: `'funnel'` (default — procura o card pelo `funnel_id`) ou `'trigger'` (usa o card que DISPAROU o flow, em flows iniciados por `card_created`/`card_moved`/`card_won`/`card_lost`). Com `'trigger'`, `funnel_id` deixa de ser obrigatório — EXCETO em `move_kanban_stage`/`create_kanban_item`, cujo funil/etapa são o DESTINO. Sem card-gatilho disponível, a ação é pulada (não cai no fallback de funil). Aplica-se a `move_kanban_stage`, `set_won`/`set_lost`/`set_open`, `assign_agent_card`, `add_card_note`, `update_attribute` (com `attr_source: 'card'`) e às condições `card_attr_equals`/`card_attr_contains` (gravando `card_source` na própria regra).
+**`card_source` (blocos de card) — opcional:** as ações de card aceitam `card_source`: `'funnel'` (default — procura o card pelo `funnel_id`) ou `'trigger'` (usa o card que DISPAROU o flow, em flows iniciados por `card_created`/`card_moved`/`card_won`/`card_lost`). Com `'trigger'`, `funnel_id` deixa de ser obrigatório — EXCETO em `move_kanban_stage`/`create_kanban_item`, cujo funil/etapa são o DESTINO. Sem card-gatilho disponível, a ação é pulada (não cai no fallback de funil). Aplica-se a `move_kanban_stage`, `set_won`/`set_lost`/`set_open`, `assign_agent_card`, `add_card_note`, `add_card_checklist`, `update_attribute` (com `attr_source: 'card'`) e às condições `card_attr_equals`/`card_attr_contains` (gravando `card_source` na própria regra).
 
 **`update_attribute` — campos EXATOS:** `attr_source` (`'contact'`, `'conversation'` ou `'card'`), `attr_key` (nome do atributo), `attr_value` (valor). NÃO existem `entity`/`key`/`value` — esses são ignorados e não salvam nada.
 

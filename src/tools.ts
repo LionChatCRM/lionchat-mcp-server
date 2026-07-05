@@ -519,7 +519,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Kanban: create_kanban_item({funnel_id, funnel_stage, title?, description?})
         — funnel_id e funnel_stage OBRIGATORIOS; title/description aceitam {{ }},
       move_kanban_stage({funnel_id,funnel_stage}), set_kanban_item_status({status:won|lost|active}),
-      set_won({}), set_lost({reason?}), assign_agent_card({agent_id}), add_card_note({content})
+      set_won({}), set_lost({reason?}), assign_agent_card({agent_id}), add_card_note({content}),
+      add_card_checklist({template_id}) — aplica um modelo de checklist ao card (vira grupo)
     Sistema (SO flow conversation): send_webhook({url,headers?,body?}), start_flow({flow_id}),
       deactivate_flow({})
   Handles: "success" (sem handle error — falha vira warning e o flow continua).
