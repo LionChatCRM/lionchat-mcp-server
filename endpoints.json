@@ -4853,7 +4853,8 @@
       "lionchat_kanban_v2_list",
       "lionchat_kanban_v2_create",
       "lionchat_kanban_v2_show"
-    ]
+    ],
+    "body_wrapper": "kanban_automation"
   },
   {
     "id": "lionchat_kanban_v2_show_3",
@@ -4923,7 +4924,8 @@
       "lionchat_kanban_v2_list",
       "lionchat_kanban_v2_create",
       "lionchat_kanban_v2_show"
-    ]
+    ],
+    "body_wrapper": "kanban_automation"
   },
   {
     "id": "lionchat_kanban_v2_destroy_5",
@@ -18126,7 +18128,8 @@
       "lionchat_meta_lead_list",
       "lionchat_meta_lead_create",
       "lionchat_meta_lead_destroy"
-    ]
+    ],
+    "body_wrapper": "form"
   },
   {
     "id": "lionchat_meta_lead_create_2",
@@ -19182,18 +19185,18 @@
     "category": "Config de Notificacao",
     "params": [
       {
-        "name": "email_enabled",
-        "type": "boolean",
+        "name": "selected_email_flags",
+        "type": "array",
         "location": "body",
         "required": false,
-        "description": "Notificacoes por email"
+        "description": "Flags de notificacao por EMAIL (substitui a lista). Ex: ['email_conversation_assignment','email_assigned_conversation_new_message']"
       },
       {
-        "name": "push_enabled",
-        "type": "boolean",
+        "name": "selected_push_flags",
+        "type": "array",
         "location": "body",
         "required": false,
-        "description": "Notificacoes push"
+        "description": "Flags de notificacao PUSH (substitui a lista). Ex: ['push_conversation_assignment']"
       }
     ],
     "returns": "config de notificação atualizado",
@@ -19204,7 +19207,8 @@
     ],
     "related_tools": [
       "lionchat_notification_settings_list"
-    ]
+    ],
+    "body_wrapper": "notification_settings"
   },
   {
     "id": "lionchat_captain_documents_create_1",
@@ -21144,7 +21148,8 @@
       "lionchat_flow_tools_run",
       "lionchat_flow_tools_assistants_update",
       "lionchat_flows_schema_reference"
-    ]
+    ],
+    "body_wrapper": "flow"
   },
   {
     "id": "lionchat_flow_tools_update",
@@ -21204,7 +21209,8 @@
     ],
     "related_tools": [
       "lionchat_flow_tools_run"
-    ]
+    ],
+    "body_wrapper": "flow"
   },
   {
     "id": "lionchat_flow_tools_destroy",
@@ -21273,6 +21279,13 @@
         "location": "body",
         "required": false,
         "description": "Parâmetros de entrada do flow, ex: { \"numero_pedido\": \"123\" }"
+      },
+      {
+        "name": "conversation_display_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Modo Simulacao (dry-run): usa uma conversa REAL como contexto (contato/atributos) sem enviar nem alterar nada. Essencial pra testar tools que dependem de atributos do contato. ADMIN-ONLY."
       }
     ],
     "returns": "{ execution_id, status, output_result, variables, execution_log, error_message, duration_ms }",
