@@ -354,6 +354,12 @@ Fontes/campos disponíveis (`source` / `field`):
 Lembrete: todo template recém-criado pelo MCP só mostra o texto na tela depois de **sincronizar**
 (o MCP cria na Meta, mas o "puxar de volta" o conteúdo é o que a tela faz com o botão Sincronizar).
 
+## FlowBuilder — notas de editor (2026-07)
+
+- **Tipo de atributo `time` (Hora 24h):** ao criar custom attribute com `attribute_display_type: "time"`, o valor canônico é `"HH:MM"` 24h e o fuso mora na definição (`attribute_timezone`, IANA, default `America/Sao_Paulo`). Uso principal: alimentar o campo Horário do node `wait` (modo date, `waitTimeMode: "variable"`).
+- **Timeout de flow `ai_tool` com node `api`:** sobe sozinho de 20s pro teto de 45s quando ainda está no padrão — não precisa configurar nada; só evite setar `execution_timeout_ms` custom se quiser manter o auto-ajuste.
+- **Teste do node `api`:** o resultado do último teste fica salvo no servidor (pin, TTL 30 dias) — sobrevive a trocar de navegador/máquina. Isso é recurso do editor humano; não há tool MCP pra isso.
+
 ## Status codes a respeitar
 
 | Code | O que fazer |

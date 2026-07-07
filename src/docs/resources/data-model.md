@@ -363,6 +363,44 @@ Booking (agendamento confirmado)
 └── meeting_url (Google Calendar / Zoom / etc)
 ```
 
+**Atributos de sistema do Booking no CONTATO (novo 2026-07-06):** ao confirmar um agendamento,
+8 custom attributes protegidos são gravados no contato — usáveis como variável
+(`{{contact.custom_attribute.booking_date}}` etc.) em mensagem/flow/automação:
+
+| Chave | Tipo | Conteúdo |
+|---|---|---|
+| `booking_title` | text | Título do tipo de evento (ex: "Consultoria 45min") |
+| `booking_date` | date | Data do agendamento, ISO `YYYY-MM-DD` |
+| `booking_time` | **time** | Hora 24h `"HH:MM"` (tipo novo — encaixa direto no campo Horário do node `wait`) |
+| `booking_datetime` | text | ISO 8601 completo com fuso (referência; prefira date/time como variável) |
+| `booking_duration` | text | Ex: "45 min" |
+| `booking_type` | text | "Call / Meet" ou "Agendamento" |
+| `booking_agent` | text | Nome do agente responsável |
+| `booking_description` | text | Observação do cliente ao agendar |
+
+## e-Clínicas (Efficient) — integração de clínicas
+
+9 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica:
+`cliente_novo`, `agendamento_novo`, `falta`, `pagamento` (os 4 da doc oficial) +
+`agendamento_atendido`, `agendamento_alterado`, `agendamento_desmarcado`,
+`agendamento_transferido`, `cliente_baixa_pagamento` (capturados ao vivo, não documentados
+pelo e-Clínica).
+
+Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como variável):
+
+| Chave | Tipo | Conteúdo |
+|---|---|---|
+| `eclinica_cliente_id` | text | ID do paciente no e-Clínica (chave de matching) |
+| `eclinica_unit_id` / `eclinica_unit_name` | text | Unidade/filial que originou o evento |
+| `eclinica_idagenda` | text | ID do último agendamento |
+| `eclinica_data_consulta` | date | Data da consulta, ISO |
+| `eclinica_hora_consulta` | **time** | Hora da consulta 24h `"HH:MM"` (novo 2026-07-06) |
+| `eclinica_status_agendamento` | text | agendado / no_show / atendido / desmarcado |
+| `eclinica_compromisso` | text | Tipo da consulta (ex: Consulta, Retorno, Exame) |
+| `eclinica_ultimo_pagamento` | text | Valor do último pagamento |
+| `eclinica_ultimo_pagamento_data` | date | Data do último pagamento/baixa (novo 2026-07-06) |
+| `eclinica_ultimo_pagamento_descricao` | text | Descrição da baixa (ex: CONSULTA INICIAL) |
+
 ## Relatórios e Métricas
 
 ```

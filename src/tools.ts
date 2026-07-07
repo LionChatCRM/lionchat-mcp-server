@@ -543,9 +543,15 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   Handle: "success"
 
 ▸ wait
-  data: { label, waitTime, waitUnit: seconds|minutes|hours|days|weekday }
-  weekday: + targetWeekday (0=dom..6=sab) + targetHour (0-23)
-  Handle: "success"
+  data.waitMode: "duration" (default) | "date" | "weekday"
+  duration: waitDuration + waitUnit (seconds|minutes|hours|days)
+  date: waitDate ("YYYY-MM-DD") + waitTime ("HH:MM" 24h) + waitTimezone (IANA, default America/Sao_Paulo)
+        + waitDateMode/waitTimeMode ("fixed"|"variable"). Em "variable" o campo contem {{contact.custom_attribute.X}}
+        (Data SO aceita atributo tipo date; Horario SO tipo time). Resolve UMA vez na entrada do node.
+        Variavel invalida -> saida "error" (invalid_variable_datetime). Data no passado -> segue por "success".
+  weekday: waitWeekday (0=dom..6=sab) + waitWeekdayTime ("HH:MM", SEMPRE fixo, sem variavel) + waitTimezone
+  (NAO existem waitUnit:"weekday", targetWeekday nem targetHour — erro de doc antiga)
+  Handles: "success" (+ "error" so com variavel invalida no modo date)
 
 ▸ randomizer
   data: { label, mode:"branches", branches:[{id,label,weight}] }

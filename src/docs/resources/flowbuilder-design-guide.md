@@ -272,6 +272,7 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 - **Texto/string:** `equal`, `not_equal`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`
 - **Número:** `equal`, `not_equal`, `greater_than`, `less_than`, `number_range`, `is_empty`, `is_not_empty`
 - **Lista/Data:** `equal`, `not_equal`, `contains`, `not_contains`
+- **Hora (`time`, novo 2026-07-06):** tratado como texto nas condições (`equal`, `not_equal`, `is_empty`, `is_not_empty`); valor canônico `"HH:MM"` 24h. Comparação maior/menor NÃO é suportada pra Hora — o uso principal desse tipo é alimentar o campo Horário do node `wait` (modo date, `waitTimeMode: "variable"`).
 
 Use operador numérico (`greater_than`, `less_than`, `number_range`) SÓ em atributo de tipo número.
 
@@ -420,6 +421,10 @@ Lembre: o atributo lido é SINGULAR (`custom_attribute`).
 
 ### 2.8 `wait`
 
+O campo raiz é **`waitMode`**: `"duration"` (default), `"date"` ou `"weekday"`.
+
+**Modo `duration` (esperar um tempo):**
+
 ```json
 {
   "id": "node-wait-time-1",
@@ -427,17 +432,58 @@ Lembre: o atributo lido é SINGULAR (`custom_attribute`).
   "position": { "x": 690, "y": 300 },
   "data": {
     "label": "Espera 10 min",
-    "waitTime": 10,
+    "waitMode": "duration",
+    "waitDuration": 10,
     "waitUnit": "minutes"
   }
 }
 ```
 
-**`waitUnit` válidos:** `seconds`, `minutes`, `hours`, `days`, `weekday` (espera próximo dia da semana).
+`waitUnit` válidos: `seconds`, `minutes`, `hours`, `days`. (NÃO existe `waitUnit: "weekday"` — dia da semana é um `waitMode` próprio, ver abaixo.)
 
-Pra `weekday`, use também `targetWeekday` (0=domingo, 1=segunda... 6=sábado) e `targetHour` (0-23).
+**Modo `date` (esperar até uma data e hora):**
 
-**Handles que SAEM:** `success`.
+```json
+{
+  "id": "node-wait-date-1",
+  "type": "wait",
+  "position": { "x": 690, "y": 300 },
+  "data": {
+    "label": "Espera ate a consulta",
+    "waitMode": "date",
+    "waitDate": "2026-12-31",
+    "waitTime": "09:00",
+    "waitTimezone": "America/Sao_Paulo",
+    "waitDateMode": "fixed",
+    "waitTimeMode": "fixed"
+  }
+}
+```
+
+- `waitDate` = `"YYYY-MM-DD"` · `waitTime` = `"HH:MM"` 24h · `waitTimezone` = fuso IANA (default `America/Sao_Paulo` se ausente).
+- **Variável nos campos (novo 2026-07-06):** `waitDateMode`/`waitTimeMode` aceitam `"fixed"` (default) ou `"variable"`. Em `"variable"`, o campo correspondente contém uma variável `{{ }}` em vez do valor fixo — ex.: `"waitDate": "{{contact.custom_attribute.data_consulta}}"`. O campo Data SÓ aceita variável de atributo tipo `date`; o campo Horário SÓ tipo `time` (Hora 24h). A variável é resolvida UMA única vez, na entrada do node (quem já está esperando mantém o valor capturado). Variável que não resolve pra data/hora válida → o flow sai pela saída `error` (payload `invalid_variable_datetime`). Data válida no PASSADO → espera 0 e segue por `success` (não é erro).
+
+**Modo `weekday` (esperar até um dia da semana):**
+
+```json
+{
+  "id": "node-wait-weekday-1",
+  "type": "wait",
+  "position": { "x": 690, "y": 300 },
+  "data": {
+    "label": "Espera ate segunda 09h",
+    "waitMode": "weekday",
+    "waitWeekday": 1,
+    "waitWeekdayTime": "09:00",
+    "waitTimezone": "America/Sao_Paulo"
+  }
+}
+```
+
+- `waitWeekday`: 0=domingo, 1=segunda... 6=sábado. `waitWeekdayTime` = `"HH:MM"` 24h, **SEMPRE fixo** (este campo NÃO aceita variável — decisão de produto). `waitTimezone` = mesmo campo do modo date.
+- (Os nomes `targetWeekday`/`targetHour` NÃO existem — eram um erro de documentação antiga.)
+
+**Handles que SAEM:** `success` (+ `error`, emitido apenas quando um campo em modo `variable` resolve pra valor inválido no modo `date`).
 
 ### 2.9 `set_variable`
 

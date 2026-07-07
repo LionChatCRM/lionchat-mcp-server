@@ -222,6 +222,18 @@ Ou para listas grandes (cursors):
 - Conta pode ter `locale` próprio mas timezone segue config do servidor
 - Pra evitar bugs, sempre passe timezone explícito
 
+### Custom attributes de data/hora — formato canônico (2026-07-06)
+
+- Atributo tipo `date`: valor canônico é **data pura ISO** `"YYYY-MM-DD"` (sem hora/fuso).
+  Os atributos de integrações (`lt_first_visit_at`/`lt_last_visit_at`, `ca_invoice_created_at`/
+  `ca_invoice_updated_at`, os 6 `omie_*` de data, `booking_date`, `eclinica_*_data`) passaram a
+  gravar nesse formato — comparações `greater_than`/`less_than` em filtro/condição funcionam.
+  Registros gravados ANTES de 06/07/2026 podem estar no formato antigo (timestamp completo ou
+  `DD/MM/AAAA`) até os rakes de backfill rodarem.
+- Atributo tipo `time` (**Hora, novo**): valor canônico é `"HH:MM"` **24h** (ex: `"14:30"`),
+  SEM data e SEM fuso embutido — o fuso mora na definição do atributo (`attribute_timezone`,
+  escolhido na criação, default `America/Sao_Paulo`).
+
 ## Códigos HTTP
 
 ### Sucesso

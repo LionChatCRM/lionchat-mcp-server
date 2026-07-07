@@ -291,6 +291,7 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | Saber se a IA deve TOCAR a ligação WP (Wavoip) / marcar recusada | `lionchat_wavoip_should_ring` / `lionchat_wavoip_flag_rejected` | Controle fino do toque de chamada na caixa QR Code |
 | Restringir agendas que a IA oferece | `lionchat_captain_assistants_update` (`config.booking_event_type_ids: [Int]`) | binding de agenda por cenário NÃO é settable via API |
 | Configurar o Copiloto (modelo/temperatura/prompt base) | `lionchat_copilot_settings_update` | admin-only; copiloto tem motor próprio (padrão temp 0.3) |
+| **Resetar/testar do zero a IA** numa conversa | `lionchat_conversations_captain_history_reset` (POST, sem body) | Cria pílula de marco na conversa; a partir dali TODA leitura autônoma da IA (respostas, resumo, follow-up) considera só mensagens pós-marco. Não apaga nada; o atendente segue vendo tudo. Enterprise-only |
 
 ## 9. Quando NÃO chamar nenhuma ferramenta
 

@@ -20226,7 +20226,14 @@
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "Tipo de exibicao: text, number, link, date, list, checkbox, currency, percent ou secret"
+        "description": "Tipo de exibicao: text, number, link, date, time (Hora 24h — valor canonico HH:MM; fuso mora em attribute_timezone), list, checkbox, currency, percent ou secret"
+      },
+      {
+        "name": "attribute_timezone",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Fuso horario IANA da definicao (so faz sentido pro tipo time/Hora; default America/Sao_Paulo). O VALOR do atributo time e sempre HH:MM 24h sem fuso embutido — o fuso mora aqui."
       },
       {
         "name": "attribute_key",
@@ -20339,7 +20346,14 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Tipo de exibicao: text, number, link, date, list, checkbox, currency, percent ou secret"
+        "description": "Tipo de exibicao: text, number, link, date, time (Hora 24h — valor canonico HH:MM; fuso mora em attribute_timezone), list, checkbox, currency, percent ou secret"
+      },
+      {
+        "name": "attribute_timezone",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Fuso horario IANA da definicao (so faz sentido pro tipo time/Hora; default America/Sao_Paulo). O VALOR do atributo time e sempre HH:MM 24h sem fuso embutido — o fuso mora aqui."
       },
       {
         "name": "attribute_key",
@@ -24756,6 +24770,32 @@
     ],
     "related_tools": [
       "lionchat_contacts_update"
+    ]
+  },
+  {
+    "id": "lionchat_conversations_captain_history_reset",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/captain_history_reset",
+    "title": "Resetar Historico da IA na Conversa",
+    "description": "Cria um marco de reset na conversa: a partir dele, TODA leitura autonoma da IA (respostas do AI Agente, resumos automaticos, follow-up, nos de IA do FlowBuilder) considera apenas mensagens posteriores ao marco. Nao apaga nada — o atendente continua vendo a conversa inteira. Uso tipico: testar um prompt/cenario novo do zero na mesma conversa. Enterprise-only. Sem body.",
+    "category": "IA / Captain",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID de exibicao da conversa (display_id)"
+      }
+    ],
+    "returns": "{ message_id } da pilula de marco criada",
+    "common_use_cases": [
+      "Testar como a IA responde do zero apos mudar prompt/cenario, sem criar outra conversa",
+      "Fazer a IA esquecer contexto antigo ja superado numa conversa longa"
+    ],
+    "related_tools": [
+      "lionchat_captain_assistants_update",
+      "lionchat_conversations_show"
     ]
   },
   {
