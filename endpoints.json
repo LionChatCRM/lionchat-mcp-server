@@ -19995,7 +19995,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/agents",
     "title": "Convidar Agente",
-    "description": "Convida um único agente para a conta. Obrigatório: email. Opcionais: name, role (agent ou administrator), availability, auto_offline. O agente recebe um convite por e-mail. Para convidar vários de uma vez, use lionchat_agents_bulk_create.",
+    "description": "Convida um único agente para a conta. Obrigatório: email. Opcionais: name, role (agent ou administrator), availability, auto_offline, custom_role_id, team_ids (times) e inboxes (caixas com cargo Agente/Supervisor). O agente recebe um convite por e-mail. Times/caixas de um convite ainda NAO confirmado ficam pendentes e sao aplicados automaticamente quando o agente confirmar o cadastro; se o usuario ja for confirmado, valem na hora. Para convidar vários de uma vez, use lionchat_agents_bulk_create.",
     "category": "Agentes",
     "params": [
       {
@@ -20039,6 +20039,20 @@
         "location": "body",
         "required": false,
         "description": "ID do cargo personalizado (custom role) a aplicar ja no convite. Requer Enterprise. Use lionchat_custom_roles_list para obter os IDs. Envie junto com role=agent (cargo personalizado e sempre nivel agente)."
+      },
+      {
+        "name": "team_ids",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "IDs dos times aos quais adicionar o agente. Array de inteiros, ex: [12, 30]. Use lionchat_teams_list para obter os IDs. Se o agente ainda nao confirmou o convite, o vinculo fica pendente e e aplicado quando ele confirmar; se ja for confirmado, aplica na hora."
+      },
+      {
+        "name": "inboxes",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Caixas de entrada do agente, cada uma com o cargo. Array de objetos { inbox_id, supervisor }, ex: [{\"inbox_id\": 82, \"supervisor\": false}, {\"inbox_id\": 91, \"supervisor\": true}]. supervisor=false => Agente (recebe conversas no automatico); supervisor=true => Supervisor (ve tudo, fora da distribuicao). Use lionchat_inboxes_list para obter os IDs. Convite nao confirmado => aplica na confirmacao; ja confirmado => na hora."
       }
     ],
     "returns": "agente convidado (com novo ID)",
@@ -20083,7 +20097,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/agents/{id}",
     "title": "Atualizar Agente",
-    "description": "Atualiza um agente existente. Campos suportados: name, role (agent ou administrator), availability, auto_offline e custom_role_id (aplica um cargo personalizado no Enterprise). Use para promover/rebaixar papel, ajustar disponibilidade ou aplicar um cargo personalizado.",
+    "description": "Atualiza um agente existente. Campos suportados: name, role (agent ou administrator), availability, auto_offline, custom_role_id, team_ids (times) e inboxes (caixas com cargo Agente/Supervisor). Ao enviar team_ids e/ou inboxes, o agente e RECONCILIADO para o estado enviado: entra nos novos, SAI dos que nao estao na lista e ajusta o cargo por caixa — envie sempre a lista COMPLETA desejada. Se NAO enviar team_ids/inboxes, os vinculos atuais ficam intactos. Use para promover/rebaixar papel, ajustar disponibilidade, aplicar cargo personalizado ou gerenciar times/caixas do agente.",
     "category": "Agentes",
     "params": [
       {
@@ -20127,6 +20141,20 @@
         "location": "body",
         "required": false,
         "description": "ID do cargo personalizado (custom role) a aplicar ao agente. Requer Enterprise. IMPORTANTE: o backend aplica este campo em TODA atualizacao do agente — se voce atualizar um agente que tem cargo personalizado SEM enviar custom_role_id, o cargo sera REMOVIDO. Ao editar um agente que tem cargo, envie sempre o custom_role_id junto. Use lionchat_custom_roles_list para obter os IDs dos cargos."
+      },
+      {
+        "name": "team_ids",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Lista COMPLETA dos times desejados para o agente (reconcilia: entra nos novos, SAI dos que nao estiverem aqui). Array de inteiros, ex: [12, 30]. Omitir o campo mantem os times atuais intactos. Use lionchat_teams_list para obter os IDs."
+      },
+      {
+        "name": "inboxes",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Lista COMPLETA das caixas desejadas para o agente, com o cargo (reconcilia: adiciona, remove e ajusta o cargo). Array de objetos { inbox_id, supervisor }, ex: [{\"inbox_id\": 82, \"supervisor\": false}, {\"inbox_id\": 91, \"supervisor\": true}]. supervisor=false => Agente; supervisor=true => Supervisor. Omitir o campo mantem as caixas atuais intactas. Use lionchat_inboxes_list para obter os IDs."
       }
     ],
     "returns": "agente atualizado",
