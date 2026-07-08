@@ -424,6 +424,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     QUALQUER msg do cliente que case), conversation_created/conversation_reopened (match_mode +
     keywords opcionais), conversation_resolved, label_added/label_removed (label_names[] — NAO
     'label' singular), card_created/card_moved (funnel_ids[] + funnel_stages[] 'funnel_id:stage'),
+    conversation_attribute_changed/card_attribute_changed (novo 2026-07-08: disparam na VIRADA de um
+    atributo pro valor que casa, RE-ENTRAM a cada mudanca; config {logic:'and'|'or', rules:[{attr_key,
+    operator, value | values:[...]}]}; attrSource IMPLICITO pela chave do gatilho (conversa vs card),
+    NAO informe; operadores iguais aos da condition; card_attribute_changed aceita funnel_id/card_source
+    opcionais na rule),
     cron, webhook. NOVO message_sent (2026-06-11): par do message_received pra mensagens de
     SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
     'desativar IA' com esse trigger sem keywords = a propria resposta da IA dispara o flow.
@@ -508,6 +513,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   ATENCAO: items[].config NAO items[].params.
   Keys validas:
     Conversa: assign_agent({agent_id}), assign_team({team_id}),
+      distribute_agents({agents:[{agent_id}], dist_id}) — RODIZIO (round-robin): cada lead vai pro
+        PROXIMO agente da lista na vez (1,2,3,1,2,3). dist_id = id fixo da acao (chave do cursor no
+        Redis; gere um unico por acao, ex 'd_ab12cd'). Ordem da lista = ordem do rodizio, sem porcentagem.
+        DIFERENTE do randomizer mode distribute_agents (sorteio ponderado),
       change_status({status: open|resolved|pending|snoozed}), change_priority({priority}),
       mute_conversation({}), add_private_note({content}), send_email_transcript({email}),
       add_conversation_label({labels:[...]}), remove_conversation_label({labels:[...]}),  // etiqueta NA CONVERSA
@@ -520,9 +529,17 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         — funnel_id e funnel_stage OBRIGATORIOS; title/description aceitam {{ }},
       move_kanban_stage({funnel_id,funnel_stage}), set_kanban_item_status({status:won|lost|active}),
       set_won({}), set_lost({reason?}), assign_agent_card({agent_id}), add_card_note({content}),
-      add_card_checklist({template_id}) — aplica um modelo de checklist ao card (vira grupo)
+      add_card_checklist({template_id}) — aplica um modelo de checklist ao card (vira grupo),
+      add_card_offer({offer_id, use_custom_value?, custom_value?, funnel_id?, card_source?}) — adiciona
+        oferta (produto/servico) ao card; offer_id de offers_list; use_custom_value:true + custom_value
+        grava valor personalizado, senao usa o valor cadastrado; total do card recalcula sozinho
     Sistema (SO flow conversation): send_webhook({url,headers?,body?}), start_flow({flow_id}),
       deactivate_flow({})
+  card_source (acoes de card): 'funnel' (default, acha o card pelo funnel_id) | 'trigger' (usa o card
+    que DISPAROU o flow em card_created/card_moved/card_won/card_lost). Com 'trigger' o funnel_id e
+    ignorado — EXCETO create_kanban_item/move_kanban_stage (funil = DESTINO). Vale pra move_kanban_stage,
+    set_won/set_lost/set_open, assign_agent_card, add_card_note, add_card_checklist, add_card_offer e
+    update_attribute (attr_source:'card').
   Handles: "success" (sem handle error — falha vira warning e o flow continua).
 
 ▸ api
@@ -555,7 +572,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
 ▸ randomizer
   data: { label, mode:"branches", branches:[{id,label,weight}] }
-  Handles: o id de cada branch.
+  mode "distribute_agents" (SORTEIO ponderado): data.agents:[{agent_id, percent}] (percentuais somando
+    100) — sorteia 1 agente por probabilidade e atribui; handle unico "success". E SORTEIO, nao rodizio
+    (pode cair no mesmo agente varias vezes seguidas). Pra RODIZIO exato use a ACAO distribute_agents.
+  Handles: o id de cada branch (mode branches); "success" (mode distribute_agents).
 
 ▸ update_group (WAHA, conversa de grupo apenas)
   Handles: "success", "error"
@@ -569,6 +589,19 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   data: title (cabecalho), body (corpo), color (yellow|teal|blue|violet|pink|orange|slate, default yellow),
   width (px, default 320, min 200), height (px, default 200, min 80). ATENCAO: texto vai em title+body,
   NUNCA em 'content' (usar content grava nota vazia). Disponivel nos 2 tipos de flow.
+
+═══ EXIT CONDITIONS (saida automatica do flow) ═══
+flow_data.exit_conditions: array no NIVEL DO FLOW (irmao de nodes/edges, NAO e node). Se QUALQUER
+condicao bater, o lead sai do flow NA HORA. Cada item tem "type":
+- Evento: label_added/label_removed ({type,value:'<slug>'}), conversation_resolved ({type}),
+  agent_assigned/team_assigned ({type,value:'<id opcional>'} — vazio=qualquer),
+  kanban_won/kanban_lost ({type,value:'<funnel_id opcional>'}).
+- Rico por atributo (novo 2026-07-08):
+  {type:'attribute_condition', logic:'and'|'or', rules:[{attr_key, attrSource:'contact'|'conversation'
+   |'card', operator, value | values:[...], funnel_id?, card_source?}]}.
+  AQUI o attrSource VAI na rule (ao contrario do gatilho de entrada por atributo, onde e implicito).
+  Operadores iguais aos da condition; is_empty/is_not_empty dispensam valor; card aceita funnel_id/
+  card_source na rule; rule sem attr_key e ignorada.
 
 ═══ VARIAVEIS {{ }} ═══
 contact.name, contact.email, contact.phone, contact.custom_attribute.X (SINGULAR — plural resolve vazio)

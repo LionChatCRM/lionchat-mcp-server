@@ -60,7 +60,7 @@ Todo node tem essa estrutura base:
 }
 ```
 
-**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `cron`, `webhook`.
+**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `conversation_attribute_changed`, `card_attribute_changed`, `cron`, `webhook`.
 
 **Trigger `message_sent` (novo 2026-06-11):** par do message_received, mas pra mensagens de SAÍDA — dispara quando atendente, celular (eco do WhatsApp) ou a própria IA/flow envia mensagem (nota privada NÃO dispara). Config: `keywords` (opcional) + `match_type` (`contains`|`exact`). Caso de uso clássico: "quando eu responder do celular, desligar a IA". ATENÇÃO: mensagem da IA também dispara — se a ação for desativar a IA, use keywords que só humanos digitam ou aceite que a primeira resposta da IA aciona o flow. Protegido por anti-loop (profundidade 5) e sessão única por conversa+flow; nunca alimenta `waiting_input`.
 
@@ -69,6 +69,7 @@ Todo node tem essa estrutura base:
 - `conversation_created` / `conversation_reopened`: filtro opcional de keywords via `match_mode` (`'any'`, `'contains'`, `'exact'`, `'customer_initiated'`, `'agent_initiated'`) + `keywords`. Só ESTES dois triggers usam `match_mode`.
 - `label_added` / `label_removed`: `label_names` (array de slugs). NÃO use `label` (singular) — é ignorado.
 - `card_created` / `card_moved`: `funnel_ids` (array) + `funnel_stages` (array de `"funnel_id:stage"`).
+- `conversation_attribute_changed` / `card_attribute_changed` (novo 2026-07-08): disparam na VIRADA de um atributo (da CONVERSA ou do CARD do kanban) pro valor que casa — RE-ENTRAM toda vez que o atributo muda pro valor alvo. Config: `{ "logic": "and"|"or", "rules": [ { "attr_key": "...", "operator": "...", "value": "..." } ] }` (uma rule pode usar `values: [...]` no lugar de `value` pra multi-valor). O `attrSource` é IMPLÍCITO pela chave do gatilho (conversa vs card) — NÃO informe. Operadores iguais aos da Condição: `equal`/`not_equal`/`contains`/`not_contains`/`starts_with`/`ends_with`/`is_empty`/`is_not_empty`/`greater_than`/`less_than`/`number_range`. Só `card_attribute_changed` aceita `funnel_id`/`card_source` opcionais dentro da rule (pra achar o card). Rule sem `attr_key` é ignorada.
 
 **Trigger `webhook` — Webhook Universal EMBUTIDO (novo 2026-06):** o flow pode ser disparado por um webhook próprio, criado automaticamente. Receita via API:
 1. Criar o flow normalmente (`flows_create`).
@@ -318,6 +319,7 @@ Ex.: `{ "operator": "sla_check", "value": "frt_breached" }`. "Estourado" = o mon
 | Key | config esperado | Efeito |
 |---|---|---|
 | `assign_agent` | `{ agent_id }` | Atribui agente humano à conversa |
+| `distribute_agents` | `{ agents: [{ agent_id }], dist_id }` | RODÍZIO (round-robin) de agentes: cada lead vai pro PRÓXIMO da lista na vez (1,2,3,1,2,3). `dist_id` = id fixo da ação (chave do cursor no Redis; gere um único por ação, ex. `"d_ab12cd"`). Ordem da lista = ordem do rodízio; sem porcentagem. DIFERENTE do randomizer mode `distribute_agents` (que é sorteio ponderado) |
 | `assign_team` | `{ team_id }` | Atribui time |
 | `change_status` | `{ status: 'open' \| 'resolved' \| 'pending' \| 'snoozed' }` | Muda status da conversa |
 | `change_priority` | `{ priority: 'urgent' \| 'high' \| 'medium' \| 'low' }` | Muda prioridade |
@@ -336,6 +338,7 @@ Ex.: `{ "operator": "sla_check", "value": "frt_breached" }`. "Estourado" = o mon
 | `assign_agent_card` | `{ agent_id }` | Atribui agente ao card |
 | `add_card_note` | `{ content }` | Nota no card |
 | `add_card_checklist` | `{ template_id, funnel_id?, card_source? }` | Aplica um MODELO de checklist ao card (vira um grupo). `template_id` de `kanban_config.checklist_templates`. Um modelo por bloco (repita o bloco pra mais de um) |
+| `add_card_offer` | `{ offer_id, use_custom_value?, custom_value?, funnel_id?, card_source? }` | Adiciona uma OFERTA (produto/serviço) ao card. `offer_id` de `offers_list`. `use_custom_value: true` + `custom_value` grava um valor personalizado na oferta; senão usa o valor cadastrado. O total do card recalcula sozinho (soma das ofertas). Respeita `card_source` (funnel só localiza o card) |
 | `send_webhook` | `{ url, headers?, body? }` | Dispara webhook externo |
 | `start_flow` | `{ flow_id }` | Inicia outro fluxo |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
@@ -345,7 +348,7 @@ Ex.: `{ "operator": "sla_check", "value": "frt_breached" }`. "Estourado" = o mon
 
 **Handles que SAEM:** `success`. Não tem handle `error` — falhas viram warning silencioso e o flow continua.
 
-**`card_source` (blocos de card) — opcional:** as ações de card aceitam `card_source`: `'funnel'` (default — procura o card pelo `funnel_id`) ou `'trigger'` (usa o card que DISPAROU o flow, em flows iniciados por `card_created`/`card_moved`/`card_won`/`card_lost`). Com `'trigger'`, `funnel_id` deixa de ser obrigatório — EXCETO em `move_kanban_stage`/`create_kanban_item`, cujo funil/etapa são o DESTINO. Sem card-gatilho disponível, a ação é pulada (não cai no fallback de funil). Aplica-se a `move_kanban_stage`, `set_won`/`set_lost`/`set_open`, `assign_agent_card`, `add_card_note`, `add_card_checklist`, `update_attribute` (com `attr_source: 'card'`) e às condições `card_attr_equals`/`card_attr_contains` (gravando `card_source` na própria regra).
+**`card_source` (blocos de card) — opcional:** as ações de card aceitam `card_source`: `'funnel'` (default — procura o card pelo `funnel_id`) ou `'trigger'` (usa o card que DISPAROU o flow, em flows iniciados por `card_created`/`card_moved`/`card_won`/`card_lost`). Com `'trigger'`, `funnel_id` deixa de ser obrigatório — EXCETO em `move_kanban_stage`/`create_kanban_item`, cujo funil/etapa são o DESTINO. Sem card-gatilho disponível, a ação é pulada (não cai no fallback de funil). Aplica-se a `move_kanban_stage`, `set_won`/`set_lost`/`set_open`, `assign_agent_card`, `add_card_note`, `add_card_checklist`, `add_card_offer`, `update_attribute` (com `attr_source: 'card'`) e às condições `card_attr_equals`/`card_attr_contains` (gravando `card_source` na própria regra).
 
 **`update_attribute` — campos EXATOS:** `attr_source` (`'contact'`, `'conversation'` ou `'card'`), `attr_key` (nome do atributo), `attr_value` (valor). NÃO existem `entity`/`key`/`value` — esses são ignorados e não salvam nada.
 
@@ -522,6 +525,8 @@ O campo raiz é **`waitMode`**: `"duration"` (default), `"date"` ou `"weekday"`.
 }
 ```
 
+**Modo `distribute_agents` (sorteio PONDERADO):** `data.mode: 'distribute_agents'` + `data.agents: [{ agent_id, percent }]` — sorteia UM agente por probabilidade (percentuais somando 100) e atribui automaticamente. Isso é SORTEIO, não rodízio: no curto prazo pode cair no mesmo agente várias vezes seguidas. Pra RODÍZIO EXATO (cada um na vez), use a AÇÃO `distribute_agents` no node `action` (ver seção 2.5) — não este modo.
+
 **Handles que SAEM:** o `id` de cada branch (`A`, `B`, ...). Em `mode: 'distribute_agents'` é `success`.
 
 ### 2.11 `update_group` (WAHA apenas)
@@ -649,6 +654,30 @@ Fontes de variável (quem cria o quê):
 | `api` | `apiResponseVar` (+ `apiResponseVar`_status) e campos do JSON de resposta |
 
 Variáveis salvas em atributo (`saveTo: 'contact_attr'`/`'conversation_attr'`, ou node `action` `update_attribute`) NÃO viram variável de sessão `{{var}}` — leia-as via `{{contact.custom_attribute.X}}` / `{{conversation.custom_attribute.X}}` (singular).
+
+---
+
+## 2-D. Exit conditions (saída automática do flow)
+
+`flow_data.exit_conditions` é um array no NÍVEL DO FLOW (irmão de `nodes`/`edges`, NÃO é um node). Se QUALQUER condição bater, o lead sai do flow NA HORA. Cada item tem `type`:
+
+**Por evento:**
+- `label_added` / `label_removed` — `{ "type": "label_added", "value": "<slug-da-label>" }`
+- `conversation_resolved` — `{ "type": "conversation_resolved" }`
+- `agent_assigned` / `team_assigned` — `{ "type": "agent_assigned", "value": "<id opcional>" }` (vazio = qualquer)
+- `kanban_won` / `kanban_lost` — `{ "type": "kanban_won", "value": "<funnel_id opcional>" }`
+
+**Rico por atributo** (novo 2026-07-08) — sai assim que o atributo bate:
+```json
+{ "type": "attribute_condition", "logic": "and",
+  "rules": [
+    { "attr_key": "status", "attrSource": "conversation", "operator": "equal", "value": "cancelado" }
+  ] }
+```
+- `attrSource` (`'contact'`|`'conversation'`|`'card'`) VAI na rule (ao contrário do gatilho de entrada por atributo, onde é implícito).
+- `operator`: mesmos da Condição (equal/not_equal/contains/not_contains/starts_with/ends_with/is_empty/is_not_empty/greater_than/less_than/number_range). Multi-valor via `values: [...]` no lugar de `value`. `is_empty`/`is_not_empty` dispensam valor.
+- `card` aceita `funnel_id`/`card_source` opcionais na rule.
+- `logic`: `and` (todas as rules) | `or` (qualquer rule). Rule sem `attr_key` é ignorada.
 
 ---
 

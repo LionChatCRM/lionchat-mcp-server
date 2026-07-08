@@ -34,6 +34,18 @@ Causas:
 
 **Ação:** NÃO bypass. Informar limitação ao usuário.
 
+### 403 `mcp_not_enabled` (acesso ao MCP não liberado)
+O uso do MCP é liberado por conta (função "MCP (IA conectada)" no Super Admin, válida
+para ADMINISTRADORES da conta) ou individualmente por usuário. Se nenhum dos dois estiver
+ativo, TODA chamada de dados responde:
+
+```json
+{ "error": "mcp_not_enabled", "message": "O acesso via MCP não está habilitado para esta conta..." }
+```
+
+**Ação:** NÃO retry — nenhuma chamada vai passar. Repasse a `message` ao usuário e oriente
+a pedir a liberação ao administrador da conta ou ao suporte do LionChat.
+
 ### 404 Not Found
 Recurso não existe.
 
