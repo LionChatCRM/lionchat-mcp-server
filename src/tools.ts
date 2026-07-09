@@ -396,7 +396,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-03)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-09)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -423,11 +423,15 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   Triggers: message_received (keywords[] min 3 chars + match_type 'contains'|'exact' — dispara em
     QUALQUER msg do cliente que case), conversation_created/conversation_reopened (match_mode +
     keywords opcionais), conversation_resolved, label_added/label_removed (label_names[] — NAO
-    'label' singular), card_created/card_moved (funnel_ids[] + funnel_stages[] 'funnel_id:stage'),
+    'label' singular), card_created/card_moved (funnel_ids[] de STRINGS ex ["37"] — numero puro [37]
+    NAO casa; + funnel_stages[] no formato 'funnel_id:chave_interna_da_etapa' ex '37:agendamento_pendente'
+    — a chave e o SLUG/UUID INTERNO da etapa no funil, NAO o nome exibido; card precisa estar num funil
+    de funnel_ids pro filtro de etapa valer),
     conversation_attribute_changed/card_attribute_changed (novo 2026-07-08: disparam na VIRADA de um
     atributo pro valor que casa, RE-ENTRAM a cada mudanca; config {logic:'and'|'or', rules:[{attr_key,
     operator, value | values:[...]}]}; attrSource IMPLICITO pela chave do gatilho (conversa vs card),
-    NAO informe; operadores iguais aos da condition; card_attribute_changed aceita funnel_id/card_source
+    NAO informe; operadores da condition EXCETO is_empty/is_not_empty (removidos do contexto reativo
+    09/07 — use so no node condition); card_attribute_changed aceita funnel_id/card_source
     opcionais na rule),
     cron, webhook. NOVO message_sent (2026-06-11): par do message_received pra mensagens de
     SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
@@ -436,6 +440,12 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     {custom_webhook_integration:{flow_id}} (idempotente, retorna URL unica); 3) flows_update com
     item {type:'webhook_received', config:{integration_id}} no data.items do start. Remover o item
     desativa o webhook. Excluir flow destroi o webhook. Duplicar flow NAO copia o gatilho.
+  VALIDACAO flow_trigger_conflict: criar/atualizar/ativar retorna HTTP 422
+    {error_code:'flow_trigger_conflict', conflicts:[{flow_id, flow_name, trigger_type, inbox_id,
+    inbox_name}]} se outro flow ATIVO na MESMA inbox tiver gatilho do mesmo tipo que colide
+    (card_created/card_moved por funil/etapa sobreposto; message_received/sent por keyword;
+    label por label; conversation_resolved sempre). Flow INATIVO nao conta. Estrategia: 1 flow com
+    gatilho amplo + node condition/exit_conditions, em vez de 2 flows concorrentes.
   Handle: "success".
 
 ▸ send_message
@@ -503,7 +513,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       business_hours ANTERIOR no array — pode deixar ausentes que o backend preenche),
     can_reply/can_reply_closed, conversation_has_agent/no_agent,
     contact_has_label/conversation_has_label,
-    kanban_exists/kanban_in_stage/kanban_won/kanban_lost, pagetrack_visited/pagetrack_event,
+    kanban_exists/kanban_in_stage/kanban_won/kanban_lost (funnel_id e CHAVE SEPARADA da condicao,
+      numero ex funnel_id:37; a etapa vai em value=slug puro ex value:"avaliacao_aceita" ou em stage,
+      NAO no formato "37:etapa"), pagetrack_visited/pagetrack_event,
     sla_check (SO value, codigo fixo: frt_breached/frt_ok/nrt_breached/nrt_ok/rt_breached/rt_ok/has_sla/no_sla;
       frt=primeira resp, nrt=proxima, rt=resolucao; _ok exige politica de SLA aplicada).
   Operador numerico SO em atributo numero.
@@ -543,13 +555,23 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   Handles: "success" (sem handle error — falha vira warning e o flow continua).
 
 ▸ api
-  data: { label, method, url, headers:[{key,value}], body, apiResponseVar }
+  data: { label, apiMethod (default GET), apiUrl (obrigatorio), apiHeaders:[{key,value}], apiBody
+    (string; ou apiBodyMode:'fields' + apiBodyFields:[{key,value}]), apiQueryParams, apiAuthType,
+    apiAuthToken, apiTimeout, apiResponseVar }
+  CAMPOS PREFIXADOS COM api — NAO use method/url/headers/body crus (o motor ignora -> GET vazio, ou
+    erro "URL not configured" sem apiUrl).
+  Variaveis de conta/segredo: {{account.custom_attribute.NOME}} — NAO existe {{env.X}} (resolve vazio
+    -> 401). Secret so resolve dentro do node api (apiUrl/apiHeaders/apiBody).
+  Ler a resposta adiante: {{apiResponseVar.campo}} navega por ponto (default var api_response, ex
+    {{api_response.user.name}}); NAO existe .payload/.response; status em {{api_response_status}}.
   Handles: "success", "error"
 
 ▸ ai
   data: { label, aiMode: "generate"|"intent"|"sentiment"|"extract", aiPrompt,
+    aiAssistantId,                   // OBRIGATORIO via API nos 4 modos — sem ele o node sai cedo
+                                     // (nao grava nada; {{ai_response}}/{{ai_intent}} ficam vazios)
     aiIntents: [{name}],            // se intent — ARRAY DE OBJETOS (NAO array de strings)
-    aiResponseVar,                   // se extract
+    aiResponseVar,                   // saida (default ai_response); extract usa esta var
     contextMessages: 25|50|75|100 }  // quantas msgs a IA enxerga
   Handles intent: "intent_{name}" por intencao + "no_intent" + "error" (var {{ai_intent}} disponivel)
   Handles sentiment: "positive", "negative", "neutral" + "error"
@@ -596,20 +618,23 @@ condicao bater, o lead sai do flow NA HORA. Cada item tem "type":
 - Evento: label_added/label_removed ({type,value:'<slug>'}), conversation_resolved ({type}),
   agent_assigned/team_assigned ({type,value:'<id opcional>'} — vazio=qualquer),
   kanban_won/kanban_lost ({type,value:'<funnel_id opcional>'}).
-- Rico por atributo (novo 2026-07-08):
+- Rico por atributo (novo 2026-07-08; REATIVO desde 2026-07-09):
   {type:'attribute_condition', logic:'and'|'or', rules:[{attr_key, attrSource:'contact'|'conversation'
    |'card', operator, value | values:[...], funnel_id?, card_source?}]}.
   AQUI o attrSource VAI na rule (ao contrario do gatilho de entrada por atributo, onde e implicito).
-  Operadores iguais aos da condition; is_empty/is_not_empty dispensam valor; card aceita funnel_id/
-  card_source na rule; rule sem attr_key e ignorada.
+  Operadores da condition EXCETO is_empty/is_not_empty (removidos do contexto reativo 09/07 — use so
+  no node condition); reativa: so reavalia quando o atributo VIGIADO muda; cada rule exige value|values;
+  card aceita funnel_id/card_source na rule; rule sem attr_key (ou sem value/values) e ignorada.
 
 ═══ VARIAVEIS {{ }} ═══
 contact.name, contact.email, contact.phone, contact.custom_attribute.X (SINGULAR — plural resolve vazio)
 CADASTRAL forma curta (canonica): contact.cpf, contact.cnpj, contact.rg, contact.address.street,
   contact.address.number, ... (NAO e custom_attribute!)
-conversation.id, conversation.status, conversation.team_id, conversation.agent_id,
+conversation.id (id INTERNO do banco), conversation.display_id (numero do app — use ESTE pra montar
+  link de conversa), conversation.status, conversation.team_id, conversation.agent_id,
   conversation.labels, conversation.custom_attribute.X
-account.custom_attribute.X, env.CHAVE, {{var_criada_no_set_variable}}, {{ai_intent}}, {{api_response_var}}
+account.custom_attribute.X (inclui variaveis de conta e segredos — NAO existe env.X),
+  {{var_criada_no_set_variable}}, {{ai_intent}}, {{api_response_var}}
 
 ═══ ANTI-LOOP ═══
 Cadeias automacao<->flow tem profundidade maxima 5 hand-offs (MAX_CHAIN_DEPTH). No 5o a cadeia e

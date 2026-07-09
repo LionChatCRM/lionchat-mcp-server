@@ -303,10 +303,10 @@
     { "id": "n2", "type": "send_message", "position": { "x": 370, "y": 300 }, "data": { "label": "Pede data", "messageItems": [{ "id": "m1", "type": "text", "content": "Em que data você prefere? (formato DD/MM)" }] } },
     { "id": "n3", "type": "wait_response", "position": { "x": 690, "y": 300 }, "data": { "label": "Data", "waitTime": 30, "waitUnit": "minutes", "validation": "regex", "regexPattern": "^\\d{2}/\\d{2}$", "invalidMessage": "Formato inválido. Use DD/MM (ex: 25/05)", "maxRetries": 2, "saveTo": "variable", "saveVariable": "data_pref" } },
     { "id": "n4", "type": "api", "position": { "x": 1010, "y": 300 }, "data": {
-      "label": "Cria booking", "method": "POST",
-      "url": "https://api.example.com/bookings",
-      "headers": [{ "key": "Authorization", "value": "Bearer {{env.BOOKING_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
-      "body": "{\"contact_id\":\"{{contact.id}}\",\"date\":\"{{data_pref}}\"}",
+      "label": "Cria booking", "apiMethod": "POST",
+      "apiUrl": "https://api.example.com/bookings",
+      "apiHeaders": [{ "key": "Authorization", "value": "Bearer {{account.custom_attribute.BOOKING_TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+      "apiBody": "{\"contact_id\":\"{{contact.id}}\",\"date\":\"{{data_pref}}\"}",
       "apiResponseVar": "booking_result"
     } },
     { "id": "n5", "type": "send_message", "position": { "x": 1330, "y": 180 }, "data": { "label": "Confirma", "messageItems": [{ "id": "m2", "type": "text", "content": "Reunião agendada! ID {{booking_result.id}}. Te mando lembrete 1h antes." }] } },
@@ -393,7 +393,7 @@
   "flow_data": {
     "nodes": [
       { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início" } },
-      { "id": "n2", "type": "api", "position": { "x": 370, "y": 300 }, "data": { "label": "Consulta ERP", "method": "GET", "url": "https://erp.exemplo.com/pedidos/{{numero_pedido}}", "headers": [{ "key": "Authorization", "value": "Bearer {{env.ERP_TOKEN}}" }], "apiResponseVar": "pedido" } },
+      { "id": "n2", "type": "api", "position": { "x": 370, "y": 300 }, "data": { "label": "Consulta ERP", "apiMethod": "GET", "apiUrl": "https://erp.exemplo.com/pedidos/{{numero_pedido}}", "apiHeaders": [{ "key": "Authorization", "value": "Bearer {{account.custom_attribute.ERP_TOKEN}}" }], "apiResponseVar": "pedido" } },
       { "id": "n3", "type": "end", "position": { "x": 690, "y": 300 }, "data": { "label": "Retorno", "mode": "structured" } },
       { "id": "n4", "type": "end", "position": { "x": 690, "y": 480 }, "data": { "label": "Erro", "mode": "structured" } }
     ],

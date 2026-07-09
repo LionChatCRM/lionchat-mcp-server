@@ -68,8 +68,8 @@ Todo node tem essa estrutura base:
 - `message_received`: `keywords` (array, obrigatório, cada termo com mín 3 chars) + `match_type` (`'exact'` ou `'contains'`, default `contains`). NÃO use `match_mode` aqui. Dispara em QUALQUER mensagem do cliente que case (não só na primeira) — só mensagem de cliente dispara, nunca de agente.
 - `conversation_created` / `conversation_reopened`: filtro opcional de keywords via `match_mode` (`'any'`, `'contains'`, `'exact'`, `'customer_initiated'`, `'agent_initiated'`) + `keywords`. Só ESTES dois triggers usam `match_mode`.
 - `label_added` / `label_removed`: `label_names` (array de slugs). NÃO use `label` (singular) — é ignorado.
-- `card_created` / `card_moved`: `funnel_ids` (array) + `funnel_stages` (array de `"funnel_id:stage"`).
-- `conversation_attribute_changed` / `card_attribute_changed` (novo 2026-07-08): disparam na VIRADA de um atributo (da CONVERSA ou do CARD do kanban) pro valor que casa — RE-ENTRAM toda vez que o atributo muda pro valor alvo. Config: `{ "logic": "and"|"or", "rules": [ { "attr_key": "...", "operator": "...", "value": "..." } ] }` (uma rule pode usar `values: [...]` no lugar de `value` pra multi-valor). O `attrSource` é IMPLÍCITO pela chave do gatilho (conversa vs card) — NÃO informe. Operadores iguais aos da Condição: `equal`/`not_equal`/`contains`/`not_contains`/`starts_with`/`ends_with`/`is_empty`/`is_not_empty`/`greater_than`/`less_than`/`number_range`. Só `card_attribute_changed` aceita `funnel_id`/`card_source` opcionais dentro da rule (pra achar o card). Rule sem `attr_key` é ignorada.
+- `card_created` / `card_moved`: `funnel_ids` (array de STRINGS, ex.: `["37"]` — número puro `[37]` NÃO casa) + `funnel_stages` (array de `"funnel_id:chave_da_etapa"`, ex.: `"37:agendamento_pendente"`). A `chave_da_etapa` é a CHAVE INTERNA da etapa no funil (slug legível em funis de template; pode ser um UUID/`stage_<n>` em etapa criada à mão ou funil duplicado) — NÃO o nome exibido na tela. Sem `funnel_ids` → dispara em qualquer funil; com `funnel_ids` mas sem `funnel_stages` → qualquer etapa daquele(s) funil(is). O card precisa estar num funil listado em `funnel_ids` pra o filtro de etapa valer. ATENÇÃO: dois flows ATIVOS na mesma inbox com `card_created`/`card_moved` de funil/etapa sobrepostos são bloqueados na criação/ativação (ver `flow_trigger_conflict` no fim deste guia).
+- `conversation_attribute_changed` / `card_attribute_changed` (novo 2026-07-08): disparam na VIRADA de um atributo (da CONVERSA ou do CARD do kanban) pro valor que casa — RE-ENTRAM toda vez que o atributo muda pro valor alvo. Config: `{ "logic": "and"|"or", "rules": [ { "attr_key": "...", "operator": "...", "value": "..." } ] }` (uma rule pode usar `values: [...]` no lugar de `value` pra multi-valor). O `attrSource` é IMPLÍCITO pela chave do gatilho (conversa vs card) — NÃO informe. Operadores (contexto REATIVO — desde 09/07 `is_empty`/`is_not_empty` NÃO valem aqui, pois "está vazio AGORA" dispararia a cada evento; use-os só no nó Condição): `equal`/`not_equal`/`contains`/`not_contains`/`starts_with`/`ends_with`/`greater_than`/`less_than`/`number_range`. Só `card_attribute_changed` aceita `funnel_id`/`card_source` opcionais dentro da rule (pra achar o card). Rule sem `attr_key` é ignorada.
 
 **Trigger `webhook` — Webhook Universal EMBUTIDO (novo 2026-06):** o flow pode ser disparado por um webhook próprio, criado automaticamente. Receita via API:
 1. Criar o flow normalmente (`flows_create`).
@@ -264,7 +264,7 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 | `can_reply` / `can_reply_closed` | janela 24h aberta/fechada |
 | `conversation_has_agent` / `conversation_no_agent` / `conversation_not_agent` | agente atribuído |
 | `contact_has_label` / `contact_no_label` / `conversation_has_label` / `conversation_no_label` | labels |
-| `kanban_exists` / `kanban_in_stage` / `kanban_won` / `kanban_lost` | card no funil (usa `funnel_id` + `stage`) |
+| `kanban_exists` / `kanban_in_stage` / `kanban_won` / `kanban_lost` | card no funil. `funnel_id` é CHAVE SEPARADA da condição (número, ex.: `"funnel_id": 37`). A etapa vai em `value` (slug puro da etapa, ex.: `"avaliacao_aceita"`) ou em `stage` — NÃO no formato `"37:etapa"`. Ex.: `{ "operator": "kanban_in_stage", "funnel_id": 37, "value": "avaliacao_aceita" }` |
 | `card_attr_equals` / `card_attr_contains` | atributo do card (`attrSource: 'card'` + `attr_key`; aceita `card_source: 'trigger'` p/ ler o card que iniciou o flow) |
 | `pagetrack_visited` / `pagetrack_event` | LionTrack |
 | `sla_check` | status do SLA da conversa (usa `value` = código fixo; ver abaixo) |
@@ -368,6 +368,10 @@ Lembre: o atributo lido é SINGULAR (`custom_attribute`).
 
 ### 2.6 `api`
 
+Os campos do nó DEVEM ser prefixados com `api` (`apiMethod`, `apiUrl`, `apiHeaders`, `apiBody`).
+O motor NÃO lê `method`/`url`/`headers`/`body` crus — se usar esses nomes, o nó manda um GET sem
+headers e sem body (ou erra "URL not configured" se faltar `apiUrl`).
+
 ```json
 {
   "id": "node-api-1",
@@ -375,17 +379,30 @@ Lembre: o atributo lido é SINGULAR (`custom_attribute`).
   "position": { "x": 1330, "y": 480 },
   "data": {
     "label": "Consulta CRM externo",
-    "method": "POST",
-    "url": "https://api.example.com/leads",
-    "headers": [
-      { "key": "Authorization", "value": "Bearer {{env.CRM_TOKEN}}" },
+    "apiMethod": "POST",
+    "apiUrl": "https://api.example.com/leads",
+    "apiHeaders": [
+      { "key": "Authorization", "value": "Bearer {{account.custom_attribute.CRM_TOKEN}}" },
       { "key": "Content-Type", "value": "application/json" }
     ],
-    "body": "{\"name\":\"{{contact.name}}\",\"email\":\"{{contact.email}}\"}",
+    "apiBody": "{\"name\":\"{{contact.name}}\",\"email\":\"{{contact.email}}\"}",
     "apiResponseVar": "crm_response"
   }
 }
 ```
+
+**Nomes de campo (exatos):** `apiMethod` (default `GET`), `apiUrl` (obrigatório), `apiHeaders`
+(array de `{key,value}`), `apiBody` (string; ou `apiBodyMode:"fields"` + `apiBodyFields:[{key,value}]`),
+`apiQueryParams`, `apiAuthType`/`apiAuthToken`, `apiTimeout`, `apiResponseVar` (nome da variável de saída).
+
+**Variáveis de conta / segredos:** use `{{account.custom_attribute.NOME}}` — NÃO existe `{{env.X}}`
+(resolve vazio → 401). Variáveis do tipo *secret* SÓ resolvem dentro do nó `api` (nos campos de
+mensagem elas são bloqueadas por segurança); aqui resolvem no `apiUrl`, `apiHeaders` e `apiBody`.
+
+**Ler a resposta nos nós seguintes (Liquid):** o corpo é gravado na variável `apiResponseVar`
+(default `api_response`) e navega por ponto — `{{api_response.campo}}`, `{{api_response.user.name}}`.
+NÃO existe `.payload`/`.response` (`{{api_response.payload.x}}` resolve vazio). O status fica em
+`{{api_response_status}}`. Se a resposta não for JSON, só `{{api_response}}` inteiro funciona.
 
 **Handles que SAEM:** `success`, `error`.
 
@@ -411,6 +428,15 @@ Lembre: o atributo lido é SINGULAR (`custom_attribute`).
 ```
 
 **`aiMode` válidos:** `generate`, `intent`, `sentiment`, `extract`.
+
+**OBRIGATÓRIO via API — `aiAssistantId`:** os modos `generate`/`intent`/`sentiment`/`extract`
+EXIGEM um `aiAssistantId` válido (id de um assistente Captain da conta). Sem ele o nó SAI cedo
+(`action: continue`) sem gravar nada — a variável de saída (`aiResponseVar`/`ai_intent`/`ai_sentiment`)
+fica vazia e `{{ai_response}}` resolve vazio no nó seguinte. A tela do Flow Builder preenche esse id
+pelo dropdown; um nó criado via API/MCP SEM `aiAssistantId` "não funciona" por isso. (Exceção: um modo
+`generate` sem assistente cai no LLM cru da conta — mas o caminho recomendado é sempre informar
+`aiAssistantId`.) A saída fica em `aiResponseVar` (default `ai_response`); `intent` também em
+`ai_intent`, `sentiment` em `ai_sentiment`.
 
 **Contexto da conversa:** campo `contextMessages` define quantas mensagens recentes a IA enxerga — valores válidos `25`, `50`, `75`, `100` (ampliado em 2026-06; antes o teto era ~20). Os modos `intent`/`sentiment`/`extract` rodam no motor contido (texto puro, sem persona nem ferramentas — mais barato e sem risco de vazamento); `generate` usa o assistente Captain.
 
@@ -667,7 +693,7 @@ Variáveis salvas em atributo (`saveTo: 'contact_attr'`/`'conversation_attr'`, o
 - `agent_assigned` / `team_assigned` — `{ "type": "agent_assigned", "value": "<id opcional>" }` (vazio = qualquer)
 - `kanban_won` / `kanban_lost` — `{ "type": "kanban_won", "value": "<funnel_id opcional>" }`
 
-**Rico por atributo** (novo 2026-07-08) — sai assim que o atributo bate:
+**Rico por atributo** (novo 2026-07-08; REATIVO desde 2026-07-09) — sai assim que o atributo VIRA pro valor que bate:
 ```json
 { "type": "attribute_condition", "logic": "and",
   "rules": [
@@ -675,9 +701,25 @@ Variáveis salvas em atributo (`saveTo: 'contact_attr'`/`'conversation_attr'`, o
   ] }
 ```
 - `attrSource` (`'contact'`|`'conversation'`|`'card'`) VAI na rule (ao contrário do gatilho de entrada por atributo, onde é implícito).
-- `operator`: mesmos da Condição (equal/not_equal/contains/not_contains/starts_with/ends_with/is_empty/is_not_empty/greater_than/less_than/number_range). Multi-valor via `values: [...]` no lugar de `value`. `is_empty`/`is_not_empty` dispensam valor.
+- `operator` (contexto REATIVO — desde 09/07 SEM `is_empty`/`is_not_empty`, que dispararia a cada evento; use-os só no nó Condição): `equal`/`not_equal`/`contains`/`not_contains`/`starts_with`/`ends_with`/`greater_than`/`less_than`/`number_range`. Multi-valor via `values: [...]` no lugar de `value`.
+- Reativa (09/07): só é reavaliada quando o atributo VIGIADO daquela rule realmente muda — não a cada mensagem. Cada rule exige `attr_key` + (`value` ou `values`); rule sem isso é ignorada.
 - `card` aceita `funnel_id`/`card_source` opcionais na rule.
-- `logic`: `and` (todas as rules) | `or` (qualquer rule). Rule sem `attr_key` é ignorada.
+- `logic`: `and` (todas as rules) | `or` (qualquer rule).
+
+---
+
+## 2.9 Validação `flow_trigger_conflict` (criar/ativar flow)
+
+Ao criar, atualizar ou ativar um flow, o backend BLOQUEIA se outro flow **ATIVO** na MESMA inbox
+tiver um gatilho do MESMO tipo que colide. Resposta: **HTTP 422** `{ "error_code": "flow_trigger_conflict",
+"conflicts": [{ flow_id, flow_name, trigger_type, inbox_id, inbox_name }] }`.
+
+- Só conta flow **ATIVO** — flows inativos não geram conflito.
+- Colisão por tipo de gatilho: `card_created`/`card_moved` colidem quando os funis/etapas se sobrepõem;
+  `message_received`/`message_sent` por interseção de keywords (vazio = "pega tudo" = colide);
+  `label_added`/`label_removed` por interseção de labels; `conversation_resolved` sempre colide.
+- Estratégia recomendada quando dois cenários dividiriam o mesmo gatilho: um flow único com gatilho
+  amplo + nó `condition` (ou `exit_conditions`) roteando/descartando, em vez de dois flows concorrentes.
 
 ---
 
@@ -790,6 +832,14 @@ Nodes nunca devem ficar com a mesma coordenada `(x, y)`. Se dois nodes têm posi
 | Mais de 1 node `start` | Flow precisa ter exatamente 1 ponto de entrada | Só 1 |
 | Node sem edge entrando (exceto start) | Node nunca executa | Confira que todo node não-start tem ao menos 1 edge target apontando pra ele |
 | `flow_data` sem `nodes` ou sem `edges` | Estrutura inválida | Inclua sempre, mesmo que `edges: []` |
+| `method`/`url`/`headers`/`body` no node api | Runtime NÃO lê → GET vazio (ou erro "URL not configured") | `apiMethod`/`apiUrl`/`apiHeaders`/`apiBody` |
+| `{{env.X}}` no node api | Não existe → resolve vazio → 401 | `{{account.custom_attribute.X}}` (secret resolve só no node api) |
+| `{{api_response.payload.campo}}` | `.payload` não existe → vazio | `{{api_response.campo}}` (o corpo fica direto sob a var); status em `{{api_response_status}}` |
+| node `ai` via API sem `aiAssistantId` | Sai cedo, variável de saída vazia | Informe `aiAssistantId` (obrigatório em generate/intent/sentiment/extract) |
+| `funnel_stages: ["37:Nome Exibido"]` | Usa o NOME da etapa, não a chave interna → gatilho nunca dispara | `"37:chave_interna"` (slug/UUID da etapa) |
+| `funnel_ids: [37]` (número) no gatilho card | String esperada → `[37].include?("37")` falso → não dispara | `funnel_ids: ["37"]` |
+| `kanban_in_stage` com `value: "37:etapa"` | Formato errado → cai no default silenciosamente | `funnel_id` separado + `value: "etapa"` (slug puro) |
+| `is_empty`/`is_not_empty` em gatilho ou exit por atributo | Removidos do contexto reativo (09/07) | Use só no node `condition` (avaliação pontual) |
 
 ---
 
