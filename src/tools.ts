@@ -603,7 +603,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   Handles: "success", "error"
 
 ▸ end
-  Terminal, sem handles de saida. Em conversation: encerra o ramo. Em ai_tool: OBRIGATORIO —
+  EXCLUSIVO de flow ai_tool — NUNCA use em flow conversation (a paleta do editor nem oferece;
+  o backend rejeita na gravacao: "contains node types not allowed in conversation flow"). Em
+  conversation o ramo termina sozinho no ultimo node, sem node de fim. Em ai_tool: OBRIGATORIO —
   data define o retorno estruturado pro LLM (suporta saida Liquid com {{ }}).
 
 ▸ note
