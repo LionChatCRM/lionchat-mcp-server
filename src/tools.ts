@@ -524,7 +524,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   data: { label, items: [ { key, config: {...} } ] }
   ATENCAO: items[].config NAO items[].params.
   Keys validas:
-    Conversa: assign_agent({agent_id}), assign_team({team_id}),
+    Conversa: assign_agent({agent_id}), assign_team({team_id})
+      — agent_id/team_id aceitam id fixo OU variavel Liquid (ex: team_id: '{{target_team}}');
+      variavel mal escrita e RECUSADA no save; em runtime, se nao resolver pra um numero,
+      o erro fica visivel no historico do node (equipe/agente precisa pertencer a conta),
       distribute_agents({agents:[{agent_id}], dist_id}) — RODIZIO (round-robin): cada lead vai pro
         PROXIMO agente da lista na vez (1,2,3,1,2,3). dist_id = id fixo da acao (chave do cursor no
         Redis; gere um unico por acao, ex 'd_ab12cd'). Ordem da lista = ordem do rodizio, sem porcentagem.

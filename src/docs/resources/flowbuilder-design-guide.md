@@ -314,13 +314,22 @@ Ex.: `{ "operator": "sla_check", "value": "frt_breached" }`. "Estourado" = o mon
 
 **ATENÇÃO:** items usa `config` (NÃO `params`).
 
+**Id dinâmico em `assign_team`/`assign_agent` (novo 2026-07-09):** `team_id`/`agent_id` aceitam
+variável Liquid além do id fixo — ex.: `{ "key": "assign_team", "config": { "team_id": "{{target_team}}" } }`
+com `target_team` calculado num `set_variable` anterior (padrão: mapa em variável da conta
+`teams_<unidade>` + `split`). Substitui o padrão antigo de node `api` chamando
+`POST /conversations/{id}/assignments` na própria plataforma. Regras: variável mal escrita é
+RECUSADA na gravação (422, parse Liquid strict); em runtime, se não resolver pra um número, o
+erro fica visível no histórico do node (e equipe/agente precisa pertencer à conta). No editor,
+o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
+
 **Keys de action válidas:**
 
 | Key | config esperado | Efeito |
 |---|---|---|
-| `assign_agent` | `{ agent_id }` | Atribui agente humano à conversa |
+| `assign_agent` | `{ agent_id }` | Atribui agente humano à conversa. `agent_id` aceita id fixo OU variável Liquid — ver nota abaixo |
 | `distribute_agents` | `{ agents: [{ agent_id }], dist_id }` | RODÍZIO (round-robin) de agentes: cada lead vai pro PRÓXIMO da lista na vez (1,2,3,1,2,3). `dist_id` = id fixo da ação (chave do cursor no Redis; gere um único por ação, ex. `"d_ab12cd"`). Ordem da lista = ordem do rodízio; sem porcentagem. DIFERENTE do randomizer mode `distribute_agents` (que é sorteio ponderado) |
-| `assign_team` | `{ team_id }` | Atribui time |
+| `assign_team` | `{ team_id }` | Atribui time. `team_id` aceita id fixo OU variável Liquid — ver nota abaixo |
 | `change_status` | `{ status: 'open' \| 'resolved' \| 'pending' \| 'snoozed' }` | Muda status da conversa |
 | `change_priority` | `{ priority: 'urgent' \| 'high' \| 'medium' \| 'low' }` | Muda prioridade |
 | `add_label` | `{ labels: ['slug1', 'slug2'] }` | Adiciona labels ao CONTATO |
@@ -578,7 +587,11 @@ Atualiza nome/descrição/foto de grupo WhatsApp. Use só quando flow roda em in
 
 ### 2.13 `end` (encerra ramo / define retorno do ai_tool)
 
-Node terminal, sem handles de saída. Em flow `conversation` apenas encerra aquele ramo. Em flow `ai_tool` é OBRIGATÓRIO: o `data` do `end` define o que volta pro LLM (modo de saída + template do resultado).
+Node terminal, sem handles de saída. **EXCLUSIVO de flow `ai_tool`** — NUNCA use em flow
+`conversation` (a paleta do editor nem oferece; desde 2026-07-09 o backend REJEITA na gravação:
+"contains node types not allowed in conversation flow"). Em conversation o ramo termina sozinho
+no último node, sem node de fim. Em `ai_tool` é OBRIGATÓRIO: o `data` do `end` define o que
+volta pro LLM (modo de saída + template do resultado).
 
 ```json
 { "id": "node-end", "type": "end", "position": { "x": 1330, "y": 300 }, "data": { "label": "Retorno", "mode": "structured" } }
