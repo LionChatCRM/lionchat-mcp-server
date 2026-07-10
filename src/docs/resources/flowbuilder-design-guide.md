@@ -221,12 +221,17 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
   "data": {
     "label": "Tipo de cliente",
     "conditions": [
-      { "id": "c1", "label": "VIP", "field": "contact.custom_attribute.plano", "operator": "equal", "value": "premium" },
-      { "id": "c2", "label": "Padrão", "field": "contact.custom_attribute.plano", "operator": "equal", "value": "standard" }
+      { "id": "c1", "label": "VIP", "field": "{{contact.custom_attribute.plano}}", "operator": "equal", "value": "premium", "valueType": "variable" },
+      { "id": "c2", "label": "Padrão", "field": "{{contact.custom_attribute.plano}}", "operator": "equal", "value": "standard", "valueType": "variable" }
     ]
   }
 }
 ```
+
+**DUAS regras críticas em condições criadas via API (descobertas 2026-07-10, flow real em produção):**
+
+1. **`field` SEMPRE com chaves `{{...}}`.** O motor só resolve o campo se ele contém `{{` — `"field": "contact.custom_attribute.plano"` (sem chaves) compara o TEXTO LITERAL do caminho com o valor e NUNCA casa (a saída nunca dispara; tudo cai no `default`). Certo: `"field": "{{contact.custom_attribute.plano}}"`.
+2. **Inclua `"valueType": "variable"` na regra.** O runtime funciona sem, mas o EDITOR VISUAL identifica o tipo da regra por esse campo — sem ele, ao abrir o nó na tela a saída aparece VAZIA (como se não tivesse condição) e, se alguém salvar o flow pela tela nesse estado, a regra é perdida. `valueType: "variable"` é o tipo genérico de expressão (aceita todos os operadores da tabela abaixo).
 
 **Agrupar várias regras numa saída — E / OU (2026-06):** cada item de `conditions` (cada saída `cond_N`) pode, em vez de uma regra plana, agrupar VÁRIAS regras com `rules[]` + `logic`:
 

@@ -485,6 +485,10 @@ ContactDocument (aba Documentos do contato, 2026-06-11)
 └── ações: preview, download, renomear, favoritar, excluir (conversas são só-leitura)
 ```
 
+### Google Contatos (integração nativa)
+
+Salva contatos do LionChat no **Google Contatos** da conta Google conectada pelo admin (etiqueta "LionChat"), fazendo o celular/WhatsApp exibirem o nome do cliente. Conexão é **uma por conta**, feita **somente pela interface** (Configurações → Integrações → Google Contatos → "Conectar conta Google" — é OAuth no navegador, **não há tool MCP** para conectar). Comportamento: contato novo com telefone sobe automático (~1 min); botão "Enviar contatos existentes" manda a base antiga (vira "Ressincronizar contatos" depois — idempotente, nunca duplica); rename aqui propaga pro Google só em contatos criados pelo sistema; nunca apaga nem altera a agenda pessoal do cliente. Quando o usuário perguntar "dá pra salvar os contatos no celular/Google?", oriente esse caminho de tela.
+
 ## Cardinalidades importantes
 
 - `Account` 1—N `User` (via AccountUser)

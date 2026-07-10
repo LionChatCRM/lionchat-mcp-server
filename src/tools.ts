@@ -396,7 +396,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-09)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-10)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -496,10 +496,18 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
 ▸ condition
   data: { label, conditions: [
-    { id, label, field, operator, value }
+    { id, label, field, operator, value, valueType }
   ]}
+  CRITICO (2026-07-10, aprendido em flow real de producao):
+    1. field SEMPRE com chaves: "{{contact.custom_attribute.plano}}", "{{minha_var}}", "{{last_response}}".
+       Sem chaves o motor compara o TEXTO LITERAL do caminho — a saida NUNCA casa (tudo cai no default).
+    2. Inclua "valueType": "variable" em CADA regra de expressao. O motor roda sem, mas o EDITOR VISUAL
+       identifica o tipo da regra por esse campo — sem ele a saida aparece VAZIA na tela e, se alguem
+       salvar o flow pela tela nesse estado, a regra e PERDIDA. (Excecoes que nao usam field/valueType
+       "variable": regras por attr_key/attrSource="attr_config", business_hours, can_reply, sla_check,
+       kanban_*, conversation_has_agent/no_agent, pagetrack_*.)
   Agrupar E/OU: cada saida pode trocar a regra plana por rules[]+logic:
-    { id, label, logic: "and"|"or", rules: [ {field,operator,value}, ... ] }
+    { id, label, logic: "and"|"or", rules: [ {field,operator,value,valueType}, ... ] }
     logic ausente = "and"; ate 10 regras por saida; sem rules = grupo de 1 (retrocompat).
     label = nome OPCIONAL da saida (cosmetico, aparece no canvas; NAO muda roteamento).
     As regras de um grupo podem ser de tipos diferentes (atributo + status + etiqueta + SLA...).
@@ -661,6 +669,17 @@ sourceHandle OBRIGATORIO casar com handle exposto pelo node source.
 8. saveTo 'attribute'/'contact_attribute' nao existem — use 'contact_attr'/'conversation_attr'
 9. ai_tool via flow_tools_create (flows_create rejeita/cria do tipo errado); no end obrigatorio
 10. node sem position empilha tudo em (0,0) — sempre informe e nunca repita (x,y)
+11. condition: field SEM '{{}}' compara texto literal (nunca casa) E regra sem valueType:'variable'
+    fica INVISIVEL no editor (salvar pela tela perde a regra) — ver secao condition acima
+12. Atribuir equipe/agente DINAMICO: NAO use node api chamando a propria plataforma
+    (/conversations/{id}/assignments com token). Use a acao nativa: action item
+    { key:'assign_team', config:{ team_id:'{{minha_var}}', team_id_mode:'variable' } }
+    (idem assign_agent/agent_id). O servidor valida o template na gravacao; id que nao
+    resolve numa equipe/agente real da conta gera erro VISIVEL no historico do node.
+    Recomendado: node condition antes ({{minha_var}} is_number) roteando falha pro fallback.
+13. Assistente de Formulas no editor (2026-07-10): quem edita pela tela tem preview ao vivo
+    (inclusive com contato real), avisos ao digitar e 'Gerar com IA' nos campos de formula —
+    ao entregar um flow com Liquid, sugira ao usuario validar as formulas la.
 
 ═══ EXEMPLO MINIMO — Menu 3 opcoes ═══
 {

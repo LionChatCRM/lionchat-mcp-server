@@ -109,7 +109,7 @@
     { "id": "n8", "type": "send_message", "position": { "x": 2290, "y": 300 }, "data": { "label": "T - Timing", "messageItems": [{ "id": "m4", "type": "text", "content": "Em quanto tempo precisam ter a solução rodando?\n\n1️⃣ Esse mês\n2️⃣ Próximos 3 meses\n3️⃣ Sem pressa" }] } },
     { "id": "n9", "type": "wait_response", "position": { "x": 2610, "y": 300 }, "data": { "label": "Prazo", "waitTime": 60, "waitUnit": "minutes", "validation": "options", "acceptedOptions": ["1","2","3"], "saveTo": "contact_attr", "saveAttrKey": "timing_tier" } },
     { "id": "n10", "type": "condition", "position": { "x": 2930, "y": 300 }, "data": { "label": "Quente?", "conditions": [
-      { "id": "c1", "label": "Lead quente", "field": "contact.custom_attribute.budget_tier", "operator": "not_equal", "value": "1" }
+      { "id": "c1", "label": "Lead quente", "field": "{{contact.custom_attribute.budget_tier}}", "operator": "not_equal", "value": "1", "valueType": "variable" }
     ] } },
     { "id": "n11", "type": "action", "position": { "x": 3250, "y": 180 }, "data": { "label": "Quente", "items": [
       { "key": "assign_team", "config": { "team_id": 1 } },
@@ -184,7 +184,7 @@
   "nodes": [
     { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "conversation_created" }] } },
     { "id": "n2", "type": "condition", "position": { "x": 370, "y": 300 }, "data": { "label": "Horário comercial?", "conditions": [
-      { "id": "c1", "label": "Dentro do horário", "field": "now.hour", "operator": "greater_than", "value": "8" }
+      { "id": "c1", "label": "Dentro do horário", "field": "{{now.hour}}", "operator": "greater_than", "value": "8", "valueType": "variable" }
     ] } },
     { "id": "n3", "type": "action", "position": { "x": 690, "y": 180 }, "data": { "label": "Atribui agente", "items": [
       { "key": "assign_team", "config": { "team_id": 1 } }
@@ -271,7 +271,7 @@
   "nodes": [
     { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received" }] } },
     { "id": "n2", "type": "condition", "position": { "x": 370, "y": 300 }, "data": { "label": "Pede humano?", "conditions": [
-      { "id": "c1", "label": "Sim", "field": "last_message.content", "operator": "contains", "value": "humano" }
+      { "id": "c1", "label": "Sim", "field": "{{last_response}}", "operator": "contains", "value": "humano", "valueType": "variable" }
     ] } },
     { "id": "n3", "type": "action", "position": { "x": 690, "y": 120 }, "data": { "label": "→ Humano", "items": [
       { "key": "deactivate_captain", "config": {} },
@@ -491,7 +491,7 @@
     { "id": "n2", "type": "condition", "position": { "x": 370, "y": 300 }, "data": { "label": "Atrasado?", "conditions": [
       { "id": "c1", "label": "SLA estourado e aberta", "logic": "and", "rules": [
         { "operator": "sla_check", "value": "frt_breached" },
-        { "field": "conversation.status", "operator": "equal", "value": "open" }
+        { "field": "{{conversation.status}}", "operator": "equal", "value": "open", "valueType": "variable" }
       ] }
     ] } },
     { "id": "n3", "type": "action", "position": { "x": 690, "y": 180 }, "data": { "label": "Etiqueta Atrasado", "actionType": "add_conversation_label", "labels": ["atrasado"] } },
