@@ -140,6 +140,37 @@ Dispara quando o CLIENTE fica inativo após resposta da IA. O motor de follow-up
 **só-leitura** (não executa ferramentas, não coleta dado — só redige a mensagem de retomada,
 com saída estruturada garantida). `paused=true` no assistente corta os follow-ups também.
 
+## Condições para NÃO fazer follow-up + horário de silêncio (2026-07)
+
+`config.follow_up_skip_conditions` — array de até 3 condições (lógica OU: qualquer uma verdadeira
+pula o follow-up). Tipos:
+
+```json
+{ "config": { "follow_up_skip_conditions": [
+  { "type": "label", "operator": "present", "labels": ["follow-pausar"] },
+  { "type": "conversation_attr", "attribute": "status_negociacao", "operator": "equal", "value": "fechado" },
+  { "type": "time_window", "start": 22, "end": 7 }
+] } }
+```
+
+- `label`: pula se a conversa TEM (`present`) / NÃO tem (`absent`) alguma das etiquetas.
+- `contact_attr` / `conversation_attr`: pula quando o atributo do contato/conversa bate o operador
+  (`equal`, `not_equal`, `contains`, `present`, `blank`, `gt`, `lt`) com `value`.
+- **`time_window` (horário de silêncio)**: `start` e `end` são horas inteiras 0-23 (fuso America/Sao_Paulo).
+  No período a IA **NÃO envia follow-up**, mas **continua respondendo o cliente normalmente**. Janela
+  **circular**: `22→7` = silêncio das 22h até as 7h (22,23,0…6). O passo que cai no silêncio é PULADO
+  (não empurra pra frente — evita disparo em massa na abertura); a cadência segue nos passos seguintes.
+  `start == end` = janela inválida (ignorada). Ideal pra não incomodar cliente de madrugada.
+
+## Desligar a IA quando um humano assume (2026-07)
+
+`config.feature_pause_on_human_reply` (bool, padrão false). Ligado, a IA **se desliga sozinha** na
+conversa (fica `captain_assistant_id=null` + `custom_attributes.captain_manually_disabled=true`)
+assim que um HUMANO DE VERDADE assume — atendente responde o cliente pelo painel (ao vivo) OU a
+mensagem sai do celular (coexistência WhatsApp). NÃO desliga: nota privada, mensagem da própria IA,
+follow-up, automação, campanha, confirmação de agendamento, mensagem agendada. Gera uma pílula
+"atendimento assumido pela equipe" na conversa. Pra religar: reatribuir o agente na conversa.
+
 ## Guardrails e diretrizes de resposta (2026-06)
 
 Dois arrays no assistente (top-level, fora do config):

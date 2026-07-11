@@ -213,6 +213,11 @@ os de `user_ids` viram membros comuns. A resposta traz `is_supervisor` (boolean)
 - `config.feature_faq`: gera FAQs sugeridas ao resolver conversas
 - `config.feature_follow_up` + `config.follow_up_steps`: follow-up automático em cadência de até
   3 etapas (cada ≥5 min, soma ≤24h) quando o cliente some — motor dedicado só-leitura
+- `config.follow_up_skip_conditions`: array (até 3, lógica OU) de condições pra NÃO fazer follow-up.
+  Tipos: `label`, `contact_attr`/`conversation_attr`, e `time_window` (horário de silêncio: `start`/`end`
+  horas 0-23, janela circular — no período não envia follow-up, mas a IA segue respondendo o cliente)
+- `config.feature_pause_on_human_reply`: bool — a IA se desliga sozinha na conversa quando um humano
+  assume (atendente responde pelo painel OU mensagem do celular); nota privada/automação/campanha não contam
 - `config.model`: modelo OpenAI usado (gpt-4o, gpt-4o-mini)
 - `config.temperature`: 0.0-1.0
 - `config.instructions`: prompt sistema (Liquid template, até 20.000 chars)
