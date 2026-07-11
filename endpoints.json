@@ -21486,10 +21486,11 @@
         "description": "Itens por página (default 25, máx 100)"
       }
     ],
-    "returns": "{ data: [{ id, status, contact_name, conversation_display_id, started_at, completed_at }], meta }",
+    "returns": "{ data: [{ id, status, contact_name, conversation_display_id, started_at, completed_at }], meta, date_trigger_pending_count (so em flow com Gatilho de Data — quantos contatos estao agendados agora), date_trigger_skips (ultimos 50 pulos: {contact_name, fire_at, reason, occurrence_date}) }",
     "common_use_cases": [
       "Diagnosticar 'o flow não disparou'",
-      "Ver quantos clientes passaram pelo flow hoje"
+      "Ver quantos clientes passaram pelo flow hoje",
+      "Ver agendados e envios pulados do Gatilho de Data (date_trigger_pending_count / date_trigger_skips)"
     ],
     "related_tools": [
       "lionchat_flows_show"

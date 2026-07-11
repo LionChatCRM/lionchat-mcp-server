@@ -512,6 +512,45 @@
 
 ---
 
+## 16. Feliz aniversário (Gatilho de Data)
+
+**Caso:** manda uma mensagem de parabéns todo ano no aniversário do contato, às 09:00, pela caixa onde ele conversa. Usa o gatilho `date_trigger` (dispara na data, sem varredura). Só flow **individual**.
+
+```json
+{
+  "nodes": [
+    { "id": "start", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [
+      { "type": "date_trigger", "config": {
+        "attr_key": "_date_of_birth",
+        "offset_direction": "on",
+        "offset_days": 0,
+        "repeat_yearly": true,
+        "send_time_source": "fixed",
+        "send_time": "09:00",
+        "inbox_mode": "contact_recent",
+        "filters": { "logic": "and", "rules": [] }
+      } }
+    ] } },
+    { "id": "n2", "type": "send_message", "position": { "x": 370, "y": 300 }, "data": { "label": "Parabéns", "messageItems": [
+      { "id": "m1", "type": "text", "content": "Feliz aniversário, {{contact.name}}! 🎉 Toda a equipe deseja um dia incrível." }
+    ] } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "start", "target": "n2", "sourceHandle": "success", "type": "deletable", "animated": true }
+  ]
+}
+```
+
+**Variações:**
+- **3 dias antes de um exame:** `attr_key` = a chave do atributo de data (ex.: `"data_exame"`), `offset_direction` = `"before"`, `offset_days` = 3, `repeat_yearly` = false (data única).
+- **Horário do próprio contato:** `send_time_source` = `"attribute"` + `send_time_attr_key` = chave do atributo com o HH:MM; ou `"variable"` + `send_time_template` = fórmula Liquid (só campos do contato).
+- **Caixa fixa:** `inbox_mode` = `"fixed"` + `inbox_id` = id de uma caixa do flow.
+- **Só parte da base:** preencha `filters.rules` (ex.: só quem tem etiqueta/atributo X) — mesmo formato do gatilho de atributo, avaliado na hora do envio.
+
+**Lembretes:** `attr_key` é obrigatório; `_date_of_birth` é o Aniversário nativo. `trigger_uuid` é preenchido pelo backend (não envie). Ativar o flow já agenda os contatos que têm a data. Pulos (contato sem telefone, caixa desvinculada, etc.) aparecem em `flows_executions_list`.
+
+---
+
 ## Como usar este catálogo
 
 1. **Identifique o pattern mais próximo** do que o cliente pediu

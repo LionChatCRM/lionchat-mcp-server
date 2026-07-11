@@ -433,6 +433,16 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     NAO informe; operadores da condition EXCETO is_empty/is_not_empty (removidos do contexto reativo
     09/07 — use so no node condition); card_attribute_changed aceita funnel_id/card_source
     opcionais na rule),
+    date_trigger (NOVO 2026-07-10 — Gatilho de Data: dispara quando uma DATA do CONTATO chega,
+    aniversario/exame; modelo agenda, sem varredura; SO flow individual). Item usa config ANINHADO:
+    {type:'date_trigger', config:{ attr_key ('_date_of_birth'=aniversario nativo, OU chave de
+    atributo do contato tipo Data ex 'data_exame' — OBRIGATORIO), offset_direction 'before'|'on'|
+    'after', offset_days 0-365, repeat_yearly bool (true=ignora ano/aniversario), send_time_source
+    'fixed'|'attribute'|'variable' (+ send_time 'HH:MM' | send_time_attr_key | send_time_template
+    Liquid so-contato), inbox_mode 'contact_recent'|'fixed' (+ inbox_id obrigatorio se fixed),
+    filters {logic,rules[...]} opcional (attrSource sempre 'contact') }}. trigger_uuid e preenchido
+    pelo backend (NAO envie). 29/02 vira 28/02 em ano nao-bissexto; tolerancia 24h; ativar o flow
+    agenda quem ja tem a data; pulos aparecem em flows_executions_list.
     cron, webhook. NOVO message_sent (2026-06-11): par do message_received pra mensagens de
     SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
     'desativar IA' com esse trigger sem keywords = a propria resposta da IA dispara o flow.

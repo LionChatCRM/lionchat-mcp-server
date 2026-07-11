@@ -60,7 +60,7 @@ Todo node tem essa estrutura base:
 }
 ```
 
-**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `conversation_attribute_changed`, `card_attribute_changed`, `cron`, `webhook`.
+**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `conversation_attribute_changed`, `card_attribute_changed`, `date_trigger`, `cron`, `webhook`.
 
 **Trigger `message_sent` (novo 2026-06-11):** par do message_received, mas pra mensagens de SAÍDA — dispara quando atendente, celular (eco do WhatsApp) ou a própria IA/flow envia mensagem (nota privada NÃO dispara). Config: `keywords` (opcional) + `match_type` (`contains`|`exact`). Caso de uso clássico: "quando eu responder do celular, desligar a IA". ATENÇÃO: mensagem da IA também dispara — se a ação for desativar a IA, use keywords que só humanos digitam ou aceite que a primeira resposta da IA aciona o flow. Protegido por anti-loop (profundidade 5) e sessão única por conversa+flow; nunca alimenta `waiting_input`.
 
@@ -70,6 +70,24 @@ Todo node tem essa estrutura base:
 - `label_added` / `label_removed`: `label_names` (array de slugs). NÃO use `label` (singular) — é ignorado.
 - `card_created` / `card_moved`: `funnel_ids` (array de STRINGS, ex.: `["37"]` — número puro `[37]` NÃO casa) + `funnel_stages` (array de `"funnel_id:chave_da_etapa"`, ex.: `"37:agendamento_pendente"`). A `chave_da_etapa` é a CHAVE INTERNA da etapa no funil (slug legível em funis de template; pode ser um UUID/`stage_<n>` em etapa criada à mão ou funil duplicado) — NÃO o nome exibido na tela. Sem `funnel_ids` → dispara em qualquer funil; com `funnel_ids` mas sem `funnel_stages` → qualquer etapa daquele(s) funil(is). O card precisa estar num funil listado em `funnel_ids` pra o filtro de etapa valer. ATENÇÃO: dois flows ATIVOS na mesma inbox com `card_created`/`card_moved` de funil/etapa sobrepostos são bloqueados na criação/ativação (ver `flow_trigger_conflict` no fim deste guia).
 - `conversation_attribute_changed` / `card_attribute_changed` (novo 2026-07-08): disparam na VIRADA de um atributo (da CONVERSA ou do CARD do kanban) pro valor que casa — RE-ENTRAM toda vez que o atributo muda pro valor alvo. Config: `{ "logic": "and"|"or", "rules": [ { "attr_key": "...", "operator": "...", "value": "..." } ] }` (uma rule pode usar `values: [...]` no lugar de `value` pra multi-valor). O `attrSource` é IMPLÍCITO pela chave do gatilho (conversa vs card) — NÃO informe. Operadores (contexto REATIVO — desde 09/07 `is_empty`/`is_not_empty` NÃO valem aqui, pois "está vazio AGORA" dispararia a cada evento; use-os só no nó Condição): `equal`/`not_equal`/`contains`/`not_contains`/`starts_with`/`ends_with`/`greater_than`/`less_than`/`number_range`. Só `card_attribute_changed` aceita `funnel_id`/`card_source` opcionais dentro da rule (pra achar o card). Rule sem `attr_key` é ignorada.
+
+- `date_trigger` — **Gatilho de Data (novo 2026-07-10):** dispara quando uma DATA guardada na ficha do CONTATO chega (aniversário, data de exame, vencimento de plano). Modelo "agendamento de mensagem": a escrita da data já marca o disparo — NÃO existe varredura periódica. Só em flow `conversation` **individual** (a data é de um contato; grupo não tem). Config (item usa `config` ANINHADO, igual `webhook_received`/`attribute_changed`):
+  ```json
+  { "type": "date_trigger", "config": {
+    "attr_key": "_date_of_birth",          // "_date_of_birth" = Aniversário nativo; OU a chave de um atributo do contato do tipo Data (ex.: "data_exame")
+    "offset_direction": "on",              // "before" | "on" | "after"
+    "offset_days": 0,                      // 0-365 (relevante só p/ before/after)
+    "repeat_yearly": true,                 // true = ignora o ano da data (aniversário); false = data única
+    "send_time_source": "fixed",           // "fixed" | "attribute" | "variable"
+    "send_time": "09:00",                  // p/ fixed — HH:MM
+    "send_time_attr_key": "",              // p/ attribute — chave de atributo do contato que contém HH:MM
+    "send_time_template": "",              // p/ variable — fórmula Liquid que resulta em HH:MM (SÓ campos do contato, ex.: "{{contact.custom_attribute.horario}}")
+    "inbox_mode": "contact_recent",        // "contact_recent" (conversa mais recente do contato) | "fixed"
+    "inbox_id": null,                      // OBRIGATÓRIO p/ inbox_mode "fixed" — id de uma inbox vinculada ao flow
+    "filters": { "logic": "and", "rules": [] }  // opcional; mesmo formato de attribute_changed, attrSource é sempre "contact"
+  }}
+  ```
+  Regras: `attr_key` é **obrigatório**. `trigger_uuid` é preenchido pelo backend no save (NÃO envie; se enviar é preservado). 29/02 em ano não-bissexto colapsa p/ 28/02. Disparo vencido tem tolerância de 24h. Se `inbox_mode` for `fixed` e a caixa for desvinculada do flow depois, os envios daquele gatilho são **pulados** (visíveis em `flows_executions_list`). Caixa oficial WhatsApp exige template na 1ª mensagem se a conversa for criada nova (senão pula). Ativar o flow agenda automaticamente os contatos que já têm a data preenchida.
 
 **Trigger `webhook` — Webhook Universal EMBUTIDO (novo 2026-06):** o flow pode ser disparado por um webhook próprio, criado automaticamente. Receita via API:
 1. Criar o flow normalmente (`flows_create`).
@@ -670,6 +688,7 @@ Na tela o usuário vê isso como TRÊS opções ao criar: "Mensagem" (= `convers
 |---|---|---|
 | Node `update_group` (Configurar Grupo: nome, foto, permissões — WAHA) | NÃO existe | **SÓ aqui** |
 | Gatilhos e condições de **LionTrack** (visita de página / evento do site) | disponíveis | **NÃO** (grupo não tem um contato único navegando) |
+| Gatilho `date_trigger` (data do contato) | disponível | **NÃO** (grupo não tem um contato único) |
 | Todos os outros nodes (`send_message`, `wait_response`, `condition`, `action`, `api`, `ai`, `set_variable`, `wait`, `randomizer`, `note`, `end`) | iguais | iguais |
 
 Regras práticas ao montar via API:

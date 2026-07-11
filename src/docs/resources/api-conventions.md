@@ -288,8 +288,8 @@ Ou com código:
 
 ```json
 {
-  "error_code": "LIONLAB_PLAN_INSUFFICIENT",
-  "message": "Plan upgrade required"
+  "error_code": "agent_no_funnel_access",
+  "message": "Agente sem acesso ao funil"
 }
 ```
 
