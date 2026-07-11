@@ -117,6 +117,10 @@ Pra reativar: `paused=false`. Toggle é auditado (`audited only: [:paused]`).
 
 **Janela de inconsistência:** ~5-8s. Jobs que já estão dentro do LLM no momento da pausa enviam a resposta mesmo. Use o botão pra parar **novas** respostas, não pra cancelar uma que já saiu.
 
+## Formato do `config` no `captain_assistants_update` (2026-07-11)
+
+O `config` DEVE ser enviado como **objeto** (ex.: `config: { disabled_tools: [...] }`), NUNCA como string/texto. Se vier em formato errado, o backend retorna **422** (não salva ignorando em silêncio). O update do `config` é **merge parcial** — mandar só o subset que muda (ex.: só `disabled_tools`) preserva os demais campos.
+
 ## Limite do prompt e cache OpenAI (2026-05-22)
 
 - `config.instructions` (system prompt do agente) aceita até **20.000 caracteres** (antes 10k). Acima de 15k, o frontend mostra aviso "lost in the middle" — prefira colocar instruções críticas no início ou final.

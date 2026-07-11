@@ -261,6 +261,8 @@ Antes de QUALQUER ação que escreve, modifica, apaga ou envia, pare e avalie se
 
 **Aja sem perguntar apenas em operações idempotentes:** leitura, busca, resumo, classificação.
 
+**Excluir agente/usuário (`lionchat_agents_destroy`) — SEMPRE pergunte o destino primeiro.** Se o agente tem recursos vinculados (conversas, tarefas — inclusive as que ele **criou** —, cards do Kanban, campanhas, agendamentos), o sistema EXIGE um destino de reatribuição. Antes de excluir: consulte `lionchat_agents_assigned_resources` (o retorno inclui `tasks_created`, tarefas criadas por ele); se houver QUALQUER recurso, **pergunte pra qual agente transferir tudo** e passe `reassign_to_agent_id` no destroy. Nunca tente excluir sem o destino — o sistema recusa e o trabalho do agente ficaria órfão. Ao excluir, tudo passa pro agente escolhido; o excluído fica só no histórico.
+
 **NUNCA sobrescreva por inferência dados já preenchidos.** Em especial, **NUNCA sobrescreva telefone ou e-mail existente de um contato** — se já há valor preenchido, pergunte antes de alterar.
 
 ## 8. Índice de roteamento (intenção → tool certa)
