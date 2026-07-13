@@ -282,7 +282,7 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 | `has_length` | comprimento exato (`value` = número) |
 | `is_number` / `is_letter` / `is_email` / `is_phone` | validação de formato |
 | `regex` | padrão regex em `value` |
-| `equal_any` / `not_equal_any` / `contains_any` | multi-valor (usa `values` array) |
+| `equal_any` / `not_equal_any` / `contains_any` / `not_contains_any` | multi-valor (usa `values` array). `contains_any` = contém ALGUMA; `not_contains_any` = não contém NENHUMA (útil pra "seguir só quando a msg não tem nenhuma das palavras-chave de outros flows") |
 | `business_hours` / `outside_business_hours` | horário comercial (par: dentro/fora). `business_hours` aceita `start_hour`/`end_hour` (0-23), `days` (array 0=Dom..6=Sab, ausente=todos) e **`timezone`** (IANA, ex.: `America/Sao_Paulo` — default se ausente). **REGRA:** a saída `outside_business_hours` HERDA `start_hour`/`end_hour`/`days`/`timezone` da `business_hours` ANTERIOR no array — pode deixá-los ausentes na "fora" (o backend preenche). O horário é avaliado no `timezone` (não em UTC) |
 | `can_reply` / `can_reply_closed` | janela 24h aberta/fechada |
 | `conversation_has_agent` / `conversation_no_agent` / `conversation_not_agent` | agente atribuído |
@@ -459,7 +459,17 @@ NÃO existe `.payload`/`.response` (`{{api_response.payload.x}}` resolve vazio).
 }
 ```
 
-**`aiMode` válidos:** `generate`, `intent`, `sentiment`, `extract`.
+**`aiMode` válidos:** `generate`, `custom` (entrada + instruções), `intent`, `sentiment`, `extract`.
+
+**Modelo por ação — `aiModel` + `aiModelExplicit` (2026-07-13):** TODO modo aceita escolher o modelo
+LLM no próprio nó, com ou sem assistente, em qualquer tipo de flow. Enviar o par:
+`"aiModel": "gpt-4.1-mini"` (whitelist de `FlowBuilder::RawLlmService::SUPPORTED_MODELS` — ex.
+gpt-4o-mini, gpt-4o, gpt-4.1, gpt-4.1-mini, gpt-4.1-nano, gpt-5*, o1, o3*, o4-mini) JUNTO de
+`"aiModelExplicit": true`. SEM a flag o backend ignora o aiModel nos modos novos (proteção de nós
+antigos que carregam aiModel de default nunca honrado). `aiModel` vazio/ausente = modelo padrão da
+conta. Com assistente selecionado, o override também vale (sobrepõe o modelo que o caminho do
+assistente usaria). Modelo fora da whitelist = ignorado (cai no padrão da conta).
+Exemplo: `{"aiMode":"sentiment","aiAssistantId":"12","aiModel":"gpt-4.1-mini","aiModelExplicit":true}`.
 
 **OBRIGATÓRIO via API — `aiAssistantId`:** os modos `generate`/`intent`/`sentiment`/`extract`
 EXIGEM um `aiAssistantId` válido (id de um assistente Captain da conta). Sem ele o nó SAI cedo

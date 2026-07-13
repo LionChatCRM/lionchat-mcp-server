@@ -216,6 +216,11 @@ os de `user_ids` viram membros comuns. A resposta traz `is_supervisor` (boolean)
 - `config.follow_up_skip_conditions`: array (até 3, lógica OU) de condições pra NÃO fazer follow-up.
   Tipos: `label`, `contact_attr`/`conversation_attr`, e `time_window` (horário de silêncio: `start`/`end`
   horas 0-23, janela circular — no período não envia follow-up, mas a IA segue respondendo o cliente)
+- Via MCP (2026-07-13): `follow_up_steps` e `follow_up_skip_conditions` podem ser enviados como
+  array OU como string JSON do array — o servidor tolera os dois (antes, string era rejeitada
+  com 422 "step 1 must be at least 5 minutes"). `feature_pause_on_human_reply`,
+  `feature_follow_up` e demais booleans de config aceitam update direto via
+  `captain_assistants_update` (merge parcial de config).
 - `config.feature_pause_on_human_reply`: bool — a IA se desliga sozinha na conversa quando um humano
   assume (atendente responde pelo painel OU mensagem do celular); nota privada/automação/campanha não contam
 - `config.model`: modelo OpenAI usado (gpt-4o, gpt-4o-mini)

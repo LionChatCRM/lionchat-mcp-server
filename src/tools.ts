@@ -588,15 +588,20 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   Handles: "success", "error"
 
 ▸ ai
-  data: { label, aiMode: "generate"|"intent"|"sentiment"|"extract", aiPrompt,
-    aiAssistantId,                   // OBRIGATORIO via API nos 4 modos — sem ele o node sai cedo
+  data: { label, aiMode: "generate"|"custom"|"intent"|"sentiment"|"extract", aiPrompt,
+    aiAssistantId,                   // OBRIGATORIO via API — sem ele o node sai cedo
                                      // (nao grava nada; {{ai_response}}/{{ai_intent}} ficam vazios)
+    aiModel,                         // opcional: modelo LLM SO deste node (ex "gpt-4.1-mini");
+                                     // vazio/ausente = modelo padrao da conta; vale em TODOS os
+                                     // modos e tambem com assistente (sobrepoe o modelo dele)
+    aiModelExplicit: true,           // OBRIGATORIO junto do aiModel — sem esta flag o backend
+                                     // IGNORA o aiModel (protecao de nodes antigos)
     aiIntents: [{name}],            // se intent — ARRAY DE OBJETOS (NAO array de strings)
     aiResponseVar,                   // saida (default ai_response); extract usa esta var
     contextMessages: 25|50|75|100 }  // quantas msgs a IA enxerga
   Handles intent: "intent_{name}" por intencao + "no_intent" + "error" (var {{ai_intent}} disponivel)
   Handles sentiment: "positive", "negative", "neutral" + "error"
-  Handles generate/extract: "success", "error"
+  Handles generate/custom/extract: "success", "error"
 
 ▸ set_variable
   data: { label, variables: [{name,value}] }
