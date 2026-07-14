@@ -2247,8 +2247,8 @@
     "id": "lionchat_funnels_list",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/funnels",
-    "title": "Listar Funis",
-    "description": "Lista todos os funis com contagem de itens por etapa (cache 5min). NAO e paginado. ACESSO (2026-06): retorna SO os funis visiveis pro usuario do token (admin, permissao kanban, funil aberto ou participante). Funil nao-visivel da 404 no show.",
+    "title": "Listar Funis (Kanbans)",
+    "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa. Lista todos os funis com contagem de itens por etapa (cache 5min). NAO e paginado. ACESSO (2026-06): retorna SO os funis visiveis pro usuario do token (admin, permissao kanban, funil aberto ou participante). Funil nao-visivel da 404 no show.",
     "category": "Funis",
     "params": [],
     "returns": "array de funis (cada um com stage_items_count); sem meta/paginacao",
@@ -2265,8 +2265,8 @@
     "id": "lionchat_funnels_create",
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/funnels",
-    "title": "Criar Funil",
-    "description": "Cria um novo funil (limite de 2 no plano free). Cria novo funil. Obrigatórios: funnel.name. Valida unicidade quando aplicável. Retorna o funil criado com ID atribuído.",
+    "title": "Criar Funil (Kanban)",
+    "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa; pra \"criar um kanban\" use ESTA ferramenta. Cria um funil novo JA COM AS ETAPAS via funnel.stages. Obrigatorios: funnel.name. Limite de 2 funis no plano free. Retorna o funil criado com ID atribuido.",
     "category": "Funis",
     "params": [
       {
@@ -2295,7 +2295,7 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Estagios"
+        "description": "Etapas do kanban. Objeto com uma chave (slug) por etapa: {\"novo_lead\": {\"name\": \"Novo Lead\", \"color\": \"#3B82F6\", \"position\": 1, \"description\": \"opcional\"}}. position define a ordem das colunas."
       },
       {
         "name": "funnel.settings",
@@ -2316,7 +2316,9 @@
     "common_use_cases": [
       "Cadastro inicial de funil",
       "Automação a partir de evento externo",
-      "Importação manual via API"
+      "Importação manual via API",
+      "Criar um kanban novo com etapas",
+      "Montar pipeline/board comercial"
     ],
     "related_tools": [
       "lionchat_funnels_create_1",
@@ -2327,8 +2329,8 @@
     "id": "lionchat_funnels_show",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/funnels/{id}",
-    "title": "Detalhe do Funil",
-    "description": "Retorna detalhes de um funil. Retorna detalhes completos de UM funil específico pelo ID. Inclui campos relacionais quando aplicável.",
+    "title": "Detalhe do Funil (Kanban)",
+    "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa. Retorna detalhes de um funil. Retorna detalhes completos de UM funil específico pelo ID. Inclui campos relacionais quando aplicável.",
     "category": "Funis",
     "params": [
       {
@@ -2351,8 +2353,8 @@
     "id": "lionchat_funnels_update",
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/funnels/{id}",
-    "title": "Atualizar Funil",
-    "description": "Atualiza funil. Atualiza campos do funil existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: funnel.name, funnel.stages, funnel.settings.",
+    "title": "Atualizar Funil (Kanban)",
+    "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa. Atualiza funil. Atualiza campos do funil existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: funnel.name, funnel.stages, funnel.settings.",
     "category": "Funis",
     "params": [
       {
@@ -2374,7 +2376,7 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Estagios"
+        "description": "Etapas do kanban. Objeto com uma chave (slug) por etapa: {\"novo_lead\": {\"name\": \"Novo Lead\", \"color\": \"#3B82F6\", \"position\": 1, \"description\": \"opcional\"}}. position define a ordem das colunas."
       },
       {
         "name": "funnel.settings",
@@ -2396,8 +2398,8 @@
     "id": "lionchat_funnels_destroy",
     "method": "DELETE",
     "path": "/api/v1/accounts/{account_id}/funnels/{id}",
-    "title": "Excluir Funil",
-    "description": "Exclui funil (deve estar vazio). Remove funil permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
+    "title": "Excluir Funil (Kanban)",
+    "description": "Funil = kanban. Exclui funil (deve estar vazio). Remove funil permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
     "category": "Funis",
     "params": [
       {
@@ -2420,8 +2422,8 @@
     "id": "lionchat_funnels_list_1",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/funnels/{id}/stage_stats",
-    "title": "Stats por Etapa",
-    "description": "Estatisticas agregadas por etapa do funil.",
+    "title": "Stats por Etapa do Funil (Kanban)",
+    "description": "Funil = kanban. Estatisticas agregadas por etapa do funil.",
     "category": "Funis",
     "params": [
       {
@@ -2489,8 +2491,8 @@
     "id": "lionchat_funnels_create_1",
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/funnels/{id}/reassign_agent",
-    "title": "Reatribuir Agente",
-    "description": "Reatribui agentes dos cards do funil em massa.",
+    "title": "Reatribuir Agente dos Cards do Funil (Kanban)",
+    "description": "Funil = kanban. Reatribui agentes dos cards do funil em massa.",
     "category": "Funis",
     "params": [
       {
@@ -2530,8 +2532,8 @@
     "id": "lionchat_funnels_create_2",
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/funnels/{id}/migrate_stage",
-    "title": "Transferir Cards Entre Etapas",
-    "description": "Transfere os cards de uma etapa para outra.",
+    "title": "Transferir Cards Entre Etapas do Funil (Kanban)",
+    "description": "Funil = kanban. Transfere os cards de uma etapa para outra.",
     "category": "Funis",
     "params": [
       {
@@ -2578,8 +2580,8 @@
     "id": "lionchat_funnels_archive",
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/funnels/{id}/archive",
-    "title": "Arquivar Funil",
-    "description": "Arquiva um funil. Atualiza campos do funil existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados.",
+    "title": "Arquivar Funil (Kanban)",
+    "description": "Funil = kanban. Arquiva um funil. Atualiza campos do funil existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados.",
     "category": "Funis",
     "params": [
       {
@@ -2602,8 +2604,8 @@
     "id": "lionchat_funnels_unarchive",
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/funnels/{id}/unarchive",
-    "title": "Desarquivar Funil",
-    "description": "Desarquiva um funil. Atualiza campos do funil existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados.",
+    "title": "Desarquivar Funil (Kanban)",
+    "description": "Funil = kanban. Desarquiva um funil. Atualiza campos do funil existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados.",
     "category": "Funis",
     "params": [
       {

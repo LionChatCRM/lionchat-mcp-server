@@ -198,8 +198,10 @@ os de `user_ids` viram membros comuns. A resposta traz `is_supervisor` (boolean)
 
 ## Funnel (Funil do Kanban)
 
+**Funil, Kanban, pipeline e board são sinônimos no LionChat** — o usuário pode usar qualquer um desses nomes; a entidade é sempre o Funnel (`lionchat_funnels_*`).
+
 - `name`: nome do funil
-- `stages`: array de etapas — cada uma com `name`, `color`, `position`
+- `stages`: objeto de etapas — uma chave (slug) por etapa, cada uma com `name`, `color`, `position`
 - `archived`: `true` = não aparece na UI principal
 
 ## Captain::Assistant (AI Agente / IA de atendimento)

@@ -171,6 +171,17 @@ lionchat_conversations_messages_list (conversation_id: 123)
 3. lionchat_inboxes_public_conversations_create (vincula contato à inbox)
 ```
 
+### Criar funil (kanban) novo com etapas
+
+**FUNIL = KANBAN = pipeline = board — são a MESMA coisa no LionChat.** Quando o usuário pedir "cria um kanban", "monta um pipeline" ou "cria um funil", a ferramenta é `lionchat_funnels_create` (não existe endpoint separado de "criar kanban").
+
+```
+1. lionchat_funnels_create (funnel.name + funnel.stages)
+   funnel.stages = objeto com uma chave (slug) por etapa:
+   { "novo_lead": { "name": "Novo Lead", "color": "#3B82F6", "position": 1 } }
+2. lionchat_funnels_show (conferir o resultado)
+```
+
 ### Criar card Kanban a partir de uma conversa
 
 Use `lionchat_kanban_items_create`. NÃO existem campos `contact_id`/`conversation_id`/`stage` — o contato vem pela conversa vinculada (`conversation_display_id`) e a etapa é o slug em `funnel_stage`.
@@ -189,7 +200,7 @@ POST /api/v1/accounts/{account_id}/kanban_items
 ```
 
 - `conversation_display_id` é **opcional** (card sem conversa vinculada é válido).
-- Ignore as ferramentas `lionchat_kanban_v2_*` — apontam para controllers inexistentes.
+- As ferramentas `lionchat_kanban_v2_*` cobrem anexos de card/nota e automações do Kanban (controllers criados em 07/2026 — a orientação antiga de ignorá-las está obsoleta). Upload de anexo via MCP segue sem suporte (limitação de file upload).
 
 ### Relatório de produtividade
 ```
