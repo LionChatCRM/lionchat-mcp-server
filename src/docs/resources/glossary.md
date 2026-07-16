@@ -377,17 +377,25 @@ Campos MUTÁVEIS (atualizáveis livremente por IA/integração): `marital_status
 
 | Sistema | O que é | Tools | Canal |
 |---|---|---|---|
-| **Ligação WP (Wavoip)** | Voz pelo WhatsApp em caixa **QR Code/WAHA** — QR conecta um "device" Wavoip; widget de discagem, gravação e transcrição automática | `wavoip_*` (por inbox: status/token/calls/connect/disconnect/settings) | WhatsApp QR Code |
+| **Ligação WP (Wavoip)** | Voz pelo WhatsApp em caixa **QR Code/WAHA** — QR conecta um "device" Wavoip; widget de discagem, gravação e transcrição automática | **NENHUMA — sem tool no MCP** (ver nota abaixo) | WhatsApp QR Code |
 | **WhatsApp Calling (Cloud)** | Voz pelo WhatsApp na **API oficial** (enterprise) | `whatsapp_calls_*` + enable/disable_whatsapp_calling | WhatsApp oficial |
 | **VoIP (Zenvia)** | Telefonia COMUM (ramais, saldo, recarga) | `voip_*` | Telefone |
 
 Quando o usuário falar "ligação", descubra o canal: caixa QR Code → Wavoip; caixa oficial →
 whatsapp_calls; telefone fixo/ramal → VoIP Zenvia.
 
-**Wavoip (2026-06-11):** config por inbox (`record_all_calls`, `auto_transcribe`,
-`transcription_provider` groq|openai), feature flag `wavoip_calling`, limite por plano
-`wavoip_voice_inboxes`, R$70/device/mês. Conectar/configurar = admin; discar/histórico = membro
-da caixa. WhatsappCall (Cloud): `status`, `custom_name`, `favorited`, `transcript`/`transcript_status`.
+**Wavoip — SEM TOOL NO MCP (decisão do dono, 2026-07-16).** As 8 tools `wavoip_*` (status, token,
+calls, connect, disconnect, settings, should_ring, flag_rejected) foram REMOVIDAS dos dois conectores.
+Motivo: cada device custa **R$70/mês na conta de revenda do LionChat** (não do cliente), e o MCP
+conseguia CRIAR device pago, DERRUBAR a linha de um cliente e ainda entregar o `token` — que permite
+FAZER ligações, gerando custo. Ligação WP é contratada e configurada **manualmente pelo cliente no
+painel**. Se o usuário pedir algo de Ligação WP, oriente-o ao painel (Configurações da caixa →
+Ligação WP) — **não existe tool e não deve existir**. NÃO re-adicionar sem ordem explícita do dono.
+
+Contexto (só pra conversar, não pra operar): config por inbox (`record_all_calls`, `auto_transcribe`,
+`transcription_provider` groq|openai), feature flag `wavoip_calling`, limite de plano
+`wavoip_voice_inboxes`. WhatsappCall (Cloud, esse SIM tem tool): `status`, `custom_name`,
+`favorited`, `transcript`/`transcript_status`.
 
 ## Chat interno da equipe (InternalChat)
 
