@@ -113,18 +113,36 @@ function normalizeResponse(body: unknown): unknown {
   if (body && typeof body === 'object' && !Array.isArray(body)) {
     const obj = body as Record<string, unknown>;
 
-    // AIDEV-NOTE: Chatwoot pagination format: { payload: [...], meta: { all_count, current_page } }
+    // AIDEV-NOTE: Chatwoot pagination format: { payload: [...], meta: { count|all_count, current_page } }
     if (Array.isArray(obj.payload) && obj.meta && typeof obj.meta === 'object') {
       const meta = obj.meta as Record<string, unknown>;
+      // AIDEV-NOTE: [fix paginacao 18/07] Conversas usam meta.all_count; CONTATOS usam meta.count.
+      // Ler so all_count zerava total_count/has_more pra contatos (bug reportado: filtro parava na
+      // 1a pagina). Aceitar os dois.
       const allCount =
-        typeof meta.all_count === 'number' ? meta.all_count : 0;
+        typeof meta.all_count === 'number'
+          ? meta.all_count
+          : typeof meta.count === 'number'
+            ? meta.count
+            : 0;
       const currentPage =
         typeof meta.current_page === 'number' ? meta.current_page : 1;
 
-      // AIDEV-NOTE: Chatwoot uses 25 items per page by default. Don't use payload.length
-      // as it's wrong on the last page (e.g. 3 items on last page → wrong totalPages calc)
-      const perPage = 25;
-      const totalPages = perPage > 0 ? Math.ceil(allCount / perPage) : 1;
+      // AIDEV-NOTE: [fix paginacao 18/07] page-size VARIA por endpoint (contatos=15, conversas=25),
+      // entao perPage fixo=25 calculava total_pages errado pra contatos (parava cedo). has_more vem
+      // do CUMULATIVO (currentPage * itens desta pagina): numa pagina cheia isso e exato e NUNCA
+      // sub-reporta (se ha proxima, a atual veio cheia); numa ultima pagina parcial pode super-reportar
+      // (1 fetch vazio extra, inofensivo — NUNCA perde dado). allCount ausente = pagina ate esvaziar.
+      const payloadLength = (obj.payload as unknown[]).length;
+      const hasMore =
+        payloadLength > 0 &&
+        (allCount === 0 || currentPage * payloadLength < allCount);
+      const totalPages =
+        allCount > 0 && payloadLength > 0
+          ? Math.ceil(allCount / payloadLength)
+          : hasMore
+            ? currentPage + 1
+            : currentPage;
 
       return {
         data: obj.payload,
@@ -132,7 +150,7 @@ function normalizeResponse(body: unknown): unknown {
           current_page: currentPage,
           total_pages: totalPages,
           total_count: allCount,
-          has_more: currentPage < totalPages,
+          has_more: hasMore,
         },
       } satisfies PaginatedResponse;
     }

@@ -700,6 +700,13 @@
         "location": "body",
         "required": false,
         "description": "Filtrar por label"
+      },
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Numero da pagina (15 por pagina) — pagine ate has_more=false pra percorrer todo o filtro"
       }
     ],
     "returns": "payload (array de contatos filtrados)",
