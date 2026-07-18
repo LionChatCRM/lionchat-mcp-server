@@ -1326,6 +1326,13 @@
         "location": "body",
         "required": true,
         "description": "Array de filtros"
+      },
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Numero da pagina — pagine ate has_more=false pra percorrer tudo"
       }
     ],
     "returns": "payload (array de conversas filtrados)",
@@ -10836,6 +10843,13 @@
         "location": "query",
         "required": false,
         "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+      },
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Numero da pagina — pagine ate has_more=false pra percorrer tudo"
       }
     ],
     "returns": "payload (array de empresas, geralmente 25 resultados)",
@@ -13668,7 +13682,15 @@
     "title": "Listar SLAs Aplicados",
     "description": "Lista os SLAs ESTOURADOS (conversas que furaram o SLA), paginado. ENTERPRISE-only, exige Admin.",
     "category": "SLA",
-    "params": [],
+    "params": [
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Numero da pagina — pagine ate has_more=false pra percorrer tudo"
+      }
+    ],
     "returns": "array de applied_sla (registros de violacao)",
     "common_use_cases": [
       "Dashboard: contar/exibir políticas SLA",

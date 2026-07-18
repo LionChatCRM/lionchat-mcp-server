@@ -29,14 +29,16 @@ A maioria dos endpoints aceita parâmetros pra filtrar antes de retornar:
 
 ## Paginação
 
-Endpoints listáveis paginam em geral 25 itens. Use `page` parameter:
+Endpoints listáveis paginam (page-size varia: contatos=15, conversas/chamadas=25, busca de msg=20). Use `page`:
 
 ```
-page=1 → primeiros 25
-page=2 → próximos 25
+page=1 → primeira página
+page=2 → próxima
 ```
 
-Pra contar total, use `meta.total_count` (vem no response). Não tente "paginar até zerar" se já tem o total — pode ser milhões.
+O conector devolve `pagination.total_count` e `pagination.has_more` — **pagine enquanto `has_more=true`** (não pare na 1ª página). Se `has_more=false`, acabou. Não tente "paginar até zerar" quando o total já é enorme (milhões) — filtre antes.
+
+**Puxando RELATÓRIO grande (2026-07-18):** a resposta é cortada em 80 mil caracteres. Se aparecer o aviso `[RESPOSTA CORTADA ...]`, os dados vieram **INCOMPLETOS** — o certo NÃO é insistir na mesma chamada, e sim **ESTREITAR**: reduza o intervalo de datas (`since`/`until`), adicione filtros, use `per_page` menor, ou pagine (`page`) nas ferramentas de LISTA. **Relatórios agregados** (`reports_summary`, `sla_metrics`, `csat_metrics`, `journey_funnel_reports`, `lead_origin_reports`) **NÃO paginam** — se cortar, restrinja o período. Pra CSAT em lista (`csat_list`), o total vem só no `csat_metrics` — combine os dois.
 
 ## Cache local mental
 

@@ -116,15 +116,18 @@ function normalizeResponse(body: unknown): unknown {
     // AIDEV-NOTE: Chatwoot pagination format: { payload: [...], meta: { count|all_count, current_page } }
     if (Array.isArray(obj.payload) && obj.meta && typeof obj.meta === 'object') {
       const meta = obj.meta as Record<string, unknown>;
-      // AIDEV-NOTE: [fix paginacao 18/07] Conversas usam meta.all_count; CONTATOS usam meta.count.
-      // Ler so all_count zerava total_count/has_more pra contatos (bug reportado: filtro parava na
-      // 1a pagina). Aceitar os dois.
+      // AIDEV-NOTE: [fix paginacao 18/07] Chave do total VARIA por endpoint no Chatwoot:
+      // conversas=all_count, contatos=count, busca de mensagens/kanban items/anexos=total_count.
+      // Ler so all_count zerava total_count/has_more nos demais (a IA parava cedo e entregava
+      // relatorio INCOMPLETO). Aceitar os tres, na ordem.
       const allCount =
         typeof meta.all_count === 'number'
           ? meta.all_count
           : typeof meta.count === 'number'
             ? meta.count
-            : 0;
+            : typeof meta.total_count === 'number'
+              ? meta.total_count
+              : 0;
       const currentPage =
         typeof meta.current_page === 'number' ? meta.current_page : 1;
 
@@ -158,18 +161,34 @@ function normalizeResponse(body: unknown): unknown {
     // AIDEV-NOTE: Some endpoints return { data: [...], meta: {...} } format
     if (Array.isArray(obj.data) && obj.meta && typeof obj.meta === 'object') {
       const meta = obj.meta as Record<string, unknown>;
+      // AIDEV-NOTE: [fix paginacao 18/07] Chamadas VoIP/LionCalls, WhatsApp calls e logs de evento
+      // (ga4/google_ads/meta_capi) usam meta.total e meta.page (nao total_count/current_page) —
+      // sem estes fallbacks o has_more vinha SEMPRE false e o relatorio parava na 1a pagina.
       const totalCount =
         typeof meta.total_count === 'number'
           ? meta.total_count
           : typeof meta.all_count === 'number'
             ? meta.all_count
-            : (obj.data as unknown[]).length;
+            : typeof meta.total === 'number'
+              ? meta.total
+              : (obj.data as unknown[]).length;
       const currentPage =
-        typeof meta.current_page === 'number' ? meta.current_page : 1;
+        typeof meta.current_page === 'number'
+          ? meta.current_page
+          : typeof meta.page === 'number'
+            ? meta.page
+            : 1;
+      // AIDEV-NOTE: [fix paginacao 18/07] usa meta.per (voip/whatsapp calls trazem) como page-size
+      // exato; sem ele cai no tamanho da pagina atual (super-reporta 1-2 fetch vazios na ultima —
+      // seguro, nunca sub-reporta).
+      const pageSize =
+        typeof meta.per === 'number' && meta.per > 0
+          ? meta.per
+          : Math.max((obj.data as unknown[]).length, 1);
       const totalPages =
         typeof meta.total_pages === 'number'
           ? meta.total_pages
-          : Math.ceil(totalCount / Math.max((obj.data as unknown[]).length, 1));
+          : Math.ceil(totalCount / pageSize);
 
       return {
         data: obj.data,
@@ -180,6 +199,49 @@ function normalizeResponse(body: unknown): unknown {
           has_more: currentPage < totalPages,
         },
       } satisfies PaginatedResponse;
+    }
+
+    // AIDEV-NOTE: [fix paginacao 18/07] Endpoints que aninham em data: { data: { meta, payload:[] } }
+    // (conversas list, notificacoes, comunicados) — nenhum ramo acima casa (payload nao e top-level;
+    // obj.data e OBJETO, nao array). Normaliza com o mesmo fallback de count (all_count/count/total_count).
+    if (obj.data && typeof obj.data === 'object' && !Array.isArray(obj.data)) {
+      const inner = obj.data as Record<string, unknown>;
+      if (
+        Array.isArray(inner.payload) &&
+        inner.meta &&
+        typeof inner.meta === 'object'
+      ) {
+        const meta = inner.meta as Record<string, unknown>;
+        const allCount =
+          typeof meta.all_count === 'number'
+            ? meta.all_count
+            : typeof meta.count === 'number'
+              ? meta.count
+              : typeof meta.total_count === 'number'
+                ? meta.total_count
+                : 0;
+        const currentPage =
+          typeof meta.current_page === 'number' ? meta.current_page : 1;
+        const payloadLength = (inner.payload as unknown[]).length;
+        const hasMore =
+          payloadLength > 0 &&
+          (allCount === 0 || currentPage * payloadLength < allCount);
+        const totalPages =
+          allCount > 0 && payloadLength > 0
+            ? Math.ceil(allCount / payloadLength)
+            : hasMore
+              ? currentPage + 1
+              : currentPage;
+        return {
+          data: inner.payload,
+          pagination: {
+            current_page: currentPage,
+            total_pages: totalPages,
+            total_count: allCount,
+            has_more: hasMore,
+          },
+        } satisfies PaginatedResponse;
+      }
     }
 
     // AIDEV-NOTE: Single object response — return as-is

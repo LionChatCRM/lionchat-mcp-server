@@ -60,17 +60,21 @@ export function buildQueryString(params: Record<string, unknown>): string {
 }
 
 // AIDEV-NOTE: Format API response data for MCP client consumption
-// Truncates at 50k chars to avoid overwhelming the LLM context
-const MAX_RESPONSE_LENGTH = 50000;
+// AIDEV-NOTE: [fix relatorios 18/07] Teto 80k (era 50k) — relatorios/listas gordas de conversa
+// (partial + kanban_items com funnel.stages) estouravam 50k e cortavam o registro no meio.
+const MAX_RESPONSE_LENGTH = 80000;
 
 export function formatResponse(data: unknown): string {
   const text =
     typeof data === 'string' ? data : JSON.stringify(data, null, 2);
 
   if (text.length > MAX_RESPONSE_LENGTH) {
+    // AIDEV-NOTE: [fix relatorios 18/07] Aviso HONESTO — o JSON acima esta cortado no meio
+    // (INCOMPLETO). Nem toda ferramenta pagina (relatorios agregados nao), entao o certo e
+    // ESTREITAR: intervalo de datas menor, mais filtros, per_page menor, ou page nas listas.
     return (
       text.slice(0, MAX_RESPONSE_LENGTH) +
-      '\n\n[Response truncated at 50,000 characters. Use pagination parameters (page, limit) to fetch smaller result sets.]'
+      `\n\n[RESPOSTA CORTADA em ${MAX_RESPONSE_LENGTH} caracteres — os dados acima estao INCOMPLETOS e o JSON pode estar truncado no meio de um registro. Para obter tudo: reduza o intervalo de datas, adicione filtros, use per_page menor, ou pagine com page nas ferramentas de LISTA. Relatorios agregados NAO paginam — restrinja o periodo.]`
     );
   }
 
