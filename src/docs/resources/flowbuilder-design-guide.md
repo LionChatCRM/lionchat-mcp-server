@@ -78,16 +78,20 @@ Todo node tem essa estrutura base:
     "offset_direction": "on",              // "before" | "on" | "after"
     "offset_days": 0,                      // 0-365 (relevante só p/ before/after)
     "repeat_yearly": true,                 // true = ignora o ano da data (aniversário); false = data única
+    "attr_source": "contact",              // "contact" (default) | "conversation" — ver bloco abaixo
+    "overwrite_mode": "replace",           // "replace" (default) | "keep_both" — ver bloco abaixo
     "send_time_source": "fixed",           // "fixed" | "attribute" | "variable"
     "send_time": "09:00",                  // p/ fixed — HH:MM
-    "send_time_attr_key": "",              // p/ attribute — chave de atributo do contato que contém HH:MM
-    "send_time_template": "",              // p/ variable — fórmula Liquid que resulta em HH:MM (SÓ campos do contato, ex.: "{{contact.custom_attribute.horario}}")
-    "inbox_mode": "contact_recent",        // "contact_recent" (conversa mais recente do contato) | "fixed"
+    "send_time_attr_key": "",              // p/ attribute — chave de atributo (do CONTATO, ou da CONVERSA se attr_source='conversation') que contém HH:MM
+    "send_time_template": "",              // p/ variable — fórmula Liquid que resulta em HH:MM (contato; e {{conversation.*}} quando attr_source='conversation')
+    "inbox_mode": "contact_recent",        // "contact_recent" (conversa mais recente do contato) | "fixed" — IGNORADO/ausente quando attr_source='conversation'
     "inbox_id": null,                      // OBRIGATÓRIO p/ inbox_mode "fixed" — id de uma inbox vinculada ao flow
     "filters": { "logic": "and", "rules": [] }  // opcional; mesmo formato de attribute_changed, attrSource é sempre "contact"
   }}
   ```
   Regras: `attr_key` é **obrigatório**. `trigger_uuid` é preenchido pelo backend no save (NÃO envie; se enviar é preservado). 29/02 em ano não-bissexto colapsa p/ 28/02. Disparo vencido tem tolerância de 24h. Se `inbox_mode` for `fixed` e a caixa for desvinculada do flow depois, os envios daquele gatilho são **pulados** (visíveis em `flows_executions_list`). Caixa oficial WhatsApp exige template na 1ª mensagem se a conversa for criada nova (senão pula). Ativar o flow agenda automaticamente os contatos que já têm a data preenchida.
+  - **`attr_source: 'conversation'` (novo 2026-07-18):** a data vem de um atributo de DATA da CONVERSA (não do contato). Dispara NAQUELA conversa (reabre se resolvida). `attr_key` = chave de atributo de conversa tipo Data; o horário-por-atributo lê da conversa. NÃO tem seletor de caixa (a conversa já é conhecida) — não envie `inbox_mode`/`inbox_id`. NÃO use `repeat_yearly` (conversa é evento pontual — vetado com keep_both). SEM agendamento retroativo: só agenda o que for escrito/alterado APÓS ativar (100% forward). Ausente = `'contact'` (comportamento legado).
+  - **`overwrite_mode` (novo 2026-07-18):** `'replace'` (default) = trocar a data cancela o agendamento anterior (correção de data errada não dispara em dobro). `'keep_both'` = acumula (cada data seu próprio disparo) — **SÓ com `attr_source: 'conversation'`** (vetado no contato) e **incompatível com `repeat_yearly`**. Os disparos futuros pendentes ficam visíveis/canceláveis na aba "Agendados" do editor.
 
 **Trigger `webhook` — Webhook Universal EMBUTIDO (novo 2026-06):** o flow pode ser disparado por um webhook próprio, criado automaticamente. Receita via API:
 1. Criar o flow normalmente (`flows_create`).
@@ -533,6 +537,7 @@ O campo raiz é **`waitMode`**: `"duration"` (default), `"date"` ou `"weekday"`.
 
 - `waitDate` = `"YYYY-MM-DD"` · `waitTime` = `"HH:MM"` 24h · `waitTimezone` = fuso IANA (default `America/Sao_Paulo` se ausente).
 - **Variável nos campos (novo 2026-07-06):** `waitDateMode`/`waitTimeMode` aceitam `"fixed"` (default) ou `"variable"`. Em `"variable"`, o campo correspondente contém uma variável `{{ }}` em vez do valor fixo — ex.: `"waitDate": "{{contact.custom_attribute.data_consulta}}"`. O campo Data SÓ aceita variável de atributo tipo `date`; o campo Horário SÓ tipo `time` (Hora 24h). A variável é resolvida UMA única vez, na entrada do node (quem já está esperando mantém o valor capturado). Variável que não resolve pra data/hora válida → o flow sai pela saída `error` (payload `invalid_variable_datetime`). Data válida no PASSADO → espera 0 e segue por `success` (não é erro).
+  - **Tipo `datetime` (Data e Hora, tipo 10) NÃO entra aqui:** o campo Data só aceita `date`(5) e o Horário só `time`(9). Um atributo `datetime` no campo Horário é rejeitado (o valor ISO cai como "atributo Data no campo errado" → saída `error`). Para agendar por data+hora vindas do cadastro, use DOIS atributos separados (um `date` + um `time`), não um `datetime`. Mesma regra no **Gatilho de Data** (`date_trigger` do start node): a fonte de data lista atributos `date` (do contato + aniversário, ou da conversa quando `attr_source='conversation'`) e o horário-por-atributo exige `time` — `datetime` não é oferecido em nenhum dos dois.
 
 **Modo `weekday` (esperar até um dia da semana):**
 
@@ -727,6 +732,15 @@ Fontes de variável (quem cria o quê):
 | `api` | `apiResponseVar` (+ `apiResponseVar`_status) e campos do JSON de resposta |
 
 Variáveis salvas em atributo (`saveTo: 'contact_attr'`/`'conversation_attr'`, ou node `action` `update_attribute`) NÃO viram variável de sessão `{{var}}` — leia-as via `{{contact.custom_attribute.X}}` / `{{conversation.custom_attribute.X}}` (singular).
+
+**Variáveis do webhook `{{webhook.*}}` (2026-07-18):** quando o flow dispara pelo gatilho de
+Webhook (embutido ou Integração Universal com `flow_id` mapeado), o payload INTEIRO recebido fica
+disponível sob o envelope `webhook` — navegação por ponto e índice de lista:
+`{{webhook.cliente.nome}}`, `{{webhook.pedido.itens.0}}`, filtros Liquid funcionam
+(`{{webhook.origem | upcase}}`). Não precisa mapear campo por campo pra atributo (o mapeamento
+continua servindo pra GRAVAR no contato). Teto: payload acima de 256KB não vira variável. Flow
+disparado por OUTRO gatilho (mensagem, card, data): `{{webhook.*}}` resolve vazio. O autocomplete
+do editor mostra o grupo WEBHOOK com os campos do último payload recebido.
 
 ---
 

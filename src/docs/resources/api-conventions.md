@@ -233,6 +233,14 @@ Ou para listas grandes (cursors):
 - Atributo tipo `time` (**Hora, novo**): valor canônico é `"HH:MM"` **24h** (ex: `"14:30"`),
   SEM data e SEM fuso embutido — o fuso mora na definição do atributo (`attribute_timezone`,
   escolhido na criação, default `America/Sao_Paulo`).
+- Atributo tipo `datetime` (**Data e Hora, novo 2026-07-18**): valor canônico é **ISO 8601 com
+  offset do fuso do atributo**, ex. `"2026-07-18T14:55:00-03:00"`. O fuso mora na definição
+  (`attribute_timezone`, default `America/Sao_Paulo`) e define o offset gravado. Um "porteiro" no
+  backend NORMALIZA qualquer entrada na escrita (UTC `Z`, outro offset, `DD/MM/AAAA HH:MM` BR,
+  AM/PM, unix timestamp) pro fuso do atributo — você pode gravar em vários formatos que ele
+  converte. Exibição humana (mensagens, painel): `"DD/MM/AAAA - HH:MM"`. Em condições/filtros o
+  valor comparado é o ISO cru (não formatado). Diferença dos 3: `date`(5)=`"YYYY-MM-DD"` dia
+  literal sem fuso; `time`(9)=`"HH:MM"` só hora; `datetime`(10)=data+hora ISO com offset.
 
 ## Códigos HTTP
 

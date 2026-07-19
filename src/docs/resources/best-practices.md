@@ -29,14 +29,16 @@ A maioria dos endpoints aceita parâmetros pra filtrar antes de retornar:
 
 ## Paginação
 
-Endpoints listáveis paginam em geral 25 itens. Use `page` parameter:
+Endpoints listáveis paginam (page-size varia: contatos=15, conversas/chamadas=25, busca de msg=20). Use `page`:
 
 ```
-page=1 → primeiros 25
-page=2 → próximos 25
+page=1 → primeira página
+page=2 → próxima
 ```
 
-Pra contar total, use `meta.total_count` (vem no response). Não tente "paginar até zerar" se já tem o total — pode ser milhões.
+O conector devolve `pagination.total_count` e `pagination.has_more` — **pagine enquanto `has_more=true`** (não pare na 1ª página). Se `has_more=false`, acabou. Não tente "paginar até zerar" quando o total já é enorme (milhões) — filtre antes.
+
+**Puxando RELATÓRIO grande (2026-07-18):** a resposta é cortada em 80 mil caracteres. Se aparecer o aviso `[RESPOSTA CORTADA ...]`, os dados vieram **INCOMPLETOS** — o certo NÃO é insistir na mesma chamada, e sim **ESTREITAR**: reduza o intervalo de datas (`since`/`until`), adicione filtros, use `per_page` menor, ou pagine (`page`) nas ferramentas de LISTA. **Relatórios agregados** (`reports_summary`, `sla_metrics`, `csat_metrics`, `journey_funnel_reports`, `lead_origin_reports`) **NÃO paginam** — se cortar, restrinja o período. Pra CSAT em lista (`csat_list`), o total vem só no `csat_metrics` — combine os dois.
 
 ## Cache local mental
 
@@ -391,7 +393,8 @@ Lembrete: todo template recém-criado pelo MCP só mostra o texto na tela depois
 
 ## FlowBuilder — notas de editor (2026-07)
 
-- **Tipo de atributo `time` (Hora 24h):** ao criar custom attribute com `attribute_display_type: "time"`, o valor canônico é `"HH:MM"` 24h e o fuso mora na definição (`attribute_timezone`, IANA, default `America/Sao_Paulo`). Uso principal: alimentar o campo Horário do node `wait` (modo date, `waitTimeMode: "variable"`).
+- **Tipo de atributo `time` (Hora 24h):** ao criar custom attribute com `attribute_display_type: "time"` (ou o numérico `9`), o valor canônico é `"HH:MM"` 24h e o fuso mora na definição (`attribute_timezone`, IANA, default `America/Sao_Paulo`). Uso principal: alimentar o campo Horário do node `wait` (modo date, `waitTimeMode: "variable"`).
+- **Tipo de atributo `datetime` (Data e Hora, novo 2026-07-18):** `attribute_display_type: "datetime"` (ou numérico `10`), com `attribute_timezone` (default `America/Sao_Paulo`). Guarda data+hora juntas em ISO com offset (`"2026-07-18T14:55:00-03:00"`); exibe `"DD/MM/AAAA - HH:MM"`. Um porteiro no backend aceita e converte vários formatos de entrada (ISO/UTC/BR/AM-PM/unix). **ATENÇÃO ao montar flows:** o tipo `datetime` NÃO é selecionável no Gatilho de Data nem nos campos Data/Horário do node `wait` — esses continuam exigindo `date`(5) pra data e `time`(9) pra hora, SEPARADOS. O `datetime` é, por ora, tipo de armazenamento/exibição (sidebar + mensagens humanas), não fonte de entrada de fluxo. Em condição, atributo `datetime` é tratado como string (compara o ISO cru).
 - **Timeout de flow `ai_tool` com node `api`:** sobe sozinho de 20s pro teto de 45s quando ainda está no padrão — não precisa configurar nada; só evite setar `execution_timeout_ms` custom se quiser manter o auto-ajuste.
 - **Teste do node `api`:** o resultado do último teste fica salvo no servidor (pin, TTL 30 dias) — sobrevive a trocar de navegador/máquina. Isso é recurso do editor humano; não há tool MCP pra isso.
 
