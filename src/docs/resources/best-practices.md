@@ -19,7 +19,7 @@ A maioria dos endpoints aceita parâmetros pra filtrar antes de retornar:
 
 | Endpoint | Filtros úteis |
 |---|---|
-| `conversations_list` | `status` (open/resolved), `assignee_type`, `inbox_id`, `team_id`, `labels`, `q` (busca) |
+| `conversations_list` | `status` (open/resolved/pending/snoozed/all), `assignee_type`, `conversation_type` (unread/unattended/mention/participating), `inbox_id`, `team_id`, `labels`, `captain_assistant` (any=com IA / none=sem IA / id do assistente), `quick_q` (busca rápida na lista), `source_id`, `updated_within` (segundos) |
 | `contacts_list` | `q` (nome/email/telefone), `include_contact_inboxes` |
 | `messages_search` | `q`, `file_type[]`, `private_only`, `page` (busca dentro de UMA conversa) |
 | `kanban_items_list` | `funnel_id`, `funnel_stage`, `assigned_agent_id` |
@@ -270,15 +270,32 @@ formato estranho: o erro de sample é tolerado e a ativação segue. Outros ganh
 **Pro MCP:** ao acionar o backfill, informe ao usuário o `mode` retornado e quantos dias foram
 puxados. Se a ativação reclamar de sample, NÃO é bloqueio — a integração ainda fica ativa.
 
-## Campanhas: audiência acumulativa (2026-06)
+## Campanhas: público avançado + exclusão ("negativar") (2026-07)
 
-`audience` aceita 3 tipos de seção combináveis: `Label`, `Funnel` (com stages/include_won/include_lost)
-e `ConversationAttribute` ({key, value}). O campo `audience_mode` define a combinação ENTRE seções:
+`audience` aceita 7 tipos de seção combináveis (cada seção é `{type, ...}`):
+- `Label` `{id}` — etiqueta de CONVERSA
+- `Funnel` `{id, stage_id?, include_won?, include_lost?}` — etapa de funil Kanban
+- `ConversationAttribute` `{key, value}` — atributo da conversa
+- `ContactLabel` `{id}` — etiqueta de CONTATO (novo)
+- `ContactAttribute` `{key, value}` — atributo do contato (novo)
+- `CardAttribute` `{key, value}` — atributo do card Kanban (novo)
+- `AgentTeam` `{assignee_ids:[], team_ids:[]}` — responsável atual OU time da conversa (novo)
+
+O campo `audience_mode` define a combinação ENTRE seções:
 - `"sum"` (default): união — contato em QUALQUER seção entra
 - `"all"`: interseção — contato precisa atender TODAS as seções preenchidas
 
-SEMPRE rode `campaigns_estimate_audience` com o MESMO audience+audience_mode antes de criar a
-campanha e mostre a contagem ao usuário — estimativa e disparo usam o mesmo motor (não divergem).
+**Exclusão / "negativar" (novo 2026-07):** `exclusion` é uma lista no MESMO formato do `audience`.
+Quem cair na exclusão é REMOVIDO do disparo, mesmo que esteja no público. No `campaigns_estimate_audience`
+o `exclusion` (e o `audience_mode`) vão TOP-LEVEL; ao CRIAR/EDITAR a campanha eles vão dentro de
+`trigger_rules` (`trigger_rules.exclusion` e `trigger_rules.audience_mode`).
+
+**Ações pós-disparo** (`template_params.bulk_actions`, campanhas QR/WAHA) aceitam, além de
+`{assignee_id, priority, labels}`: `contact_labels: []` (aplica etiqueta ao CONTATO que recebeu) e
+`attribute_changes: [{scope:'contact'|'conversation', key, value}]` (grava/sobrescreve atributo de quem recebeu).
+
+SEMPRE rode `campaigns_estimate_audience` com o MESMO audience + audience_mode + exclusion antes de
+criar a campanha e mostre a contagem ao usuário — estimativa e disparo usam o mesmo motor (não divergem).
 
 ## Agendamento (booking): idempotência e limites (2026-06)
 
