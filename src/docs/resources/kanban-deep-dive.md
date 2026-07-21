@@ -294,7 +294,7 @@ Funis agora têm visibilidade por usuário. Um funil é visível pra alguém qua
 - é admin da conta, OU
 - tem permissão `kanban_view`/`kanban_manage` (custom role), OU
 - o funil está aberto a todos, OU
-- a pessoa participa do funil (está em `settings.agents` ou tem card atribuído)
+- a pessoa participa do funil (está em `settings.agents`, OU é membro de um TIME em `settings.teams` — novo 2026-07-21, membros resolvidos ao vivo — ou tem card atribuído)
 
 **Efeitos práticos nas tools:**
 - `funnels_list` retorna SÓ os funis visíveis pro usuário do token

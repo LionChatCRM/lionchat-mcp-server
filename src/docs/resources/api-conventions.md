@@ -198,6 +198,20 @@ Ou para listas grandes (cursors):
 - `includes` / `excludes` (relacionamentos)
 - `before` / `after` (datas)
 
+### Atributos personalizados — operadores por TIPO (2026-07-21)
+
+Vale pra automações, filtro avançado de conversas/contatos e busca "+ Filtro" (motor compartilhado):
+
+| Tipo do atributo | Operadores aceitos |
+|---|---|
+| texto / link | equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present |
+| lista | equal_to, not_equal_to, is_present, is_not_present |
+| número / data | equal_to, not_equal_to, is_present, is_not_present, is_greater_than, is_less_than |
+| sim/não (checkbox) | equal_to, not_equal_to, is_present, is_not_present |
+
+- Em atributo de LISTA, `equal_to` com vários `values[]` casa QUALQUER um deles (multi-seleção).
+- NUNCA use `contains` em número/data/checkbox — o backend rejeita (cast inválido).
+
 > **Contatos — busca parcial por nome/ID externo:** no `POST /contacts/filter`, os campos `name` e
 > `identifier` aceitam `contains` / `does_not_contain` (match parcial, case-insensitive). Use isso
 > pra "contatos cujo nome contém X" sem precisar do valor exato.
@@ -219,7 +233,10 @@ Ou para listas grandes (cursors):
 ### Timezone
 
 - Default: `America/Sao_Paulo` (UTC-3, sem DST atualmente)
-- Conta pode ter `locale` próprio mas timezone segue config do servidor
+- A CONTA tem fuso próprio (2026-07-21): Configurações > Conta, gravado em
+  `custom_attributes.timezone` (IANA, ex. `America/Manaus`) via atualização da conta —
+  vem no topo do payload da conta (`timezone`). Caixas novas e o FlowBuilder herdam.
+  Valor inválido é DESCARTADO em silêncio — confirme com um GET depois de gravar.
 - Pra evitar bugs, sempre passe timezone explícito
 
 ### Custom attributes de data/hora — formato canônico (2026-07-06)
