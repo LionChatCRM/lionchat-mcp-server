@@ -211,8 +211,9 @@ As instruções aceitam variáveis Liquid `{{ }}` que chegam JÁ PREENCHIDAS com
 
 - Contato: `{{contact.name}}`, `{{contact.first_name}}`, `{{contact.last_name}}`, `{{contact.email}}`, `{{contact.phone}}`, `{{contact.cpf}}`, `{{contact.cnpj}}`, `{{contact.rg}}`, `{{contact.date_of_birth}}`, `{{contact.profession}}`, `{{contact.address.city}}` (e `.cep`/`.street`/`.number`/`.neighborhood`/`.state`...), `{{contact.custom_attribute.<chave>}}`.
 - Conversa: `{{conversation.display_id}}`, `{{conversation.custom_attribute.<chave>}}`.
-- Variável sem valor sai vazia (não quebra). Texto SEM `{{` sai idêntico (preserva o cache do prompt) — só use variável quando agregar.
-- ATENÇÃO: variável de CONTA NÃO funciona aqui — `{{account.custom_attribute.<chave>}}` (slogan, endereço...) sai VAZIA dentro das instruções do AI Agente (o contexto só tem `contact` e `conversation`, proteção contra vazar secret). Pra um valor fixo da empresa no prompt, escreva o valor literal no texto.
+- Variável sem valor sai vazia (não quebra). Texto SEM `{{` sai idêntico (preserva o cache do prompt) — só use variável quando agregar. Erro de digitação (filtro inválido, `{{` sem fechar) degrada suave: o pedaço com erro sai vazio e o resto das variáveis continua resolvendo (exceção: bloco `{% %}` sem fechar ainda cai pra texto cru).
+- Conta (2026-07): `{{account.custom_attribute.<chave>}}` (slogan, endereço...) AGORA resolve nas instruções e cenários — MAS só os atributos de conta que você DEFINIU (via `account_variables_create`); campos internos de faturamento e secrets NUNCA aparecem no autocomplete nem resolvem. O editor de Instruções/Cenários já sugere essas variáveis de conta ao digitar `{{`.
+- Simulador/Playground: agora também substitui as variáveis (com os dados do painel de teste). Obs.: CPF/CNPJ/endereço não são coletados no painel, então saem vazios só no teste (na conversa real funcionam).
 
 ## Conhecimento passivo da IA: FAQ + artigos (RAG) (2026-06)
 

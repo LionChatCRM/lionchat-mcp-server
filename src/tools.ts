@@ -396,7 +396,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-10)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-21)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -536,7 +536,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       NAO no formato "37:etapa"), pagetrack_visited/pagetrack_event,
     sla_check (SO value, codigo fixo: frt_breached/frt_ok/nrt_breached/nrt_ok/rt_breached/rt_ok/has_sla/no_sla;
       frt=primeira resp, nrt=proxima, rt=resolucao; _ok exige politica de SLA aplicada).
-  Operador numerico SO em atributo numero.
+  greater_than/less_than: atributo numero (valor numerico) OU temporais (novo 2026-07-21) —
+    date (value ISO YYYY-MM-DD, compara por DIA), time (value "HH:MM", compara minutos-do-dia),
+    datetime (value "YYYY-MM-DDTHH:MM", compara HORARIO DE PAREDE — ignora fuso/offset).
+    Backend detecta o FORMATO do value: instante > dia > minutos > numero.
+    number_range SO em numero. NUNCA maior/menor em texto/lista.
 
 ▸ action
   data: { label, items: [ { key, config: {...} } ] }

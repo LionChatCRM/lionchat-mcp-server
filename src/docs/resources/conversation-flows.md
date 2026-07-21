@@ -130,10 +130,16 @@ Se `captain_assistant_id` foi setado (manual ou via automação):
 
 ### 6. Estado "pending" (status 2)
 
-Conversa em "pending" significa "aguardando algo":
-- Cliente respondeu mas agente ainda não viu
-- OU agente respondeu e tá aguardando cliente
-- Geralmente movida automaticamente por automação ("se 24h sem resposta → pending")
+Conversa em "pending" significa "aguardando algo" — status HUMANO reativado (2026-07-20,
+handoff consultor→gestor). Pendente só acontece por ação explícita:
+- Botão "Deixar pendente" no painel
+- Ação de automação `pending_conversation`
+- Node `change_status` do FlowBuilder com `status: pending`
+- Ferramenta nativa da IA (deixar conversa pendente)
+
+Comportamentos importantes:
+- Mensagem nova do cliente NÃO reabre conversa pendente (segue pendente na lista)
+- Pendente ATRIBUÍDA notifica o responsável (o gestor recebe o aviso)
 
 ### 7. Resolução (status 1)
 

@@ -282,7 +282,7 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 | `contains` / `not_contains` | substring |
 | `starts_with` / `ends_with` | prefixo/sufixo |
 | `is_empty` / `is_not_empty` | vazio/preenchido (NÃO existe `is_present`/`is_blank`) |
-| `greater_than` / `less_than` | comparação numérica |
+| `greater_than` / `less_than` | comparação numérica (atributo número) OU de DATA (atributo `date`, `value` ISO `YYYY-MM-DD`). O backend detecta data ISO no valor do atributo e compara como data; senão numérico |
 | `number_range` | faixa; `value` no formato `"min-max"` (ex `"10-50"`) |
 | `has_length` | comprimento exato (`value` = número) |
 | `is_number` / `is_letter` / `is_email` / `is_phone` | validação de formato |
@@ -300,10 +300,12 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 **Restrição por TIPO de atributo (a UI só oferece um subconjunto, e é o que faz sentido):**
 - **Texto/string:** `equal`, `not_equal`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`
 - **Número:** `equal`, `not_equal`, `greater_than`, `less_than`, `number_range`, `is_empty`, `is_not_empty`
-- **Lista/Data:** `equal`, `not_equal`, `contains`, `not_contains`
-- **Hora (`time`, novo 2026-07-06):** tratado como texto nas condições (`equal`, `not_equal`, `is_empty`, `is_not_empty`); valor canônico `"HH:MM"` 24h. Comparação maior/menor NÃO é suportada pra Hora — o uso principal desse tipo é alimentar o campo Horário do node `wait` (modo date, `waitTimeMode: "variable"`).
+- **Lista:** `equal`, `not_equal`, `contains`, `not_contains`
+- **Data (`date`):** `equal`, `not_equal`, **`greater_than`, `less_than`** (novo 2026-07-21). Em `greater_than`/`less_than` o `value` é data ISO `YYYY-MM-DD` (UI = calendário). Backend compara como DATA (dia).
+- **Hora (`time`):** `equal`, `not_equal`, **`greater_than`, `less_than`** (novo 2026-07-21), `is_empty`, `is_not_empty`. `value` canônico `"HH:MM"` 24h (UI = seletor de hora). Backend compara por minutos-do-dia. (Também alimenta o campo Horário do node `wait`.)
+- **Data e Hora (`datetime`):** `equal`, `not_equal`, **`greater_than`, `less_than`** (novo 2026-07-21). Em `greater_than`/`less_than` o `value` é ISO `YYYY-MM-DDTHH:MM` (UI = calendário + hora). Backend compara HORÁRIO DE PAREDE (dia+hora até o minuto, IGNORA o fuso — o valor gravado tem offset `-03:00` mas a comparação é feita no relógio local, não no instante UTC).
 
-Use operador numérico (`greater_than`, `less_than`, `number_range`) SÓ em atributo de tipo número.
+`greater_than`/`less_than` valem em atributo número (valor numérico) E temporais `date`/`time`/`datetime` (o backend detecta o formato do valor: instante > dia > minutos > número). `number_range` SÓ em número. Nunca use maior/menor em texto/lista.
 
 **SLA — operador `sla_check` (2026-06):** verifica se a conversa está dentro/fora do prazo de SLA. A regra NÃO usa `field`, só `value` (código fixo):
 
@@ -887,7 +889,7 @@ Nodes nunca devem ficar com a mesma coordenada `(x, y)`. Se dois nodes têm posi
 | `aiIntentOptions` (array de strings) no node ai | Ignorado | `aiIntents: [{name}]` |
 | `match_mode` no `message_received` | Ignorado | `match_type` (`exact`/`contains`) |
 | `label` (singular) em `label_added`/`label_removed` | Ignorado | `label_names: [...]` |
-| operador numérico (`greater_than` etc) em atributo texto | UI não oferece; semântica errada | usar só em atributo número |
+| `greater_than`/`less_than` em atributo texto/lista | UI não oferece; semântica errada | usar só em atributo número ou `date` (data ISO) |
 | inboxes em flow `ai_tool` | Validação rejeita | ai_tool não tem inboxes |
 | `waitTime: "60"` (string) | Espera Integer | `waitTime: 60` |
 | `inbox_ids` aninhado em `{flow:{...}}` | No MCP, achata-se sozinho | Passa `inbox_ids: [1, 2]` no nível raiz |

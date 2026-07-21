@@ -7,7 +7,7 @@
     "description": "Retorna detalhes da conta atualmente autenticada. Inclui plano, usage limits, custom_attributes, configurações gerais. Use pra entender contexto antes de outras ações.",
     "category": "Conta",
     "params": [],
-    "returns": "{ id, name, plan, usage_limits, custom_attributes, domain, locale, ... }",
+    "returns": "{ id, name, plan, usage_limits, custom_attributes, domain, locale, ... } Inclui timezone (fuso próprio da conta, 2026-07-21, default America/Sao_Paulo) no topo do payload.",
     "common_use_cases": [
       "Verificar plano e limites antes de criar recursos",
       "Pegar locale/timezone pra formatar saída",
@@ -2293,7 +2293,7 @@
     "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa. Lista todos os funis com contagem de itens por etapa (cache 5min). NAO e paginado. ACESSO (2026-06): retorna SO os funis visiveis pro usuario do token (admin, permissao kanban, funil aberto ou participante). Funil nao-visivel da 404 no show.",
     "category": "Funis",
     "params": [],
-    "returns": "array de funis (cada um com stage_items_count); sem meta/paginacao",
+    "returns": "array de funis (cada um com stage_items_count); sem meta/paginacao Inclui resolved_agents: [{id, name, avatar_url, via: 'agent'|'team'}] — quem efetivamente participa do funil (2026-07-21).",
     "common_use_cases": [
       "Dashboard: contar/exibir funis",
       "Buscar com filtros antes de outra operação",
@@ -2344,7 +2344,7 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). Cada automacao: {id, enabled, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value (id da etapa p/ stage_moved; status p/ status_change; vazio p/ card_created), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (ex.: move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations)."
+        "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). Cada automacao: {id, enabled, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value (id da etapa p/ stage_moved; status p/ status_change; vazio p/ card_created), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (ex.: move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations)."
       },
       {
         "name": "funnel.global_custom_attributes",
@@ -2383,7 +2383,7 @@
         "description": "ID do funil"
       }
     ],
-    "returns": "funil (objeto completo com associações)",
+    "returns": "funil (objeto completo com associações) Inclui resolved_agents: [{id, name, avatar_url, via: 'agent'|'team'}] — quem efetivamente participa do funil (2026-07-21).",
     "common_use_cases": [
       "Ver dados completos antes de editar",
       "Verificar estado atual antes de uma ação",
@@ -2425,10 +2425,10 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). Cada automacao: {id (formato 'automation_<timestamp_ms>'), enabled: true, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value SEMPRE preenchido ('card_created' literal p/ card_created; chave da etapa de destino no hash funnel.stages p/ stage_moved; 'won'|'lost' p/ status_change), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; update_checklist->{checklist_updates:[{checklist_item_id,completed,text}]}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. Regras: trigger_value vazio ou enabled=false fazem a UI descartar a automacao no proximo salvar do usuario; stage_moved + move_to_stage nunca executa (anti-loop); notify_team hoje so registra em log (nao notifica ninguem); update_checklist nao aparece na UI (so via API). ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations)."
+        "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). Cada automacao: {id (formato 'automation_<timestamp_ms>'), enabled: true, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value SEMPRE preenchido ('card_created' literal p/ card_created; chave da etapa de destino no hash funnel.stages p/ stage_moved; 'won'|'lost' p/ status_change), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; update_checklist->{checklist_updates:[{checklist_item_id,completed,text}]}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. Regras: trigger_value vazio ou enabled=false fazem a UI descartar a automacao no proximo salvar do usuario; stage_moved + move_to_stage nunca executa (anti-loop); notify_team hoje so registra em log (nao notifica ninguem); update_checklist nao aparece na UI (so via API). ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations)."
       }
     ],
-    "returns": "funil atualizado",
+    "returns": "funil atualizado Inclui resolved_agents: [{id, name, avatar_url, via: 'agent'|'team'}] — quem efetivamente participa do funil (2026-07-21).",
     "common_use_cases": [
       "Edição parcial de funil",
       "Alteração de status/estado",
@@ -3826,7 +3826,14 @@
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "JSON mapeando coluna do CSV -> campo do contato. Campos aceitos: name, email, phone_number, company, city, labels, instagram, facebook, linkedin, twitter (demais chaves sao ignoradas)"
+        "description": "JSON mapeando coluna do CSV -> campo do contato. Campos aceitos: name, email, phone_number, company, city, labels, instagram, facebook, linkedin, twitter (demais chaves sao ignoradas) Chaves de destino também aceitam prefixo 'custom_attribute:<chave>' (atributo personalizado) e 'cadastral:<campo>' (dados cadastrais)."
+      },
+      {
+        "name": "value_mappings",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "De-para de VALORES por coluna (2026-07-21), p/ atributos de LISTA e campos cadastrais: {\"<mapping_key>\": {\"<valor da planilha>\": \"<opção do sistema>\" | \"\"}}. mapping_key é PREFIXADO ('custom_attribute:<chave>' ou 'cadastral:<campo>'). Chave ausente = valor cru; opção vazia (\"\") = IGNORAR o valor (campo fica em branco, sem aviso). Match ignora espaços e maiúsculas. Malformado = 422."
       }
     ],
     "returns": "{ import_id } — use import_status para acompanhar o progresso",
@@ -8679,7 +8686,7 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "daily, weekly, monthly, yearly"
+        "description": "Frequência da recorrência. Valores REAIS (corrigido 2026-07-21; 'daily/weekly/monthly/yearly' NUNCA existiram): every_day, every_day_at_time, every_week, every_biweekly, every_month, every_year, every_weekday (dias úteis), every_weekend. Aceita a string direta ou {type: '<valor>'}."
       }
     ],
     "returns": "mensagem agendada criado (com novo ID)",
@@ -8699,7 +8706,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/scheduled_messages/{id}",
     "title": "Atualizar Agendada",
-    "description": "Atualiza mensagem agendada (wrapper scheduled_message). Campos: content, scheduled_at, title, inbox_id, is_recurrent, period, recurrence_count.",
+    "description": "Atualiza mensagem agendada (wrapper scheduled_message). Campos: content, scheduled_at, title, inbox_id, is_recurrent, period, recurrence_count. (2026-07-21) Trocar o period agora PERSISTE; editar scheduled_at REARMA o envio; mensagem sent/failed editada com data futura VOLTA a pending (reativação — só fluxo manual).",
     "category": "Mensagens Agendadas",
     "params": [
       {
@@ -9761,7 +9768,7 @@
         "type": "array",
         "location": "body",
         "required": true,
-        "description": "[{action_name, action_params[]}]"
+        "description": "[{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre)."
       },
       {
         "name": "active",
@@ -9859,7 +9866,7 @@
         "type": "array",
         "location": "body",
         "required": false,
-        "description": "Acoes"
+        "description": "Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre)."
       }
     ],
     "returns": "regra de automação atualizado",
@@ -13785,7 +13792,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/support_access",
     "title": "Solicitar Acesso de Suporte",
-    "description": "Concede acesso de suporte (SuperAdmin) à conta. Obrigatório: support_agent_email.",
+    "description": "Concede acesso de suporte (SuperAdmin) à conta. Obrigatório: support_agent_email. Grantee pode ser SuperAdmin OU usuário marcado como 'usuário de suporte' no Super Admin (isenção de vaga). 422 se o e-mail já for agente pago regular da conta (sem grant prévio).",
     "category": "Acesso de Suporte",
     "params": [
       {
@@ -13808,6 +13815,20 @@
         "location": "body",
         "required": false,
         "description": "Texto de consentimento LGPD"
+      },
+      {
+        "name": "duration_hours",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Duração do acesso em horas (respeita o teto do servidor). Ignorado quando lifetime=true."
+      },
+      {
+        "name": "lifetime",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "true = acesso VITALÍCIO (2026-07-21): não expira e não agenda revogação automática."
       }
     ],
     "returns": "acesso de suporte criado (com novo ID)",
@@ -20214,6 +20235,13 @@
         "location": "body",
         "required": false,
         "description": "Lista COMPLETA das caixas desejadas para o agente, com o cargo (reconcilia: adiciona, remove e ajusta o cargo). Array de objetos { inbox_id, supervisor }, ex: [{\"inbox_id\": 82, \"supervisor\": false}, {\"inbox_id\": 91, \"supervisor\": true}]. supervisor=false => Agente; supervisor=true => Supervisor. Omitir o campo mantem as caixas atuais intactas. Use lionchat_inboxes_list para obter os IDs."
+      },
+      {
+        "name": "email",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Novo e-mail do agente (2026-07-21). A troca exige confirmação: o link vai pro e-mail NOVO e o antigo continua valendo até confirmar (sem lockout). Agente ainda não confirmado troca direto."
       }
     ],
     "returns": "agente atualizado",
@@ -25008,6 +25036,171 @@
     ],
     "related_tools": [
       "lionchat_flows_scheduled_firings_list"
+    ]
+  },
+  {
+    "id": "lionchat_contacts_import_validate",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/contacts/import_validate",
+    "title": "Validar Import de Contatos (pré-check)",
+    "description": "Valida o CSV de import ANTES de importar: confere tipos dos valores contra os atributos de destino (data, número, lista...) e devolve os problemas por linha/coluna. Aceita os mesmos file + mappings + value_mappings do import_csv. Use pra conferir antes de rodar o import de verdade.",
+    "category": "Contatos",
+    "params": [
+      {
+        "name": "file",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Arquivo CSV (mesmo formato do import_csv)"
+      },
+      {
+        "name": "mappings",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Mapeamento coluna→campo (mesmo formato do import_csv, com prefixos custom_attribute:/cadastral:)"
+      },
+      {
+        "name": "value_mappings",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "De-para de valores (mesmo formato do import_csv)"
+      }
+    ],
+    "returns": "Resultado da validação com problemas por linha/coluna (tipos incompatíveis, valores fora da lista)",
+    "common_use_cases": [
+      "Conferir a planilha antes do import definitivo"
+    ],
+    "related_tools": [
+      "lionchat_contacts_create_8",
+      "lionchat_contacts_create_7",
+      "lionchat_contacts_show_1"
+    ]
+  },
+  {
+    "id": "lionchat_account_settings_update",
+    "method": "PUT",
+    "path": "/api/v1/accounts/{account_id}",
+    "title": "Atualizar Configurações da Conta",
+    "description": "Atualiza as configurações GERAIS da conta (Configurações > Conta). Inclui o FUSO HORÁRIO próprio da conta (novo 2026-07-21): timezone IANA, default America/Sao_Paulo — caixas novas e o Gatilho de Data do FlowBuilder herdam. ATENÇÃO: timezone inválido é DESCARTADO em silêncio (não dá erro) — confirme com account_show depois. Não confundir com account_update (que é o PERFIL do usuário logado).",
+    "category": "Conta",
+    "params": [
+      {
+        "name": "name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Nome da conta"
+      },
+      {
+        "name": "locale",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Idioma da conta (ex. pt_BR)"
+      },
+      {
+        "name": "support_email",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "E-mail de suporte da conta"
+      },
+      {
+        "name": "domain",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Domínio da conta"
+      },
+      {
+        "name": "timezone",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Fuso horário IANA da conta (ex. America/Sao_Paulo, America/Manaus). Gravado em custom_attributes.timezone; vem no topo do payload da conta. Inválido = ignorado em silêncio."
+      }
+    ],
+    "returns": "Conta atualizada (payload completo, com timezone no topo)",
+    "common_use_cases": [
+      "Mudar o fuso horário da conta",
+      "Atualizar nome/idioma/e-mail de suporte"
+    ],
+    "related_tools": [
+      "lionchat_account_show",
+      "lionchat_current_account"
+    ]
+  },
+  {
+    "id": "lionchat_team_members_kanban_reassignment_preview",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/teams/{team_id}/team_members/kanban_reassignment_preview",
+    "title": "Prévia de reatribuição de cards (remover agente do time)",
+    "description": "Antes de remover agentes de um time VINCULADO a funil Kanban (settings.teams), mostra quais cards ficariam órfãos por agente que perde acesso. Envie user_ids = a lista COMPLETA desejada de membros (quem ficar de fora é tratado como removido).",
+    "category": "Times",
+    "params": [
+      {
+        "name": "team_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do time"
+      },
+      {
+        "name": "user_ids",
+        "type": "array",
+        "location": "body",
+        "required": true,
+        "description": "Lista COMPLETA de membros desejada após a mudança (não a lista de removidos)"
+      }
+    ],
+    "returns": "{ reassignments: [...] } — por agente removido, os funis/cards afetados que precisarão de novo dono",
+    "common_use_cases": [
+      "Ver o impacto antes de tirar alguém de um time ligado a funil"
+    ],
+    "related_tools": [
+      "lionchat_team_members_remove_agents_with_reassignment",
+      "lionchat_funnels_show"
+    ]
+  },
+  {
+    "id": "lionchat_team_members_remove_agents_with_reassignment",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/teams/{team_id}/team_members/remove_agents_with_reassignment",
+    "title": "Remover agentes do time reatribuindo os cards",
+    "description": "Remove agentes de um time vinculado a funil Kanban REATRIBUINDO os cards deles em uma operação atômica (2026-07-21). Use a prévia (kanban_reassignment_preview) antes pra montar o destino por funil. 422 {error: 'reassignment_failed'} se algum destino for inválido — nada é aplicado.",
+    "category": "Times",
+    "params": [
+      {
+        "name": "team_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do time"
+      },
+      {
+        "name": "user_ids",
+        "type": "array",
+        "location": "body",
+        "required": true,
+        "description": "Lista COMPLETA de membros desejada após a mudança"
+      },
+      {
+        "name": "reassignments",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Destino dos cards por funil pra cada agente removido (shape da prévia)"
+      }
+    ],
+    "returns": "200 com o time atualizado | 422 { error: 'reassignment_failed', reason } (atômico — nada muda)",
+    "common_use_cases": [
+      "Tirar um agente do time sem deixar cards órfãos no funil"
+    ],
+    "related_tools": [
+      "lionchat_team_members_kanban_reassignment_preview",
+      "lionchat_team_members_destroy"
     ]
   }
 ]
