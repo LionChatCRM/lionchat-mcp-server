@@ -1137,6 +1137,34 @@
         "location": "query",
         "required": false,
         "description": "Ordenação: last_activity_at_desc (MAIS RECENTES, padrão), last_activity_at_asc, created_at_desc (últimas criadas), created_at_asc (mais antigas), priority_desc (prioridade alta primeiro), waiting_since_desc (esperando há mais tempo)"
+      },
+      {
+        "name": "captain_assistant",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por Agente de IA (Captain): 'any' = conversas com IA ativa (captain_assistant_id preenchido); 'none' = sem IA / atendimento humano; ou o ID do assistente para filtrar por um agente especifico. Ex.: 'todas as conversas na mao da IA' = any."
+      },
+      {
+        "name": "quick_q",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Busca rapida na lista (min 3 caracteres): casa nome, e-mail, telefone ou identifier do contato; se for so digitos, casa tambem o numero da conversa (display_id). Respeita o filtro de status. Para busca ampla (CPF, atributo, conteudo de mensagem) use conversations_search."
+      },
+      {
+        "name": "source_id",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtra pela origem do contact_inbox (source_id) — ex.: '5511999999999@c.us' do WhatsApp."
+      },
+      {
+        "name": "updated_within",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "So conversas atualizadas nos ultimos N segundos (ex.: 3600 = ultima hora). Util para polling de atividade recente."
       }
     ],
     "returns": "meta (contadores globais) + payload (array de conversas)",
@@ -20289,7 +20317,7 @@
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "Tipo de exibicao: text, number, link, date, time (Hora 24h — valor canonico HH:MM; fuso mora em attribute_timezone), list, checkbox, currency, percent ou secret"
+        "description": "Tipo de exibicao do atributo: text, number, currency, percent, link, date, list, checkbox, time, datetime. NOVO 'datetime' = Data e Hora (interno ISO 8601 com offset do fuso do atributo; usa attribute_timezone, default America/Sao_Paulo; exibe DD/MM/AAAA - HH:MM). ATENCAO: 'datetime' NAO entra no Gatilho de Data nem nos campos Data/Horario do no Esperar do FlowBuilder — esses continuam exigindo 'date' e 'time' SEPARADOS."
       },
       {
         "name": "attribute_timezone",
@@ -20409,7 +20437,7 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Tipo de exibicao: text, number, link, date, time (Hora 24h — valor canonico HH:MM; fuso mora em attribute_timezone), list, checkbox, currency, percent ou secret"
+        "description": "Tipo de exibicao do atributo: text, number, currency, percent, link, date, list, checkbox, time, datetime. NOVO 'datetime' = Data e Hora (interno ISO 8601 com offset do fuso do atributo; usa attribute_timezone, default America/Sao_Paulo; exibe DD/MM/AAAA - HH:MM). ATENCAO: 'datetime' NAO entra no Gatilho de Data nem nos campos Data/Horario do no Esperar do FlowBuilder — esses continuam exigindo 'date' e 'time' SEPARADOS."
       },
       {
         "name": "attribute_timezone",
@@ -20731,7 +20759,7 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Regras de disparo (ongoing/Website): { url, time_on_page }"
+        "description": "Regras da campanha (hash aberto). Carrega: 'audience_mode' ('sum'|'all', combinacao das secoes de publico) e 'exclusion' (array no MESMO formato do audience — publico a negativar/excluir do disparo). Ex.: {\"audience_mode\":\"sum\",\"exclusion\":[{\"type\":\"ContactLabel\",\"id\":12}]}. audience_mode top-level so vale no estimate_audience; ao criar/editar ele PRECISA ir aqui dentro."
       },
       {
         "name": "template_params",
@@ -20901,14 +20929,21 @@
         "type": "array",
         "location": "body",
         "required": true,
-        "description": "Critérios de público — array de seções combináveis: { type: 'Label', id } | { type: 'Funnel', id, stages: ['slug_etapa'], include_won: bool, include_lost: bool } | { type: 'ConversationAttribute', key, value } (atributo personalizado da conversa, ex: origem_do_lead=instagram)"
+        "description": "Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Cada secao: {type, ...}. Tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stage_id?} (etapa de funil Kanban); 'ConversationAttribute' {key, value}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value}; 'CardAttribute' {key, value} (atributo do card Kanban); 'AgentTeam' {assignee_ids:[], team_ids:[]} (responsavel atual OU time da conversa)."
       },
       {
         "name": "audience_mode",
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Como combinar as seções do público: 'sum' (união, default — contato em QUALQUER seção entra) ou 'all' (interseção — precisa atender TODAS as seções preenchidas)"
+        "description": "Como combinar as secoes: 'sum' (uniao — quem estiver em QUALQUER secao, padrao) | 'all' (intersecao — quem estiver em TODAS as secoes preenchidas). No estimate vai top-level; ao CRIAR a campanha o modo vai dentro de trigger_rules.audience_mode."
+      },
+      {
+        "name": "exclusion",
+        "type": "array",
+        "location": "query",
+        "required": false,
+        "description": "Publico a EXCLUIR/negativar antes de estimar (mesmo formato do 'audience': lista de secoes por tipo). O contador desconta quem cair na exclusao. Tipos aceitos iguais aos do audience (Label, Funnel, ConversationAttribute, ContactLabel, ContactAttribute, CardAttribute, AgentTeam)."
       }
     ],
     "returns": "{ count: <int> }",
@@ -24901,6 +24936,78 @@
     ],
     "related_tools": [
       "lionchat_copilot_settings_show"
+    ]
+  },
+  {
+    "id": "lionchat_flows_scheduled_firings_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/flows/{flow_id}/scheduled_firings",
+    "title": "Agendamentos do Gatilho de Data (Agendados)",
+    "description": "Lista os disparos FUTUROS pendentes do Gatilho de Data de um flow (aba 'Agendados'). Cada item mostra quando vai disparar, o atributo/valor que gerou o agendamento, a fonte (contato ou conversa) e o contato/conversa alvo. So flows com Gatilho de Data. ADMIN + flowbuilder_manage. Paginado.",
+    "category": "Flows",
+    "params": [
+      {
+        "name": "flow_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow"
+      },
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Pagina (default 1)"
+      },
+      {
+        "name": "per",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Itens por pagina (default 25, max 100)"
+      }
+    ],
+    "returns": "{ payload: [{ id, fire_at (ISO), occurrence_date, attr_key, attr_value, attr_source ('contact'|'conversation'), contact_id, contact_name, conversation_id }], meta: { count } }",
+    "common_use_cases": [
+      "Ver quem esta agendado para disparar e quando",
+      "Auditar os agendamentos futuros de um flow de Gatilho de Data"
+    ],
+    "related_tools": [
+      "lionchat_flows_scheduled_firings_cancel",
+      "lionchat_flows_executions_list",
+      "lionchat_flows_show"
+    ]
+  },
+  {
+    "id": "lionchat_flows_scheduled_firings_cancel",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/flows/{flow_id}/scheduled_firings/{id}/cancel",
+    "title": "Cancelar um agendamento do Gatilho de Data",
+    "description": "Cancela um disparo futuro pendente do Gatilho de Data (aba 'Agendados'). Idempotente/seguro: se o disparo JA aconteceu, responde 409 {error:'ja_disparado'} e nada muda. ADMIN + flowbuilder_manage.",
+    "category": "Flows",
+    "params": [
+      {
+        "name": "flow_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do flow"
+      },
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do agendamento (scheduled_firing) a cancelar"
+      }
+    ],
+    "returns": "200 { id, status: 'cancelled' } | 409 { error: 'ja_disparado' } se ja disparou | 404 se nao encontrado",
+    "common_use_cases": [
+      "Cancelar um disparo futuro agendado por engano"
+    ],
+    "related_tools": [
+      "lionchat_flows_scheduled_firings_list"
     ]
   }
 ]
