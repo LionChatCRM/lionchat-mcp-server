@@ -9768,7 +9768,7 @@
         "type": "array",
         "location": "body",
         "required": true,
-        "description": "[{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre)."
+        "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. [{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre)."
       },
       {
         "name": "active",
@@ -9866,7 +9866,7 @@
         "type": "array",
         "location": "body",
         "required": false,
-        "description": "Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre)."
+        "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre)."
       }
     ],
     "returns": "regra de automação atualizado",
