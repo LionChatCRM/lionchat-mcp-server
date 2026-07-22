@@ -36,7 +36,7 @@
     "method": "PUT",
     "path": "/api/v1/profile",
     "title": "Atualizar Perfil",
-    "description": "Atualiza o perfil do usuário atual. Campos (nested em profile): name, email, display_name, avatar, message_signature, timezone, ui_settings, current_password, password. NÃO altera availability aqui.",
+    "description": "Atualiza o perfil do usuário atual. Campos (nested em profile): name, email, display_name, avatar, message_signature, timezone, ui_settings, current_password, password. NÃO altera availability aqui. NOVO 22/07: aceita working_hours_enabled + working_hours (horário comercial único da conta; SLA com only_during_business_hours passa a contar só o expediente).",
     "category": "Conta",
     "params": [
       {
@@ -94,6 +94,20 @@
         "location": "body",
         "required": false,
         "description": "Nova senha"
+      },
+      {
+        "name": "working_hours_enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Liga/desliga o horário comercial NO NÍVEL DA CONTA (novo 22/07). Quando ligado, vale para todas as caixas EXCETO Chat do Site (que mantém o horário individual da caixa)."
+      },
+      {
+        "name": "working_hours",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Grade de horário comercial da conta: array com os 7 dias, cada um {day_of_week: 0-6 (0=domingo), closed_all_day: bool, open_all_day: bool, open_hour, open_minutes, close_hour, close_minutes}. Mesmo formato do horário de caixa. Ex.: {\"day_of_week\":1,\"closed_all_day\":false,\"open_all_day\":false,\"open_hour\":9,\"open_minutes\":0,\"close_hour\":18,\"close_minutes\":0}. O show da conta retorna working_hours (somente leitura, [] se nunca configurado) e working_hours_enabled."
       }
     ],
     "returns": "perfil do usuário atualizado",
@@ -1074,6 +1088,32 @@
     "related_tools": []
   },
   {
+    "id": "lionchat_conversations_mentionable_users",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/mentionable_users",
+    "title": "Agentes Mencionáveis da Conversa",
+    "description": "Lista os agentes que podem ser @mencionados em nota interna DESTA conversa (novo 22/07) — só quem tem acesso a ela: administradores, membros da caixa, membros do time da conversa e o responsável pelo card. Use antes de criar nota privada com menção: mencionar quem não está na lista não notifica. Regra irmã (comportamento, sem endpoint): notificação de nova mensagem agora vai SÓ para o responsável da conversa; participantes não recebem mais sino/push a cada mensagem (menção notifica pelo caminho próprio).",
+    "category": "Conversas",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "display_id da conversa"
+      }
+    ],
+    "returns": "200 {payload: [agentes]} — id, name, email, role, availability_status, thumbnail",
+    "common_use_cases": [
+      "Descobrir quem pode ser mencionado numa nota interna",
+      "Escolher o agente certo para acionar numa conversa"
+    ],
+    "related_tools": [
+      "lionchat_conversations_messages_create",
+      "lionchat_agents_list"
+    ]
+  },
+  {
     "id": "lionchat_conversations_list",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/conversations",
@@ -2018,7 +2058,7 @@
     "method": "DELETE",
     "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/{id}",
     "title": "Deletar Mensagem",
-    "description": "Remove uma mensagem (soft delete). Remove mensagem permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
+    "description": "Remove uma mensagem (soft delete no LionChat). ATENÇÃO por canal (esclarecido 22/07): exclusão que também some do WhatsApp do cliente SÓ existe em caixa WAHA (QR). Em caixa OFICIAL/coex (whatsapp_cloud) a Meta NÃO expõe API de apagar — a mensagem some só do painel e o cliente CONTINUA vendo no WhatsApp dele (o painel nem oferece mais essa opção nesses canais). Confirme o canal antes; ação irreversível.",
     "category": "Mensagens",
     "params": [
       {
@@ -7493,7 +7533,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/macros",
     "title": "Criar Macro",
-    "description": "Cria uma nova macro com ações. Cria novo macro. Obrigatórios: name, actions. Valida unicidade quando aplicável. Retorna o macro criado com ID atribuído.",
+    "description": "Cria uma nova macro com ações. Cria novo macro. Obrigatórios: name, actions. Valida unicidade quando aplicável. Retorna o macro criado com ID atribuído. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
     "category": "Macros",
     "params": [
       {
@@ -7555,7 +7595,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/macros/{id}",
     "title": "Atualizar Macro",
-    "description": "Atualiza macro. Atualiza campos do macro existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, actions.",
+    "description": "Atualiza macro. Atualiza campos do macro existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, actions. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
     "category": "Macros",
     "params": [
       {
@@ -9157,7 +9197,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/flows",
     "title": "Listar Flows",
-    "description": "Lista todos os flows da conta com estatísticas de execução. Lista flows paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de flow).",
+    "description": "Lista todos os flows da conta com estatísticas de execução. Lista flows paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de flow). Cada flow retorna também o campo tags (array de strings, novo 22/07) — use para organizar/agrupar flows.",
     "category": "Flows",
     "params": [],
     "returns": "meta (contadores globais) + payload (array de flows)",
@@ -9217,6 +9257,13 @@
         "location": "body",
         "required": false,
         "description": "Estrutura {nodes:[], edges:[]} em formato Vue Flow. CONSULTE A DESCRICAO DO TOOL para schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable, wait). Cada node tem campo 'data' com formato especifico por tipo. Edges precisam ter sourceHandle correto (ex: 'option_1', 'success', 'timeout', 'no_response')."
+      },
+      {
+        "name": "tags",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Tags livres do flow para organização (array de strings; máx 20 tags, cada uma até 50 caracteres; duplicadas por maiúscula/minúscula são unificadas). A lista de flows na tela filtra por Status/Tipo/Caixa/Tags no navegador — não há filtro por query param no index."
       }
     ],
     "returns": "flow criado (com novo ID)",
@@ -9298,6 +9345,13 @@
         "location": "body",
         "required": false,
         "description": "Estrutura {nodes:[], edges:[]} em formato Vue Flow. Ver descricao do tool lionchat_flows_create para schema dos nodes."
+      },
+      {
+        "name": "tags",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Tags livres do flow para organização (array de strings; máx 20 tags, cada uma até 50 caracteres; duplicadas por maiúscula/minúscula são unificadas). A lista de flows na tela filtra por Status/Tipo/Caixa/Tags no navegador — não há filtro por query param no index."
       }
     ],
     "returns": "flow atualizado",
@@ -9732,7 +9786,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/automation_rules",
     "title": "Criar Regra de Automacao",
-    "description": "Cria uma regra de automacao. event_name validos: conversation_created, conversation_updated, conversation_resolved, message_created, conversation_opened, webhook, kanban_item_created, kanban_item_stage_changed. conditions: [{attribute_key, filter_operator, query_operator, values[]}]. actions: [{action_name, action_params[]}]. Aceita active, inbox_id.",
+    "description": "Cria uma regra de automacao. event_name validos: conversation_created, conversation_updated, conversation_resolved, message_created, conversation_opened, webhook, kanban_item_created, kanban_item_stage_changed. conditions: [{attribute_key, filter_operator, query_operator, values[]}]. actions: [{action_name, action_params[]}]. Aceita active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
     "category": "Regras de Automacao",
     "params": [
       {
@@ -9830,7 +9884,7 @@
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/automation_rules/{id}",
     "title": "Atualizar Regra",
-    "description": "Atualiza uma regra de automacao (PUT, substituicao completa). Campos: name, event_name, conditions, actions, active, inbox_id.",
+    "description": "Atualiza uma regra de automacao (PUT, substituicao completa). Campos: name, event_name, conditions, actions, active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
     "category": "Regras de Automacao",
     "params": [
       {
@@ -13540,7 +13594,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/sla_policies",
     "title": "Criar Politica SLA",
-    "description": "Cria uma politica de SLA. ENTERPRISE-only. Body exige wrapper sla_policy. Thresholds em segundos (float).",
+    "description": "Cria uma politica de SLA. ENTERPRISE-only. Body exige wrapper sla_policy. Thresholds em segundos (float). NOVO 22/07: only_during_business_hours agora é EFETIVO — o relógio do SLA conta só os segundos dentro do horário comercial (Chat do Site usa o horário da própria caixa; demais canais usam o horário comercial da CONTA, se ligado; tudo fechado = volta a contar 24/7).",
     "category": "SLA",
     "params": [
       {
@@ -13624,7 +13678,7 @@
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/sla_policies/{id}",
     "title": "Atualizar SLA",
-    "description": "Atualiza uma politica de SLA. ENTERPRISE-only. Wrapper sla_policy.",
+    "description": "Atualiza uma politica de SLA. ENTERPRISE-only. Wrapper sla_policy. NOVO 22/07: only_during_business_hours agora é EFETIVO — o relógio do SLA conta só os segundos dentro do horário comercial (Chat do Site usa o horário da própria caixa; demais canais usam o horário comercial da CONTA, se ligado; tudo fechado = volta a contar 24/7).",
     "category": "SLA",
     "params": [
       {
@@ -20262,7 +20316,7 @@
     "method": "DELETE",
     "path": "/api/v1/accounts/{account_id}/agents/{id}",
     "title": "Excluir Agente",
-    "description": "Remove um agente da conta. ATENÇÃO: se o agente tiver recursos vinculados (conversas, times, inboxes etc.), o parâmetro reassign_to_agent_id é OBRIGATÓRIO para reatribuir esses recursos a outro agente — sem ele a exclusão é recusada. Use lionchat_agents_assigned_resources antes para checar dependências.",
+    "description": "Remove um agente da conta. Se o agente tiver recursos vinculados (conversas, times, inboxes etc.), reassign_to_agent_id é OBRIGATÓRIO (sem ele: 422). NOVO 22/07: a exclusão COM reatribuição roda em SEGUNDO PLANO (pode levar minutos em conta grande) — a resposta é 202 {status:'processing'} e o agente some da lista só quando o job termina; enquanto isso o index de agentes traz a flag deleting=true no agente. Tentar excluir de novo durante o processamento retorna 409 {error:'agent_already_being_deleted'} — NÃO repita a chamada, aguarde. Use lionchat_agents_assigned_resources antes para checar dependências.",
     "category": "Agentes",
     "params": [
       {
@@ -20280,7 +20334,7 @@
         "description": "ID do agente que receberá os recursos. Obrigatório quando o agente possui recursos vinculados."
       }
     ],
-    "returns": "200 OK",
+    "returns": "200 OK (sem recursos, síncrono) | 202 Accepted {status:'processing'} (com reatribuição, roda em 2º plano) | 409 agent_already_being_deleted (exclusão já em andamento) | 422 (reassign_to_agent_id faltando ou igual ao próprio agente) | 404 (agente de destino inexistente)",
     "common_use_cases": [
       "Desligar um agente reatribuindo suas conversas",
       "Limpeza de agentes inativos",
