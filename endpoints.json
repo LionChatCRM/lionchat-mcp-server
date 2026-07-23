@@ -36,7 +36,7 @@
     "method": "PUT",
     "path": "/api/v1/profile",
     "title": "Atualizar Perfil",
-    "description": "Atualiza o perfil do usuário atual. Campos (nested em profile): name, email, display_name, avatar, message_signature, timezone, ui_settings, current_password, password. NÃO altera availability aqui.",
+    "description": "Atualiza o perfil do usuário atual. Campos (nested em profile): name, email, display_name, avatar, message_signature, timezone, ui_settings, current_password, password. NÃO altera availability aqui. NOVO 22/07: aceita working_hours_enabled + working_hours (horário comercial único da conta; SLA com only_during_business_hours passa a contar só o expediente).",
     "category": "Conta",
     "params": [
       {
@@ -94,6 +94,20 @@
         "location": "body",
         "required": false,
         "description": "Nova senha"
+      },
+      {
+        "name": "working_hours_enabled",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Liga/desliga o horário comercial NO NÍVEL DA CONTA (novo 22/07). Quando ligado, vale para todas as caixas EXCETO Chat do Site (que mantém o horário individual da caixa)."
+      },
+      {
+        "name": "working_hours",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Grade de horário comercial da conta: array com os 7 dias, cada um {day_of_week: 0-6 (0=domingo), closed_all_day: bool, open_all_day: bool, open_hour, open_minutes, close_hour, close_minutes}. Mesmo formato do horário de caixa. Ex.: {\"day_of_week\":1,\"closed_all_day\":false,\"open_all_day\":false,\"open_hour\":9,\"open_minutes\":0,\"close_hour\":18,\"close_minutes\":0}. O show da conta retorna working_hours (somente leitura, [] se nunca configurado) e working_hours_enabled."
       }
     ],
     "returns": "perfil do usuário atualizado",
@@ -1074,6 +1088,32 @@
     "related_tools": []
   },
   {
+    "id": "lionchat_conversations_mentionable_users",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/mentionable_users",
+    "title": "Agentes Mencionáveis da Conversa",
+    "description": "Lista os agentes que podem ser @mencionados em nota interna DESTA conversa (novo 22/07) — só quem tem acesso a ela: administradores, membros da caixa, membros do time da conversa e o responsável pelo card. Use antes de criar nota privada com menção: mencionar quem não está na lista não notifica. Regra irmã (comportamento, sem endpoint): notificação de nova mensagem agora vai SÓ para o responsável da conversa; participantes não recebem mais sino/push a cada mensagem (menção notifica pelo caminho próprio).",
+    "category": "Conversas",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "display_id da conversa"
+      }
+    ],
+    "returns": "200 {payload: [agentes]} — id, name, email, role, availability_status, thumbnail",
+    "common_use_cases": [
+      "Descobrir quem pode ser mencionado numa nota interna",
+      "Escolher o agente certo para acionar numa conversa"
+    ],
+    "related_tools": [
+      "lionchat_conversations_messages_create",
+      "lionchat_agents_list"
+    ]
+  },
+  {
     "id": "lionchat_conversations_list",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/conversations",
@@ -2018,7 +2058,7 @@
     "method": "DELETE",
     "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/{id}",
     "title": "Deletar Mensagem",
-    "description": "Remove uma mensagem (soft delete). Remove mensagem permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
+    "description": "Remove uma mensagem (soft delete no LionChat). ATENÇÃO por canal (esclarecido 22/07): exclusão que também some do WhatsApp do cliente SÓ existe em caixa WAHA (QR). Em caixa OFICIAL/coex (whatsapp_cloud) a Meta NÃO expõe API de apagar — a mensagem some só do painel e o cliente CONTINUA vendo no WhatsApp dele (o painel nem oferece mais essa opção nesses canais). Confirme o canal antes; ação irreversível.",
     "category": "Mensagens",
     "params": [
       {
@@ -7493,7 +7533,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/macros",
     "title": "Criar Macro",
-    "description": "Cria uma nova macro com ações. Cria novo macro. Obrigatórios: name, actions. Valida unicidade quando aplicável. Retorna o macro criado com ID atribuído.",
+    "description": "Cria uma nova macro com ações. Cria novo macro. Obrigatórios: name, actions. Valida unicidade quando aplicável. Retorna o macro criado com ID atribuído. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
     "category": "Macros",
     "params": [
       {
@@ -7555,7 +7595,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/macros/{id}",
     "title": "Atualizar Macro",
-    "description": "Atualiza macro. Atualiza campos do macro existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, actions.",
+    "description": "Atualiza macro. Atualiza campos do macro existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, actions. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
     "category": "Macros",
     "params": [
       {
@@ -9157,7 +9197,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/flows",
     "title": "Listar Flows",
-    "description": "Lista todos os flows da conta com estatísticas de execução. Lista flows paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de flow).",
+    "description": "Lista todos os flows da conta com estatísticas de execução. Lista flows paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de flow). Cada flow retorna também o campo tags (array de strings, novo 22/07) — use para organizar/agrupar flows.",
     "category": "Flows",
     "params": [],
     "returns": "meta (contadores globais) + payload (array de flows)",
@@ -9173,7 +9213,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/flows",
     "title": "Criar Flow",
-    "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. conversation_mode: 'individual' (default) | 'group'. Sticky note (type 'note'): data usa title+body+color(yellow|teal|blue|violet|pink|orange|slate)+width+height — NUNCA 'content'.",
+    "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. conversation_mode: 'individual' (default) | 'group'. Sticky note (type 'note'): data usa title+body+color(yellow|teal|blue|violet|pink|orange|slate)+width+height — NUNCA 'content'. ORGANIZAÇÃO: preencha tags ao criar (reutilizando as tags já existentes nos flows da conta — veja flows_list) pra manter a lista organizada.",
     "category": "Flows",
     "params": [
       {
@@ -9217,6 +9257,13 @@
         "location": "body",
         "required": false,
         "description": "Estrutura {nodes:[], edges:[]} em formato Vue Flow. CONSULTE A DESCRICAO DO TOOL para schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable, wait). Cada node tem campo 'data' com formato especifico por tipo. Edges precisam ter sourceHandle correto (ex: 'option_1', 'success', 'timeout', 'no_response')."
+      },
+      {
+        "name": "tags",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Tags livres do flow para organização (array de strings; máx 20 tags, cada uma até 50 caracteres; duplicadas por maiúscula/minúscula são unificadas). A lista de flows na tela filtra por Status/Tipo/Caixa/Tags no navegador — não há filtro por query param no index."
       }
     ],
     "returns": "flow criado (com novo ID)",
@@ -9298,6 +9345,13 @@
         "location": "body",
         "required": false,
         "description": "Estrutura {nodes:[], edges:[]} em formato Vue Flow. Ver descricao do tool lionchat_flows_create para schema dos nodes."
+      },
+      {
+        "name": "tags",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Tags livres do flow para organização (array de strings; máx 20 tags, cada uma até 50 caracteres; duplicadas por maiúscula/minúscula são unificadas). A lista de flows na tela filtra por Status/Tipo/Caixa/Tags no navegador — não há filtro por query param no index."
       }
     ],
     "returns": "flow atualizado",
@@ -9732,7 +9786,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/automation_rules",
     "title": "Criar Regra de Automacao",
-    "description": "Cria uma regra de automacao. event_name validos: conversation_created, conversation_updated, conversation_resolved, message_created, conversation_opened, webhook, kanban_item_created, kanban_item_stage_changed. conditions: [{attribute_key, filter_operator, query_operator, values[]}]. actions: [{action_name, action_params[]}]. Aceita active, inbox_id.",
+    "description": "Cria uma regra de automacao. event_name validos: conversation_created, conversation_updated, conversation_resolved, message_created, conversation_opened, webhook, kanban_item_created, kanban_item_stage_changed. conditions: [{attribute_key, filter_operator, query_operator, values[]}]. actions: [{action_name, action_params[]}]. Aceita active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
     "category": "Regras de Automacao",
     "params": [
       {
@@ -9768,7 +9822,7 @@
         "type": "array",
         "location": "body",
         "required": true,
-        "description": "[{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre)."
+        "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. [{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre)."
       },
       {
         "name": "active",
@@ -9830,7 +9884,7 @@
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/automation_rules/{id}",
     "title": "Atualizar Regra",
-    "description": "Atualiza uma regra de automacao (PUT, substituicao completa). Campos: name, event_name, conditions, actions, active, inbox_id.",
+    "description": "Atualiza uma regra de automacao (PUT, substituicao completa). Campos: name, event_name, conditions, actions, active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
     "category": "Regras de Automacao",
     "params": [
       {
@@ -9866,7 +9920,7 @@
         "type": "array",
         "location": "body",
         "required": false,
-        "description": "Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre)."
+        "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre)."
       }
     ],
     "returns": "regra de automação atualizado",
@@ -13540,7 +13594,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/sla_policies",
     "title": "Criar Politica SLA",
-    "description": "Cria uma politica de SLA. ENTERPRISE-only. Body exige wrapper sla_policy. Thresholds em segundos (float).",
+    "description": "Cria uma politica de SLA. ENTERPRISE-only. Body exige wrapper sla_policy. Thresholds em segundos (float). NOVO 22/07: only_during_business_hours agora é EFETIVO — o relógio do SLA conta só os segundos dentro do horário comercial (Chat do Site usa o horário da própria caixa; demais canais usam o horário comercial da CONTA, se ligado; tudo fechado = volta a contar 24/7).",
     "category": "SLA",
     "params": [
       {
@@ -13624,7 +13678,7 @@
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/sla_policies/{id}",
     "title": "Atualizar SLA",
-    "description": "Atualiza uma politica de SLA. ENTERPRISE-only. Wrapper sla_policy.",
+    "description": "Atualiza uma politica de SLA. ENTERPRISE-only. Wrapper sla_policy. NOVO 22/07: only_during_business_hours agora é EFETIVO — o relógio do SLA conta só os segundos dentro do horário comercial (Chat do Site usa o horário da própria caixa; demais canais usam o horário comercial da CONTA, se ligado; tudo fechado = volta a contar 24/7).",
     "category": "SLA",
     "params": [
       {
@@ -20262,7 +20316,7 @@
     "method": "DELETE",
     "path": "/api/v1/accounts/{account_id}/agents/{id}",
     "title": "Excluir Agente",
-    "description": "Remove um agente da conta. ATENÇÃO: se o agente tiver recursos vinculados (conversas, times, inboxes etc.), o parâmetro reassign_to_agent_id é OBRIGATÓRIO para reatribuir esses recursos a outro agente — sem ele a exclusão é recusada. Use lionchat_agents_assigned_resources antes para checar dependências.",
+    "description": "Remove um agente da conta. Se o agente tiver recursos vinculados (conversas, times, inboxes etc.), reassign_to_agent_id é OBRIGATÓRIO (sem ele: 422). NOVO 22/07: a exclusão COM reatribuição roda em SEGUNDO PLANO (pode levar minutos em conta grande) — a resposta é 202 {status:'processing'} e o agente some da lista só quando o job termina; enquanto isso o index de agentes traz a flag deleting=true no agente. Tentar excluir de novo durante o processamento retorna 409 {error:'agent_already_being_deleted'} — NÃO repita a chamada, aguarde. Use lionchat_agents_assigned_resources antes para checar dependências.",
     "category": "Agentes",
     "params": [
       {
@@ -20280,7 +20334,7 @@
         "description": "ID do agente que receberá os recursos. Obrigatório quando o agente possui recursos vinculados."
       }
     ],
-    "returns": "200 OK",
+    "returns": "200 OK (sem recursos, síncrono) | 202 Accepted {status:'processing'} (com reatribuição, roda em 2º plano) | 409 agent_already_being_deleted (exclusão já em andamento) | 422 (reassign_to_agent_id faltando ou igual ao próprio agente) | 404 (agente de destino inexistente)",
     "common_use_cases": [
       "Desligar um agente reatribuindo suas conversas",
       "Limpeza de agentes inativos",

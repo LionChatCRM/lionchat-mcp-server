@@ -235,6 +235,23 @@ telefone extraídos). Em versões antigas a mensagem era descartada.
   em vez de responder sem saber o que o cliente disse.
 - Sem AI Agente ativo na conversa = nenhuma resposta de IA (motor antigo V1 foi aposentado).
 - IA travada pelo anti-loop avisa um humano via notificação (não fica muda).
+- Desde 22/07: quando a IA falha, a nota privada de erro traz o **erro literal da OpenAI** (429 TPM,
+  sem saldo, chave inválida) e sai em TODA tentativa falhada — se o cliente pergunta "por que a IA
+  parou", leia a última nota privada da conversa que a causa está escrita nela.
+- Desde 22/07: desligar a IA no meio de uma resposta **interrompe na hora** — os blocos restantes
+  daquela resposta são abortados antes de ir ao cliente (a despedida do próprio handoff continua saindo).
+
+### "Agente sumiu / não sumiu da lista após excluir" (22/07)
+Exclusão de agente COM reatribuição roda em **segundo plano** (minutos em conta grande): a resposta
+é 202 `{status:'processing'}`, o index de agentes traz `deleting: true` enquanto processa e a linha
+some quando termina. Segunda tentativa durante o processamento = **409 agent_already_being_deleted**
+— é sinal de que JÁ está rodando; não repita a chamada.
+
+### "Participante não recebeu notificação de mensagem nova" (22/07)
+Comportamento novo, não é bug: notificação de nova mensagem vai SÓ pro **responsável** da conversa.
+Participantes continuam vendo a conversa, mas não recebem sino/push a cada mensagem — pra acionar
+alguém específico, use @menção em nota interna (que notifica pelo caminho próprio; a lista de quem
+pode ser mencionado vem de `lionchat_conversations_mentionable_users`).
 
 ### "Editei o evento no Google Calendar e não sincronizou"
 Auto-cura desde 2026-06-09: o vigia horário re-arma o "watch" morto de conexões saudáveis

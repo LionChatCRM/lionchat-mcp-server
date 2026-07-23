@@ -353,6 +353,7 @@ Quando o cliente pedir pra criar um fluxo:
 6. **NUNCA crie** nodes sem `position: {x, y}` — eles ficam empilhados no canvas
 7. **NUNCA invente** `sourceHandle` — use só os listados no design guide por tipo de node (ex: condition usa `cond_0`/`cond_1`/`default`, não IDs livres)
 8. Antes de chamar `flows_create`, apresente um resumo em **linguagem natural** do que vai criar e confirme com o cliente
+9. **Organize com tags (novo 22/07):** ao criar um flow, preencha o campo `tags` pra manter a lista organizada (ex.: `["vendas"]`, `["pos-venda", "cobranca"]`). **Reutilize as tags que já existem** nos flows da conta (veja o campo `tags` no retorno de `flows_list`) em vez de inventar variações — "venda"/"Vendas"/"VENDA" viram bagunça. Sem tag óbvia pelo contexto, pergunte ao cliente em qual grupo o flow se encaixa. Máx 20 tags por flow, 50 caracteres cada
 
 ## 12. Idioma das respostas
 

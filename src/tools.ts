@@ -396,7 +396,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-21)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-22)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -433,6 +433,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     NAO informe; operadores da condition EXCETO is_empty/is_not_empty (removidos do contexto reativo
     09/07 — use so no node condition); card_attribute_changed aceita funnel_id/card_source
     opcionais na rule),
+    contact_attribute_changed (NOVO 2026-07-22 — 'Atributo do contato muda': dispara quando um
+    custom_attribute do CONTATO muda e a condicao casa, mesmo com o contato fora de flow. Item:
+    {key:'contact_attribute_changed', config:{logic:'and'|'or', rules:[{attrSource:'contact',
+    attr_key, operator, value | values:[...]}]}} — 1 a 10 regras; DIFERENTE dos irmaos de 08/07,
+    aqui o attrSource VAI na rule e e SEMPRE 'contact'; operadores iguais aos do node condition.
+    VERSAO SEGURA por decisao de produto: dispara SO na conversa mais recente que JA EXISTE numa
+    caixa do flow (reabre se resolvida); contato sem conversa NAO dispara e NUNCA cria conversa.
+    Dedup 30s por contato, anti-loop por profundidade de cadeia; so flows de conversa),
     date_trigger (NOVO 2026-07-10 — Gatilho de Data: dispara quando uma DATA do CONTATO chega,
     aniversario/exame; modelo agenda, sem varredura; SO flow individual). Item usa config ANINHADO:
     {type:'date_trigger', config:{ attr_key ('_date_of_birth'=aniversario nativo, OU chave de
@@ -472,6 +480,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   buttons_timeout_action: "advance" (padrao, segue no_reply_timeout ao esgotar) | "remind" (manda 1
   lembrete buttons_reminder_text e CONTINUA esperando; depois segue no_reply_timeout). No modo remind
   a unidade NAO pode ser days e horas <= 23 (janela 24h do WhatsApp).
+  Botoes em TEMPLATE (NOVO 2026-07-22): item de template com botoes quick-reply tambem PAUSA e
+  roteia pelo clique. Item DEVE ter type:"template" (NAO whatsapp_template — o canvas so expoe os
+  handles com "template") + template_id + template_buttons:[{title,value}] (title = texto EXATO do
+  botao aprovado na Meta — o WhatsApp devolve o TITULO no clique e o match e por ele; value = slug
+  do titulo, deduplicado). Handles: "button_{value}" por botao + "no_response" (sempre — texto livre)
+  + "no_reply_timeout" (so com buttons_timeout > 0; buttons_timeout_unit minutes|hours|days, 0 = sem
+  timeout). Modo sincrono (ai_tool) e dry_run NAO pausam — o template so e enviado. So faz sentido
+  em caixa WhatsApp com template de botoes quick-reply aprovado.
   Handles sem botoes: "success", "error".
 
 ▸ wait_response
