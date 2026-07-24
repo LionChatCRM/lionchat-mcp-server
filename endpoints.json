@@ -1314,6 +1314,47 @@
     "related_tools": []
   },
   {
+    "id": "lionchat_conversations_toggle_status",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/toggle_status",
+    "title": "Resolver / Reabrir / Mudar Status da Conversa",
+    "description": "Muda o status da conversa: fechar/encerrar/resolver (status=resolved), reabrir (open), marcar pendente (pending) ou adiar (snoozed, com snoozed_until). É A ferramenta para 'fechar a conversa' — a lionchat_conversations_update NÃO altera status. Sem o param status, alterna resolved↔open. ATENÇÃO: reabrir conversa antiga de contato com trava de conversa única pode ser recusado (reopen_blocked).",
+    "category": "Conversas",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "display_id da conversa"
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "open, resolved, pending ou snoozed (sem ele: alterna resolved/open)"
+      },
+      {
+        "name": "snoozed_until",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Até quando adiar (ISO 8601), junto com status=snoozed"
+      }
+    ],
+    "returns": "200 {payload: {success: true, current_status, conversation_id}}",
+    "common_use_cases": [
+      "Fechar/resolver uma conversa após o atendimento",
+      "Reabrir uma conversa resolvida",
+      "Adiar (snooze) uma conversa até uma data"
+    ],
+    "related_tools": [
+      "lionchat_conversations_show",
+      "lionchat_conversations_update"
+    ]
+  },
+  {
     "id": "lionchat_conversations_update",
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/conversations/{id}",
