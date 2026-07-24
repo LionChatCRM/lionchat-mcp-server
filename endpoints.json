@@ -698,7 +698,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/contacts/filter",
     "title": "Filtrar Contatos",
-    "description": "Filtra contatos com condições avançadas (múltiplas condições combinadas com AND/OR, operadores como contains, is_present, days_before, starts_with, e filtro por custom_attributes). Ver a seção Casos de Uso e Filtros para a lista completa de atributos e operadores. Filtragem avançada de contatos via payload de condições. Múltiplos operadores: equal_to, contains, includes, is_present, etc.\n\nNOVO (2026-06): filtro por REGISTROS VINCULADOS — acha o contato pelo que aconteceu com ele: attribute_key 'conversation_search' (conversa vinculada: status/etiquetas/caixa), condicoes com custom_attribute_type 'conversation_attribute' (atributos da conversa) e attribute_key 'kanban_card' (card vinculado: funil/etapa/prioridade/status). Combinaveis com E/OU.",
+    "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422.",
     "category": "Contatos",
     "params": [
       {
@@ -1426,7 +1426,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/conversations/filter",
     "title": "Filtrar Conversas",
-    "description": "Filtra conversas com condições avançadas (múltiplas condições AND/OR, operadores como equal_to, contains, is_present, days_before, filtro por custom_attributes). Ordenação fixa: last_activity_at DESC. Paginação: 25 registros/página. Ver a seção Casos de Uso e Filtros para a lista completa de atributos e operadores. Filtragem avançada de conversas via payload de condições. Múltiplos operadores: equal_to, contains, includes, is_present, etc.",
+    "description": "Filtra conversas com condicoes avancadas (payload de condicoes, mesmas da tela). Ordenacao fixa last_activity_at DESC, 25/pagina.\n\nCHAVES FILTRAVEIS (attribute_key -> operadores): status, chat_type, priority (equal_to/not_equal_to); assignee_id, inbox_id, team_id, campaign_id, captain_assistant_id, labels (equal_to/not_equal_to/is_present/is_not_present); display_id (equal_to/not_equal_to/contains/does_not_contain); created_at, last_activity_at (is_greater_than/is_less_than/days_before — valor de data); browser_language, conversation_language, referer, mail_subject; card_funnel_stage (conversa POR CARD do Kanban — valor 'funnel:<id>' ou 'stage:<id>:<chave_etapa>'); QUALQUER outra chave = atributo personalizado (use custom_attribute_type na condicao: 'conversation_attribute' ou 'contact_attribute').\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422 'Operador invalido' (ex: labels NAO aceita 'includes' — use equal_to).",
     "category": "Conversas",
     "params": [
       {
@@ -2252,7 +2252,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/{id}/retry",
     "title": "Reenviar Mensagem",
-    "description": "Reenvia uma mensagem que falhou. Obrigatorios: conversation_id, id.",
+    "description": "[POST] Reenvia uma mensagem que falhou. Obrigatorios: conversation_id, id. [2026-07-24] Motor unico de reenvio: limpeza cirurgica de content_attributes (preserva vinculos de flow/automacao/comentario IG) + trava anti-duplicata por mensagem. Pra reenviar TODAS as falhadas de uma caixa de uma vez, use lionchat_inboxes_failed_messages_bulk_retry.",
     "category": "Mensagens",
     "params": [
       {
@@ -2279,7 +2279,9 @@
     "related_tools": [
       "lionchat_conversations_messages_list",
       "lionchat_conversations_messages_create",
-      "lionchat_conversations_messages_update"
+      "lionchat_conversations_messages_update",
+      "lionchat_inboxes_failed_messages_summary",
+      "lionchat_inboxes_failed_messages_bulk_retry"
     ]
   },
   {
@@ -3504,7 +3506,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/kanban_items/filter",
     "title": "Filtrar Items",
-    "description": "Filtra items com condições avançadas (mesmos filtros do index). Filtragem avançada de itens Kanban via payload de condições. Múltiplos operadores: equal_to, contains, includes, is_present, etc.",
+    "description": "Filtra cards do Kanban com o filtro RICO da plataforma (mesmo motor da tela '+ Filtro'). Filtros REAIS aplicados: etapas (stages), prioridades, status do card (open/won/lost), agente, faixa de valor, periodo de criacao (date_start/end), periodo de agendamento (scheduled_date_*), tarefas (task_filter), canal, etiqueta da conversa, oferta e atributos personalizados de card/contato/conversa (JSON-string + custom_attribute_match all/any). ATENCAO: SEM paginacao — retorna ate 5000 cards em ordem created_at DESC, shape {items:[], total, filters}. NAO existe filtro por time aqui (use lionchat_kanban_items_list_3 pra relatorio por time, ou filtre por agent_id); ordenacao e fixa. (2026-07-24: removidos os parametros stage_id/inbox_id/sort_by/sort_direction/page — eram aceitos mas IGNORADOS pelo backend; use stages[] no lugar de stage_id.)",
     "category": "Itens",
     "params": [
       {
@@ -3513,13 +3515,6 @@
         "location": "query",
         "required": true,
         "description": "ID do funil"
-      },
-      {
-        "name": "stage_id",
-        "type": "string",
-        "location": "query",
-        "required": false,
-        "description": "Etapa"
       },
       {
         "name": "agent_id",
@@ -3559,39 +3554,103 @@
         "description": "Valor máximo"
       },
       {
-        "name": "inbox_id",
-        "type": "integer",
+        "name": "stages",
+        "query_name": "stages[]",
+        "type": "array",
         "location": "query",
         "required": false,
-        "description": "Inbox"
+        "description": "Etapas do funil (chaves internas/slugs, ex: ['novo_lead','qualificado'])"
       },
       {
-        "name": "sort_by",
+        "name": "date_start",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Campo de ordenação"
+        "description": "Criado a partir de (YYYY-MM-DD) — filtra created_at do card"
       },
       {
-        "name": "sort_direction",
+        "name": "date_end",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "asc ou desc"
+        "description": "Criado ate (YYYY-MM-DD)"
       },
       {
-        "name": "page",
-        "type": "integer",
+        "name": "scheduled_date_start",
+        "type": "string",
         "location": "query",
         "required": false,
-        "description": "Página"
+        "description": "Agendamento a partir de (YYYY-MM-DD) — considera scheduled_at/deadline_at do card E tarefas da agenda vinculadas"
+      },
+      {
+        "name": "scheduled_date_end",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Agendamento ate (YYYY-MM-DD)"
+      },
+      {
+        "name": "task_filter",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtro por tarefas vinculadas: has_task | no_task | today | tomorrow | this_week | overdue"
+      },
+      {
+        "name": "channel",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Tipo de canal da conversa do card, SEM o prefixo Channel:: (ex: Waha, Whatsapp, Instagram, Email)"
+      },
+      {
+        "name": "label",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Etiqueta aplicada na CONVERSA vinculada ao card (match parcial por titulo)"
+      },
+      {
+        "name": "offer",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Descricao exata de uma oferta presente no card (item_details.offers)"
+      },
+      {
+        "name": "card_custom_attribute_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "STRING JSON (array serializado) de condicoes sobre atributos personalizados do CARD: [{\"attribute_key\":\"...\",\"filter_operator\":\"equal_to|not_equal_to|contains|does_not_contain|is_present|is_not_present\",\"values\":[\"...\"]}]. Ex: \"[{\\\"attribute_key\\\":\\\"origem\\\",\\\"filter_operator\\\":\\\"equal_to\\\",\\\"values\\\":[\\\"indicacao\\\"]}]\". NAO enviar como array nativo — o backend faz JSON.parse da string."
+      },
+      {
+        "name": "contact_custom_attribute_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "STRING JSON (array serializado) de condicoes sobre atributos personalizados do CONTATO vinculado: [{\"attribute_key\":\"...\",\"filter_operator\":\"equal_to|not_equal_to|contains|does_not_contain|is_present|is_not_present\",\"values\":[\"...\"]}]. Ex: \"[{\\\"attribute_key\\\":\\\"origem\\\",\\\"filter_operator\\\":\\\"equal_to\\\",\\\"values\\\":[\\\"indicacao\\\"]}]\". NAO enviar como array nativo — o backend faz JSON.parse da string."
+      },
+      {
+        "name": "conversation_custom_attribute_filters",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "STRING JSON (array serializado) de condicoes sobre atributos personalizados da CONVERSA vinculada: [{\"attribute_key\":\"...\",\"filter_operator\":\"equal_to|not_equal_to|contains|does_not_contain|is_present|is_not_present\",\"values\":[\"...\"]}]. Ex: \"[{\\\"attribute_key\\\":\\\"origem\\\",\\\"filter_operator\\\":\\\"equal_to\\\",\\\"values\\\":[\\\"indicacao\\\"]}]\". NAO enviar como array nativo — o backend faz JSON.parse da string."
+      },
+      {
+        "name": "custom_attribute_match",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "'all' (E — todas as condicoes de atributo, padrao) ou 'any' (OU — qualquer uma)"
       }
     ],
-    "returns": "payload (array de itens Kanban filtrados)",
+    "returns": "{ items: [cards serializados], total: <int>, filters: <eco dos filtros> } — cap 5000, sem paginacao",
     "common_use_cases": [
-      "Filtros complexos com múltiplas condições",
-      "Relatórios customizados",
-      "Substituir vários list calls por 1 filtro estruturado"
+      "Relatorio de cards por periodo + etapa + valor",
+      "Cards com atributo personalizado especifico (card/contato/conversa)",
+      "Cards com tarefa atrasada (task_filter=overdue) ou sem tarefa"
     ],
     "related_tools": [
       "lionchat_kanban_items_list",
@@ -3730,8 +3789,8 @@
     "id": "lionchat_kanban_items_list_3",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/kanban_items/reports",
-    "title": "Relatórios Kanban",
-    "description": "Retorna relatórios agregados do kanban. Lista itens Kanban paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de item Kanban).",
+    "title": "Relatório Agregado do Kanban",
+    "description": "RELATORIO AGREGADO do Kanban (funil de vendas) — a resposta e um OBJETO de metricas, nao lista de cards: soma de valores GANHOS no periodo, contagem/valor por etapa, previsao ponderada (forecast), top negocios, cards parados (stale) e metas do funil. Filtra por periodo (from/to), agentes (user_ids[]) e time (team_id). USE ESTA TOOL quando pedirem 'relatorio do funil/vendas/ganhos do mes por agente ou time'. Pra LISTAR os cards em si, use lionchat_kanban_items_filter.",
     "category": "Itens",
     "params": [
       {
@@ -3740,13 +3799,42 @@
         "location": "query",
         "required": true,
         "description": "ID do funil"
+      },
+      {
+        "name": "from",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Inicio do periodo (YYYY-MM-DD ou ISO 8601)"
+      },
+      {
+        "name": "to",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Fim do periodo (YYYY-MM-DD ou ISO 8601)"
+      },
+      {
+        "name": "user_ids",
+        "query_name": "user_ids[]",
+        "type": "array",
+        "location": "query",
+        "required": false,
+        "description": "IDs de agentes — restringe o relatorio aos cards atribuidos a eles"
+      },
+      {
+        "name": "team_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "ID do time — restringe aos cards dos agentes do time"
       }
     ],
-    "returns": "objeto de relatorios agregados (nao array de itens)",
+    "returns": "objeto de metricas agregadas do funil (valores ganhos, por etapa, forecast, top deals, stale) — NAO e array de itens",
     "common_use_cases": [
-      "Dashboard: contar/exibir itens Kanban",
-      "Buscar com filtros antes de outra operação",
-      "Auditoria/relatório de itens Kanban ativas"
+      "Ganhos do mes por agente ou time",
+      "Valor total e contagem por etapa do funil",
+      "Forecast (previsao ponderada) e negocios parados"
     ],
     "related_tools": [
       "lionchat_kanban_items_list",
@@ -21078,7 +21166,7 @@
       {
         "name": "exclusion",
         "type": "array",
-        "location": "query",
+        "location": "body",
         "required": false,
         "description": "Publico a EXCLUIR/negativar antes de estimar (mesmo formato do 'audience': lista de secoes por tipo). O contador desconta quem cair na exclusao. Tipos aceitos iguais aos do audience (Label, Funnel, ConversationAttribute, ContactLabel, ContactAttribute, CardAttribute, AgentTeam)."
       }
@@ -22214,6 +22302,67 @@
       "Diagnosticar 'mensagens não estão saindo' (sessão caiu?)"
     ],
     "related_tools": []
+  },
+  {
+    "id": "lionchat_inboxes_failed_messages_summary",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/failed_messages/summary",
+    "title": "Falhas de Envio da Caixa (painel)",
+    "description": "[NOVO 2026-07-24] Painel 'Falhas de envio' da caixa: mensagens FALHADAS das ultimas 24h agrupadas por motivo — billing (falta de saldo/pagamento), transient (erro comum, reenviavel), window_expired (janela de 24h da API oficial fechou), permanent (erro definitivo) — + grupos informativos campaign (mensagem de campanha NUNCA reenvia por aqui) e partial (multi-anexo parcial, anti-duplicata). group_details traz ate 30 itens por grupo com contato, conversa, erro real e horario. Canais elegiveis: WAHA (QR), WhatsApp oficial e Messenger (Telegram/Instagram nao marcam failed). ADMIN-ONLY. Use antes do bulk_retry pra mostrar ao usuario O QUE falhou e quanto e reenviavel (retryable_count = billing + transient).",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada"
+      }
+    ],
+    "returns": "{ window_hours, eligible_channel, bulk_retry_running, groups:{billing,transient,window_expired,permanent}, group_details, campaign_count, partial_count, retryable_count, total }",
+    "common_use_cases": [
+      "Diagnosticar por que mensagens nao chegaram (agrupado por motivo, com erro real)",
+      "Ver quantas falhas sao reenviaveis antes de disparar o reenvio em massa",
+      "Auditoria pos-incidente de envio (saldo Meta, sessao WAHA caida)"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_failed_messages_bulk_retry",
+      "lionchat_conversations_messages_create_1",
+      "lionchat_inboxes_waha_status"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_failed_messages_bulk_retry",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/failed_messages/bulk_retry",
+    "title": "Reenvio em Massa das Falhadas",
+    "description": "[NOVO 2026-07-24] Reenvia EM LOTE as mensagens falhadas REENVIAVEIS das ultimas 24h da caixa (grupos billing + transient do summary). Teto 500 por clique; cadencia anti-ban (WAHA 8s entre mensagens, demais 1s); trava de 1 lote por caixa (409 bulk_retry_running se ja houver lote rodando); cada mensagem e re-validada na hora do reenvio (ainda failed, sem source_id, sessao WAHA WORKING, janela 24h da oficial) e tem teto de 3 tentativas no erro comum. Mensagens de CAMPANHA e multi-anexo PARCIAL nunca entram (anti-duplicata). ADMIN-ONLY. Sempre chame o summary antes e mostre as contagens ao usuario; confirme antes de disparar (acao de envio em massa real).",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada"
+      },
+      {
+        "name": "classification",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Opcional: restringe o lote a UM grupo — 'billing' (so as de falta de saldo, ex: apos pagar a Meta) ou 'transient' (so erro comum). Ausente = todos os reenviaveis."
+      }
+    ],
+    "returns": "{ scheduled: <agendadas agora>, remaining: <elegiveis que ficaram alem do teto de 500> } | 409 {error:'bulk_retry_running'} | 422 {error:'inbox_not_eligible'|'invalid_classification'}",
+    "common_use_cases": [
+      "Pos-incidente: reenviar tudo que falhou nas ultimas 24h da caixa",
+      "Pagou o saldo da Meta: reenviar SO o grupo billing (classification='billing')"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_failed_messages_summary",
+      "lionchat_conversations_messages_create_1"
+    ]
   },
   {
     "id": "lionchat_internal_chat_rooms_list",
