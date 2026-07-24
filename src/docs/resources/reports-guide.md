@@ -12,6 +12,27 @@ Como interpretar cada um dos endpoints de relatório (`lionchat_reports_*`) e m�
 86400 segundos → "24 horas" ou "1 dia"
 ```
 
+## Por que o número "não bate" — leia ANTES de responder ao usuário (2026-07-24)
+
+Quando o usuário disser "o relatório está errado / não bate", quase sempre é UMA destas semânticas
+(verificadas no código e com prova empírica em conta real):
+
+1. **"Conversas" e "Resolvidas" têm âncoras de tempo DIFERENTES.** conversations_count = conversas
+   CRIADAS no período; resolutions_count = eventos de resolução OCORRIDOS no período (a conversa pode
+   ter sido criada antes). Um atendente pode "resolver mais do que recebeu" — correto, não é bug.
+2. **"Resolvidas" conta EVENTOS, não conversas.** Resolver → reabrir → resolver = 2. Pode passar do
+   total de conversas.
+3. **Recorte por ATENDENTE só enxerga conversas ATRIBUÍDAS.** Conversa sem responsável (auto-atribuição
+   desligada, disparo em massa) não aparece em NENHUM atendente — a soma dos atendentes pode ser uma
+   fração minúscula do total da conta (caso real: 202 de 4001). Sempre diga quantas estão sem atendente.
+4. **A contagem de conversas por atendente usa o responsável ATUAL** — reatribuir conversa antiga move
+   o histórico de um atendente pro outro. Já resoluções/tempos usam quem era o dono NA HORA do evento.
+   Os dois cards podem divergir legitimamente em conta que reatribui.
+5. **timezone_offset NÃO altera totais** de summary — só o agrupamento dos pontos da série temporal.
+   Diferenças de ~1% entre relatório e lista filtrada são borda de janela/fuso, não defeito.
+6. **since/until são unix SEGUNDOS** em TODOS os endpoints de relatório. ISO 8601 quebra a janela em
+   silêncio (relatório vazio/errado).
+
 ## Mapeamento dos endpoints `lionchat_reports_*`
 
 > ⚠️ **A numeração `_N` é gerada automaticamente e NÃO segue uma ordem lógica.** Use SEMPRE a tabela
@@ -146,7 +167,7 @@ Retorna SOMENTE estes dois campos (não existe taxa pronta):
 ### `lionchat_reports_list_13` — Conversation Traffic (tráfego)
 **Use quando:** "horário de pico", "quando tem mais demanda"
 
-Heatmap de volume por hora. Aceita `timezone_offset` (importante: sem ele o pico sai em UTC).
+Heatmap de volume por hora. Aceita SÓ `timezone_offset` (sem ele o pico sai em UTC). ATENÇÃO: janela FIXA a partir de hoje — NÃO aceita `since`/`until`.
 
 ### `lionchat_reports_list_16` / `_17` — Tempo real (live)
 **Use quando:** "quem tá online agora", "carga atual", "conversas abertas no momento"
@@ -171,7 +192,7 @@ Retorna SOMENTE estes campos (nem média, nem taxa de resposta vêm prontas):
 > **Taxa de resposta** = `total_count / total_sent_messages_count`.
 > No exemplo: 80/210 = **38%**.
 
-**Filtros aceitos:** `user_ids`, `inbox_id`, `team_id`, `rating`, `since`/`until`.
+**Filtros aceitos (expostos na tool desde 2026-07-24):** `user_ids[]`, `inbox_id`, `team_id`, `rating`, `since`/`until` (unix segundos). Agora dá pra recortar CSAT por caixa/atendente direto.
 
 ### `lionchat_sla_metrics` — SLA agregado (ENTERPRISE-ONLY)
 **Use quando:** "cumprimento de SLA", "quantos prazos estouraram"
@@ -190,7 +211,7 @@ Retorna:
 > O `hit_rate` já vem calculado como string (ex.: `"95.5%"`, ou `"100%"` quando não há falhas).
 > Não divida nada — apenas exiba o valor.
 
-**Filtros aceitos:** `inbox_id`, `team_id`, `sla_policy_id`, `label_list`, `assigned_agent_id`, `since`/`until`.
+**Filtros aceitos (expostos na tool desde 2026-07-24):** `inbox_id`, `team_id`, `sla_policy_id`, `label_list[]`, `assigned_agent_id`, `since`/`until` (unix segundos).
 
 ## Padrões de interpretação
 

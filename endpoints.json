@@ -5188,14 +5188,14 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data inicio (ISO 8601)"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data fim (ISO 8601)"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "business_hours",
@@ -5230,14 +5230,21 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data inicio"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data fim"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+      },
+      {
+        "name": "business_hours",
+        "type": "boolean",
+        "location": "query",
+        "required": false,
+        "description": "true = medias consideram so o horario de atendimento configurado"
       }
     ],
     "returns": "array por time { id, name, conversations_count, avg_resolution_time (seg), avg_first_response_time (seg), avg_reply_time (seg), resolved_count } (sem paginacao/meta)",
@@ -5265,14 +5272,21 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data inicio"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data fim"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+      },
+      {
+        "name": "business_hours",
+        "type": "boolean",
+        "location": "query",
+        "required": false,
+        "description": "true = medias consideram so o horario de atendimento configurado"
       }
     ],
     "returns": "array por inbox (mesma estrutura do resumo); sem meta",
@@ -5300,14 +5314,21 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data inicio"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data fim"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+      },
+      {
+        "name": "business_hours",
+        "type": "boolean",
+        "location": "query",
+        "required": false,
+        "description": "true = medias consideram so o horario de atendimento configurado"
       }
     ],
     "returns": "array por label; sem meta",
@@ -5335,14 +5356,21 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data inicio"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data fim"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+      },
+      {
+        "name": "business_hours",
+        "type": "boolean",
+        "location": "query",
+        "required": false,
+        "description": "true = medias consideram so o horario de atendimento configurado"
       }
     ],
     "returns": "array por canal; sem meta",
@@ -5370,7 +5398,7 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Metrica: conversations_count, incoming_messages_count, etc"
+        "description": "Metrica (UMA por chamada): conversations_count | incoming_messages_count | outgoing_messages_count | avg_first_response_time | avg_resolution_time | resolutions_count | reply_time | bot_resolutions_count | bot_handoffs_count. Tempos em SEGUNDOS."
       },
       {
         "name": "type",
@@ -5384,14 +5412,14 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Timestamp inicio"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Timestamp fim"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "id",
@@ -5419,7 +5447,7 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Offset de timezone em horas"
+        "description": "Deslocamento de fuso em horas (ex: -3 pra Brasilia) — afeta SO o agrupamento dos pontos do grafico (fronteira do dia/hora), NAO altera totais de summary."
       }
     ],
     "returns": "array de { value, timestamp[, count] } (sem meta)",
@@ -5447,14 +5475,14 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Timestamp inicio"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Timestamp fim"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "type",
@@ -5482,7 +5510,7 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Offset de timezone em horas"
+        "description": "Deslocamento de fuso em horas (ex: -3). NAO altera os totais do summary — so afeta agrupamento em endpoints de serie temporal."
       }
     ],
     "returns": "{ conversations_count, incoming_messages_count, outgoing_messages_count, resolutions_count, avg_first_response_time (seg), avg_resolution_time (seg), previous: {...mesma estrutura...} }",
@@ -5718,7 +5746,7 @@
     "method": "GET",
     "path": "/api/v2/accounts/{account_id}/reports/conversation_traffic",
     "title": "Trafego de Conversas",
-    "description": "Exporta CSV de heatmap de trafego de conversas. Aceita timezone_offset.",
+    "description": "[GET] Conversation Traffic (heatmap de volume por hora x dia, CSV). ATENCAO: janela FIXA calculada a partir de HOJE no fuso informado — NAO aceita since/until (nao adianta passar). Unico parametro: timezone_offset (ex: -3 pra Brasilia; sem ele o pico sai em UTC).",
     "category": "Relatorios",
     "params": [
       {
@@ -13938,9 +13966,60 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/applied_slas/metrics",
     "title": "Metricas SLA",
-    "description": "Metricas agregadas de SLA. ENTERPRISE-only, Admin.",
+    "description": "[GET] Agregado de SLA (ENTERPRISE-ONLY): total_applied_slas, number_of_sla_misses e hit_rate (string pronta com %). [2026-07-24] Agora com os filtros REAIS expostos: periodo since/until (unix SEGUNDOS), inbox_id, team_id, sla_policy_id, label_list[] e assigned_agent_id. Conta sem Enterprise/SLA: endpoint indisponivel.",
     "category": "SLA",
-    "params": [],
+    "params": [
+      {
+        "name": "since",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+      },
+      {
+        "name": "until",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+      },
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por caixa de entrada"
+      },
+      {
+        "name": "team_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por time"
+      },
+      {
+        "name": "sla_policy_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por politica de SLA"
+      },
+      {
+        "name": "label_list",
+        "query_name": "label_list[]",
+        "type": "array",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por etiquetas da conversa (titulos)"
+      },
+      {
+        "name": "assigned_agent_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por atendente responsavel (admin; agente comum ve so o proprio)"
+      }
+    ],
     "returns": "{ total_applied_slas, number_of_sla_misses, hit_rate } — hit_rate e STRING tipo '95.5%'",
     "common_use_cases": [
       "Dashboard: contar/exibir políticas SLA",
@@ -20826,7 +20905,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/csat_survey_responses/metrics",
     "title": "Metricas CSAT",
-    "description": "Metricas de CSAT do periodo. Filtros: user_ids, inbox_id, team_id, rating. A MEDIA e a taxa NAO vem prontas — calcule de ratings_count.",
+    "description": "[GET] Agregado de CSAT: total de respostas, distribuicao por nota (ratings_count) e pesquisas enviadas (total_sent_messages_count). [2026-07-24] Agora com os filtros REAIS expostos: user_ids[] (atendentes), inbox_id (caixa), team_id, rating e periodo since/until (unix SEGUNDOS). Nota media = soma(nota x qtd)/total; taxa de resposta = total_count/total_sent_messages_count (calcule — nao vem prontas).",
     "category": "CSAT",
     "params": [
       {
@@ -20834,14 +20913,43 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data inicio"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data fim"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+      },
+      {
+        "name": "user_ids",
+        "query_name": "user_ids[]",
+        "type": "array",
+        "location": "query",
+        "required": false,
+        "description": "IDs de atendentes — CSAT so das conversas atribuidas a eles (admin; agente comum ve so o proprio)"
+      },
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por caixa de entrada"
+      },
+      {
+        "name": "team_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por time"
+      },
+      {
+        "name": "rating",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtra por nota (1-5)"
       }
     ],
     "returns": "{ total_count, ratings_count (hash rating=>qtd), total_sent_messages_count }",
