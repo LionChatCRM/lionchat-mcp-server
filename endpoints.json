@@ -7533,7 +7533,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/macros",
     "title": "Criar Macro",
-    "description": "Cria uma nova macro com ações. Cria novo macro. Obrigatórios: name, actions. Valida unicidade quando aplicável. Retorna o macro criado com ID atribuído. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
+    "description": "Cria uma nova macro com ações. Cria novo macro. Obrigatórios: name, actions. Valida unicidade quando aplicável. Retorna o macro criado com ID atribuído. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500). NOVO 23/07 — cardápio equiparado ao das automações, 13 ações novas aceitas em action_name: add_sla (params [sla_policy_id]), open_conversation, pending_conversation (sem params), send_canned_response ([canned_response_id] — na MACRO a mensagem sai assinada pelo EXECUTOR da macro; na automação sai como robô), send_email_to_team ([{team_ids, message}]), assign_captain_assistant ([assistant_id]), e 7 de Kanban: create_kanban_item, move_kanban_item_to_stage, assign_agent_to_kanban_item, add_note_to_kanban_item, start_kanban_item_timer, stop_kanban_item_timer, set_kanban_item_status (params espelham os das automações: funil/etapa/nota/status). Fora do cardápio: send_whatsapp_template (exige caixa oficial específica).",
     "category": "Macros",
     "params": [
       {
@@ -7595,7 +7595,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/macros/{id}",
     "title": "Atualizar Macro",
-    "description": "Atualiza macro. Atualiza campos do macro existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, actions. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
+    "description": "Atualiza macro. Atualiza campos do macro existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, actions. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500). NOVO 23/07 — cardápio equiparado ao das automações, 13 ações novas aceitas em action_name: add_sla (params [sla_policy_id]), open_conversation, pending_conversation (sem params), send_canned_response ([canned_response_id] — na MACRO a mensagem sai assinada pelo EXECUTOR da macro; na automação sai como robô), send_email_to_team ([{team_ids, message}]), assign_captain_assistant ([assistant_id]), e 7 de Kanban: create_kanban_item, move_kanban_item_to_stage, assign_agent_to_kanban_item, add_note_to_kanban_item, start_kanban_item_timer, stop_kanban_item_timer, set_kanban_item_status (params espelham os das automações: funil/etapa/nota/status). Fora do cardápio: send_whatsapp_template (exige caixa oficial específica).",
     "category": "Macros",
     "params": [
       {
@@ -9213,7 +9213,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/flows",
     "title": "Criar Flow",
-    "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. conversation_mode: 'individual' (default) | 'group'. Sticky note (type 'note'): data usa title+body+color(yellow|teal|blue|violet|pink|orange|slate)+width+height — NUNCA 'content'. ORGANIZAÇÃO: preencha tags ao criar (reutilizando as tags já existentes nos flows da conta — veja flows_list) pra manter a lista organizada.",
+    "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. conversation_mode: 'individual' (default) | 'group'. Sticky note (type 'note'): data usa title+body+color(yellow|teal|blue|violet|pink|orange|slate)+width+height — NUNCA 'content'. ORGANIZAÇÃO: preencha tags ao criar (reutilizando as tags já existentes nos flows da conta — veja flows_list) pra manter a lista organizada. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas).",
     "category": "Flows",
     "params": [
       {
@@ -9308,7 +9308,7 @@
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/flows/{id}",
     "title": "Atualizar Flow",
-    "description": "Atualiza nome, descricao, caixas de entrada ou dados dos blocos. Mesmo schema de flow_data do tool lionchat_flows_create — consulte a descricao daquele tool para o schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable) e dos edges. RECAP RAPIDO: action items[].config (nao params); send_message messageItems (nao items); wait_response validation='options' gera handles 'option_X' (dispensa condition node); edges sourceHandle DEVE casar com handle real do node source. Atualiza campos do flow existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, inbox_ids, flow_data. IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create.",
+    "description": "Atualiza nome, descricao, caixas de entrada ou dados dos blocos. Mesmo schema de flow_data do tool lionchat_flows_create — consulte a descricao daquele tool para o schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable) e dos edges. RECAP RAPIDO: action items[].config (nao params); send_message messageItems (nao items); wait_response validation='options' gera handles 'option_X' (dispensa condition node); edges sourceHandle DEVE casar com handle real do node source. Atualiza campos do flow existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, inbox_ids, flow_data. IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas).",
     "category": "Flows",
     "params": [
       {
@@ -13638,6 +13638,13 @@
         "location": "body",
         "required": false,
         "description": "Considerar apenas horario comercial"
+      },
+      {
+        "name": "resolution_check_delay",
+        "type": "number",
+        "location": "body",
+        "required": false,
+        "description": "Tempo de checagem da resolução, em SEGUNDOS (novo 23/07): a conversa precisa ficar resolvida por N segundos para o SLA selar o resultado final — reaberta dentro da janela, os relógios continuam do ponto original (fecha a brecha do resolve-reabre). Null/ausente = sela na hora (comportamento antigo). Ex.: 1800 = 30 minutos."
       }
     ],
     "returns": "política SLA criado (com novo ID)",
@@ -13729,6 +13736,13 @@
         "location": "body",
         "required": false,
         "description": "Considerar apenas horario comercial"
+      },
+      {
+        "name": "resolution_check_delay",
+        "type": "number",
+        "location": "body",
+        "required": false,
+        "description": "Tempo de checagem da resolução, em SEGUNDOS (novo 23/07): a conversa precisa ficar resolvida por N segundos para o SLA selar o resultado final — reaberta dentro da janela, os relógios continuam do ponto original (fecha a brecha do resolve-reabre). Null/ausente = sela na hora (comportamento antigo). Ex.: 1800 = 30 minutos."
       }
     ],
     "returns": "política SLA atualizado",
@@ -13846,7 +13860,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/support_access",
     "title": "Solicitar Acesso de Suporte",
-    "description": "Concede acesso de suporte (SuperAdmin) à conta. Obrigatório: support_agent_email. Grantee pode ser SuperAdmin OU usuário marcado como 'usuário de suporte' no Super Admin (isenção de vaga). 422 se o e-mail já for agente pago regular da conta (sem grant prévio).",
+    "description": "Concede acesso de suporte (SuperAdmin) à conta. Obrigatório: support_agent_email. Grantee pode ser SuperAdmin OU usuário marcado como 'usuário de suporte' no Super Admin (isenção de vaga). 422 se o e-mail já for agente pago regular da conta (sem grant prévio). Acesso VITALÍCIO: envie lifetime:true (duration_hours é ignorado). No painel, o vitalício aparece como opção do menu de duração (23/07).",
     "category": "Acesso de Suporte",
     "params": [
       {
@@ -20763,7 +20777,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/campaigns",
     "title": "Criar Campanha",
-    "description": "Cria campanha. O TIPO vem da inbox: WhatsApp oficial (Cloud, exige template em template_params), WhatsApp QR Code/WAHA (texto livre + variações anti-bloqueio), SMS/Twilio, ou Website (ongoing — popup de chat por URL/tempo). One-off exige audience. ENVIO EM MASSA: SEMPRE rode estimate_audience com o MESMO audience+audience_mode antes e CONFIRME com o usuário. 422 se inbox incompatível, audience vazio (one-off) ou ConversationAttribute sem key/value.",
+    "description": "Cria campanha. O TIPO vem da inbox: WhatsApp oficial (Cloud, exige template em template_params), WhatsApp QR Code/WAHA (texto livre + variações anti-bloqueio), SMS/Twilio, ou Website (ongoing — popup de chat por URL/tempo). One-off exige audience. ENVIO EM MASSA: SEMPRE rode estimate_audience com o MESMO audience+audience_mode antes e CONFIRME com o usuário. 422 se inbox incompatível, audience vazio (one-off) ou ConversationAttribute sem key/value. COMPORTAMENTO NOVO 23/07: as ações pós-envio da campanha (tag/atributo/prioridade/atendente) aplicam SÓ quando a Meta confirma a ENTREGA (delivered/read), nunca no aceite — mensagem que falha ou é barrada por spam NÃO recebe as ações (corrige exclusão furada no disparo seguinte). Efeito visível: a tag/atributo pode levar de segundos a minutos pra aparecer após o disparo.",
     "category": "Campanhas",
     "params": [
       {
@@ -20891,7 +20905,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/campaigns/{id}",
     "title": "Atualizar Campanha",
-    "description": "Atualiza campanha (mesmos campos do create). Campanha one-off já 'completed' não pode ser editada (422). Mudar audience de campanha agendada vale pro disparo.",
+    "description": "Atualiza campanha (mesmos campos do create). Campanha one-off já 'completed' não pode ser editada (422). Mudar audience de campanha agendada vale pro disparo. COMPORTAMENTO NOVO 23/07: as ações pós-envio da campanha (tag/atributo/prioridade/atendente) aplicam SÓ quando a Meta confirma a ENTREGA (delivered/read), nunca no aceite — mensagem que falha ou é barrada por spam NÃO recebe as ações (corrige exclusão furada no disparo seguinte). Efeito visível: a tag/atributo pode levar de segundos a minutos pra aparecer após o disparo.",
     "category": "Campanhas",
     "params": [
       {
@@ -24186,6 +24200,144 @@
       "Desconectar um app"
     ],
     "related_tools": []
+  },
+  {
+    "id": "lionchat_eclinica_integrations_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/eclinica_integrations",
+    "title": "Listar Integração e-Clínica",
+    "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). ATENÇÃO: o mapeamento evento→flow NÃO é editável via MCP (somente pelo painel).",
+    "category": "Integracoes",
+    "params": [],
+    "returns": "200 {payload: {eclinica_integrations: [...]}}",
+    "common_use_cases": [
+      "Descobrir o id da integração e-Clínica da conta",
+      "Conferir se a integração está ativa"
+    ],
+    "related_tools": [
+      "lionchat_eclinica_reminder_history_list"
+    ]
+  },
+  {
+    "id": "lionchat_eclinica_reminder_history_list",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}/reminder_history",
+    "title": "Histórico dos Lembretes e-Clínica",
+    "description": "Lista os disparos de lembrete agendados da integração e-Clínica (novo 23/07) — responde 'o lembrete do paciente X saiu?'. Cada item traz status (pending aguardando | fired enviado | cancelled | skipped pulado + skip_reason | failed falhou + fail_reason), datas (created_at recebido, fire_at agendado, fired_at disparado, data_consulta), flow_name, contact_name, compromisso e unidade. Somente administrador.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração e-Clínica (de lionchat_eclinica_integrations_list)"
+      },
+      {
+        "name": "page",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Página"
+      },
+      {
+        "name": "per",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Itens por página (máx 100, padrão 50)"
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtro: pending, fired, cancelled, skipped ou failed"
+      },
+      {
+        "name": "date_field",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Campo do filtro de data: fire_at, created_at ou data_consulta"
+      },
+      {
+        "name": "date_from",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Data inicial (AAAA-MM-DD)"
+      },
+      {
+        "name": "date_to",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Data final (AAAA-MM-DD)"
+      },
+      {
+        "name": "q",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Busca por nome do contato"
+      },
+      {
+        "name": "sort_by",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Ordenar por: created_at, fire_at, fired_at ou data_consulta"
+      },
+      {
+        "name": "sort_dir",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "asc ou desc"
+      }
+    ],
+    "returns": "200 {payload: {firings: [{id, status, created_at, fire_at, fired_at, flow_id, flow_name, contact_id, contact_name, data_consulta, hora_consulta, compromisso, unidade_nome, days_before, skip_reason, fail_reason}]}, meta: {count, current_page, per_page, total_pages}}",
+    "common_use_cases": [
+      "Verificar se o lembrete de consulta de um paciente foi enviado",
+      "Listar lembretes que falharam para reprocessar",
+      "Auditar os disparos agendados de um período"
+    ],
+    "related_tools": [
+      "lionchat_eclinica_integrations_list",
+      "lionchat_eclinica_reminder_history_reprocess"
+    ]
+  },
+  {
+    "id": "lionchat_eclinica_reminder_history_reprocess",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}/reminder_history/{firing_id}/reprocess",
+    "title": "Reprocessar Lembrete e-Clínica Falhado",
+    "description": "Reprocessa UM lembrete com status failed (novo 23/07): volta para pending e dispara de novo. Só funciona em lembrete FALHADO — status diferente retorna 422; corrida (dois cliques) retorna 409. Somente administrador.",
+    "category": "Integracoes",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da integração e-Clínica"
+      },
+      {
+        "name": "firing_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID do disparo falhado (de lionchat_eclinica_reminder_history_list com status=failed)"
+      }
+    ],
+    "returns": "200 {id, status: 'pending'} | 422 (não está failed) | 409 (já em reprocessamento)",
+    "common_use_cases": [
+      "Reenviar um lembrete de consulta que falhou"
+    ],
+    "related_tools": [
+      "lionchat_eclinica_reminder_history_list"
+    ]
   },
   {
     "id": "lionchat_contacts_tracking_events_list",

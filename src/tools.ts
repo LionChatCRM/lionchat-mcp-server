@@ -396,7 +396,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-22)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-24)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -441,6 +441,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     VERSAO SEGURA por decisao de produto: dispara SO na conversa mais recente que JA EXISTE numa
     caixa do flow (reabre se resolvida); contato sem conversa NAO dispara e NUNCA cria conversa.
     Dedup 30s por contato, anti-loop por profundidade de cadeia; so flows de conversa),
+    sla_missed (NOVO 24/07 — 'SLA estourado': dispara no momento EXATO do estouro de um prazo de
+    SLA na conversa. Item: {key:'sla_missed', config:{sla_policy_id:''|'any'|'<id>',
+    sla_type:'any'|'frt'|'nrt'|'rt'}} — vazio/'any' = qualquer politica / qualquer prazo; frt =
+    1a resposta, nrt = resposta ao cliente, rt = resolucao. NAO re-dispara se o flow ja tem sessao
+    ativa na conversa; flow antigo sem config = todos os SLAs/qualquer prazo),
     date_trigger (NOVO 2026-07-10 — Gatilho de Data: dispara quando uma DATA do CONTATO chega,
     aniversario/exame; modelo agenda, sem varredura; SO flow individual). Item usa config ANINHADO:
     {type:'date_trigger', config:{ attr_key ('_date_of_birth'=aniversario nativo, OU chave de
@@ -573,7 +578,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       change_status({status: open|resolved|pending|snoozed}), change_priority({priority}),
       mute_conversation({}), add_private_note({content}), send_email_transcript({email}),
       add_conversation_label({labels:[...]}), remove_conversation_label({labels:[...]}),  // etiqueta NA CONVERSA
-      assign_captain({assistant_id}), deactivate_captain({})
+      assign_captain({assistant_id}), deactivate_captain({}),
+      add_sla({sla_policy_id}) — NOVO 24/07: aplica politica de SLA na conversa (id de sla_list;
+        aceita variavel Liquid). NO-OP se a conversa JA tem SLA (nunca troca/reinicia); politica
+        inexistente nao quebra o fluxo
     Contato: add_label({labels:[...]}), remove_label({labels:[...]}),  // etiqueta NO CONTATO
       update_attribute({attr_source:'contact'|'conversation'|'card', attr_key, attr_value})
         — campos EXATOS (NAO entity/key/value). Somar/subtrair via Liquid no attr_value:
@@ -681,8 +689,12 @@ CADASTRAL forma curta (canonica): contact.cpf, contact.cnpj, contact.rg, contact
 conversation.id (id INTERNO do banco), conversation.display_id (numero do app — use ESTE pra montar
   link de conversa), conversation.status, conversation.team_id, conversation.agent_id,
   conversation.labels, conversation.custom_attribute.X
-account.custom_attribute.X (inclui variaveis de conta e segredos — NAO existe env.X),
-  {{var_criada_no_set_variable}}, {{ai_intent}}, {{api_response_var}}
+agent.name, agent.first_name, agent.last_name, agent.id, agent.email (email NOVO 23/07)
+inbox.id, inbox.name (antes resolviam vazio fora do Enviar Mensagem — corrigido 23/07)
+account.name, account.id (id NOVO 23/07), account.custom_attribute.X (inclui variaveis de conta e
+  segredos — NAO existe env.X), {{var_criada_no_set_variable}}, {{ai_intent}}, {{api_response_var}}
+DESDE 23/07 essas variaveis padrao funcionam em TODOS os nodes (Chamada API, Condicoes, IA, Definir
+  Variavel) — antes so no Enviar Mensagem. Campo vazio resolve pra string vazia (nunca trava o flow).
 
 ═══ ANTI-LOOP ═══
 Cadeias automacao<->flow tem profundidade maxima 5 hand-offs (MAX_CHAIN_DEPTH). No 5o a cadeia e
@@ -705,6 +717,11 @@ sourceHandle OBRIGATORIO casar com handle exposto pelo node source.
 9. ai_tool via flow_tools_create (flows_create rejeita/cria do tipo errado); no end obrigatorio
 10. node sem position empilha tudo em (0,0) — sempre informe e nunca repita (x,y)
 11. condition: field SEM '{{}}' compara texto literal (nunca casa) E regra sem valueType:'variable'
+12. NOTA (type:'note'): o texto vai em data.title + data.body — 'content'/'label'/'text' NAO
+    renderizam (nota aparece EM BRANCO na tela). Nunca crie nota sem body preenchido.
+13. ESPACAMENTO: colunas de nodes a >=320px no eixo x (ex.: 50, 370, 690, 1010...) e irmaos/ramos a
+    >=180px no eixo y — nodes colados escondem as linhas de conexao. Sticky notes ficam AO LADO ou
+    ACIMA do trecho comentado (ex.: y do node - 240), NUNCA sobre nodes ou sobre as linhas.
     fica INVISIVEL no editor (salvar pela tela perde a regra) — ver secao condition acima
 12. Atribuir equipe/agente DINAMICO: NAO use node api chamando a propria plataforma
     (/conversations/{id}/assignments com token). Use a acao nativa: action item

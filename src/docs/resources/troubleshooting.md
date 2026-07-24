@@ -247,6 +247,18 @@ Exclusão de agente COM reatribuição roda em **segundo plano** (minutos em con
 some quando termina. Segunda tentativa durante o processamento = **409 agent_already_being_deleted**
 — é sinal de que JÁ está rodando; não repita a chamada.
 
+### "Disparei a campanha e a tag/atributo não apareceu no contato" (23/07)
+Comportamento novo, não é bug: as ações pós-envio da campanha (tag/atributo/prioridade/atendente)
+aplicam SÓ quando a Meta confirma a ENTREGA (delivered/read) — nunca no aceite. Leva de segundos a
+minutos. Mensagem que falhou ou foi barrada por spam NÃO recebe as ações (de propósito: evita que a
+exclusão "quem já recebeu" fure no disparo seguinte). Se a tag não apareceu, confira o status da
+mensagem da campanha antes de suspeitar da automação.
+
+### "Import de histórico WAHA criou DUAS conversas pro mesmo contato" (23/07)
+Comportamento novo, de propósito: o import de histórico agora grava as mensagens com a DATA ORIGINAL
+numa conversa de HISTÓRICO separada (resolvida, marcada como importada) — o contato fica com 2 cards:
+o vivo e o histórico. A conversa viva nunca se mistura com a de histórico.
+
 ### "Participante não recebeu notificação de mensagem nova" (22/07)
 Comportamento novo, não é bug: notificação de nova mensagem vai SÓ pro **responsável** da conversa.
 Participantes continuam vendo a conversa, mas não recebem sino/push a cada mensagem — pra acionar

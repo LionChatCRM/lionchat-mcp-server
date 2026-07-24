@@ -665,6 +665,14 @@ do `send_message`, ação `add_private_note`, ação `add_card_note`) — nunca 
 `position` é o canto superior esquerdo da nota; como ela é maior que um node comum, posicione-a ATRÁS
 do grupo de nodes que ela rotula (ex.: um pouco acima e à esquerda do primeiro node do trecho).
 
+**REGRA DE LAYOUT (espaçamento — vale pra TODO node, novo 24/07):** nodes colados escondem as linhas
+de conexão e viram bola de neve visual. Ao gerar `position`:
+- Colunas no eixo x com passo de **≥320px** (padrão dos exemplos deste guia: 50, 370, 690, 1010, 1330…).
+- Irmãos/ramificações no eixo y com **≥180px** entre si.
+- Sticky notes ficam **AO LADO ou ACIMA** do trecho comentado (ex.: `y` do node − 240), **nunca em cima**
+  de nodes nem sobre as linhas — nota grande (320×200 default) cobre tudo que estiver embaixo.
+- Nunca repita o mesmo `(x, y)` em dois nodes.
+
 ```json
 { "id": "note-1", "type": "note", "position": { "x": 40, "y": 40 },
   "data": { "title": "Qualificação", "body": "Revisar mensagens antes de publicar", "color": "violet", "width": 360, "height": 180 } }
