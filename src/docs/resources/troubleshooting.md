@@ -265,6 +265,39 @@ Participantes continuam vendo a conversa, mas não recebem sino/push a cada mens
 alguém específico, use @menção em nota interna (que notifica pelo caminho próprio; a lista de quem
 pode ser mencionado vem de `lionchat_conversations_mentionable_users`).
 
+### "Mandei reenviar a mensagem falhada e voltou 422" (25/07)
+Não é bug: mensagem **cancelada** ou **excluída** nunca reenvia. O bloqueio é na fonte e vale pros
+três caminhos — botão da bolha (`lionchat_conversations_messages_create_1`), reenvio em lote
+(`lionchat_inboxes_failed_messages_bulk_retry`) e a auto-recuperação do WAHA. Se o usuário quer
+mesmo mandar de novo, o caminho é escrever uma mensagem nova.
+
+### "A falha sumiu do painel" / "apareceu um grupo Excluídas" (25/07)
+Dois comportamentos novos e propositais no painel Falhas de envio
+(`lionchat_inboxes_failed_messages_summary`):
+- **Cancelada** (`cancel_retry` / `bulk_cancel`) some do painel de vez — cancelar é limpar.
+- **Excluída** NÃO some: vira o grupo informativo `deleted` (campo `deleted_count`), guardando
+  contato, horário e o **motivo original** da falha. É registro, então não tem botão de reenviar
+  nem de cancelar e fica fora de `retryable_count` e do `total`.
+
+Cancelar vale pra TODOS os grupos (inclusive `permanent`, `window_expired`, `campaign` e `partial`,
+que nunca seriam reenviados) — é assim que se limpa o painel. Ações irreversíveis: confirme com o
+usuário e mostre as contagens do summary antes.
+
+### "O Messenger parou de enviar / 'Invalid parameter'" (24/07)
+Causa raiz do apagão de 22 a 24/07: a Meta **aposentou a message tag** que o sistema mandava em todo
+envio de Messenger. Corrigido em 24/07. Agora o Messenger respeita a **janela de 24h** de verdade:
+dentro da janela envia normal; passou de 24h da última mensagem do cliente, a Meta recusa — não é
+falha do LionChat, é regra da plataforma. Não existe template de Messenger pra "reabrir" a janela
+(isso é WhatsApp). Instagram nunca usou tag e não foi afetado.
+
+### "A importação de histórico do WhatsApp (QR) parou no meio" (25/07)
+A importação agora se recupera sozinha: se o servidor reiniciar no meio, ela fica `interrupted` e
+**retoma de onde parou** (não baixa de novo o que já entrou) na próxima verificação. Estados
+possíveis: `importing` (rodando), `interrupted` (caiu, vai retomar sozinha), `paused` (alguém pausou
+pelo painel de suporte — só volta no botão Retomar), `cancelled` (encerrada de vez), `completed`.
+Enquanto uma importação está viva, o repescador de mensagens da sessão fica fora do caminho, de
+propósito. Pausar, retomar e cancelar são ações do painel de suporte — não existem no MCP.
+
 ### "Editei o evento no Google Calendar e não sincronizou"
 Auto-cura desde 2026-06-09: o vigia horário re-arma o "watch" morto de conexões saudáveis
 sozinho (sem reconectar a conta). Se persistir >1h, aí sim investigar a conexão

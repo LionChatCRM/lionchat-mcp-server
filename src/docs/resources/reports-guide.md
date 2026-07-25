@@ -137,6 +137,10 @@ Retorna array de métricas, **uma por usuário da conta**. Campos confirmados (e
 > - **CSAT por agente:** use `lionchat_csat_list` com filtro `user_ids=<id>` e calcule a média.
 > - **Tempo online / status:** use `lionchat_agent_availability` ou os live_reports (`_16`/`_17`).
 
+**Filtro por caixa (novo em 2026-07-24):** aceita `inbox_id` — o desempenho dos agentes DENTRO de
+uma caixa específica. É exclusivo deste relatório; os resumos de time/caixa/etiqueta/canal
+(`_1` a `_4`) NÃO aceitam `inbox_id`.
+
 `_1` (time), `_2` (inbox), `_3` (label), `_4` (canal) seguem a mesma ideia de resumo agrupado,
 trocando a chave de agrupamento.
 
@@ -174,6 +178,10 @@ Heatmap de volume por hora. Aceita SÓ `timezone_offset` (sem ele o pico sai em 
 
 São os live_reports (`conversation_metrics` e a versão agrupada). Use estes — e não os resumos
 históricos — quando o usuário quiser o agora.
+
+**Filtros aceitos (expostos na tool desde 2026-07-24):** `inbox_id`, `assignee_id` e `team_id`,
+todos opcionais e combináveis — é o mesmo recorte da tela Visão Geral. Em `_17` o `group_by`
+(`team_id` ou `assignee_id`) continua obrigatório e os filtros recortam a base ANTES de agrupar.
 
 ### `lionchat_csat_metrics` — CSAT agregado
 **Use quando:** "satisfação", "nota média dos clientes", "CSAT"

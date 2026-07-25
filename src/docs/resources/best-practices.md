@@ -147,6 +147,12 @@ Dispara quando o CLIENTE fica inativo após resposta da IA. O motor de follow-up
 **só-leitura** (não executa ferramentas, não coleta dado — só redige a mensagem de retomada,
 com saída estruturada garantida). `paused=true` no assistente corta os follow-ups também.
 
+**Corrigido em 2026-07-24:** quando a IA é ativada por um **Flow** (ação "Ativar IA") ou por uma
+**automação**, o follow-up agora é agendado no ato da ativação. Antes, nesses dois caminhos a
+cadência simplesmente nunca começava — a conversa ficava com IA ativa e sem nenhum follow-up. Se um
+cliente relatar "a IA nunca faz o follow-up", confira primeiro se a ativação veio por flow/automação
+e se a conta já está na versão de 24/07.
+
 ## Condições para NÃO fazer follow-up + horário de silêncio (2026-07)
 
 `config.follow_up_skip_conditions` — array de até 3 condições (lógica OU: qualquer uma verdadeira
@@ -198,6 +204,11 @@ Como a coleta de dados/cenários funciona hoje (importante pra diagnosticar "IA 
 - Cenários são instruções inline no prompt (sem troca de personagem); o raciocínio do cenário
   fica no "caderninho" da conversa (campo scenario_checklist, visível no card Raciocínio).
 - Sem AI Agente ativo na conversa = NENHUMA resposta de IA (motor V1 aposentado em 2026-06).
+- **Corrigido em 2026-07-24:** a IA agora enxerga no prompt a lista de atributos personalizados
+  definidos de **Conversa** e de **Card do Kanban** (antes só a de Contato chegava, e mesmo essa em
+  parte) — por isso ela conseguia gravar atributo de contato mas "não funcionava" pra conversa/card.
+  Regra prática que continua valendo: só dá pra a IA preencher atributo que **existe cadastrado**
+  (`custom_attributes_create`) no modelo certo — conversa, contato ou card.
 
 ## Cenários com parâmetro fixo e execução determinística (2026-06)
 
@@ -309,7 +320,9 @@ criar a campanha e mostre a contagem ao usuário — estimativa e disparo usam o
 ## Variáveis de conta (account_variables)
 
 Pra dados fixos que se repetem (slogans, endereços, horários):
-- `account_variables_create` UMA vez — campos: `attribute_display_name` (rótulo), `attribute_key` (a chave usada no `{{ }}`), `attribute_display_type` (`text`; use `secret` pra token/senha), `value`. Admin-only.
+- `account_variables_create` UMA vez — campos: `attribute_display_name` (rótulo), `attribute_key` (a chave usada no `{{ }}`), `attribute_display_type`, `value`. Admin-only.
+- Tipos oferecidos na tela (2026-07-25): **Texto** (`text`), **Data** (`date`), **Hora** (`time`) e **Confidencial** (`secret`). Data e Hora gravam o valor já normalizado (`AAAA-MM-DD` e `HH:MM` em 24h) — antes a tela só tinha Texto e a data entrava como texto solto, sem validar formato. Os demais tipos do enum (`number`, `list`, `link`, `checkbox`, `currency`, `percent`, `datetime`) funcionam pela API, mas a tela os edita como texto.
+- O **tipo e a chave não mudam depois de criados** — `account_variables_update` só altera rótulo, descrição e valor. Pra trocar o tipo, apague e crie de novo.
 - Use em templates com a sintaxe COMPLETA `{{ account.custom_attribute.<attribute_key> }}` (ex: `{{ account.custom_attribute.slogan }}`). NÃO existe atalho `{{slogan}}` solto — sem o prefixo `account.custom_attribute.` não resolve.
 - Resolve em: mensagens, respostas prontas, campanhas e automações. NÃO resolve nas instruções do AI Agente (base/cenário) — ali só `contact.*` e `conversation.*`.
 - `secret` nunca aparece em template (sai vazio); só resolve em nós API Request do FlowBuilder.
@@ -360,6 +373,9 @@ Endereço: {% assign chave = "endereco_" | append: contact.custom_attribute.unid
   nas instruções do AI Agente.
 - Se a chave montada não existir, o `{% echo %}` sai vazio (sem erro). Teste com um contato
   de cada valor da lista antes de entregar.
+- Botão com link (CTA) da resposta pronta/flow: a URL do botão aceita variáveis
+  (`{{contact.name}}`, `{{contact.phone}}`, atributo etc.) — cada valor é codificado
+  automaticamente (espaço vira `%20`), então o link nunca quebra. Útil pra rastrear cliques.
 
 ### Padrão geral (serve pra qualquer caso)
 
@@ -409,6 +425,48 @@ Fontes/campos disponíveis (`source` / `field`):
 
 Lembrete: todo template recém-criado pelo MCP só mostra o texto na tela depois de **sincronizar**
 (o MCP cria na Meta, mas o "puxar de volta" o conteúdo é o que a tela faz com o botão Sincronizar).
+
+### Botão de link do template com variável — link rastreável por cliente (2026-07-25)
+
+O botão de URL do template pode terminar com uma variável, pra montar um link diferente por contato
+(rastrear cliques, pré-preencher formulário, etc).
+
+Regras da Meta (o template é recusado na hora se furar qualquer uma):
+
+- No máximo **UMA** variável no botão, e ela é sempre `{{1}}`.
+- `{{1}}` só pode ficar **no FINAL** da URL, com base `https://` fixa antes.
+- O componente `BUTTONS` precisa mandar `example` com a URL completa de exemplo (sem ele, erro 100).
+
+E o `variable_mapping` recebe a chave especial `_button_url` (com underscore na frente de propósito:
+ela **não** conta como variável de corpo):
+
+```json
+{
+  "components": [
+    { "type": "BODY", "text": "Olá {{1}}, sua proposta está pronta." ,
+      "example": { "body_text": [["Maria"]] } },
+    { "type": "BUTTONS", "buttons": [
+      { "type": "URL", "text": "Ver proposta",
+        "url": "https://minhaempresa.com.br/proposta?cliente={{1}}",
+        "example": ["https://minhaempresa.com.br/proposta?cliente=Maria Silva"] }
+    ] }
+  ],
+  "variable_mapping": {
+    "1": { "source": "contact", "field": "name.split.first", "label": "Primeiro nome" },
+    "_button_url": { "source": "contact", "field": "name", "label": "Nome completo",
+                     "example": "Maria Silva", "button_index": 0 }
+  }
+}
+```
+
+- `button_index` = a **posição do botão** dentro do componente `BUTTONS` (0 = primeiro).
+- `source`/`field` usam a mesma tabela de fontes acima, mais `custom` (texto fixo, escrito no `field`).
+- No envio, o valor é **codificado automaticamente** (espaço vira `%20`) — o link nunca quebra.
+- Vale em conversa, automação, flow, agendada e campanha (na campanha resolve por contato).
+
+O mesmo vale pro **botão de link (CTA)** de resposta pronta e do FlowBuilder: a URL aceita
+`{{contact.name}}`, `{{contact.phone}}`, atributo personalizado etc., com a mesma codificação
+automática. Ver a seção de variáveis de conta acima.
 
 ## FlowBuilder — notas de editor (2026-07)
 

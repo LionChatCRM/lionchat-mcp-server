@@ -26,7 +26,7 @@ E/OU é encadeado condição a condição (sem parênteses).
 | `chat_type` (individual/group/channel/broadcast/status) | equal_to, not_equal_to |
 | `priority` | equal_to, not_equal_to |
 | `assignee_id` (atendente), `inbox_id`, `team_id`, `campaign_id`, `captain_assistant_id` (IA), `labels` | equal_to, not_equal_to, is_present, is_not_present |
-| `display_id` | equal_to, not_equal_to, contains, does_not_contain |
+| `display_id` | equal_to, not_equal_to, contains, does_not_contain (o `contains`, busca por trecho do número, passou a funcionar de verdade em 2026-07-25 — antes dava erro de banco) |
 | `referer`, `mail_subject` | equal_to, not_equal_to, contains, does_not_contain |
 | `browser_language`, `conversation_language` | equal_to, not_equal_to |
 | `created_at`, `last_activity_at` (valor = data) | is_greater_than, is_less_than, days_before |
@@ -42,6 +42,7 @@ Mesmo shape de condição. 15/página.
 
 | attribute_key | Operadores |
 |---|---|
+| `id` (id interno do contato) | equal_to, not_equal_to |
 | `name`, `email`, `identifier`, `city`, `company`, `profession` | equal_to, not_equal_to, contains, does_not_contain |
 | `phone_number` | + starts_with |
 | `cpf`, `cnpj`, `rg` (cadastral) | equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present |
