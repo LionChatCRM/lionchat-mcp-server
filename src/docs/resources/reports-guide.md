@@ -32,6 +32,34 @@ Quando o usuário disser "o relatório está errado / não bate", quase sempre �
    Diferenças de ~1% entre relatório e lista filtrada são borda de janela/fuso, não defeito.
 6. **since/until são unix SEGUNDOS** em TODOS os endpoints de relatório. ISO 8601 quebra a janela em
    silêncio (relatório vazio/errado).
+7. **Mande SEMPRE as DUAS pontas do período.** Mandar só `since` (ou só `until`) fazia o filtro de
+   data ser ignorado por inteiro, em silêncio: vinham os números da vida toda rotulados como do
+   período pedido. Corrigido em 2026-07-25 (meia janela virou período aberto de um lado), mas a
+   recomendação continua: mande as duas.
+8. **"Não atendidas" NÃO é "nunca foi respondida".** A regra real é: **o cliente falou por último e
+   ninguém respondeu ainda**. A definição antiga ("sem primeira resposta") foi abandonada de
+   propósito, porque marcava como não atendida a conversa em que o robô/atendente falou primeiro e o
+   cliente nunca respondeu. Numa conta real as duas leituras dão 32 contra 17 — nunca explique esse
+   número como "N pessoas nunca foram respondidas".
+9. **Relatório ao vivo e `conversations_meta` NÃO contam o mesmo universo.** O ao vivo conta tudo da
+   conta, inclusive conversa de caixa apagada, e não checa permissão; o `meta` exclui caixa apagada,
+   exige contato vivo e respeita as caixas que o usuário enxerga. Podem divergir com razão.
+
+### Corrigido em 2026-07-25 (validação contra o banco de produção)
+
+Se o cliente comparar com um número antigo, estes três **aumentaram** porque estavam subestimados:
+
+- **Relatório por canal** passou a contar conversa **silenciada** (antes ela sumia do canal e do
+  total; a soma dos canais nunca fechava com o total do resumo).
+- **Tempo médio por etiqueta** passou a usar a janela do EVENTO, como os outros relatórios. Antes era
+  calculado sem janela nenhuma e mostrava tempos até **25x menores** que a realidade (1,7 dia no lugar
+  de 43,6). Etiqueta sem dado agora vem **vazia** em vez de "0s".
+- **Receita/ganhos do Kanban** passaram a incluir a venda fechada no período cujo card entrou antes
+  dele (numa conta real faltava metade dos ganhos).
+
+E dois que devolviam número impossível: **"pendentes" do relatório ao vivo** era sempre 0, e o
+**cumprimento de prazo (SLA)** dizia "100%" para conta sem nenhum prazo aplicado — agora vem vazio,
+que significa "sem dados", não "perfeito".
 
 ## Mapeamento dos endpoints `lionchat_reports_*`
 

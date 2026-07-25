@@ -3824,7 +3824,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/kanban_items/reports",
     "title": "Relatório Agregado do Kanban",
-    "description": "RELATORIO AGREGADO do Kanban (funil de vendas) — a resposta e um OBJETO de metricas, nao lista de cards: soma de valores GANHOS no periodo, contagem/valor por etapa, previsao ponderada (forecast), top negocios, cards parados (stale) e metas do funil. Filtra por periodo (from/to), agentes (user_ids[]) e time (team_id). USE ESTA TOOL quando pedirem 'relatorio do funil/vendas/ganhos do mes por agente ou time'. Pra LISTAR os cards em si, use lionchat_kanban_items_filter. [ATENCAO 2026-07-25] from/to SO aceitam timestamp UNIX — data por extenso devolve tudo zerado sem erro algum. Alem disso, wonInPeriod/wonValueInPeriod hoje SUBCONTAM: negocio ganho no periodo cujo card foi criado ANTES do periodo pode nao entrar (falta o mesmo fallback de data que a contagem usa). Ao responder receita, avise que o numero pode estar subestimado em funil de ciclo longo.",
+    "description": "RELATORIO AGREGADO do Kanban (funil de vendas) — a resposta e um OBJETO de metricas, nao lista de cards: soma de valores GANHOS no periodo, contagem/valor por etapa, previsao ponderada (forecast), top negocios, cards parados (stale) e metas do funil. Filtra por periodo (from/to), agentes (user_ids[]) e time (team_id). USE ESTA TOOL quando pedirem 'relatorio do funil/vendas/ganhos do mes por agente ou time'. Pra LISTAR os cards em si, use lionchat_kanban_items_filter. [2026-07-25] Corrigido: wonInPeriod/wonValueInPeriod subcontavam — negocio ganho no periodo cujo card foi criado ANTES do periodo ficava de fora (numa conta real, metade dos ganhos). Se a conta ainda nao estiver na versao de 26/07, avise que a receita pode estar subestimada em funil de ciclo longo.",
     "category": "Itens",
     "params": [
       {
@@ -3839,14 +3839,14 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Inicio do periodo — timestamp UNIX (segundos ou milissegundos). ATENCAO: NAO aceita data por extenso: mandar '2026-07-01' NAO da erro, mas devolve o relatorio INTEIRO ZERADO (o backend faz to_i e '2026-07-01' vira o numero 2026 = janeiro de 1970). Sempre converta a data para timestamp UNIX antes de chamar."
+        "description": "Inicio do periodo. O mais seguro e mandar timestamp UNIX (segundos ou milissegundos) — funciona em qualquer versao. Data por extenso ('2026-07-01') so passou a funcionar em 26/07/2026; em versao anterior ela NAO da erro, devolve o relatorio INTEIRO ZERADO (vira 1970 por dentro). Se vier tudo zero e o funil tem cards, repita com timestamp."
       },
       {
         "name": "to",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Fim do periodo — timestamp UNIX (segundos ou milissegundos). Mesma armadilha do 'from': data por extenso ('2026-07-31') zera o relatorio em silencio. Converta para timestamp UNIX."
+        "description": "Fim do periodo. Mesma regra do 'from': timestamp UNIX e sempre seguro. A partir de 26/07/2026 aceita tambem data por extenso, e data SEM hora cobre o dia inteiro (ate 23:59:59)."
       },
       {
         "name": "user_ids",

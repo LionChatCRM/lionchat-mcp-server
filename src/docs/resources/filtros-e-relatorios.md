@@ -44,7 +44,7 @@ Mesmo shape de condição. 15/página.
 |---|---|
 | `id` (id interno do contato) | equal_to, not_equal_to |
 | `name`, `email`, `identifier`, `city`, `company`, `profession` | equal_to, not_equal_to, contains, does_not_contain |
-| `phone_number` | + starts_with |
+| `phone_number` | + starts_with (busca por DDD/prefixo — **passou a funcionar de verdade em 2026-07-25**; antes devolvia lista SEMPRE vazia porque virava igualdade exata) |
 | `cpf`, `cnpj`, `rg` (cadastral) | equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present |
 | `country_code` | equal_to, not_equal_to |
 | `labels` | equal_to, not_equal_to, is_present, is_not_present |
@@ -58,6 +58,15 @@ Mesmo shape de condição. 15/página.
 - `card_funnel_id`, `card_stage`, `card_priority`, `card_status` (equal_to/not_equal_to) — card
   do Kanban vinculado.
 - Condição com `custom_attribute_type:'conversation_attribute'` — atributo da conversa vinculada.
+
+### Duas regras que enganam nos filtros
+
+- **Vários valores na mesma condição** (ex.: cidade é "Sorocaba" OU "Campinas"): funciona em contatos
+  desde 2026-07-25 — antes o filtro de CONTATOS usava só o primeiro valor e descartava o resto em
+  silêncio (conversa sempre usou todos).
+- **"Entre duas datas" não existe como operador** — são duas condições (`is_greater_than` +
+  `is_less_than`), e as duas pontas ficam **de fora**. Pra incluir os dias 01 e 10, peça de 30/06 a
+  11/07. O corte do dia é em UTC, então conversa do fim da noite conta no dia seguinte.
 
 ## 3. Kanban — `lionchat_kanban_items_filter` (lista rica de cards)
 
@@ -125,6 +134,11 @@ payload=[
 
 **R3 — Ganhos do mês por agente/time:**
 `kanban_items_list_3 funnel_id=37 from=2026-07-01 to=2026-07-31 user_ids=[6,12]` (ou `team_id=3`)
+
+> ⚠️ **`from`/`to` deste relatório:** o mais seguro é mandar **timestamp UNIX**. Data por extenso
+> (`2026-07-01`) só passou a funcionar em 2026-07-25 — em versão anterior ela devolve o relatório
+> **inteiro zerado, sem erro nenhum** (vira 1970 por dentro). Se o número vier todo zero e o funil
+> tem cards, é este o motivo: repita com timestamp.
 
 **R4 — Conversas de uma campanha que FALHARAM/entregaram:** filtre por
 `campaign_id equal_to <id>`; o status da MENSAGEM de template (sent/delivered/read/failed) está
