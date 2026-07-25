@@ -1,5 +1,6 @@
 // AIDEV-NOTE: Utility module for LionChat MCP server
 // Path substitution, query string building, param separation, and response formatting
+import { sanitizeResponse } from './sanitize.js';
 
 // AIDEV-NOTE: Separates raw MCP tool input into path/query/body buckets based on endpoint param definitions
 export interface SeparatedParams {
@@ -62,23 +63,105 @@ export function buildQueryString(params: Record<string, unknown>): string {
 // AIDEV-NOTE: Format API response data for MCP client consumption
 // AIDEV-NOTE: [fix relatorios 18/07] Teto 80k (era 50k) — relatorios/listas gordas de conversa
 // (partial + kanban_items com funnel.stages) estouravam 50k e cortavam o registro no meio.
-const MAX_RESPONSE_LENGTH = 80000;
+// AIDEV-NOTE: [2026-07-24] Teto configuravel por env LIONCHAT_MCP_MAX_RESPONSE (min 10k).
+const MAX_RESPONSE_LENGTH = (() => {
+  const env = Number.parseInt(process.env.LIONCHAT_MCP_MAX_RESPONSE ?? '', 10);
+  return Number.isFinite(env) && env >= 10000 ? env : 80000;
+})();
 
-export function formatResponse(data: unknown): string {
+export interface FormatResponseOptions {
+  // slim=false SO via full_response:true (tools curadas). Segredos independem disto.
+  slim?: boolean;
+  toolId?: string;
+}
+
+// AIDEV-NOTE: [2026-07-24] TODA resposta passa por sanitizeResponse (segredos SEMPRE redigidos;
+// campos pesados podados por default — ver sanitize.ts). Ao estourar o teto, tenta CORTE LIMPO:
+// remove itens inteiros do final do maior array em vez de fatiar o JSON no meio de um registro.
+export function formatResponse(data: unknown, opts?: FormatResponseOptions): string {
+  const sanitized =
+    typeof data === 'string'
+      ? data
+      : sanitizeResponse(data, { slim: opts?.slim !== false, toolId: opts?.toolId });
   const text =
-    typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    typeof sanitized === 'string' ? sanitized : JSON.stringify(sanitized, null, 2);
 
-  if (text.length > MAX_RESPONSE_LENGTH) {
-    // AIDEV-NOTE: [fix relatorios 18/07] Aviso HONESTO — o JSON acima esta cortado no meio
-    // (INCOMPLETO). Nem toda ferramenta pagina (relatorios agregados nao), entao o certo e
-    // ESTREITAR: intervalo de datas menor, mais filtros, per_page menor, ou page nas listas.
-    return (
-      text.slice(0, MAX_RESPONSE_LENGTH) +
-      `\n\n[RESPOSTA CORTADA em ${MAX_RESPONSE_LENGTH} caracteres — os dados acima estao INCOMPLETOS e o JSON pode estar truncado no meio de um registro. Para obter tudo: reduza o intervalo de datas, adicione filtros, use per_page menor, ou pagine com page nas ferramentas de LISTA. Relatorios agregados NAO paginam — restrinja o periodo.]`
-    );
+  if (text.length <= MAX_RESPONSE_LENGTH) {
+    return text;
   }
 
-  return text;
+  const clean = tryCleanCut(sanitized, MAX_RESPONSE_LENGTH);
+  if (clean) {
+    return clean;
+  }
+
+  // AIDEV-NOTE: [fix relatorios 18/07] Fallback: aviso HONESTO — o JSON acima esta cortado no
+  // meio (INCOMPLETO). Nem toda ferramenta pagina (relatorios agregados nao), entao o certo e
+  // ESTREITAR: intervalo de datas menor, mais filtros, per_page menor, ou page nas listas.
+  return (
+    text.slice(0, MAX_RESPONSE_LENGTH) +
+    `\n\n[RESPOSTA CORTADA em ${MAX_RESPONSE_LENGTH} caracteres — os dados acima estao INCOMPLETOS e o JSON pode estar truncado no meio de um registro. Para obter tudo: reduza o intervalo de datas, adicione filtros, use per_page menor, ou pagine com page nas ferramentas de LISTA. Relatorios agregados NAO paginam — restrinja o periodo.]`
+  );
+}
+
+// AIDEV-NOTE: [2026-07-24] Corte limpo — localiza o maior array de itens nos shapes conhecidos
+// ({data:[...]}, {payload:[...]}, {items:[...]}, {data:{payload:[...]}} ou array na raiz) e faz
+// busca binaria pelo maior prefixo de itens INTEIROS que cabe no teto. Shape nao reconhecido ou
+// array com <2 itens => null (chamador usa o fallback de fatia crua).
+function tryCleanCut(value: unknown, max: number): string | null {
+  const isObj = (v: unknown): v is Record<string, unknown> =>
+    !!v && typeof v === 'object' && !Array.isArray(v);
+
+  let arr: unknown[] | null = null;
+  let rebuild: ((sliced: unknown[]) => unknown) | null = null;
+
+  if (Array.isArray(value)) {
+    arr = value;
+    rebuild = (sliced) => sliced;
+  } else if (isObj(value)) {
+    for (const key of ['data', 'payload', 'items']) {
+      const v = value[key];
+      if (Array.isArray(v) && v.length > 1) {
+        arr = v;
+        rebuild = (sliced) => ({ ...value, [key]: sliced });
+        break;
+      }
+      // Shape cru aninhado de conversas: { data: { meta, payload: [...] } }
+      if (key === 'data' && isObj(v) && Array.isArray(v.payload) && v.payload.length > 1) {
+        arr = v.payload;
+        rebuild = (sliced) => ({ ...value, data: { ...v, payload: sliced } });
+        break;
+      }
+    }
+  }
+
+  if (!arr || !rebuild || arr.length < 2) {
+    return null;
+  }
+
+  let lo = 1;
+  let hi = arr.length - 1;
+  let best: string | null = null;
+  let bestKeep = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const text = JSON.stringify(rebuild(arr.slice(0, mid)), null, 2);
+    if (text.length <= max) {
+      best = text;
+      bestKeep = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+
+  if (!best) {
+    return null;
+  }
+  return (
+    best +
+    `\n\n[LISTA ENXUGADA para caber no limite: exibindo ${bestKeep} de ${arr.length} itens desta resposta (JSON acima esta INTEIRO, so com menos itens). Para o restante: pagine, adicione filtros ou reduza o periodo.]`
+  );
 }
 
 // AIDEV-NOTE: Route each input param to path/query/body based on endpoint parameter definitions

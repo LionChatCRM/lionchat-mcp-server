@@ -14,6 +14,11 @@ import {
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import {
+  FULL_RESPONSE_PARAM,
+  FULL_RESPONSE_DESCRIPTION,
+  supportsFullResponse,
+} from './sanitize.js';
 
 // AIDEV-NOTE: Shape of each endpoint entry in endpoints.json
 interface EndpointParam {
@@ -189,8 +194,12 @@ function paramTypeToZod(param: EndpointParam): ZodTypeAny {
 // AIDEV-NOTE: Build Zod object schema from endpoint params.
 // account_id is exposed as OPTIONAL — when omitted we fall back to LIONCHAT_ACCOUNT_ID.
 // This enables multi-tenant usage (single MCP instance can hit several accounts).
+// AIDEV-NOTE: [2026-07-24] toolId opcional — tools curadas (sanitize.FULL_RESPONSE_TOOLS)
+// ganham o param full_response no schema (escape do slim). NAO injetar nas 682 (inflaria
+// o tools/list em ~20-30k tokens).
 function buildZodSchema(
-  params: EndpointParam[]
+  params: EndpointParam[],
+  toolId?: string
 ): z.ZodObject<Record<string, ZodTypeAny>> {
   const shape: Record<string, ZodTypeAny> = {};
   let hasAccountIdInPath = false;
@@ -229,6 +238,14 @@ function buildZodSchema(
       );
   }
 
+  // AIDEV-NOTE: [2026-07-24] Escape do slim so nas tools curadas — ver sanitize.ts.
+  if (toolId && supportsFullResponse(toolId)) {
+    shape[FULL_RESPONSE_PARAM] = z
+      .boolean()
+      .optional()
+      .describe(FULL_RESPONSE_DESCRIPTION);
+  }
+
   return z.object(shape);
 }
 
@@ -244,7 +261,7 @@ function registerSingleTool(
   client: LionChatClient,
   endpoint: EndpointDef
 ): void {
-  const schema = buildZodSchema(endpoint.params);
+  const schema = buildZodSchema(endpoint.params, endpoint.id);
   const annotations = getToolAnnotations(endpoint.method);
   const hasFile = hasFileParam(endpoint.params);
 
@@ -294,6 +311,12 @@ function registerSingleTool(
         const paramsWithoutAccount: Record<string, unknown> = { ...params };
         delete paramsWithoutAccount['account_id'];
 
+        // AIDEV-NOTE: [2026-07-24] full_response e flag do CONECTOR (escape do slim) — stripar
+        // SEMPRE antes do bucketing (mesmo tratamento do account_id), senao o catch-all
+        // default->body do separateParams vazaria o campo pro corpo enviado ao Rails.
+        const fullResponse = params[FULL_RESPONSE_PARAM] === true;
+        delete paramsWithoutAccount[FULL_RESPONSE_PARAM];
+
         const { pathParams, queryParams, bodyParams } = separateParams(
           paramsWithoutAccount,
           endpoint.params,
@@ -315,7 +338,15 @@ function registerSingleTool(
         });
 
         return {
-          content: [{ type: 'text' as const, text: formatResponse(result) }],
+          content: [
+            {
+              type: 'text' as const,
+              text: formatResponse(result, {
+                slim: !fullResponse,
+                toolId: endpoint.id,
+              }),
+            },
+          ],
         };
       } catch (err) {
         // AIDEV-NOTE: Return actionable error messages from LionChatApiError to the LLM

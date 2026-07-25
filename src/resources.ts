@@ -45,6 +45,13 @@ export const RESOURCES: ResourceDef[] = [
     filename: 'api-conventions.md',
   },
   {
+    name: 'Filtros e Relatorios',
+    uri: 'lionchat://docs/filtros-e-relatorios',
+    description:
+      'Tabelas COMPLETAS de chaves/operadores dos filtros de conversas, contatos e Kanban + relatorio agregado do funil + receitas prontas. Consulte ANTES de montar qualquer filtro ou relatorio — evita 422 de operador invalido.',
+    filename: 'filtros-e-relatorios.md',
+  },
+  {
     name: 'Fluxos de Conversacao',
     uri: 'lionchat://docs/conversation-flows',
     description:
