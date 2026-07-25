@@ -22481,6 +22481,32 @@
     "related_tools": []
   },
   {
+    "id": "lionchat_inboxes_waha_import_status",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha/import_status",
+    "title": "Andamento da Importacao de Historico (WhatsApp QR)",
+    "description": "[NOVO 2026-07-25] SO LEITURA: mostra em que pe esta a importacao de historico de uma caixa WhatsApp por QR (WAHA). Responde a pergunta 'a importacao parou?'. Campos: status ('idle' nunca rodou | 'importing' rodando | 'interrupted' caiu e VAI RETOMAR sozinha de onde parou | 'paused' pausada por alguem no painel de suporte, so volta no botao Retomar | 'cancelled' encerrada de vez | 'completed' concluida), started_at, completed_at, total_chats/processed_chats (conversas), total_messages/created_messages/skipped_messages (mensagens; skipped = ja existiam), contacts_created e error. ADMIN-ONLY, e so pra caixa WAHA (QR) — a caixa oficial (Cloud) usa lionchat_inboxes_whatsapp_history_status. Pausar, retomar e cancelar NAO existem no MCP: sao do painel de suporte.",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (WhatsApp por QR)"
+      }
+    ],
+    "returns": "situacao e progresso da importacao (status, contadores de conversas/mensagens/contatos, erro)",
+    "common_use_cases": [
+      "Cliente pergunta por que a importacao de historico parou ou sumiu",
+      "Acompanhar a migracao de um cliente novo (quantas conversas ja entraram)"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_waha_status",
+      "lionchat_inboxes_whatsapp_history_status"
+    ]
+  },
+  {
     "id": "lionchat_inboxes_failed_messages_summary",
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/failed_messages/summary",
