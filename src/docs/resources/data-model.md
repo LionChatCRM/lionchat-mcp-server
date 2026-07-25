@@ -408,6 +408,22 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_ultimo_pagamento` | text | Valor do último pagamento |
 | `eclinica_ultimo_pagamento_data` | date | Data do último pagamento/baixa (novo 2026-07-06) |
 | `eclinica_ultimo_pagamento_descricao` | text | Descrição da baixa (ex: CONSULTA INICIAL) |
+| `eclinica_laboratorio_data_prevista` | date | Previsão de entrega da medicação (novo 2026-07-23) |
+| `eclinica_laboratorio_data_moldagem` | date | Data do pedido da medicação |
+| `eclinica_laboratorio_data_entrega` | date | Data de entrega da medicação |
+| `eclinica_laboratorio_situacao` | text | Situação do pedido no laboratório |
+| `eclinica_ultima_cobranca_valor` | text | Valor da última cobrança/carnê gerado |
+| `eclinica_ultima_cobranca_vencimento` | date | Vencimento da última cobrança |
+| `eclinica_ultima_cobranca_descricao` | text | Descrição da última cobrança |
+
+**Lembretes automáticos (Integrações > e-Clínica > Lembretes).** Cada linha tem um **tipo de
+evento** que decide de qual data a contagem parte: `agendamento` (data da consulta, padrão),
+`controle_laboratorio_novo` (previsão de entrega da medicação) e `cliente_inclusao_pagamento`
+(vencimento da cobrança). Desde 2026-07-25 cada linha exige também uma **hora do disparo** —
+`HH:MM` fixo ou fórmula com variável de conta/contato (ex.: horário por unidade, ou a própria hora
+da consulta) — em vez de herdar sempre o horário da consulta. Há ainda um filtro opcional
+("Só quando") por atributo `eclinica_*` do contato. Nada disso é editável pelo MCP: só pelo painel.
+Pra auditar o que foi/será disparado, use `lionchat_eclinica_reminder_history_list`.
 
 ## Relatórios e Métricas
 

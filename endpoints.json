@@ -698,7 +698,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/contacts/filter",
     "title": "Filtrar Contatos",
-    "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422.",
+    "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422. [2026-07-25] Nova chave id (id interno do contato, equal_to/not_equal_to) — serve pra exportar/checar UM contato especifico.",
     "category": "Contatos",
     "params": [
       {
@@ -1426,7 +1426,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/conversations/filter",
     "title": "Filtrar Conversas",
-    "description": "Filtra conversas com condicoes avancadas (payload de condicoes, mesmas da tela). Ordenacao fixa last_activity_at DESC, 25/pagina.\n\nCHAVES FILTRAVEIS (attribute_key -> operadores): status, chat_type, priority (equal_to/not_equal_to); assignee_id, inbox_id, team_id, campaign_id, captain_assistant_id, labels (equal_to/not_equal_to/is_present/is_not_present); display_id (equal_to/not_equal_to/contains/does_not_contain); created_at, last_activity_at (is_greater_than/is_less_than/days_before — valor de data); browser_language, conversation_language, referer, mail_subject; card_funnel_stage (conversa POR CARD do Kanban — valor 'funnel:<id>' ou 'stage:<id>:<chave_etapa>'); QUALQUER outra chave = atributo personalizado (use custom_attribute_type na condicao: 'conversation_attribute' ou 'contact_attribute').\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422 'Operador invalido' (ex: labels NAO aceita 'includes' — use equal_to).",
+    "description": "Filtra conversas com condicoes avancadas (payload de condicoes, mesmas da tela). Ordenacao fixa last_activity_at DESC, 25/pagina.\n\nCHAVES FILTRAVEIS (attribute_key -> operadores): status, chat_type, priority (equal_to/not_equal_to); assignee_id, inbox_id, team_id, campaign_id, captain_assistant_id, labels (equal_to/not_equal_to/is_present/is_not_present); display_id (equal_to/not_equal_to/contains/does_not_contain); created_at, last_activity_at (is_greater_than/is_less_than/days_before — valor de data); browser_language, conversation_language, referer, mail_subject; card_funnel_stage (conversa POR CARD do Kanban — valor 'funnel:<id>' ou 'stage:<id>:<chave_etapa>'); QUALQUER outra chave = atributo personalizado (use custom_attribute_type na condicao: 'conversation_attribute' ou 'contact_attribute').\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422 'Operador invalido' (ex: labels NAO aceita 'includes' — use equal_to). [2026-07-25] O operador contains em display_id agora funciona de verdade (busca por trecho do numero da conversa; antes dava erro de banco).",
     "category": "Conversas",
     "params": [
       {
@@ -2252,7 +2252,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/{id}/retry",
     "title": "Reenviar Mensagem",
-    "description": "[POST] Reenvia uma mensagem que falhou. Obrigatorios: conversation_id, id. [2026-07-24] Motor unico de reenvio: limpeza cirurgica de content_attributes (preserva vinculos de flow/automacao/comentario IG) + trava anti-duplicata por mensagem. Pra reenviar TODAS as falhadas de uma caixa de uma vez, use lionchat_inboxes_failed_messages_bulk_retry.",
+    "description": "[POST] Reenvia uma mensagem que falhou. Obrigatorios: conversation_id, id. [2026-07-24] Motor unico de reenvio: limpeza cirurgica de content_attributes (preserva vinculos de flow/automacao/comentario IG) + trava anti-duplicata por mensagem. Pra reenviar TODAS as falhadas de uma caixa de uma vez, use lionchat_inboxes_failed_messages_bulk_retry. [2026-07-25] Mensagem cancelada ou excluida NAO reenvia — a chamada responde 422 com o motivo. Pra cancelar de vez o reenvio, use lionchat_conversations_messages_cancel_retry.",
     "category": "Mensagens",
     "params": [
       {
@@ -2282,6 +2282,40 @@
       "lionchat_conversations_messages_update",
       "lionchat_inboxes_failed_messages_summary",
       "lionchat_inboxes_failed_messages_bulk_retry"
+    ]
+  },
+  {
+    "id": "lionchat_conversations_messages_cancel_retry",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/{id}/cancel_retry",
+    "title": "Cancelar Reenvio de Mensagem Falhada",
+    "description": "[NOVO 2026-07-25] Cancela DE VEZ o reenvio de UMA mensagem que falhou: na conversa ela vira o selo cinza 'Envio cancelado', sai do painel Falhas de envio e fica FORA de TODO reenvio (botao da bolha, reenvio em lote e auto-recuperacao do WAHA). IRREVERSIVEL — sempre confirme com o usuario antes de chamar. Exige mensagem outgoing + status failed + nao-privada (qualquer outra coisa responde 400). Mesma permissao do reenvio (agente com acesso a conversa). Pra cancelar todas as falhadas de uma caixa de uma vez use lionchat_inboxes_failed_messages_bulk_cancel.",
+    "category": "Mensagens",
+    "params": [
+      {
+        "name": "conversation_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "Display ID da conversa"
+      },
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da mensagem falhada"
+      }
+    ],
+    "returns": "mensagem atualizada (retry_cancelled + retry_cancelled_at em content_attributes)",
+    "common_use_cases": [
+      "Desistir de reenviar uma mensagem que falhou",
+      "Limpar uma falha antiga do painel sem mandar nada pro cliente"
+    ],
+    "related_tools": [
+      "lionchat_conversations_messages_create_1",
+      "lionchat_inboxes_failed_messages_bulk_cancel",
+      "lionchat_inboxes_failed_messages_summary"
     ]
   },
   {
@@ -5180,7 +5214,7 @@
     "method": "GET",
     "path": "/api/v2/accounts/{account_id}/summary_reports/agent",
     "title": "Relatorio por Agente",
-    "description": "Relatório por agente — lista métricas (conversas atendidas, tempos médios, CSAT) por cada agente da conta no período. ⚠️ Tempos em SEGUNDOS.",
+    "description": "Relatório por agente — lista métricas (conversas atendidas, tempos médios, CSAT) por cada agente da conta no período. ⚠️ Tempos em SEGUNDOS. [2026-07-24] Aceita inbox_id (opcional) pra ver o desempenho dos agentes DENTRO de uma caixa.",
     "category": "Relatorios",
     "params": [
       {
@@ -5203,6 +5237,13 @@
         "location": "query",
         "required": false,
         "description": "Considerar apenas horario comercial"
+      },
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Opcional (2026-07-24): so as conversas daquela caixa entram no calculo por agente. Exclusivo deste relatorio (os resumos de time/caixa/etiqueta/canal NAO aceitam)."
       }
     ],
     "returns": "Array por agente de { id, name, conversations_count, avg_first_response_time (seg), avg_reply_time (seg), avg_resolution_time (seg), resolved_count, csat_score_average }",
@@ -5822,7 +5863,7 @@
     "method": "GET",
     "path": "/api/v2/accounts/{account_id}/live_reports/conversation_metrics",
     "title": "Metricas em Tempo Real",
-    "description": "Metricas ao vivo de conversas (conversation_metrics). Filtro opcional team_id.",
+    "description": "Metricas ao vivo de conversas (conversation_metrics). Filtro opcional team_id. [2026-07-24] Aceita tambem inbox_id e assignee_id (opcionais) — e o mesmo recorte da tela Visao Geral. Combinaveis com team_id.",
     "category": "Relatorios",
     "params": [
       {
@@ -5831,6 +5872,20 @@
         "location": "query",
         "required": false,
         "description": "Filtrar por time (opcional)"
+      },
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Opcional (2026-07-24): recorta as metricas por UMA caixa de entrada."
+      },
+      {
+        "name": "assignee_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Opcional (2026-07-24): recorta as metricas por UM atendente responsavel."
       }
     ],
     "returns": "{ open, unattended, unassigned, pending }",
@@ -5850,7 +5905,7 @@
     "method": "GET",
     "path": "/api/v2/accounts/{account_id}/live_reports/grouped_conversation_metrics",
     "title": "Metricas Agrupadas em Tempo Real",
-    "description": "Metricas ao vivo agrupadas. group_by OBRIGATORIO (team_id ou assignee_id).",
+    "description": "Metricas ao vivo agrupadas. group_by OBRIGATORIO (team_id ou assignee_id). [2026-07-24] Aceita tambem inbox_id e assignee_id (opcionais) pra recortar a base antes do agrupamento.",
     "category": "Relatorios",
     "params": [
       {
@@ -5866,6 +5921,20 @@
         "location": "query",
         "required": false,
         "description": "Filtrar por time (opcional)"
+      },
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Opcional (2026-07-24): recorta as metricas por UMA caixa de entrada."
+      },
+      {
+        "name": "assignee_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Opcional (2026-07-24): recorta as metricas por UM atendente responsavel."
       }
     ],
     "returns": "array { open, unattended, unassigned, <group_id> } (sem meta)",
@@ -12885,7 +12954,7 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Tipo do valor: text (padrão), secret (valor secreto — guardado criptografado), number, checkbox, list, link, date. Apelido legado: encrypted_text é aceito e convertido para secret automaticamente. Tipo fora dessa lista retorna 422."
+        "description": "Tipo do valor: text (padrao), date (data — grava normalizado AAAA-MM-DD), time (hora — grava normalizado HH:MM, formato 24h), secret (valor secreto, guardado criptografado), number, checkbox, list, link, currency, percent, datetime. A tela de Variaveis da Conta oferece Texto, Data, Hora e Confidencial (2026-07-25) com seletor nativo; os demais tipos funcionam pela API mas a tela os edita como texto. Apelido legado: encrypted_text e aceito e convertido para secret automaticamente. Tipo fora dessa lista retorna 422."
       },
       {
         "name": "value",
@@ -12913,7 +12982,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/account_variables/{id}",
     "title": "Atualizar Variável",
-    "description": "Atualiza valor de uma variável existente. Atualiza campos do variável de conta existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: value.",
+    "description": "Atualiza valor de uma variável existente. Atualiza campos do variável de conta existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: value. O TIPO (attribute_display_type) e a CHAVE (attribute_key) NAO mudam depois de criados — pra trocar o tipo, apague a variavel e crie de novo.",
     "category": "Variaveis da Conta",
     "params": [
       {
@@ -14978,7 +15047,7 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Opcional. Mapeia variaveis {{N}} do corpo a campos do sistema para auto-preenchimento no envio (NAO vai para a Meta, fica salvo localmente). Chave = posicao da variavel (\"1\", \"2\"...), valor = objeto {source, field, label}. Ex: {\"1\": {\"source\": \"contact\", \"field\": \"name.split.first\", \"label\": \"Primeiro nome\"}}. Variavel sem mapping continua manual (digitada no envio). Fontes/campos: contact/name (Nome completo), contact/name.split.first (Primeiro nome), contact/name.split[1..] (Sobrenome), contact/phone_number, contact/email, conversation/assignee.name (Atendente), conversation/team.name (Equipe), account/name, ou contact/custom_attributes.CHAVE para campo personalizado."
+        "description": "Opcional. Mapeia variaveis {{N}} do corpo a campos do sistema para auto-preenchimento no envio (NAO vai para a Meta, fica salvo localmente). Chave = posicao da variavel (\"1\", \"2\"...), valor = objeto {source, field, label}. Ex: {\"1\": {\"source\": \"contact\", \"field\": \"name.split.first\", \"label\": \"Primeiro nome\"}}. Variavel sem mapping continua manual (digitada no envio). Fontes/campos: contact/name (Nome completo), contact/name.split.first (Primeiro nome), contact/name.split[1..] (Sobrenome), contact/phone_number, contact/email, conversation/assignee.name (Atendente), conversation/team.name (Equipe), account/name, ou contact/custom_attributes.CHAVE para campo personalizado. [NOVO 2026-07-25] Botao de link (URL) com variavel — link rastreavel por cliente: a URL do botao pode terminar com {{1}} (regra da Meta: no maximo UMA variavel, exatamente {{1}}, sempre NO FINAL, com base https:// fixa antes). Nesse caso o componente BUTTONS precisa mandar example: [\"<url com o exemplo no lugar do {{1}}>\"] (sem o example a Meta recusa o template na hora, erro 100) e o variable_mapping recebe a chave especial _button_url = {source, field, label, example, button_index}, onde button_index e a POSICAO do botao dentro do componente BUTTONS. source/field usam a mesma tabela das variaveis de corpo (contact/name, contact/name.split.first, contact/phone_number, contact/email, contact/custom_attributes.CHAVE, conversation/display_id, conversation/assignee.name, account/name), mais 'custom' (texto fixo, vai no field). No envio o valor e codificado automaticamente (espaco vira %20), entao o link nunca quebra. A chave comeca com _ de proposito: ela NAO conta como variavel de corpo."
       }
     ],
     "returns": "template WhatsApp criado (com novo ID)",
@@ -15104,7 +15173,7 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Opcional. Mapeia variaveis {{N}} a campos do sistema para auto-preenchimento no envio (NAO vai para a Meta). Chave = posicao da variavel (\"1\", \"2\"...), valor = objeto {source, field, label}. Ex: {\"1\": {\"source\": \"contact\", \"field\": \"name.split.first\", \"label\": \"Primeiro nome\"}}. Mesmas fontes/campos do endpoint de criacao."
+        "description": "Opcional. Mapeia variaveis {{N}} a campos do sistema para auto-preenchimento no envio (NAO vai para a Meta). Chave = posicao da variavel (\"1\", \"2\"...), valor = objeto {source, field, label}. Ex: {\"1\": {\"source\": \"contact\", \"field\": \"name.split.first\", \"label\": \"Primeiro nome\"}}. Mesmas fontes/campos do endpoint de criacao. [NOVO 2026-07-25] Botao de link (URL) com variavel — link rastreavel por cliente: a URL do botao pode terminar com {{1}} (regra da Meta: no maximo UMA variavel, exatamente {{1}}, sempre NO FINAL, com base https:// fixa antes). Nesse caso o componente BUTTONS precisa mandar example: [\"<url com o exemplo no lugar do {{1}}>\"] (sem o example a Meta recusa o template na hora, erro 100) e o variable_mapping recebe a chave especial _button_url = {source, field, label, example, button_index}, onde button_index e a POSICAO do botao dentro do componente BUTTONS. source/field usam a mesma tabela das variaveis de corpo (contact/name, contact/name.split.first, contact/phone_number, contact/email, contact/custom_attributes.CHAVE, conversation/display_id, conversation/assignee.name, account/name), mais 'custom' (texto fixo, vai no field). No envio o valor e codificado automaticamente (espaco vira %20), entao o link nunca quebra. A chave comeca com _ de proposito: ela NAO conta como variavel de corpo."
       }
     ],
     "returns": "{ success: true }",
@@ -21118,7 +21187,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/campaigns/{id}",
     "title": "Detalhes da Campanha",
-    "description": "Retorna uma campanha pelo display_id (o número visível na UI, não o id interno). Inclui audience, trigger_rules e template_params completos.",
+    "description": "Retorna uma campanha pelo display_id (o número visível na UI, não o id interno). Inclui audience, trigger_rules e template_params completos. [2026-07-25] Campanha inexistente/apagada responde 404 limpo (antes dava erro 500).",
     "category": "Campanhas",
     "params": [
       {
@@ -21231,7 +21300,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/campaigns/{id}/statistics",
     "title": "Estatísticas da Campanha",
-    "description": "Métricas de entrega de campanha one-off: total, enviadas, entregues, lidas, falhas e taxas (%).",
+    "description": "Métricas de entrega de campanha one-off: total, enviadas, entregues, lidas, falhas e taxas (%). [2026-07-25] Campanha inexistente/apagada responde 404 limpo (antes dava erro 500).",
     "category": "Campanhas",
     "params": [
       {
@@ -21254,7 +21323,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/campaigns/estimate_audience",
     "title": "Estimar Audiência da Campanha",
-    "description": "Conta quantos contatos COM TELEFONE atendem aos critérios ANTES de criar a campanha. Usa o MESMO motor do disparo (estimativa = lista real). SEMPRE chame antes de campaigns_create e mostre o número ao usuário.",
+    "description": "Conta quantos contatos COM TELEFONE atendem aos critérios ANTES de criar a campanha. Usa o MESMO motor do disparo (estimativa = lista real). SEMPRE chame antes de campaigns_create e mostre o número ao usuário. [2026-07-25] audience e exclusion aceitam tanto lista quanto texto JSON de uma lista; qualquer outro formato responde 422 com a mensagem do erro (antes dava erro 500).",
     "category": "Campanhas",
     "params": [
       {
@@ -22416,7 +22485,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/failed_messages/summary",
     "title": "Falhas de Envio da Caixa (painel)",
-    "description": "[NOVO 2026-07-24] Painel 'Falhas de envio' da caixa: mensagens FALHADAS das ultimas 24h agrupadas por motivo — billing (falta de saldo/pagamento), transient (erro comum, reenviavel), window_expired (janela de 24h da API oficial fechou), permanent (erro definitivo) — + grupos informativos campaign (mensagem de campanha NUNCA reenvia por aqui) e partial (multi-anexo parcial, anti-duplicata). group_details traz ate 30 itens por grupo com contato, conversa, erro real e horario. Canais elegiveis: WAHA (QR), WhatsApp oficial e Messenger (Telegram/Instagram nao marcam failed). ADMIN-ONLY. Use antes do bulk_retry pra mostrar ao usuario O QUE falhou e quanto e reenviavel (retryable_count = billing + transient).",
+    "description": "[NOVO 2026-07-24] Painel 'Falhas de envio' da caixa: mensagens FALHADAS das ultimas 24h agrupadas por motivo — billing (falta de saldo/pagamento), transient (erro comum, reenviavel), window_expired (janela de 24h da API oficial fechou), permanent (erro definitivo) — + grupos informativos campaign (mensagem de campanha NUNCA reenvia por aqui) e partial (multi-anexo parcial, anti-duplicata). group_details traz ate 30 itens por grupo com contato, conversa, erro real e horario. Canais elegiveis: WAHA (QR), WhatsApp oficial e Messenger (Telegram/Instagram nao marcam failed). ADMIN-ONLY. Use antes do bulk_retry pra mostrar ao usuario O QUE falhou e quanto e reenviavel (retryable_count = billing + transient). [ATUALIZADO 2026-07-25] Novo grupo informativo 'deleted' (Excluidas): mensagem falhada que o usuario APAGOU continua no painel como registro, com o motivo ORIGINAL da falha preservado e sem botao de reenviar/cancelar; vem tambem no campo deleted_count e fica FORA de retryable_count e do total. Mensagem CANCELADA (lionchat_conversations_messages_cancel_retry ou bulk_cancel) some do painel de vez.",
     "category": "Caixas de Entrada",
     "params": [
       {
@@ -22444,7 +22513,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/failed_messages/bulk_retry",
     "title": "Reenvio em Massa das Falhadas",
-    "description": "[NOVO 2026-07-24] Reenvia EM LOTE as mensagens falhadas REENVIAVEIS das ultimas 24h da caixa (grupos billing + transient do summary). Teto 500 por clique; cadencia anti-ban (WAHA 8s entre mensagens, demais 1s); trava de 1 lote por caixa (409 bulk_retry_running se ja houver lote rodando); cada mensagem e re-validada na hora do reenvio (ainda failed, sem source_id, sessao WAHA WORKING, janela 24h da oficial) e tem teto de 3 tentativas no erro comum. Mensagens de CAMPANHA e multi-anexo PARCIAL nunca entram (anti-duplicata). ADMIN-ONLY. Sempre chame o summary antes e mostre as contagens ao usuario; confirme antes de disparar (acao de envio em massa real).",
+    "description": "[NOVO 2026-07-24] Reenvia EM LOTE as mensagens falhadas REENVIAVEIS das ultimas 24h da caixa (grupos billing + transient do summary). Teto 500 por clique; cadencia anti-ban (WAHA 8s entre mensagens, demais 1s); trava de 1 lote por caixa (409 bulk_retry_running se ja houver lote rodando); cada mensagem e re-validada na hora do reenvio (ainda failed, sem source_id, sessao WAHA WORKING, janela 24h da oficial) e tem teto de 3 tentativas no erro comum. Mensagens de CAMPANHA e multi-anexo PARCIAL nunca entram (anti-duplicata). ADMIN-ONLY. Sempre chame o summary antes e mostre as contagens ao usuario; confirme antes de disparar (acao de envio em massa real). [2026-07-25] Mensagem CANCELADA ou EXCLUIDA nunca entra no lote (bloqueio na fonte, vale tambem pro botao de reenvio e pra auto-recuperacao do WAHA). Pra descartar em vez de reenviar use lionchat_inboxes_failed_messages_bulk_cancel.",
     "category": "Caixas de Entrada",
     "params": [
       {
@@ -22470,6 +22539,40 @@
     "related_tools": [
       "lionchat_inboxes_failed_messages_summary",
       "lionchat_conversations_messages_create_1"
+    ]
+  },
+  {
+    "id": "lionchat_inboxes_failed_messages_bulk_cancel",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/failed_messages/bulk_cancel",
+    "title": "Cancelar Falhadas em Lote",
+    "description": "[NOVO 2026-07-25] Cancela EM LOTE o reenvio das mensagens falhadas das ultimas 24h da caixa: elas somem do painel Falhas de envio e ficam fora de todo reenvio (botao, lote e auto-recuperacao do WAHA). Diferente do reenvio, cancelar vale pra TODOS os grupos — billing, transient, window_expired, permanent, campaign e partial — e e exatamente o jeito de limpar do painel o que nunca seria reenviado. Sincrono (sem job): responde {cancelled: N} na hora. Teto de 1000 por chamada. NAO mexe no grupo 'deleted' (Excluidas), que e registro permanente. IRREVERSIVEL e ADMIN-ONLY: chame lionchat_inboxes_failed_messages_summary antes, mostre as contagens ao usuario e confirme antes de disparar.",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada"
+      },
+      {
+        "name": "classification",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "Opcional: restringe o cancelamento a UM grupo — 'billing', 'transient', 'window_expired', 'permanent', 'campaign' ou 'partial'. Ausente = cancela TODAS as falhadas da janela de 24h. Valor fora dessa lista responde 422 invalid_classification."
+      }
+    ],
+    "returns": "{cancelled: N} — quantidade de mensagens canceladas",
+    "common_use_cases": [
+      "Limpar o painel de falhas de envio de uma caixa",
+      "Descartar em massa falhas que nunca serao reenviadas (janela fechada, erro definitivo)"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_failed_messages_summary",
+      "lionchat_inboxes_failed_messages_bulk_retry",
+      "lionchat_conversations_messages_cancel_retry"
     ]
   },
   {
@@ -24504,7 +24607,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/eclinica_integrations",
     "title": "Listar Integração e-Clínica",
-    "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). ATENÇÃO: o mapeamento evento→flow NÃO é editável via MCP (somente pelo painel).",
+    "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). ATENÇÃO: o mapeamento evento→flow NÃO é editável via MCP (somente pelo painel). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes NAO sao editaveis via MCP — somente pelo painel (Integracoes > e-Clinica > Lembretes).",
     "category": "Integracoes",
     "params": [],
     "returns": "200 {payload: {eclinica_integrations: [...]}}",
@@ -24521,7 +24624,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}/reminder_history",
     "title": "Histórico dos Lembretes e-Clínica",
-    "description": "Lista os disparos de lembrete agendados da integração e-Clínica (novo 23/07) — responde 'o lembrete do paciente X saiu?'. Cada item traz status (pending aguardando | fired enviado | cancelled | skipped pulado + skip_reason | failed falhou + fail_reason), datas (created_at recebido, fire_at agendado, fired_at disparado, data_consulta), flow_name, contact_name, compromisso e unidade. Somente administrador.",
+    "description": "Lista os disparos de lembrete agendados da integração e-Clínica (novo 23/07) — responde 'o lembrete do paciente X saiu?'. Cada item traz status (pending aguardando | fired enviado | cancelled | skipped pulado + skip_reason | failed falhou + fail_reason), datas (created_at recebido, fire_at agendado, fired_at disparado, data_consulta), flow_name, contact_name, compromisso e unidade. Somente administrador. [2026-07-25] O historico cobre os tres tipos de lembrete: consulta (conta a partir da data da consulta), laboratorio/medicacao (conta a partir da data prevista do laboratorio) e vencimento de cobranca (conta a partir do vencimento). O horario de cada disparo vem da 'Hora do disparo' configurada na linha do lembrete.",
     "category": "Integracoes",
     "params": [
       {

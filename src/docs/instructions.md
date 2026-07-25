@@ -285,7 +285,7 @@ Antes de QUALQUER ação que escreve, modifica, apaga ou envia, pare e avalie se
 
 **Sempre confirme em linguagem natural (resumindo o efeito) antes de executar quando:**
 
-- **(a) A ação é destrutiva/irreversível** — qualquer `*_destroy`, `*_bulk_actions`, apagar contato (cascateia para as conversas dele), mudar status em massa.
+- **(a) A ação é destrutiva/irreversível** — qualquer `*_destroy`, `*_bulk_actions`, apagar contato (cascateia para as conversas dele), mudar status em massa, cancelar reenvio de mensagem falhada (`*_cancel_retry`, `*_bulk_cancel` — a mensagem sai de todo reenvio pra sempre).
 - **(b) Envia mensagem ao cliente final** — `lionchat_conversations_messages_create` com `message_type` outgoing, `*_scheduled_messages_*`, templates WhatsApp, campanhas/disparos.
 - **(c) Altera config** — conta, inbox, funil, automação, IA Agente (`captain_assistants_update`).
 - **(d) O pedido é ambíguo/incompleto** — falta ID, período, canal, destinatário, ou há mais de uma interpretação possível.
@@ -322,6 +322,7 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | **Origem dos leads** (de onde vieram, por plataforma/campanha/conjunto) | `lionchat_lead_origin_reports` | Relatório de leitura; filtros `platform`/`campaign`/`adset`; `won` = cards em Ganho; leads únicos por telefone |
 | **Bloquear/desbloquear** contato | `lionchat_conversations_toggle_block` (`blocked: true|false`) | Gera pílula de atividade e descarta mensagens futuras do contato; NÃO resolve a conversa |
 | **Importar histórico** de caixa WhatsApp Cloud (QR) | `lionchat_inboxes_whatsapp_history_start` / `_status` / `_cancel` | Admin-only + flag `qr_history_import`; só caixa oficial. Acompanhe `state` no `_status` |
+| Ver / limpar **falhas de envio** de uma caixa | `lionchat_inboxes_failed_messages_summary` primeiro; depois `_bulk_retry` (reenviar) ou `_bulk_cancel` (descartar) | Admin-only. Reenvio em massa e cancelamento em massa são ações irreversíveis: mostre as contagens do summary e confirme (seção 7a/7b). Numa mensagem só: `lionchat_conversations_messages_create_1` (reenviar) / `lionchat_conversations_messages_cancel_retry` (cancelar) |
 | **Definir supervisor** de caixa | `lionchat_inbox_members_create` / `_update` com `supervisor_ids[]` | Supervisor vê TUDO da caixa mas fica fora do rodízio (ver abaixo) |
 | Qualquer coisa de Ligação WP (Wavoip) | **NÃO HÁ TOOL** — removidas em 2026-07-16 por decisão do dono | Ligação WP é contratada e configurada **manualmente pelo cliente no painel**. O MCP não conecta, não desconecta, não entrega token de discagem nem muda config. Oriente o usuário a fazer pelo painel (Configurações da caixa → Ligação WP). |
 | Restringir agendas que a IA oferece | `lionchat_captain_assistants_update` (`config.booking_event_type_ids: [Int]`) | binding de agenda por cenário NÃO é settable via API |
