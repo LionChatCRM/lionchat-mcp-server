@@ -45,21 +45,25 @@ Quando o usuário disser "o relatório está errado / não bate", quase sempre �
    conta, inclusive conversa de caixa apagada, e não checa permissão; o `meta` exclui caixa apagada,
    exige contato vivo e respeita as caixas que o usuário enxerga. Podem divergir com razão.
 
-### Corrigido em 2026-07-25 (validação contra o banco de produção)
+### Cinco números que estavam ERRADOS — corrigidos na atualização de 26/07/2026
 
-Se o cliente comparar com um número antigo, estes três **aumentaram** porque estavam subestimados:
+Achados numa validação de cada resposta contra o banco de produção. **A correção é do sistema, não
+do conector: se a instalação do cliente ainda não recebeu essa atualização, o comportamento ANTIGO
+continua valendo.** A coluna "antes" serve pra você reconhecer e avisar o usuário em vez de repetir
+um número errado com confiança.
 
-- **Relatório por canal** passou a contar conversa **silenciada** (antes ela sumia do canal e do
-  total; a soma dos canais nunca fechava com o total do resumo).
-- **Tempo médio por etiqueta** passou a usar a janela do EVENTO, como os outros relatórios. Antes era
-  calculado sem janela nenhuma e mostrava tempos até **25x menores** que a realidade (1,7 dia no lugar
-  de 43,6). Etiqueta sem dado agora vem **vazia** em vez de "0s".
-- **Receita/ganhos do Kanban** passaram a incluir a venda fechada no período cujo card entrou antes
-  dele (numa conta real faltava metade dos ganhos).
+| Relatório | Antes (errado) | Depois |
+|---|---|---|
+| Por CANAL | Conversa **silenciada** não era contada: sumia do canal e do total, e a soma dos canais nunca fechava com o total do resumo (numa conta: Instagram 46 tendo 58) | Silenciada entra; a soma fecha |
+| Tempo médio por ETIQUETA | Calculado **sem janela de data**: a mesma linha dizia "37 resolvidas" e mostrava a média de 6; pedir mês fechado do passado trazia resolução ocorrida DEPOIS. Sempre pra baixo — 1,7 dia no lugar de 43,6 (**25x**) | Usa a janela do evento, como agente/caixa/time |
+| Etiqueta sem dado | Mostrava "0s" (lia como resolução instantânea) | Vem vazio |
+| Receita/ganhos do KANBAN | Venda fechada no período de card criado ANTES dele não contava (numa conta: metade dos ganhos e R$ 3.750 fora) | Conta tudo |
+| "Pendentes" do relatório ao vivo | **Sempre 0**, por condição impossível | Número real |
+| Cumprimento de prazo (SLA) | "100%" para conta com ZERO prazo aplicado — escondia "o SLA não está rodando" | Vazio = sem dados |
 
-E dois que devolviam número impossível: **"pendentes" do relatório ao vivo** era sempre 0, e o
-**cumprimento de prazo (SLA)** dizia "100%" para conta sem nenhum prazo aplicado — agora vem vazio,
-que significa "sem dados", não "perfeito".
+**Como reconhecer instalação antiga:** soma dos canais menor que o total do resumo; tempo médio por
+etiqueta absurdamente baixo perto do tempo por atendente; "pendentes" zerado no ao vivo tendo
+conversa pendente na lista; "100%" de prazo com nenhum prazo aplicado.
 
 ## Mapeamento dos endpoints `lionchat_reports_*`
 
