@@ -3824,7 +3824,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/kanban_items/reports",
     "title": "Relatório Agregado do Kanban",
-    "description": "RELATORIO AGREGADO do Kanban (funil de vendas) — a resposta e um OBJETO de metricas, nao lista de cards: soma de valores GANHOS no periodo, contagem/valor por etapa, previsao ponderada (forecast), top negocios, cards parados (stale) e metas do funil. Filtra por periodo (from/to), agentes (user_ids[]) e time (team_id). USE ESTA TOOL quando pedirem 'relatorio do funil/vendas/ganhos do mes por agente ou time'. Pra LISTAR os cards em si, use lionchat_kanban_items_filter.",
+    "description": "RELATORIO AGREGADO do Kanban (funil de vendas) — a resposta e um OBJETO de metricas, nao lista de cards: soma de valores GANHOS no periodo, contagem/valor por etapa, previsao ponderada (forecast), top negocios, cards parados (stale) e metas do funil. Filtra por periodo (from/to), agentes (user_ids[]) e time (team_id). USE ESTA TOOL quando pedirem 'relatorio do funil/vendas/ganhos do mes por agente ou time'. Pra LISTAR os cards em si, use lionchat_kanban_items_filter. ATENCAO wonInPeriod/wonValueInPeriod: em instalacao ANTERIOR a atualizacao de 26/07/2026 eles SUBCONTAM — negocio ganho no periodo cujo card foi criado ANTES do periodo fica de fora (numa conta real, metade dos ganhos e R$3.750 sumiam). Ao responder receita nessas contas, avise que o numero pode estar subestimado em funil de ciclo longo.",
     "category": "Itens",
     "params": [
       {
@@ -3839,14 +3839,14 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Inicio do periodo (YYYY-MM-DD ou ISO 8601)"
+        "description": "Inicio do periodo — mande SEMPRE timestamp UNIX (segundos ou milissegundos): funciona em QUALQUER versao. Data por extenso ('2026-07-01') so e aceita a partir da atualizacao de 26/07/2026; antes dela NAO da erro, devolve o relatorio INTEIRO ZERADO (vira 1970 por dentro). Se vier tudo zero e o funil tem cards, era isso — repita com timestamp."
       },
       {
         "name": "to",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Fim do periodo (YYYY-MM-DD ou ISO 8601)"
+        "description": "Fim do periodo — mesma regra do 'from': timestamp UNIX e sempre seguro. A partir da atualizacao de 26/07/2026 aceita tambem data por extenso, e data SEM hora passa a cobrir o dia inteiro (ate 23:59:59)."
       },
       {
         "name": "user_ids",
@@ -22479,6 +22479,32 @@
       "Diagnosticar 'mensagens não estão saindo' (sessão caiu?)"
     ],
     "related_tools": []
+  },
+  {
+    "id": "lionchat_inboxes_waha_import_status",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha/import_status",
+    "title": "Andamento da Importacao de Historico (WhatsApp QR)",
+    "description": "[NOVO 2026-07-25] SO LEITURA: mostra em que pe esta a importacao de historico de uma caixa WhatsApp por QR (WAHA). Responde a pergunta 'a importacao parou?'. Campos: status ('idle' nunca rodou | 'importing' rodando | 'interrupted' caiu e VAI RETOMAR sozinha de onde parou | 'paused' pausada por alguem no painel de suporte, so volta no botao Retomar | 'cancelled' encerrada de vez | 'completed' concluida), started_at, completed_at, total_chats/processed_chats (conversas), total_messages/created_messages/skipped_messages (mensagens; skipped = ja existiam), contacts_created e error. ADMIN-ONLY, e so pra caixa WAHA (QR) — a caixa oficial (Cloud) usa lionchat_inboxes_whatsapp_history_status. Pausar, retomar e cancelar NAO existem no MCP: sao do painel de suporte.",
+    "category": "Caixas de Entrada",
+    "params": [
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "ID da caixa de entrada (WhatsApp por QR)"
+      }
+    ],
+    "returns": "situacao e progresso da importacao (status, contadores de conversas/mensagens/contatos, erro)",
+    "common_use_cases": [
+      "Cliente pergunta por que a importacao de historico parou ou sumiu",
+      "Acompanhar a migracao de um cliente novo (quantas conversas ja entraram)"
+    ],
+    "related_tools": [
+      "lionchat_inboxes_waha_status",
+      "lionchat_inboxes_whatsapp_history_status"
+    ]
   },
   {
     "id": "lionchat_inboxes_failed_messages_summary",

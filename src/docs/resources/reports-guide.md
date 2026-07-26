@@ -32,6 +32,38 @@ Quando o usuário disser "o relatório está errado / não bate", quase sempre �
    Diferenças de ~1% entre relatório e lista filtrada são borda de janela/fuso, não defeito.
 6. **since/until são unix SEGUNDOS** em TODOS os endpoints de relatório. ISO 8601 quebra a janela em
    silêncio (relatório vazio/errado).
+7. **Mande SEMPRE as DUAS pontas do período.** Mandar só `since` (ou só `until`) fazia o filtro de
+   data ser ignorado por inteiro, em silêncio: vinham os números da vida toda rotulados como do
+   período pedido. Corrigido em 2026-07-25 (meia janela virou período aberto de um lado), mas a
+   recomendação continua: mande as duas.
+8. **"Não atendidas" NÃO é "nunca foi respondida".** A regra real é: **o cliente falou por último e
+   ninguém respondeu ainda**. A definição antiga ("sem primeira resposta") foi abandonada de
+   propósito, porque marcava como não atendida a conversa em que o robô/atendente falou primeiro e o
+   cliente nunca respondeu. Numa conta real as duas leituras dão 32 contra 17 — nunca explique esse
+   número como "N pessoas nunca foram respondidas".
+9. **Relatório ao vivo e `conversations_meta` NÃO contam o mesmo universo.** O ao vivo conta tudo da
+   conta, inclusive conversa de caixa apagada, e não checa permissão; o `meta` exclui caixa apagada,
+   exige contato vivo e respeita as caixas que o usuário enxerga. Podem divergir com razão.
+
+### Cinco números que estavam ERRADOS — corrigidos na atualização de 26/07/2026
+
+Achados numa validação de cada resposta contra o banco de produção. **A correção é do sistema, não
+do conector: se a instalação do cliente ainda não recebeu essa atualização, o comportamento ANTIGO
+continua valendo.** A coluna "antes" serve pra você reconhecer e avisar o usuário em vez de repetir
+um número errado com confiança.
+
+| Relatório | Antes (errado) | Depois |
+|---|---|---|
+| Por CANAL | Conversa **silenciada** não era contada: sumia do canal e do total, e a soma dos canais nunca fechava com o total do resumo (numa conta: Instagram 46 tendo 58) | Silenciada entra; a soma fecha |
+| Tempo médio por ETIQUETA | Calculado **sem janela de data**: a mesma linha dizia "37 resolvidas" e mostrava a média de 6; pedir mês fechado do passado trazia resolução ocorrida DEPOIS. Sempre pra baixo — 1,7 dia no lugar de 43,6 (**25x**) | Usa a janela do evento, como agente/caixa/time |
+| Etiqueta sem dado | Mostrava "0s" (lia como resolução instantânea) | Vem vazio |
+| Receita/ganhos do KANBAN | Venda fechada no período de card criado ANTES dele não contava (numa conta: metade dos ganhos e R$ 3.750 fora) | Conta tudo |
+| "Pendentes" do relatório ao vivo | **Sempre 0**, por condição impossível | Número real |
+| Cumprimento de prazo (SLA) | "100%" para conta com ZERO prazo aplicado — escondia "o SLA não está rodando" | Vazio = sem dados |
+
+**Como reconhecer instalação antiga:** soma dos canais menor que o total do resumo; tempo médio por
+etiqueta absurdamente baixo perto do tempo por atendente; "pendentes" zerado no ao vivo tendo
+conversa pendente na lista; "100%" de prazo com nenhum prazo aplicado.
 
 ## Mapeamento dos endpoints `lionchat_reports_*`
 
