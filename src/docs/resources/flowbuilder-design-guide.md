@@ -60,7 +60,7 @@ Todo node tem essa estrutura base:
 }
 ```
 
-**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `conversation_attribute_changed`, `card_attribute_changed`, `contact_attribute_changed`, `date_trigger`, `cron`, `webhook`.
+**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `conversation_attribute_changed`, `card_attribute_changed`, `contact_attribute_changed`, `date_trigger`, `campaign_trigger`, `cron`, `webhook`.
 
 **Trigger `message_sent` (novo 2026-06-11):** par do message_received, mas pra mensagens de SAÍDA — dispara quando atendente, celular (eco do WhatsApp) ou a própria IA/flow envia mensagem (nota privada NÃO dispara). Config: `keywords` (opcional) + `match_type` (`contains`|`exact`). Caso de uso clássico: "quando eu responder do celular, desligar a IA". ATENÇÃO: mensagem da IA também dispara — se a ação for desativar a IA, use keywords que só humanos digitam ou aceite que a primeira resposta da IA aciona o flow. Protegido por anti-loop (profundidade 5) e sessão única por conversa+flow; nunca alimenta `waiting_input`.
 
@@ -95,6 +95,27 @@ Todo node tem essa estrutura base:
   - **`overwrite_mode` (novo 2026-07-18):** `'replace'` (default) = trocar a data cancela o agendamento anterior (correção de data errada não dispara em dobro). `'keep_both'` = acumula (cada data seu próprio disparo) — **SÓ com `attr_source: 'conversation'`** (vetado no contato) e **incompatível com `repeat_yearly`**. Os disparos futuros pendentes ficam visíveis/canceláveis na aba "Agendados" do editor.
   - **Ver/cancelar os agendamentos (novo 2026-07-20):** `flows_scheduled_firings_list` (flow_id) lista os disparos FUTUROS pendentes do Gatilho de Data (quando vai disparar, atributo/valor que gerou, fonte contato/conversa, contato/conversa alvo). `flows_scheduled_firings_cancel` (flow_id, id) cancela um — se já disparou responde 409 `ja_disparado` e nada muda. Só flows com Gatilho de Data; ADMIN + flowbuilder_manage.
 
+**Trigger `campaign_trigger` — Gatilho "Campanha" (novo 2026-07-28):** LIBERA o flow para ser disparado
+por uma **Campanha de Fluxo** (Campanhas > Fluxo). É uma **AUTORIZAÇÃO, não um evento**: sozinho ele
+nunca dispara nada — quem dispara é a campanha, pessoa por pessoa, no ritmo configurado nela.
+
+Item (sem `config`): `{ "key": "campaign_trigger" }`
+
+- **Sem esse item o flow NÃO aparece na lista da campanha** e `campaigns_create` com `flow_id` responde
+  422. É o passo que todo mundo esquece — ao montar um flow para disparo em massa, **ligue este gatilho
+  antes de criar a campanha**.
+- Pode conviver com outros gatilhos no mesmo flow (ex.: um flow que responde a mensagem E também pode
+  ser disparado em campanha). É **isento** da trava de gatilho duplicado.
+- Só flow de conversa (`flow_type: conversation`); flow de grupo funciona, mas o público é de contatos.
+- Em caixa WhatsApp **oficial**, o 1º bloco de mensagem do flow precisa ser um **template aprovado** —
+  a campanha é recusada na criação (422) se não for. Em QR Code não existe essa regra.
+- Como a campanha inicia o flow com o contato **sem ter mandado nada**, escreva o 1º bloco assumindo
+  contato frio (apresente-se, dê contexto) — diferente de um flow de atendimento, que responde a alguém.
+
+Receita completa: `flows_create`/`flows_update` com o item no start → `flows_list` com
+`with_campaign_trigger=true&inbox_id=N` para confirmar que ficou elegível → `campaigns_create` com
+`flow_id`. Acompanhar: `campaigns_flow_report`. Interromper: `campaigns_stop_flow`.
+
 **Trigger `webhook` — Webhook Universal EMBUTIDO (novo 2026-06):** o flow pode ser disparado por um webhook próprio, criado automaticamente. Receita via API:
 1. Criar o flow normalmente (`flows_create`).
 2. `POST /custom_webhook_integrations` com `{ "custom_webhook_integration": { "flow_id": <id do flow> } }` — o sistema cria a integração embutida (idempotente: repetir retorna a mesma; nome automático "Flow: <nome>"; auto-mapeia todos os eventos → este flow) e retorna a URL única do webhook.
@@ -102,7 +123,7 @@ Todo node tem essa estrutura base:
 4. Salvar o flow (`flows_update`) — o save sincroniza a ativação do webhook embutido (remover o item desativa a integração automaticamente).
 Webhooks embutidos NÃO aparecem na listagem de integrações standalone; excluir o flow destrói o webhook; duplicar o flow NÃO copia o gatilho embutido. Rate limit do endpoint público: 60/min por token.
 
-**TRAVA DE GATILHO DUPLICADO (2026-06-16) — leia ANTES de ativar/criar flow ativo:** o sistema BLOQUEIA ter dois flows ATIVOS com o MESMO gatilho na MESMA inbox e mesmo `conversation_mode` (evita o evento disparar dois flows). Colisão = mesmo tipo de gatilho + config cruzando (mesmas keywords/funil/labels/url/etc) + inbox compartilhada + mesmo modo. EXCEÇÕES que podem coexistir: `webhook_received` e `manual_trigger`.
+**TRAVA DE GATILHO DUPLICADO (2026-06-16) — leia ANTES de ativar/criar flow ativo:** o sistema BLOQUEIA ter dois flows ATIVOS com o MESMO gatilho na MESMA inbox e mesmo `conversation_mode` (evita o evento disparar dois flows). Colisão = mesmo tipo de gatilho + config cruzando (mesmas keywords/funil/labels/url/etc) + inbox compartilhada + mesmo modo. EXCEÇÕES que podem coexistir: `webhook_received`, `manual_trigger` e `campaign_trigger` (este último porque não dispara por evento — é só uma autorização para a campanha).
 - Ao **ativar** (`flows_toggle` inativo→ativo) ou **criar já ativo**: qualquer conflito é barrado.
 - Ao **editar** um flow já ativo: só conflito NOVO é barrado (duplicados que já existiam são preservados).
 - A API responde **422** com `{ "error_code": "flow_trigger_conflict", "conflicts": [{ flow_id, flow_name, trigger_type, inbox_id, inbox_name }] }`.
@@ -363,7 +384,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 
 | Key | config esperado | Efeito |
 |---|---|---|
-| `assign_agent` | `{ agent_id }` | Atribui agente humano à conversa. `agent_id` aceita id fixo OU variável Liquid — ver nota abaixo |
+| `assign_agent` | `{ agent_id }` | Atribui agente humano à conversa. `agent_id` aceita id fixo, variável Liquid (ver nota abaixo) OU a string `'nil'` — que REMOVE o responsável da conversa (opção "Nenhum" da UI) |
 | `distribute_agents` | `{ agents: [{ agent_id }], dist_id }` | RODÍZIO (round-robin) de agentes: cada lead vai pro PRÓXIMO da lista na vez (1,2,3,1,2,3). `dist_id` = id fixo da ação (chave do cursor no Redis; gere um único por ação, ex. `"d_ab12cd"`). Ordem da lista = ordem do rodízio; sem porcentagem. DIFERENTE do randomizer mode `distribute_agents` (que é sorteio ponderado) |
 | `assign_team` | `{ team_id }` | Atribui time. `team_id` aceita id fixo OU variável Liquid — ver nota abaixo |
 | `change_status` | `{ status: 'open' \| 'resolved' \| 'pending' \| 'snoozed' }` | Muda status da conversa |
@@ -380,7 +401,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `set_kanban_item_status` | `{ status: 'won' \| 'lost' \| 'active' }` | Marca status do card |
 | `set_won` | `{}` | Atalho pra ganho |
 | `set_lost` | `{ reason? }` | Atalho pra perdido |
-| `assign_agent_card` | `{ agent_id }` | Atribui agente ao card |
+| `assign_agent_card` | `{ agent_id, mode? }` | Responsável do card. `mode`: `'add'` (default — SOMA na lista), `'replace'` (só o escolhido fica; atribui antes de remover os demais) ou `'remove_all'` (tira TODOS os responsáveis; `agent_id` dispensado) |
 | `add_card_note` | `{ content }` | Nota no card |
 | `add_card_checklist` | `{ template_id, funnel_id?, card_source? }` | Aplica um MODELO de checklist ao card (vira um grupo). `template_id` de `kanban_config.checklist_templates`. Um modelo por bloco (repita o bloco pra mais de um) |
 | `add_card_offer` | `{ offer_id, use_custom_value?, custom_value?, funnel_id?, card_source? }` | Adiciona uma OFERTA (produto/serviço) ao card. `offer_id` de `offers_list`. `use_custom_value: true` + `custom_value` grava um valor personalizado na oferta; senão usa o valor cadastrado. O total do card recalcula sozinho (soma das ofertas). Respeita `card_source` (funnel só localiza o card) |

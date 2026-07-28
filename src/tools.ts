@@ -427,7 +427,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-24)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-28)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -487,6 +487,16 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     filters {logic,rules[...]} opcional (attrSource sempre 'contact') }}. trigger_uuid e preenchido
     pelo backend (NAO envie). 29/02 vira 28/02 em ano nao-bissexto; tolerancia 24h; ativar o flow
     agenda quem ja tem a data; pulos aparecem em flows_executions_list.
+    campaign_trigger (NOVO 2026-07-28 — Gatilho 'Campanha'): AUTORIZACAO, nao evento. Sozinho
+    NUNCA dispara — libera o flow pra ser disparado por uma CAMPANHA DE FLUXO (Campanhas >
+    Fluxo), pessoa por pessoa, no ritmo da campanha. Item SEM config: {key:'campaign_trigger'}.
+    SEM ele o flow nao aparece na lista da campanha e campaigns_create com flow_id da 422 —
+    e o passo que todo mundo esquece. Convive com outros gatilhos no mesmo flow e e ISENTO da
+    trava de gatilho duplicado. Caixa WhatsApp OFICIAL: o 1o bloco de mensagem do flow tem que
+    ser template aprovado (senao a campanha e recusada na criacao); QR Code nao tem essa regra.
+    Escreva o 1o bloco assumindo CONTATO FRIO (a pessoa nao mandou nada — a campanha e que
+    iniciou). Receita: flows_update com o item -> flows_list com with_campaign_trigger=true e
+    inbox_id pra confirmar -> campaigns_create com flow_id.
     cron, webhook. NOVO message_sent (2026-06-11): par do message_received pra mensagens de
     SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
     'desativar IA' com esse trigger sem keywords = a propria resposta da IA dispara o flow.
@@ -599,6 +609,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   ATENCAO: items[].config NAO items[].params.
   Keys validas:
     Conversa: assign_agent({agent_id}), assign_team({team_id})
+      — agent_id aceita tambem a string 'nil' (NOVO 2026-07-28), que REMOVE o responsavel da
+      conversa (opcao 'Nenhum' da tela) — deixa a conversa sem atendente em vez de trocar,
       — agent_id/team_id aceitam id fixo OU variavel Liquid (ex: team_id: '{{target_team}}');
       variavel mal escrita e RECUSADA no save; em runtime, se nao resolver pra um numero,
       o erro fica visivel no historico do node (equipe/agente precisa pertencer a conta),
@@ -620,7 +632,13 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Kanban: create_kanban_item({funnel_id, funnel_stage, title?, description?})
         — funnel_id e funnel_stage OBRIGATORIOS; title/description aceitam {{ }},
       move_kanban_stage({funnel_id,funnel_stage}), set_kanban_item_status({status:won|lost|active}),
-      set_won({}), set_lost({reason?}), assign_agent_card({agent_id}), add_card_note({content}),
+      set_won({}), set_lost({reason?}), add_card_note({content}),
+      assign_agent_card({agent_id, mode?}) — RESPONSAVEL DO CARD. mode (NOVO 2026-07-28):
+        'add' (default, SOMA na lista — comportamento historico), 'replace' (so o escolhido
+        fica; atribui ANTES de remover os outros, entao falha de atribuicao nunca deixa o card
+        sem responsavel) ou 'remove_all' (tira TODOS; agent_id dispensado). Automacoes/macros
+        e flows antigos nao mandam mode e seguem no 'add'. Cada remocao grava atividade na
+        linha do tempo do card, igual a remocao manual,
       add_card_checklist({template_id}) — aplica um modelo de checklist ao card (vira grupo),
       add_card_offer({offer_id, use_custom_value?, custom_value?, funnel_id?, card_source?}) — adiciona
         oferta (produto/servico) ao card; offer_id de offers_list; use_custom_value:true + custom_value
