@@ -242,6 +242,24 @@ POST /api/v1/accounts/{account_id}/kanban_items
 Estrutura do audience: `[{type:'Label', id}, {type:'Funnel', id, stages:[], include_won, include_lost}, {type:'ConversationAttribute', key, value}]`.
 QR Code aceita `template_params` com `delay_min/delay_max/variations` (anti-bloqueio) e `bulk_actions`.
 
+### Criar campanha de FLUXO (dispara um flow, não uma mensagem) — novo 28/07/2026
+```
+1. lionchat_flows_list com with_campaign_trigger=true&inbox_id=N → flows ELEGÍVEIS
+   (vazio? o flow precisa do gatilho 'campaign_trigger' no bloco start — ver flowbuilder-design-guide)
+2. Montar audience + lionchat_campaigns_estimate_audience → mostrar contagem ao usuário
+3. CONFIRMAR com o usuário (é envio em massa — seção 7b)
+4. lionchat_campaigns_create com flow_id + template_params {delay_min, delay_max, daily_cap}
+   (SEM message — o texto sai dos blocos do flow)
+5. Acompanhar com lionchat_campaigns_flow_report; parar com lionchat_campaigns_stop_flow
+```
+A campanha inicia o flow para cada pessoa do público, cadenciado (intervalo sorteado entre uma pessoa
+e outra) e com teto de PESSOAS por dia — quem passa do teto entra no dia seguinte, no mesmo horário,
+automaticamente. Vale nas duas famílias de WhatsApp (oficial e QR Code).
+
+Ao explicar o resultado, use `flow_report`: `fired` (disparados), `pending` (na fila) e `skips` (quem
+foi pulado, com o motivo). Motivo mais comum: `sessao_ja_ativa` = a pessoa já estava nesse mesmo flow,
+e pular evita que ela receba tudo em dobro. Quem está sendo atendido pela equipe **não** é pulado.
+
 ### Criar ferramenta da IA (ai_tool)
 ```
 1. lionchat_flow_tools_create (tool_name snake_case + tool_description + flow_data com nó end)

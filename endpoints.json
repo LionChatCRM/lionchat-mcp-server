@@ -9439,7 +9439,22 @@
     "title": "Listar Flows",
     "description": "Lista todos os flows da conta com estatísticas de execução. Lista flows paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de flow). Cada flow retorna também o campo tags (array de strings, novo 22/07) — use para organizar/agrupar flows.",
     "category": "Flows",
-    "params": [],
+    "params": [
+      {
+        "name": "with_campaign_trigger",
+        "type": "boolean",
+        "location": "query",
+        "required": false,
+        "description": "true = devolve SO os flows elegiveis para CAMPANHA DE FLUXO: ativos, com o gatilho 'campaign_trigger' ligado no bloco start e vinculados a alguma inbox. Combine com inbox_id para filtrar pela caixa da campanha. Use SEMPRE antes de criar uma campanha de fluxo — flow sem esse gatilho e recusado com 422."
+      },
+      {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "query",
+        "required": false,
+        "description": "Filtra os flows vinculados a essa caixa de entrada."
+      }
+    ],
     "returns": "meta (contadores globais) + payload (array de flows)",
     "common_use_cases": [
       "Dashboard: contar/exibir flows",
@@ -21097,7 +21112,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/campaigns",
     "title": "Criar Campanha",
-    "description": "Cria campanha. O TIPO vem da inbox: WhatsApp oficial (Cloud, exige template em template_params), WhatsApp QR Code/WAHA (texto livre + variações anti-bloqueio), SMS/Twilio, ou Website (ongoing — popup de chat por URL/tempo). One-off exige audience. ENVIO EM MASSA: SEMPRE rode estimate_audience com o MESMO audience+audience_mode antes e CONFIRME com o usuário. 422 se inbox incompatível, audience vazio (one-off) ou ConversationAttribute sem key/value. COMPORTAMENTO NOVO 23/07: as ações pós-envio da campanha (tag/atributo/prioridade/atendente) aplicam SÓ quando a Meta confirma a ENTREGA (delivered/read), nunca no aceite — mensagem que falha ou é barrada por spam NÃO recebe as ações (corrige exclusão furada no disparo seguinte). Efeito visível: a tag/atributo pode levar de segundos a minutos pra aparecer após o disparo.",
+    "description": "Cria campanha. O TIPO vem da inbox: WhatsApp oficial (Cloud, exige template em template_params), WhatsApp QR Code/WAHA (texto livre + variações anti-bloqueio), SMS/Twilio, ou Website (ongoing — popup de chat por URL/tempo). One-off exige audience. ENVIO EM MASSA: SEMPRE rode estimate_audience com o MESMO audience+audience_mode antes e CONFIRME com o usuário. 422 se inbox incompatível, audience vazio (one-off) ou ConversationAttribute sem key/value. COMPORTAMENTO NOVO 23/07: as ações pós-envio da campanha (tag/atributo/prioridade/atendente) aplicam SÓ quando a Meta confirma a ENTREGA (delivered/read), nunca no aceite — mensagem que falha ou é barrada por spam NÃO recebe as ações (corrige exclusão furada no disparo seguinte). Efeito visível: a tag/atributo pode levar de segundos a minutos pra aparecer após o disparo. CAMPANHA DE FLUXO (NOVO 28/07/2026): passando `flow_id` a campanha dispara um FLUXO do FlowBuilder para cada pessoa do publico, cadenciado, em vez de mandar uma mensagem — vale nas duas familias de WhatsApp (oficial e QR Code). Nesse modo `message` e ignorado e o ritmo vai em template_params (delay_min/delay_max/daily_cap). Acompanhe com lionchat_campaigns_flow_report e interrompa com lionchat_campaigns_stop_flow.",
     "category": "Campanhas",
     "params": [
       {
@@ -21111,8 +21126,8 @@
         "name": "message",
         "type": "string",
         "location": "body",
-        "required": true,
-        "description": "Mensagem (texto com {{contact.name}} etc; no WhatsApp oficial o conteúdo real vem do template em template_params)"
+        "required": false,
+        "description": "Mensagem (texto com {{contact.name}} etc; no WhatsApp oficial o conteúdo real vem do template em template_params) OBRIGATORIO exceto em CAMPANHA DE FLUXO (quando flow_id vai preenchido) — la o texto sai dos blocos do flow."
       },
       {
         "name": "inbox_id",
@@ -21182,7 +21197,14 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "WhatsApp oficial: { name, namespace, lang_code, parameters }. QR Code/WAHA: { delay_min, delay_max, variations: ['variação 1', ...], bulk_actions: { assignee_id, priority, labels: [] } }"
+        "description": "WhatsApp oficial: { name, namespace, lang_code, parameters }. QR Code/WAHA: { delay_min, delay_max, variations: ['variação 1', ...], bulk_actions: { assignee_id, priority, labels: [] } } CAMPANHA DE FLUXO (flow_id presente): { delay_min, delay_max, daily_cap } — intervalo sorteado em SEGUNDOS entre uma pessoa e outra (padrao 20/40) e teto de PESSOAS por dia (padrao 500 no QR Code; em caixa oficial, sem o campo, herda o limite que a Meta libera). Quem passa do teto do dia entra no dia seguinte no mesmo horario, automaticamente. NAO aceita variations nem bulk_actions (as acoes pos-envio sao blocos do proprio flow)."
+      },
+      {
+        "name": "flow_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "CAMPANHA DE FLUXO (28/07/2026): id do flow que sera disparado para cada pessoa do publico, em vez de mandar uma mensagem. Quando presente, `message` NAO e usado (quem manda texto sao os blocos do flow) e o ritmo vai em template_params (delay_min/delay_max/daily_cap). O flow PRECISA: estar ativo, ser do tipo conversa, ter o gatilho 'campaign_trigger' ligado no bloco start E estar vinculado a MESMA inbox da campanha — senao 422 explicando qual regra falhou. Em caixa WhatsApp OFICIAL o 1o bloco de mensagem do flow tem que ser um template aprovado (senao 422). Use lionchat_flows_list com with_campaign_trigger=true&inbox_id=N para achar os flows elegiveis ANTES de criar."
       }
     ],
     "returns": "{ campaign: {...} } (201)",
@@ -21276,6 +21298,13 @@
         "location": "body",
         "required": false,
         "description": "Ativa/desativa sem apagar"
+      },
+      {
+        "name": "flow_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "CAMPANHA DE FLUXO (28/07/2026): id do flow que sera disparado para cada pessoa do publico, em vez de mandar uma mensagem. Quando presente, `message` NAO e usado (quem manda texto sao os blocos do flow) e o ritmo vai em template_params (delay_min/delay_max/daily_cap). O flow PRECISA: estar ativo, ser do tipo conversa, ter o gatilho 'campaign_trigger' ligado no bloco start E estar vinculado a MESMA inbox da campanha — senao 422 explicando qual regra falhou. Em caixa WhatsApp OFICIAL o 1o bloco de mensagem do flow tem que ser um template aprovado (senao 422). Use lionchat_flows_list com with_campaign_trigger=true&inbox_id=N para achar os flows elegiveis ANTES de criar."
       }
     ],
     "returns": "{ campaign: {...} }",
@@ -21393,6 +21422,92 @@
     ],
     "related_tools": [
       "lionchat_campaigns_list"
+    ]
+  },
+  {
+    "id": "lionchat_campaigns_flow_report",
+    "method": "GET",
+    "path": "/api/v1/accounts/{account_id}/campaigns/{id}/flow_report",
+    "title": "Andamento da Campanha de Fluxo",
+    "description": "Andamento da agenda de uma CAMPANHA DE FLUXO (campanha criada com flow_id). Retorna scheduled (total agendado), fired (ja disparados), pending (ainda na fila), skipped (pulados), cancelled, failed, skips (quebra por MOTIVO do pulo) e ends_at (previsao de termino). Motivos possiveis em skips[].reason: sessao_ja_ativa (a pessoa ja estava nesse mesmo flow — evita receber em dobro), contato_sem_telefone, template_necessario (caixa oficial exige template aprovado no 1o bloco), caixa_desvinculada, gatilho_removido, flow_inativo, flow_removido, conversa_falhou, sessao_duplicada, erro_interno. Quando a campanha termina os numeros ficam CONGELADOS (a agenda e limpa em 30 dias). 422 se a campanha nao for de fluxo.",
+    "category": "Campanhas",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "display_id da campanha (o mesmo id que campaigns_list devolve)"
+      }
+    ],
+    "returns": "{ scheduled, fired, pending, skipped, cancelled, failed, skips: [{reason, count}], ends_at }",
+    "common_use_cases": [
+      "Responder 'como esta o disparo do fluxo X?'",
+      "Explicar por que algumas pessoas nao receberam (quebra por motivo)",
+      "Conferir a previsao de termino antes de decidir parar ou remarcar"
+    ],
+    "related_tools": [
+      "lionchat_campaigns_stop_flow",
+      "lionchat_campaigns_reschedule_flow"
+    ]
+  },
+  {
+    "id": "lionchat_campaigns_stop_flow",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/campaigns/{id}/stop_flow",
+    "title": "Parar Campanha de Fluxo",
+    "description": "Cancela quem AINDA NAO foi disparado numa CAMPANHA DE FLUXO. NAO apaga a campanha: quem ja recebeu, as conversas criadas, o card e os numeros do relatorio ficam INTACTOS — so a fila e esvaziada. Nao tem desfazer: pra retomar seria preciso criar a campanha de novo. SEMPRE confirme com o usuario antes de chamar, dizendo quantas pessoas ficarao de fora (pegue o numero em lionchat_campaigns_flow_report -> pending). 422 se nao houver ninguem na fila ou se a campanha nao for de fluxo.",
+    "category": "Campanhas",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "display_id da campanha"
+      }
+    ],
+    "returns": "{ stopped: N } — quantas pessoas ficaram de fora",
+    "common_use_cases": [
+      "'Para o disparo do fluxo agora' sem perder o historico",
+      "Interromper campanha que comecou com o publico errado"
+    ],
+    "related_tools": [
+      "lionchat_campaigns_flow_report",
+      "lionchat_campaigns_reschedule_flow"
+    ]
+  },
+  {
+    "id": "lionchat_campaigns_reschedule_flow",
+    "method": "POST",
+    "path": "/api/v1/accounts/{account_id}/campaigns/{id}/reschedule_flow",
+    "title": "Remarcar Campanha de Fluxo",
+    "description": "Empurra quem ainda esta na fila de uma CAMPANHA DE FLUXO para outro horario, PRESERVANDO o espacamento entre as pessoas (todas andam o mesmo tanto — o ritmo configurado nao muda). Alternativa NAO destrutiva ao stop_flow: use quando o problema e a HORA, nao o publico. 422 se nao houver ninguem na fila, se a data for invalida/no passado ou se a campanha nao for de fluxo.",
+    "category": "Campanhas",
+    "params": [
+      {
+        "name": "id",
+        "type": "integer",
+        "location": "path",
+        "required": true,
+        "description": "display_id da campanha"
+      },
+      {
+        "name": "scheduled_at",
+        "type": "string",
+        "location": "body",
+        "required": true,
+        "description": "Novo horario de inicio do que sobrou, ISO 8601 COM fuso (ex: '2026-07-30T09:00:00-03:00'). Precisa ser FUTURO. Sem o fuso a hora e lida no fuso do servidor e o disparo sai na hora errada."
+      }
+    ],
+    "returns": "{ starts_at, remaining } — novo inicio e quantas pessoas continuam na fila",
+    "common_use_cases": [
+      "'Adia o resto do disparo pra amanha de manha'",
+      "Tirar o disparo de um horario ruim sem perder ninguem"
+    ],
+    "related_tools": [
+      "lionchat_campaigns_flow_report",
+      "lionchat_campaigns_stop_flow"
     ]
   },
   {
