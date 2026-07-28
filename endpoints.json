@@ -4222,7 +4222,14 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Instrucao IA para redigir o follow-up"
+        "description": "Instrucao IA para redigir o follow-up (LEGADO: vale como 1 etapa unica; so e usado quando follow_up_steps esta vazio)"
+      },
+      {
+        "name": "config.follow_up_steps",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Cadencia de follow-up: ate 3 etapas [{after_minutes, prompt}]. E ESTE o campo que a tela mostra em 'Instrucoes para a IA neste follow-up' e o que manda de verdade — tem precedencia sobre follow_up_time/follow_up_prompt. Cada after_minutes >= 5 (conta a partir da mensagem anterior) e a soma nao passa de 1440 min (24h). Ex.: [{\"after_minutes\":30,\"prompt\":\"Pergunte se ainda tem interesse\"}]. Aceita array ou string JSON."
       },
       {
         "name": "config.disabled_tools",
@@ -4440,7 +4447,14 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Instrucao IA para redigir o follow-up"
+        "description": "Instrucao IA para redigir o follow-up (LEGADO: vale como 1 etapa unica; so e usado quando follow_up_steps esta vazio)"
+      },
+      {
+        "name": "config.follow_up_steps",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "Cadencia de follow-up: ate 3 etapas [{after_minutes, prompt}]. E ESTE o campo que a tela mostra em 'Instrucoes para a IA neste follow-up' e o que manda de verdade — tem precedencia sobre follow_up_time/follow_up_prompt. Cada after_minutes >= 5 (conta a partir da mensagem anterior) e a soma nao passa de 1440 min (24h). Ex.: [{\"after_minutes\":30,\"prompt\":\"Pergunte se ainda tem interesse\"}]. Aceita array ou string JSON."
       },
       {
         "name": "config.disabled_tools",
