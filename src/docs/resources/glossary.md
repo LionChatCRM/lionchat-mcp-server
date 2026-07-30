@@ -214,7 +214,10 @@ os de `user_ids` viram membros comuns. A resposta traz `is_supervisor` (boolean)
 - `config.feature_memory`: gera notas no contato ao resolver conversas
 - `config.feature_faq`: gera FAQs sugeridas ao resolver conversas
 - `config.feature_follow_up` + `config.follow_up_steps`: follow-up automático em cadência de até
-  3 etapas (cada ≥5 min, soma ≤24h) quando o cliente some — motor dedicado só-leitura
+  3 etapas (cada ≥5 min, **soma ≤1380 min = 23h**, não 24h) quando o cliente some — motor dedicado
+  só-leitura. O teto é 1380 porque a janela de 24h do WhatsApp conta da **mensagem do cliente**, não do
+  primeiro follow-up; somar 1440 é recusado com 422 (e no campo legado `follow_up_time` a mensagem de
+  erro ainda diz "1440" por engano — o teto aplicado é 1380)
 - `config.follow_up_skip_conditions`: array (até 3, lógica OU) de condições pra NÃO fazer follow-up.
   Tipos: `label`, `contact_attr`/`conversation_attr`, e `time_window` (horário de silêncio: `start`/`end`
   horas 0-23, janela circular — no período não envia follow-up, mas a IA segue respondendo o cliente)
@@ -223,8 +226,12 @@ os de `user_ids` viram membros comuns. A resposta traz `is_supervisor` (boolean)
   com 422 "step 1 must be at least 5 minutes"). `feature_pause_on_human_reply`,
   `feature_follow_up` e demais booleans de config aceitam update direto via
   `captain_assistants_update` (merge parcial de config).
-- `config.feature_pause_on_human_reply`: bool — a IA se desliga sozinha na conversa quando um humano
-  assume (atendente responde pelo painel OU mensagem do celular); nota privada/automação/campanha não contam
+- `config.feature_pause_on_human_reply`: bool (nasce desligado) — a IA se desliga sozinha na conversa
+  quando um humano assume (atendente responde pelo painel OU mensagem do celular); nota
+  privada/automação/campanha não contam. **Mensagem agendada depende de quem agendou (2026-07-29):**
+  agendada **pela IA** não desliga (o disparo assina como o assistente); agendada **por um atendente**
+  conta como atendente ao vivo e **DESLIGA** a IA da conversa — na prática, programar uma mensagem em
+  nome do atendente numa conversa com IA ativa tira a IA dali quando ela for enviada
 - `config.model`: modelo OpenAI usado (gpt-4o, gpt-4o-mini)
 - `config.temperature`: 0.0-1.0
 - `config.instructions`: prompt sistema (Liquid template, até 20.000 chars)
@@ -373,16 +380,23 @@ Campos MUTÁVEIS (atualizáveis livremente por IA/integração): `marital_status
 
 `custom_attribute_definitions` (model=`contact_attribute`) fica reservado a dado de NEGÓCIO genérico que não tem modelo dedicado (ex: "plano contratado", "nicho do cliente").
 
-## Ligações — TRÊS sistemas distintos (não confundir!)
+## Ligações — CINCO sistemas distintos (não confundir!)
 
 | Sistema | O que é | Tools | Canal |
 |---|---|---|---|
-| **Ligação WP (Wavoip)** | Voz pelo WhatsApp em caixa **QR Code/WAHA** — QR conecta um "device" Wavoip; widget de discagem, gravação e transcrição automática | **NENHUMA — sem tool no MCP** (ver nota abaixo) | WhatsApp QR Code |
+| **Ligação WP (Wavoip)** | Voz pelo WhatsApp em caixa **QR Code/WAHA** — QR conecta um "device" Wavoip (pago, por caixa); widget de discagem, gravação e transcrição automática | **NENHUMA — sem tool no MCP** (ver nota abaixo) | WhatsApp QR Code |
+| **LionCalls** | Voz pelo WhatsApp em caixa **QR Code**, mas pelo **motor próprio do LionChat** (credencial global, 1 sessão por caixa; flag `lioncalls_calling`, nasce desligada e é ligada conta a conta) | **NENHUMA — sem tool no MCP** | WhatsApp QR Code |
 | **WhatsApp Calling (Cloud)** | Voz pelo WhatsApp na **API oficial** (enterprise) | `whatsapp_calls_*` + enable/disable_whatsapp_calling | WhatsApp oficial |
-| **VoIP (Zenvia)** | Telefonia COMUM (ramais, saldo, recarga) | `voip_*` | Telefone |
+| **VoIP (Zenvia)** | Telefonia COMUM com softphone no navegador (ramais, saldo, recarga) | `voip_*` | Telefone |
+| **VTCall** | Telefonia por **PABX click-to-call**, config por conta + ramal por atendente; **sem softphone no navegador** — o atendente fala pelo app/ramal do VTCall | `vtcall_settings_*` (show/update/test_connection), `vtcall_ramals_*` (list/create/destroy) | Telefone (PABX do cliente) |
 
-Quando o usuário falar "ligação", descubra o canal: caixa QR Code → Wavoip; caixa oficial →
-whatsapp_calls; telefone fixo/ramal → VoIP Zenvia.
+Quando o usuário falar "ligação", descubra o canal ANTES de responder: caixa QR Code → Wavoip **ou**
+LionCalls (dois motores diferentes para o MESMO tipo de caixa — veja qual está conectado nela); caixa
+oficial → `whatsapp_calls`; telefone/ramal → Zenvia (softphone) ou VTCall (PABX).
+
+**Histórico é compartilhado.** Wavoip, LionCalls, Zenvia e VTCall gravam na MESMA tabela de ligações,
+então `voip_calls_list` (`/voip/calls`) devolve as quatro juntas — mesmo as que não têm tool própria.
+Só o WhatsApp Calling (Cloud) fica fora, em `whatsapp_calls_*`.
 
 **Wavoip — SEM TOOL NO MCP (decisão do dono, 2026-07-16).** As 8 tools `wavoip_*` (status, token,
 calls, connect, disconnect, settings, should_ring, flag_rejected) foram REMOVIDAS dos dois conectores.

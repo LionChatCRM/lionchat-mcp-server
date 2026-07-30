@@ -227,9 +227,15 @@ POST /api/v1/accounts/{account_id}/kanban_items
 ### Relatório de produtividade
 ```
 1. lionchat_reports_summary (visão geral)
-2. lionchat_reports_list (por agente — passa since/until ISO 8601)
+2. lionchat_reports_list (por agente — passa since/until em Unix EM SEGUNDOS)
 3. Comparar avg_first_response_time entre agentes
 ```
+**`since`/`until` dos relatórios só aceitam número Unix em SEGUNDOS** (`1782864000` = 01/07/2026 00:00
+UTC), nunca ISO 8601 nem data por extenso — o formato ISO do resto da plataforma (seção 3) NÃO vale
+aqui. Desde 29/07/2026 a API recusa com HTTP 400 (`invalid_date_params`); antes disso o relatório
+voltava ZERADO com HTTP 200 (a conta 19 tinha 4.396 conversas no período e a resposta vinha zero).
+Converta a data do usuário para segundos antes de chamar. Os exports em CSV (agents, inboxes, labels,
+teams, conversations_summary) exigem as DUAS pontas; nos demais, `since` ou `until` sozinho é válido.
 
 ### Criar campanha de WhatsApp (disparo em massa)
 ```
@@ -292,10 +298,14 @@ e pular evita que ela receba tudo em dobro. Quem está sendo atendido pela equip
 | Limite | Valor |
 |---|---|
 | `per_page` max | 100 |
-| Bulk actions (IDs) max | 100 por chamada |
+| Bulk actions (IDs) max | 300 por chamada (desde 18/05/2026; passou disso = HTTP 422 `bulk_ids_limit_exceeded`) |
 | Rate limit leitura | 1200/min por token |
 | Rate limit escrita | 600/min por token |
 | Loop detection | bloqueia chamada idêntica >10x em 10s |
+
+Exceção ao teto de 300: em ação em massa de **contatos** com `select_all: true` (agir sobre todos os
+contatos do filtro) não há teto de IDs — o servidor refaz o filtro e processa em lotes no fundo. O
+teto de 300 vale para o caminho normal, com a lista de IDs. Kanban usa o mesmo teto no `item_ids`.
 
 ## 7. Confirmar antes de agir — regra de ouro
 

@@ -245,15 +245,23 @@ Captain::Assistant
 ├── config (jsonb) — chaves principais:
 │     model, temperature, instructions (max 20.000 chars), feature_memory, feature_faq,
 │     feature_follow_up (bool), follow_up_steps (array de {after_minutes, prompt} — ATE 3 etapas,
-│       cada uma >= 5 min, soma <= 1440 min/24h; legado follow_up_time+follow_up_prompt = 1 etapa),
+│       cada uma >= 5 min, soma <= 1380 min = 23h (2026-07-29 — NAO 1440: a janela de 24h do WhatsApp
+│       conta da MENSAGEM DO CLIENTE, nao do 1o follow-up, entao 1440 disparava com a janela ja fechada.
+│       Somar 1440 = 422. GOTCHA: no campo legado follow_up_time a mensagem de erro do servidor ainda
+│       diz "must be between 5 and 1440 minutes" por engano — o teto que ele aplica e 1380);
+│       legado follow_up_time+follow_up_prompt = 1 etapa),
 │     follow_up_skip_conditions (array — condicoes pra NAO fazer follow-up, logica OU, ate 3; tipos:
 │       label {operator present|absent, labels[]}; contact_attr/conversation_attr {attribute, operator
 │       equal|not_equal|contains|present|blank|gt|lt, value}; time_window {start, end — horas inteiras
 │       0-23; NAO envia follow-up nesse periodo, janela circular ex 22->7; a IA SEGUE respondendo o
 │       cliente normal — o silencio e so do follow-up}),
-│     feature_pause_on_human_reply (bool — a IA se DESLIGA sozinha na conversa quando um HUMANO
-│       assume: atendente responde pelo painel (ao vivo) OU mensagem enviada do celular. NAO conta:
-│       nota privada, msg da propria IA, automacao, campanha, confirmacao de agendamento, msg agendada),
+│     feature_pause_on_human_reply (bool, nasce DESLIGADO — quando ligado, a IA se DESLIGA sozinha na
+│       conversa quando um HUMANO assume: atendente responde pelo painel (ao vivo) OU mensagem enviada
+│       do celular. NAO conta: nota privada, msg da propria IA, automacao, campanha, confirmacao de
+│       agendamento. MENSAGEM AGENDADA DEPENDE DE QUEM AGENDOU (2026-07-29): agendada pela IA (a tool
+│       carimba source_type='Captain::Assistant' e o disparo assina como o assistente) NAO desliga;
+│       agendada por ATENDENTE assina como User com Current.user setado no disparo = conta como
+│       atendente ao vivo e DESLIGA a IA da conversa),
 │     activation_label (etiqueta que ativa o agente — unica por conta),
 │     min_response_time / max_response_time (delay humanizado, 1-60s),
 │     disabled_tools (array de IDs de tools desativadas pro assistente),

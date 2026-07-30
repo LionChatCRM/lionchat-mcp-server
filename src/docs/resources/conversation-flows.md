@@ -98,17 +98,65 @@ Avaliação:
 
 ### 4. Auto-assignment
 
-Roda após automation rules. Lógica simplificada:
+Roda após automation rules. Existem **DOIS caminhos vivos** (`Inbox#auto_assignment_v2_enabled?`),
+não um moderno e um legado:
 
 ```
-SE inbox.enable_auto_assignment_v2:
-  SE inbox.assignment_policy associada:
-    → Política decide (round-robin, balanced, etc)
-  SENAO:
-    → assignee_id fica null (manual)
+SE inbox.assignment_policy vinculada:
+  → modo POLÍTICA: round-robin ou balanced, prioridade da fila, capacidade
+SENÃO SE inbox.enable_auto_assignment (botão "Distribuição automática" da própria caixa):
+  → modo SIMPLES: round-robin entre os membros da caixa
+SENÃO:
+  → assignee_id fica null (atribuição manual)
 ```
 
-V2 (Assignment Policy) é o motor moderno. V1 (campo `auto_assignment` simples) é legado.
+Os dois caminhos rodam no MESMO serviço (`AutoAssignment::AssignmentService`), usam o MESMO rodízio
+(`AutoAssignment::RoundRobinSelector` — só a política pode trocá-lo pelo modo `balanced`) e passam
+pelo MESMO freio de rajada
+(`AutoAssignment::RateLimiter`). O que muda é de onde vem a configuração: com política vinculada, ela
+manda em tudo (inclusive em "distribuir para agentes offline"); sem política, vale o que está no
+`auto_assignment_config` da própria caixa.
+
+**NUNCA escreva que o modo simples é legado, nem recomende criar Política de Atribuição para quem só
+quer o botão da caixa.** Vincular uma política **esconde a seção inteira de Distribuição Automática da
+tela da caixa** (`CollaboratorsPage.vue`: `showAutoDistribution = !inbox.has_assignment_policy`). O
+cliente perde os controles que estava usando, não entende por que sumiram, e o que ele configurou lá
+passa a ser ignorado (o valor fica gravado e só volta a valer se a política for desvinculada).
+
+Regra prática:
+- Cliente quer só "dividir os leads entre a equipe" → **botão da própria caixa**. Não crie política.
+- Cliente quer regra compartilhada entre várias caixas, modo balanced, prioridade de fila ou limite de
+  capacidade por atendente → aí sim Política de Atribuição.
+
+Quem entra no rodízio: só `inbox_members` com `auto_assignable: true` (supervisor de caixa fica de
+fora) e, se "distribuir para agentes offline" estiver desligado, só quem está online.
+
+**LEIA o valor da conta antes de responder — NUNCA recite um número de cabeça.** Os valores reais
+vêm na resposta da API:
+- `has_assignment_policy` (resposta da caixa) diz QUAL dos dois caminhos vale ali. `true` = política
+  manda; `false` = vale o botão da própria caixa.
+- Com política vinculada, leia `fair_distribution_limit` (quantas conversas por atendente),
+  `fair_distribution_window` (tamanho da janela, **em segundos**) e `assign_offline_agents` na
+  resposta da política. O `auto_assignment_config` da caixa é **IGNORADO** nesse caso — não o cite.
+- Sem política, leia as MESMAS chaves dentro do bloco `auto_assignment_config` da caixa
+  (`fair_distribution_limit`, `fair_distribution_window`, `assign_offline_agents`).
+- Chave ausente/vazia = vale o padrão de fábrica (hoje 10 conversas a cada 600 segundos) — cite isso
+  só como "valor de fábrica, confira o da conta", nunca como se fosse a configuração do cliente.
+
+**EXCEÇÃO SEM FREIO (não dá pra descobrir lendo a resposta):** caixa **sem** política vinculada, com
+`assign_offline_agents` LIGADO e **sem número escolhido** em `fair_distribution_limit`, roda **SEM
+FREIO NENHUM** (`AutoAssignment::RateLimiter#resolve_limit`: `return 0 if inbox.assign_offline_agents?`).
+Racional (decisão do dono 29/07): com offline ligado todo membro está sempre na roleta, então a divisão
+já é igual por construção e o freio só atrasaria a entrega. Não existe campo dizendo "sem freio" — o
+bloco vazio parece "padrão", mas não é. Efeito prático: **nessas caixas, dizer ao cliente que existe um
+teto por atendente é MENTIRA**. Número escolhido pelo cliente sempre vence o toggle: se
+`fair_distribution_limit` tem um número MAIOR QUE ZERO, o freio existe mesmo com offline ligado.
+
+**Zero também é "sem freio":** na caixa (não na política), `fair_distribution_limit: 0` é a saída
+explícita de quem não quer teto nenhum — o freio fica desligado (`RateLimiter#enabled?` exige limite
+positivo). Ou seja, existem DUAS formas de a caixa ficar sem freio: campo vazio com offline ligado, ou
+zero escrito de propósito. Na Política de Atribuição o zero nem é aceito (o cadastro exige maior que
+zero), então política vinculada SEMPRE tem freio.
 
 ### 5. Captain (IA Agente)
 
@@ -138,7 +186,10 @@ handoff consultor→gestor). Pendente só acontece por ação explícita:
 - Ferramenta nativa da IA (deixar conversa pendente)
 
 Comportamentos importantes:
-- Mensagem nova do cliente NÃO reabre conversa pendente (segue pendente na lista)
+- Mensagem nova do CLIENTE REABRE conversa pendente (volta pra Aberta, com pílula de aviso na
+  conversa). Só a do cliente: resposta do ATENDENTE não reabre. Vale desde 30/07/2026 e REVOGA a
+  regra anterior de 20/07 ("pendente não reabre") — decisão do dono depois de a conta 19 acumular
+  258 clientes esperando sem o time ver. NUNCA responda que a conversa fica parada em Pendente
 - Pendente ATRIBUÍDA notifica o responsável (o gestor recebe o aviso)
 
 ### 7. Resolução (status 1)
@@ -186,10 +237,20 @@ Conversation
 
 ### "Conversa não atribuiu ninguém"
 
-1. `inbox.enable_auto_assignment_v2` está true?
-2. `inbox.assignment_policy` está setado?
-3. Tem `InboxMember` ativos pra essa inbox?
-4. Tem `automation_rule` que poderia ter atribuído antes?
+1. A distribuição está ligada em ALGUM dos dois caminhos? `inbox.assignment_policy` vinculada **ou**
+   `inbox.enable_auto_assignment` true. Não existe campo `enable_auto_assignment_v2` — não peça por ele.
+   Política vinculada **não é requisito**: caixa sem política e com o botão ligado distribui normalmente.
+2. Se há política: ela está com `enabled: true`? Política desligada = ninguém é atribuído.
+3. Tem `InboxMember` com `auto_assignable: true`? Supervisor de caixa é membro mas **não entra** no rodízio.
+4. Se "distribuir para agentes offline" está desligado, tem alguém **online** agora? Sem ninguém online
+   a fila fica parada até alguém logar.
+5. O atendente pode estar no **teto da janela** do freio de rajada (o robô só entrega N conversas por
+   atendente/caixa dentro de uma janela deslizante). A vaga volta quando a conversa é resolvida, adiada
+   ou vira pendente — e a fila anda sozinha em até 1 minuto. Antes de culpar o freio, confira os
+   valores reais da conta e a exceção SEM FREIO (seção 4) — pode não haver teto nenhum ali.
+6. Se a caixa tem **uma única** conversa esperando, o freio **nem se aplica** (`should_apply_rate_limit?`
+   exige mais de 1 não atribuída). Nesse caso a causa é outra — não culpe o freio.
+7. Tem `automation_rule` que poderia ter atribuído antes?
 
 ### "IA não respondeu"
 

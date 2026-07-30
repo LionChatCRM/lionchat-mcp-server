@@ -121,8 +121,30 @@ Um card individual dentro de uma etapa.
 | `custom_attributes` | jsonb — campos custom (igual contatos) |
 | `assigned_agents` | jsonb array de agentes responsáveis |
 | `activities` | jsonb array — log de atividades |
-| `checklist` | jsonb array de tarefas dentro do card (item: `text`/`completed`/`position` + `group_id`/`group_name` opcionais para agrupar) |
+| `checklist` | **O que fica guardado:** jsonb array de tarefas do card (item: `text`/`completed`/`position` + `group_id`/`group_name` opcionais para agrupar). **O que a API devolve é OUTRA coisa** — ver o aviso logo abaixo |
 | `timer_started_at`, `timer_duration` | Timer interno do card |
+
+> **ATENÇÃO — na maioria das respostas o `checklist` NÃO é a lista de tarefas, e sim um resumo com
+> os números:** `{ total_count, completed_count, groups: [{ group_id, group_name, total_count,
+> completed_count }] }`. Não existe nenhum `text` ali. Procurar a tarefa nesse campo faz a IA
+> concluir "esse card não tem checklist" num card que tem 12 tarefas.
+>
+> O formato **muda por ferramenta** — não é o mesmo em todas:
+>
+> | Ferramenta | `checklist` | `attachments` | `item_details.notes` / `offers` / `custom_attributes` | `activities` / `funnel` |
+> |---|---|---|---|---|
+> | `kanban_items_list` | **array completo** | `{ total_count }` | completos | ausentes |
+> | `kanban_items_show` | **resumo** | `{ total_count }` | completos | presentes |
+> | `kanban_items_filter` / `_search` | **resumo** | `{ total_count }` | `notes` vira `{ total_count }`; `offers`/`custom_attributes` **removidos** | ausentes |
+> | card embutido em `conversations_show` | **resumo** | — | — | — |
+>
+> - Para ler as tarefas de verdade em QUALQUER caso: **`lionchat_kanban_items_kanban_checklist_list`**
+>   (`GET .../kanban_items/{id}/get_checklist`) → `{ item_id, checklist: [ ...itens completos... ],
+>   checklist_count }`.
+> - No resumo, `groups` só conta o que está agrupado: tarefa **avulsa** (sem `group_id`) entra no
+>   `total_count`/`completed_count` gerais mas **não aparece** em `groups`. Somar os grupos ≠ total.
+> - O card embutido em `conversations_list`/`conversations_filter` **não traz `checklist` nenhum** —
+>   nem resumo. Só `conversations_show` traz o resumo.
 
 ### item_details (detalhes do card)
 
@@ -326,8 +348,18 @@ qualquer agente no card (`assigned_agents`), não só ao responsável da convers
 - `conversations_list` / `conversations_search` retornam SÓ conversas de caixas acessíveis (mais as
   liberadas pela ponte de card atribuído).
 - `conversations_show` / `conversations_messages_*` de conversa inacessível → **404**.
-- Buscar card por ID ou rodar ação em massa (`kanban_bulk_bulk_actions`, export) numa caixa
-  inacessível → **404** (a ação não vaza cards de caixa que o agente não pode ver).
+- Buscar card por ID de caixa inacessível → **404** (não revela sequer que o card existe).
+- Ação em massa de CARD (`kanban_bulk_create` = mover, `kanban_bulk_create_1` = atribuir agente,
+  `kanban_bulk_create_2` = definir prioridade) em que NENHUM dos `item_ids` é acessível → **404**
+  `{ "error": "Nenhum item valido encontrado" }`. Se só PARTE for inacessível, a ação roda nos
+  acessíveis e ignora o resto em silêncio.
+- `kanban_items_export` **não dá 404** — ele filtra: exporta só os cards das caixas que o agente vê
+  (pode voltar vazio). Em nenhum dos casos a resposta vaza card de caixa sem acesso.
+
+> **Não confunda:** apesar do nome, **`kanban_bulk_bulk_actions` NÃO é ação em massa de card do
+> Kanban** — ela bate em `POST /accounts/{id}/bulk_actions`, que é a ação em massa de **conversas e
+> contatos** (`type: Conversation` ou `Contact`). Card do Kanban tem as **três** ferramentas
+> listadas acima, todas com `item_ids: [...]`, e nenhuma delas aceita etiqueta.
 
 **Pro MCP:** se uma conversa/card "some" da listagem ou dá 404 pra um agente que jura que existe,
 provavelmente é acesso por caixa — explique que ele só vê as caixas das quais participa, e que o

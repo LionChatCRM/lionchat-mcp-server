@@ -107,8 +107,16 @@ Item (sem `config`): `{ "key": "campaign_trigger" }`
 - Pode conviver com outros gatilhos no mesmo flow (ex.: um flow que responde a mensagem E também pode
   ser disparado em campanha). É **isento** da trava de gatilho duplicado.
 - Só flow de conversa (`flow_type: conversation`); flow de grupo funciona, mas o público é de contatos.
-- Em caixa WhatsApp **oficial**, o 1º bloco de mensagem do flow precisa ser um **template aprovado** —
-  a campanha é recusada na criação (422) se não for. Em QR Code não existe essa regra.
+- Em caixa WhatsApp **oficial**, o primeiro bloco de mensagem de **CADA CAMINHO** que sai do Início
+  precisa abrir com **template aprovado** — não só o primeiro bloco que o flow encontra. Com
+  randomizador (teste A/B) ou condição logo no começo, **todas** as variações são conferidas: basta
+  UMA sem template pra campanha ser recusada na criação (422). O erro nomeia os blocos culpados pelo
+  rótulo, teto de 5: `must start with an approved WhatsApp template on official inboxes (no template
+  in: <rótulos>)`. O que vale é o **primeiro item** do `messageItems` daquele bloco, e os tipos
+  aceitos são `template` (o que a tela grava) e `whatsapp_template` (legado). Flow sem nenhum bloco
+  de mensagem não tem o que validar. Em QR Code não existe essa regra.
+  (Corrigido em 2026-07-29: até então a checagem aceitava só `whatsapp_template` — nome que a tela
+  NUNCA gravou — e olhava um caminho só; recusava 100% das caixas oficiais.)
 - Como a campanha inicia o flow com o contato **sem ter mandado nada**, escreva o 1º bloco assumindo
   contato frio (apresente-se, dê contexto) — diferente de um flow de atendimento, que responde a alguém.
 
@@ -418,6 +426,10 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 
 **`update_attribute` — campos EXATOS:** `attr_source` (`'contact'`, `'conversation'` ou `'card'`), `attr_key` (nome do atributo), `attr_value` (valor). NÃO existem `entity`/`key`/`value` — esses são ignorados e não salvam nada.
 
+**Coerção por TIPO (2026-07-29):** em `attr_source: 'contact'|'conversation'`, o `attr_value` de atributo personalizado é coagido pelo tipo da definição antes de gravar: número/moeda/porcentagem viram numérico ("1.234,56" → 1234.56; inteiro fica inteiro), checkbox aceita sim/não/true/false e grava BOOLEANO, lista casa caixa-insensível e grava a opção canônica, data aceita DD/MM/AAAA ou ISO, hora aceita "14:30"/"14h30". Valor irreconhecível grava como veio e o passo mostra nota âmbar no histórico. Card NÃO coage (atributo de card não tem definição tipada no backend).
+
+**Campos NATIVOS do contato (2026-07-29):** com `attr_source: 'contact'`, `attr_key` também aceita os paths canônicos `contact.name`, `contact.email`, `contact.cpf`, `contact.cnpj`, `contact.rg`, `contact.passport`, `contact.date_of_birth`, `contact.gender`, `contact.marital_status`, `contact.profession` e `contact.address.{cep,street,number,complement,neighborhood,city,state,country}` — gravam na ficha nativa do contato (não em custom_attributes). Regras: telefone/identifier/etiquetas NÃO são aceitos (mapa fechado — chave fora dele vira atributo personalizado comum); documentos, nascimento, gênero e **e-mail** só preenchem campo VAZIO; nome/profissão/estado civil/endereço sobrescrevem; valor em branco nunca grava; gênero aceita `m|f|o|na` e estado civil `solteiro|casado|uniao_estavel|divorciado|separado|viuvo`; data de nascimento em `dd/mm/aaaa` ou `aaaa-mm-dd`. Recusas aparecem no histórico de execução (passo 'skipped'/'error' com mensagem).
+
 **Somar/subtrair NÃO é operação dedicada** — é filtro Liquid no próprio `attr_value`. O valor é resolvido como template antes de salvar. Exemplos:
 
 ```json
@@ -497,13 +509,21 @@ NÃO existe `.payload`/`.response` (`{{api_response.payload.x}}` resolve vazio).
 
 **Modelo por ação — `aiModel` + `aiModelExplicit` (2026-07-13):** TODO modo aceita escolher o modelo
 LLM no próprio nó, com ou sem assistente, em qualquer tipo de flow. Enviar o par:
-`"aiModel": "gpt-4.1-mini"` (whitelist de `FlowBuilder::RawLlmService::SUPPORTED_MODELS` — ex.
-gpt-4o-mini, gpt-4o, gpt-4.1, gpt-4.1-mini, gpt-4.1-nano, gpt-5*, o1, o3*, o4-mini) JUNTO de
-`"aiModelExplicit": true`. SEM a flag o backend ignora o aiModel nos modos novos (proteção de nós
-antigos que carregam aiModel de default nunca honrado). `aiModel` vazio/ausente = modelo padrão da
-conta. Com assistente selecionado, o override também vale (sobrepõe o modelo que o caminho do
-assistente usaria). Modelo fora da whitelist = ignorado (cai no padrão da conta).
+`"aiModel": "gpt-4.1-mini"` JUNTO de `"aiModelExplicit": true`. SEM a flag o backend ignora o
+aiModel nos modos novos (proteção de nós antigos que carregam aiModel de default nunca honrado).
+`aiModel` vazio/ausente = modelo padrão da conta. Com assistente selecionado, o override também vale
+(sobrepõe o modelo que o caminho do assistente usaria). Modelo fora da whitelist = ignorado (cai no
+padrão da conta).
 Exemplo: `{"aiMode":"sentiment","aiAssistantId":"12","aiModel":"gpt-4.1-mini","aiModelExplicit":true}`.
+
+**A whitelist (`FlowBuilder::RawLlmService::SUPPORTED_MODELS`) é uma lista FECHADA de 16 nomes, SEM
+curinga** — não existe "a família gpt-5 inteira":
+`gpt-4o-mini`, `gpt-4o`, `gpt-4.1-nano`, `gpt-4.1-mini`, `gpt-4.1`, `gpt-5-mini`, `gpt-5`,
+`gpt-5.2`, `gpt-5.4-nano`, `gpt-5.4-mini`, `gpt-5.4`, `gpt-5.5`, `o1`, `o3`, `o3-mini`, `o4-mini`.
+A família **`gpt-5.6` (luna/terra/sol) foi REMOVIDA em 2026-07-29**: ela recusa function tools
+(erro 400 na OpenAI), o que deixava o Agente de IA **mudo em 100% das chamadas** — saiu também daqui
+pra não ser oferecida numa tela e faltar na outra. Também não existem `o1-mini`, `gpt-4.5-preview`,
+`gpt-5.2-pro` nem `gpt-5.5-pro` (a OpenAI recusa).
 
 **OBRIGATÓRIO via API — `aiAssistantId`:** os modos `generate`/`intent`/`sentiment`/`extract`
 EXIGEM um `aiAssistantId` válido (id de um assistente Captain da conta). Sem ele o nó SAI cedo
@@ -581,15 +601,22 @@ O campo raiz é **`waitMode`**: `"duration"` (default), `"date"` ou `"weekday"`.
     "waitMode": "weekday",
     "waitWeekday": 1,
     "waitWeekdayTime": "09:00",
+    "waitWeekdayTimeMode": "fixed",
     "waitTimezone": "America/Sao_Paulo"
   }
 }
 ```
 
-- `waitWeekday`: 0=domingo, 1=segunda... 6=sábado. `waitWeekdayTime` = `"HH:MM"` 24h, **SEMPRE fixo** (este campo NÃO aceita variável — decisão de produto). `waitTimezone` = mesmo campo do modo date.
+- `waitWeekday`: 0=domingo, 1=segunda... 6=sábado. `waitWeekdayTime` = `"HH:MM"` 24h. `waitTimezone` = mesmo campo do modo date.
+- **Variável no Horário (novo 2026-07-29 — reverte a proibição de 06/07):** o campo `waitWeekdayTime` ACEITA variável `{{ }}`, com o mesmo contrato dos campos do modo `date`. O modo mora em **`waitWeekdayTimeMode`**: `"fixed"` (default, e o que vale quando a chave está ausente) ou `"variable"` — espelho exato do `waitTimeMode`.
+  - **Mandar a variável SEM `"waitWeekdayTimeMode": "variable"` não funciona e não avisa:** o motor trata o campo como texto fixo, a chave `{{ }}` nunca é resolvida e o horário calculado não é o pretendido. Não há erro de validação, nem na API nem na tela. Como o MCP escreve o JSON do fluxo direto, sem passar pela tela, esse par é obrigatório.
+  - Exemplo: `{"waitMode":"weekday","waitWeekday":1,"waitWeekdayTime":"{{contact.custom_attribute.horario_retorno}}","waitWeekdayTimeMode":"variable","waitTimezone":"America/Sao_Paulo"}`.
+  - Resolve UMA única vez, na entrada do node (quem já está esperando mantém o valor capturado). Aceita `"14:30"`, `"9:30"`, `"14h30"`, `"14h"`, `"14:30:00"` — ou seja, atributo tipo `time` (Hora 24h). Valor ISO de atributo `date`/`datetime` é rejeitado (mesma regra do campo Horário do modo `date`).
+  - Variável que não resolve pra horário válido → saída `error` (payload `invalid_variable_datetime`, `field: waitWeekdayTime`).
+  - Modo `fixed` NUNCA emite erro: horário em branco cai no default `09:00` — flow antigo intacto.
 - (Os nomes `targetWeekday`/`targetHour` NÃO existem — eram um erro de documentação antiga.)
 
-**Handles que SAEM:** `success` (+ `error`, emitido apenas quando um campo em modo `variable` resolve pra valor inválido no modo `date`).
+**Handles que SAEM:** `success` (+ `error`, emitido quando um campo em modo `variable` resolve pra valor inválido — vale nos DOIS modos, `date` e `weekday`; em modo `fixed` o `error` nunca é emitido).
 
 ### 2.9 `set_variable`
 
@@ -621,12 +648,18 @@ O campo raiz é **`waitMode`**: `"duration"` (default), `"date"` ou `"weekday"`.
     "label": "A/B test mensagem",
     "mode": "branches",
     "branches": [
-      { "id": "A", "label": "Variante A", "weight": 50 },
-      { "id": "B", "label": "Variante B", "weight": 50 }
+      { "id": "A", "label": "Variante A", "percent": 50 },
+      { "id": "B", "label": "Variante B", "percent": 50 }
     ]
   }
 }
 ```
+
+**O campo é `percent`, NÃO `weight` (2026-07-30):** a tela sempre gravou `percent` (`randomizerBranches`
+do FlowNodeConfigModal) e o motor lia só `weight` — nenhum node configurado pela tela funcionava.
+Corrigido em 30/07: o motor lê `percent` e aceita `weight` só como dado antigo. **Escreva sempre
+`percent`** — randomizador criado com `weight` até roda, mas abre com as porcentagens EM BRANCO na
+tela do cliente (a tela lê só `percent`).
 
 **Modo `distribute_agents` (sorteio PONDERADO):** `data.mode: 'distribute_agents'` + `data.agents: [{ agent_id, percent }]` — sorteia UM agente por probabilidade (percentuais somando 100) e atribui automaticamente. Isso é SORTEIO, não rodízio: no curto prazo pode cair no mesmo agente várias vezes seguidas. Pra RODÍZIO EXATO (cada um na vez), use a AÇÃO `distribute_agents` no node `action` (ver seção 2.5) — não este modo.
 
