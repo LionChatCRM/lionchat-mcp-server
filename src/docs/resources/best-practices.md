@@ -77,7 +77,14 @@ Conversa com 200 mensagens? **Não baixe tudo**:
 ## Operações em massa
 
 Pra atribuir labels, mover cards, etc em vários itens:
-- `kanban_bulk_bulk_actions` (cards Kanban)
+
+- `kanban_bulk_bulk_actions` — **NÃO é de cards do Kanban**, apesar do nome. Ela bate em
+  `POST /bulk_actions` e age em **conversas ou contatos** (o `type` é `Conversation` ou `Contact`).
+  Usar ela achando que move card não dá erro visível — só não faz o que você queria.
+- Cards do Kanban têm **três** ferramentas próprias, uma por ação:
+  - `kanban_bulk_create` → `bulk_move_items` (mover cards de etapa)
+  - `kanban_bulk_create_1` → `bulk_assign_agent` (definir o responsável)
+  - `kanban_bulk_create_2` → `bulk_set_priority` (definir a prioridade)
 - `kanban_items_kanban_agents_create` em massa (passar array)
 - `automation_rules_*` (criar regras em vez de fazer manualmente)
 
@@ -127,7 +134,32 @@ O `config` DEVE ser enviado como **objeto** (ex.: `config: { disabled_tools: [..
 ## Limite do prompt e cache OpenAI (2026-05-22)
 
 - `config.instructions` (system prompt do agente) aceita até **20.000 caracteres** (antes 10k). Acima de 15k, o frontend mostra aviso "lost in the middle" — prefira colocar instruções críticas no início ou final.
-- **Cache automático** ativo em todos os 15 modelos suportados (GPT-4.1 Nano até GPT-5.2 Pro, o1, o3, o4-mini). Desconto 50-75% no input cachado, sem configuração. Reuso do prompt do agente em múltiplas conversas maximiza a economia.
+- **Cache automático** ativo em todos os 16 modelos oferecidos na plataforma. Desconto 50-75% no input cachado, sem configuração. Reuso do prompt do agente em múltiplas conversas maximiza a economia.
+
+### Lista real de modelos (`config.model`)
+
+Estes são os 16 valores que o seletor de modelo do painel oferece (`ModelSelector.vue`). Só recomende
+valores desta lista:
+
+| Faixa | Modelos |
+|---|---|
+| Econômicos / rápidos | `gpt-4.1-nano`, `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-5.4-nano`, `gpt-5.4-mini` |
+| Intermediários | `gpt-4o`, `gpt-4.1`, `gpt-5-mini`, `gpt-5.4` |
+| Raciocínio | `o3-mini`, `o4-mini` |
+| Premium | `gpt-5`, `gpt-5.2`, `gpt-5.5`, `o1`, `o3` |
+
+**`GPT-5.2 Pro` não existe.** O valor válido é `gpt-5.2`, sem "Pro".
+
+> **PERIGO — família `gpt-5.6` (`gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`): REMOVIDA em 29/07/2026.**
+> Esses modelos **recusam function tools** em `/v1/chat/completions` (erro 400 real: "Function tools with
+> reasoning_effort are not supported"). Como o AI Agente usa ferramentas em **toda** resposta, 100% das
+> chamadas falhavam e a IA ficava **MUDA** — sem erro na tela, sem resposta. Ficou 2 semanas invisível.
+> **Nunca sugira, nunca grave** um `gpt-5.6` — nem se o cliente pedir "o mais novo/mais forte".
+>
+> O campo `config.model` **não tem lista branca no servidor**: ele é `store_accessor` do `config` e
+> aceita qualquer texto sem validar. Modelo inválido salva com 200 e só quebra na hora de responder.
+> Desde 29/07 o erro vira uma **nota privada em português** na conversa (`llm_request_rejected`) — é o
+> primeiro lugar a olhar quando "a IA parou de responder logo depois de mexerem nas configurações".
 
 ## Follow-up automático multi-etapa (2026-06)
 
@@ -137,21 +169,61 @@ O follow-up do AI Agente agora suporta **cadência de até 3 etapas** via `confi
 { "config": { "feature_follow_up": true, "follow_up_steps": [
   { "after_minutes": 30,  "prompt": "Pergunte gentilmente se ainda tem interesse" },
   { "after_minutes": 240, "prompt": "Ofereça tirar dúvidas" },
-  { "after_minutes": 1140, "prompt": "Última tentativa, despeça-se cordialmente" }
+  { "after_minutes": 1110, "prompt": "Última tentativa, despeça-se cordialmente" }
 ] } }
 ```
 
-Regras: cada etapa ≥ 5 min; soma total ≤ 1440 min (24h); máx 3 etapas. Campos legados
-`follow_up_time` + `follow_up_prompt` continuam funcionando como 1 etapa única.
+Regras: cada etapa ≥ 5 min; **soma total ≤ 1380 min (23h)**; máx 3 etapas. Campos legados
+`follow_up_time` + `follow_up_prompt` continuam funcionando como 1 etapa única (e obedecem ao **mesmo
+teto de 1380**).
+
+> **O teto é 1380, não 1440** (`Captain::Assistant::FOLLOW_UP_MAX_TOTAL_MINUTES`). Motivo: a janela de
+> 24h do WhatsApp conta a partir da **mensagem do cliente**, não do primeiro acompanhamento — 1h de
+> folga evita agendar uma cobrança que a Meta recusaria na hora de enviar. Montar a cadência somando
+> 1440 faz o salvamento ser **recusado**. Pegadinha: a mensagem de erro do campo legado `follow_up_time`
+> ainda diz "must be between 5 and 1440 minutes", mas a validação usa 1380 — não confie no texto do erro.
+
+(O exemplo acima soma exatamente 1380: 30 + 240 + 1110.)
+
 Dispara quando o CLIENTE fica inativo após resposta da IA. O motor de follow-up é dedicado e
 **só-leitura** (não executa ferramentas, não coleta dado — só redige a mensagem de retomada,
 com saída estruturada garantida). `paused=true` no assistente corta os follow-ups também.
 
-**Corrigido em 2026-07-24:** quando a IA é ativada por um **Flow** (ação "Ativar IA") ou por uma
-**automação**, o follow-up agora é agendado no ato da ativação. Antes, nesses dois caminhos a
-cadência simplesmente nunca começava — a conversa ficava com IA ativa e sem nenhum follow-up. Se um
-cliente relatar "a IA nunca faz o follow-up", confira primeiro se a ativação veio por flow/automação
-e se a conta já está na versão de 24/07.
+### "A IA nunca faz o follow-up" — o conserto é de 29/07, NÃO de 24/07
+
+**Não repita que isso foi corrigido em 24/07.** A versão de 24/07 agendava o follow-up **dentro** do
+bloco do "Responder na hora": ou seja, ela só funcionava quando esse interruptor estava **LIGADO** —
+justamente o caso que menos precisa dela. Com "Responder na hora" **desligado**, a IA não fala, o único
+outro gatilho (o hook de mensagem enviada) também não dispara, e a conversa fica **com IA ativa e sem
+nenhum acompanhamento, para sempre**. Aconteceu em **140 conversas da conta 52** — todas criadas
+DEPOIS do suposto conserto de 24/07. A ativação **manual pela tela** nunca esteve coberta em nenhuma
+das duas versões até 29/07.
+
+**"Responder na hora" e acompanhamento são INDEPENDENTES.** São perguntas diferentes:
+- *Responder na hora* (`captain_reply_now` / `proactive`) = "a IA fala agora, sem esperar o cliente?"
+- *Acompanhamento* (`feature_follow_up`) = "a IA cobra depois, se ninguém responder?"
+
+Desligar o primeiro **não** deve desligar o segundo. Nunca oriente o cliente a ligar "Responder na
+hora" para o acompanhamento funcionar.
+
+**Corrigido de verdade em 2026-07-29**, nos três caminhos que ativam a IA, com o agendamento **fora**
+do bloco do "Responder na hora":
+- Flow, ação "Ativar IA" (`FlowBuilder::ActionDelegator`) — só em ativação nova (a conversa não tinha IA)
+- Automação, ação "Atribuir assistente" (`AutomationRules::ActionService`)
+- Ativação manual pela tela da conversa (`ConversationsController`) — armado **antes** da checagem do
+  "Responder na hora"
+
+**Ainda descoberto (não corrigido):** ativar a IA em **lote** (ação em massa de conversas com
+`captain_assistant_id`) **não arma o acompanhamento nem dispara resposta imediata**. Se o cliente
+ativou a IA em massa e reclama que ela não cobra de volta, é isso — e o caminho é reativar pela tela
+ou por automação.
+
+Diagnóstico, nesta ordem, quando relatarem "a IA nunca faz o follow-up":
+1. `config.feature_follow_up` está ligado no assistente? E `paused` está desligado? (`paused=true`
+   corta os follow-ups)
+2. A ativação veio por **lote**? Então nunca foi armado.
+3. Tem `follow_up_skip_conditions` batendo (etiqueta, atributo, janela de silêncio)?
+4. A soma das etapas passa de 1380 min? Nesse caso o assistente nem salvou a cadência.
 
 ## Condições para NÃO fazer follow-up + horário de silêncio (2026-07)
 

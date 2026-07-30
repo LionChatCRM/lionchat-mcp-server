@@ -349,16 +349,26 @@ Quando rate-limited:
 
 ### Bulk actions
 
-`POST /bulk_actions` aceita arrays de IDs. **Máximo 100 IDs por chamada**.
+`POST /bulk_actions` aceita arrays de IDs. **Máximo 300 IDs por chamada** (`MAX_BULK_IDS`, desde
+2026-05-15). Acima disso o servidor recusa com `422` + `code: "bulk_ids_limit_exceeded"` — quebre em
+chamadas de 300.
+
+**Exceção:** contato com `select_all: true` (agir sobre TODOS os contatos do filtro) **não tem teto** —
+o servidor resolve pelo próprio filtro (`query` / `labels_filter`), em lotes no fundo, e não usa `ids`.
 
 ```json
 {
   "type": "Conversation",
-  "ids": [1, 2, 3, ...],   // max 100
-  "action_name": "assign_agent",
-  "action_attributes": { "assignee_id": 6 }
+  "ids": [1, 2, 3, ...],          // max 300
+  "fields": { "assignee_id": 6 }  // conversa: status, assignee_id, team_id, inbox_id, captain_assistant_id
 }
 ```
+
+**⚠️ `action_attributes` NÃO EXISTE.** O servidor não lê esse campo em lugar nenhum (só aparece em
+comentário de TODO no código). Mandar a mudança por ali devolve **200 OK e não faz absolutamente nada** —
+falha silenciosa, sem erro na tela. Conversa se altera por `fields` (+ `labels: {add:[], remove:[]}` e
+`snoozed_until`). Em conversa o `action_name` é **ignorado**; ele só tem efeito em **contato**, onde
+`"delete"` apaga os contatos (sem ele, o que vale é `labels: {add: []}`).
 
 ### Search (overhaul 2026-06-10)
 

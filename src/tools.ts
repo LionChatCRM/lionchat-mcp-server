@@ -427,7 +427,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-28)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-30)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -691,12 +691,24 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         + waitDateMode/waitTimeMode ("fixed"|"variable"). Em "variable" o campo contem {{contact.custom_attribute.X}}
         (Data SO aceita atributo tipo date; Horario SO tipo time). Resolve UMA vez na entrada do node.
         Variavel invalida -> saida "error" (invalid_variable_datetime). Data no passado -> segue por "success".
-  weekday: waitWeekday (0=dom..6=sab) + waitWeekdayTime ("HH:MM", SEMPRE fixo, sem variavel) + waitTimezone
+  weekday: waitWeekday (0=dom..6=sab) + waitWeekdayTime ("HH:MM" 24h) + waitWeekdayTimeMode
+        ("fixed" default | "variable") + waitTimezone. O Horario ACEITA VARIAVEL desde 29/07
+        (antes era sempre fixo por decisao de produto — o dono reverteu). Mesmo contrato do modo
+        date: em "variable" o waitWeekdayTime contem {{...}} (atributo tipo time), resolve UMA vez
+        na entrada do node, aceita "14:30"/"9:30"/"14h30", variavel invalida -> saida "error".
+        waitWeekdayTimeMode e OBRIGATORIO ao usar variavel: sem ele (ou em "fixed") o motor trata o
+        campo como TEXTO FIXO e o calculo recebe a chave literal {{...}} — como o MCP grava o JSON
+        do flow direto, sem passar pela tela, nada preenche esse campo por voce.
   (NAO existem waitUnit:"weekday", targetWeekday nem targetHour — erro de doc antiga)
-  Handles: "success" (+ "error" so com variavel invalida no modo date)
+  Handles: "success" (+ "error" quando a variavel de data/hora nao resolve — vale nos DOIS modos
+    com variavel, date e weekday, erro invalid_variable_datetime; no modo fixo nunca ha "error")
 
 ▸ randomizer
-  data: { label, mode:"branches", branches:[{id,label,weight}] }
+  data: { label, mode:"branches", branches:[{id,label,percent}] }
+    O campo e "percent", NAO "weight" (30/07): a tela sempre gravou percent e o motor lia so weight —
+    todo node configurado pela tela quebrava. Hoje o motor le percent e aceita weight so como dado
+    antigo. Escreva SEMPRE percent: com weight o node roda, mas abre com as porcentagens EM BRANCO
+    na tela do cliente.
   mode "distribute_agents" (SORTEIO ponderado): data.agents:[{agent_id, percent}] (percentuais somando
     100) — sorteia 1 agente por probabilidade e atribui; handle unico "success". E SORTEIO, nao rodizio
     (pode cair no mesmo agente varias vezes seguidas). Pra RODIZIO exato use a ACAO distribute_agents.
@@ -735,15 +747,27 @@ condicao bater, o lead sai do flow NA HORA. Cada item tem "type":
 contact.name, contact.email, contact.phone, contact.custom_attribute.X (SINGULAR — plural resolve vazio)
 CADASTRAL forma curta (canonica): contact.cpf, contact.cnpj, contact.rg, contact.address.street,
   contact.address.number, ... (NAO e custom_attribute!)
-conversation.id (id INTERNO do banco), conversation.display_id (numero do app — use ESTE pra montar
-  link de conversa), conversation.status, conversation.team_id, conversation.agent_id,
-  conversation.labels, conversation.custom_attribute.X
-agent.name, agent.first_name, agent.last_name, agent.id, agent.email (email NOVO 23/07)
+conversation.id — JA E o numero que aparece no app (o motor devolve o display_id). Use ESTE pra
+  montar link de conversa. NAO existe um "id interno do banco" separado nas variaveis.
+  conversation.display_id e so um APELIDO, aceito desde 29/07, que devolve o mesmo numero — antes
+  disso resolvia VAZIO, e todo link de conversa montado por flow saiu quebrado.
+conversation.status, conversation.team_id, conversation.custom_attribute.X
+conversation.label (SINGULAR — etiquetas da conversa em texto separado por virgula).
+  {{conversation.labels}} NAO EXISTE: some do texto sem erro nenhum.
+agent.* = o RESPONSAVEL da conversa: agent.name, agent.first_name, agent.last_name,
+  agent.id (USE ESTE pro id do responsavel — conversation.agent_id resolvia VAZIO ate 29/07, quando
+  virou apelido de agent.id; escreva a forma canonica), agent.email (email NOVO 23/07)
 inbox.id, inbox.name (antes resolviam vazio fora do Enviar Mensagem — corrigido 23/07)
 account.name, account.id (id NOVO 23/07), account.custom_attribute.X (inclui variaveis de conta e
   segredos — NAO existe env.X), {{var_criada_no_set_variable}}, {{ai_intent}}, {{api_response_var}}
 DESDE 23/07 essas variaveis padrao funcionam em TODOS os nodes (Chamada API, Condicoes, IA, Definir
   Variavel) — antes so no Enviar Mensagem. Campo vazio resolve pra string vazia (nunca trava o flow).
+REGRA-MAE: variavel FORA da lista acima SOME do texto, sem erro em lugar nenhum — nao quebra o save,
+  nao quebra a execucao, nao aparece no historico do node. So o buraco no texto denuncia. Por isso
+  escreva exatamente as chaves desta lista e nunca invente plural/sinonimo. Em caixa WhatsApp
+  OFICIAL o preco e maior: parametro de template que chega vazio faz a META RECUSAR o envio
+  (#132000) e o cliente NAO RECEBE NADA — foi assim que um aviso de medicacao deixou de ser
+  entregue (conta 56, 29/07, {{conversation.assignee.name}} resolvendo vazio).
 
 ═══ ANTI-LOOP ═══
 Cadeias automacao<->flow tem profundidade maxima 5 hand-offs (MAX_CHAIN_DEPTH). No 5o a cadeia e

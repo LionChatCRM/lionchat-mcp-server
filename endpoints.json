@@ -1207,7 +1207,7 @@
         "description": "So conversas atualizadas nos ultimos N segundos (ex.: 3600 = ultima hora). Util para polling de atividade recente."
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de conversas)",
+    "returns": "Objeto com envelope DUPLO: { data: { meta: {...}, payload: [conversas] } }. A lista fica em data.payload (NAO em payload direto). O meta traz exatamente: mine_count, assigned_count, unassigned_count, all_count, groups_count. Cada conversa vem com um array extra `kanban_items` (cards do Kanban visiveis pro usuario). Paginacao real: 25/pagina.",
     "common_use_cases": [
       "Dashboard: contar/exibir conversas",
       "Buscar com filtros antes de outra operação",
@@ -1359,7 +1359,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/conversations/{id}",
     "title": "Atualizar Conversa",
-    "description": "Atualiza a conversa. So aceita priority e captain_assistant_id (NAO altera status nem custom_attributes).",
+    "description": "Atualiza a conversa. So aceita priority, captain_assistant_id e captain_reply_now (NAO altera status nem custom_attributes).",
     "category": "Conversas",
     "params": [
       {
@@ -1382,6 +1382,13 @@
         "location": "body",
         "required": false,
         "description": "ID do AI Agente (enviar null para desativar)"
+      },
+      {
+        "name": "captain_reply_now",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Interruptor \"Responder na hora\" ao ATIVAR a IA nesta conversa. Ausente (padrao) ou true = a IA responde em ~2 segundos. false = a IA fica ativa mas so fala quando o cliente escrever. NAO tem nada a ver com o acompanhamento automatico (follow-up): desde 29/07/2026 os dois sao INDEPENDENTES — com o interruptor desligado o follow-up e armado do mesmo jeito. So tem efeito no PATCH que ATIVA a IA (captain_assistant_id passando de vazio para um id)."
       }
     ],
     "returns": "conversa atualizado",
@@ -1956,7 +1963,7 @@
         "description": "Mensagens antes deste ID"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de mensagens)",
+    "returns": "Objeto com `meta` + `payload`. `payload` = array de mensagens, das mais antigas para as mais novas. `meta` NAO tem contadores: traz `labels` (etiquetas da conversa), `additional_attributes`, `contact`, `assignee`, `agent_last_seen_at` e `assignee_last_seen_at`. Sem parametro vem as ULTIMAS 20 mensagens; para paginar use `before` (20 anteriores ao id), `after` (ate 100 posteriores) ou `around` (~50 ao redor de um id).",
     "common_use_cases": [
       "Dashboard: contar/exibir mensagens",
       "Buscar com filtros antes de outra operação",
@@ -3737,7 +3744,7 @@
         "description": "Valor máx"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de itens Kanban)",
+    "returns": "NAO devolve JSON. Devolve um ARQUIVO CSV pra download (text/csv, anexo `kanban_items_<funil>_<data>.csv`), com cabecalho e uma linha por card: id, titulo, descricao, status, prioridade, valor, etapa (nome amigavel), funil, agentes, cliente, email, telefone, criado em, atualizado em, prazo, id da conversa, conversas vinculadas e ofertas. Nao ha `meta` nem `payload` — o corpo e o CSV cru. `funnel_id` e OBRIGATORIO (sem ele volta 400 `{error}`). Filtros opcionais: priorities, value_min, value_max, agent_id, date_start/date_end, scheduled_date_start/scheduled_date_end. So exporta cards das caixas que o usuario pode ver.",
     "common_use_cases": [
       "Dashboard: contar/exibir itens Kanban",
       "Buscar com filtros antes de outra operação",
@@ -4102,7 +4109,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/captain/assistants",
     "title": "Criar Assistente IA",
-    "description": "Cria um assistente de IA. Obrigatorios: name, description. Exige Admin; sujeito ao limite do plano (403 se atingir).\n\nCONFIG (2026-06): config faz MERGE PARCIAL no update. Chaves novas: follow_up_steps (ate 3 etapas [{after_minutes>=5, prompt}], soma<=1440min), disabled_tools, offer_ids, media_asset_ids, booking_event_type_ids, activation_label, min/max_response_time. instructions ate 20.000 chars.",
+    "description": "Cria um assistente de IA. Obrigatorios: name, description. Exige Admin; sujeito ao limite do plano (403 se atingir).\n\nCONFIG (2026-06): config faz MERGE PARCIAL no update. Chaves novas: follow_up_steps (ate 3 etapas [{after_minutes>=5, prompt}], soma<=1380min (23h)), disabled_tools, offer_ids, media_asset_ids, booking_event_type_ids, activation_label, min/max_response_time. instructions ate 20.000 chars.",
     "category": "Assistentes",
     "params": [
       {
@@ -4138,7 +4145,7 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Modelo LLM (gpt-4o-mini, gpt-4o, etc). Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL"
+        "description": "Modelo LLM do assistente. O campo NAO E VALIDADO: qualquer texto e aceito e gravado, e o erro so aparece depois, em producao. NUNCA use a familia gpt-5.6 (gpt-5.6-luna / gpt-5.6-terra / gpt-5.6-sol): ela recusa function tools, e como a IA usa ferramenta em TODA resposta, 100% das chamadas falham e o Agente fica MUDO em silencio (removida da plataforma em 29/07). Valores validos hoje — os mesmos 16 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL."
       },
       {
         "name": "config.instructions",
@@ -4215,7 +4222,7 @@
         "type": "integer",
         "location": "body",
         "required": false,
-        "description": "Tempo em minutos pra disparar follow-up"
+        "description": "Tempo em minutos pra disparar o follow-up (LEGADO — so vale quando config.follow_up_steps esta vazio). Entre 5 e 1380 min (23h). ATENCAO: quando o valor e recusado, a mensagem de erro do servidor ainda diz \"must be between 5 and 1440 minutes\" POR ENGANO — o teto que vale e 1380. Nao fique em tentativa e erro: use 1380."
       },
       {
         "name": "config.follow_up_prompt",
@@ -4229,7 +4236,7 @@
         "type": "array",
         "location": "body",
         "required": false,
-        "description": "Cadencia de follow-up: ate 3 etapas [{after_minutes, prompt}]. E ESTE o campo que a tela mostra em 'Instrucoes para a IA neste follow-up' e o que manda de verdade — tem precedencia sobre follow_up_time/follow_up_prompt. Cada after_minutes >= 5 (conta a partir da mensagem anterior) e a soma nao passa de 1440 min (24h). Ex.: [{\"after_minutes\":30,\"prompt\":\"Pergunte se ainda tem interesse\"}]. Aceita array ou string JSON."
+        "description": "Cadencia de follow-up: ate 3 etapas [{after_minutes, prompt}]. E ESTE o campo que a tela mostra em \"Instrucoes para a IA neste follow-up\" e o que manda de verdade — tem precedencia sobre follow_up_time/follow_up_prompt. Cada after_minutes >= 5 (conta a partir da mensagem anterior) e a SOMA nao passa de 1380 min (23h), NAO 1440. [29/07] O teto e 23h porque a janela de 24h do WhatsApp conta da MENSAGEM DO CLIENTE, e a cadencia so comeca depois da resposta da IA: somar 1440 e salvo pela tela antiga mas o envio cai fora da janela e some. Somar mais de 1380 e RECUSADO no salvamento — nao e defeito. Ex.: [{\"after_minutes\":30,\"prompt\":\"Pergunte se ainda tem interesse\"}]. Aceita array ou string JSON."
       },
       {
         "name": "config.disabled_tools",
@@ -4320,7 +4327,7 @@
     "method": "PATCH",
     "path": "/api/v1/accounts/{account_id}/captain/assistants/{id}",
     "title": "Atualizar Assistente IA",
-    "description": "Atualiza um assistente de IA. Exige Admin. Para pausar use paused:true (top-level).\n\nCONFIG (2026-06): config faz MERGE PARCIAL no update. Chaves novas: follow_up_steps (ate 3 etapas [{after_minutes>=5, prompt}], soma<=1440min), disabled_tools, offer_ids, media_asset_ids, booking_event_type_ids, activation_label, min/max_response_time. instructions ate 20.000 chars.",
+    "description": "Atualiza um assistente de IA. Exige Admin. Para pausar use paused:true (top-level).\n\nCONFIG (2026-06): config faz MERGE PARCIAL no update. Chaves novas: follow_up_steps (ate 3 etapas [{after_minutes>=5, prompt}], soma<=1380min (23h)), disabled_tools, offer_ids, media_asset_ids, booking_event_type_ids, activation_label, min/max_response_time. instructions ate 20.000 chars.",
     "category": "Assistentes",
     "params": [
       {
@@ -4363,7 +4370,7 @@
         "type": "string",
         "location": "body",
         "required": false,
-        "description": "Modelo LLM (gpt-4o-mini, gpt-4o, etc)"
+        "description": "Modelo LLM do assistente. O campo NAO E VALIDADO: qualquer texto e aceito e gravado, e o erro so aparece depois, em producao. NUNCA use a familia gpt-5.6 (gpt-5.6-luna / gpt-5.6-terra / gpt-5.6-sol): ela recusa function tools, e como a IA usa ferramenta em TODA resposta, 100% das chamadas falham e o Agente fica MUDO em silencio (removida da plataforma em 29/07). Valores validos hoje — os mesmos 16 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL."
       },
       {
         "name": "config.instructions",
@@ -4440,7 +4447,7 @@
         "type": "integer",
         "location": "body",
         "required": false,
-        "description": "Tempo em minutos pra disparar follow-up"
+        "description": "Tempo em minutos pra disparar o follow-up (LEGADO — so vale quando config.follow_up_steps esta vazio). Entre 5 e 1380 min (23h). ATENCAO: quando o valor e recusado, a mensagem de erro do servidor ainda diz \"must be between 5 and 1440 minutes\" POR ENGANO — o teto que vale e 1380. Nao fique em tentativa e erro: use 1380."
       },
       {
         "name": "config.follow_up_prompt",
@@ -4454,7 +4461,7 @@
         "type": "array",
         "location": "body",
         "required": false,
-        "description": "Cadencia de follow-up: ate 3 etapas [{after_minutes, prompt}]. E ESTE o campo que a tela mostra em 'Instrucoes para a IA neste follow-up' e o que manda de verdade — tem precedencia sobre follow_up_time/follow_up_prompt. Cada after_minutes >= 5 (conta a partir da mensagem anterior) e a soma nao passa de 1440 min (24h). Ex.: [{\"after_minutes\":30,\"prompt\":\"Pergunte se ainda tem interesse\"}]. Aceita array ou string JSON."
+        "description": "Cadencia de follow-up: ate 3 etapas [{after_minutes, prompt}]. E ESTE o campo que a tela mostra em \"Instrucoes para a IA neste follow-up\" e o que manda de verdade — tem precedencia sobre follow_up_time/follow_up_prompt. Cada after_minutes >= 5 (conta a partir da mensagem anterior) e a SOMA nao passa de 1380 min (23h), NAO 1440. [29/07] O teto e 23h porque a janela de 24h do WhatsApp conta da MENSAGEM DO CLIENTE, e a cadencia so comeca depois da resposta da IA: somar 1440 e salvo pela tela antiga mas o envio cai fora da janela e some. Somar mais de 1380 e RECUSADO no salvamento — nao e defeito. Ex.: [{\"after_minutes\":30,\"prompt\":\"Pergunte se ainda tem interesse\"}]. Aceita array ou string JSON."
       },
       {
         "name": "config.disabled_tools",
@@ -4909,7 +4916,7 @@
         "description": "ID do item"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de cards Kanban)",
+    "returns": "{ item_id, attachments: [ { id, url, filename, content_type, byte_size, created_at } ], attachments_count }. NAO tem meta nem payload — a lista de anexos vem na chave attachments. Sem paginacao: devolve todos os anexos do card.",
     "common_use_cases": [
       "Dashboard: contar/exibir cards Kanban",
       "Buscar com filtros antes de outra operação",
@@ -5069,7 +5076,7 @@
     "description": "Lista automacoes configuradas no Kanban. Lista cards Kanban paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de card Kanban).",
     "category": "Kanban V2",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de cards Kanban)",
+    "returns": "LISTA PURA (array no topo, SEM embrulho meta/payload) — a resposta JA E a lista. E a lista de AUTOMACOES do Kanban (nao de cards). Cada item: id, name, description, active, trigger (objeto), conditions (array), actions (array), account_id, created_at, updated_at. Lista vazia = [].",
     "common_use_cases": [
       "Dashboard: contar/exibir cards Kanban",
       "Buscar com filtros antes de outra operação",
@@ -5228,7 +5235,7 @@
     "method": "GET",
     "path": "/api/v2/accounts/{account_id}/summary_reports/agent",
     "title": "Relatorio por Agente",
-    "description": "Relatório por agente — lista métricas (conversas atendidas, tempos médios, CSAT) por cada agente da conta no período. ⚠️ Tempos em SEGUNDOS. [2026-07-24] Aceita inbox_id (opcional) pra ver o desempenho dos agentes DENTRO de uma caixa.",
+    "description": "Relatorio por agente — uma linha por agente da conta com conversas, resolvidas e tempos medios no periodo. ⚠️ Tempos em SEGUNDOS e podem vir NULOS (sem evento no periodo). NAO traz o nome do agente (cruze o `id` com lionchat_agents_list) e NAO traz nenhuma metrica de satisfacao — para CSAT use lionchat_csat_metrics. [2026-07-24] Aceita inbox_id (opcional) pra ver o desempenho dos agentes DENTRO de uma caixa.",
     "category": "Relatorios",
     "params": [
       {
@@ -5250,7 +5257,7 @@
         "type": "boolean",
         "location": "query",
         "required": false,
-        "description": "Considerar apenas horario comercial"
+        "description": "true = as MEDIAS contam so o expediente — e so o das caixas que TEM horario de atendimento configurado (working_hours_enabled). [29/07] Nenhuma caixa configurada = os tempos voltam NULOS (travessao na tela), NAO zero. Evento gravado ANTES de 29/07 guarda 0 fabricado e puxa a media pra baixo; periodo que atravessa 29/07 mistura os dois e NAO e confiavel. NAO ligue por padrao: sem expediente configurado a resposta vira \"tempo medio de primeira resposta: 0 segundos\"."
       },
       {
         "name": "inbox_id",
@@ -5260,7 +5267,7 @@
         "description": "Opcional (2026-07-24): so as conversas daquela caixa entram no calculo por agente. Exclusivo deste relatorio (os resumos de time/caixa/etiqueta/canal NAO aceitam)."
       }
     ],
-    "returns": "Array por agente de { id, name, conversations_count, avg_first_response_time (seg), avg_reply_time (seg), avg_resolution_time (seg), resolved_count, csat_score_average }",
+    "returns": "Array por agente de { id (user_id), conversations_count, resolved_conversations_count, avg_first_response_time (seg), avg_reply_time (seg), avg_resolution_time (seg) }. NAO existem os campos `name`, `resolved_count` nem `csat_score_average` — pedir satisfacao por aqui devolve vazio e NAO significa que a conta nao tem pesquisa. [29/07] Pode vir uma linha com `id: null` = conversas SEM ATENDENTE; nao e um agente e nao entra em ranking.",
     "common_use_cases": [
       "Ranking de produtividade por agente",
       "Identificar top performers e gargalos",
@@ -5277,7 +5284,7 @@
     "method": "GET",
     "path": "/api/v2/accounts/{account_id}/summary_reports/team",
     "title": "Relatorio por Time",
-    "description": "Resumo de metricas por TIME (period). Aceita business_hours.",
+    "description": "Resumo de metricas por TIME no periodo. Aceita business_hours. ⚠️ Tempos em SEGUNDOS e podem vir NULOS. NAO traz o nome do time (cruze o `id` com lionchat_teams_list) e NAO traz satisfacao — para CSAT use lionchat_csat_metrics.",
     "category": "Relatorios",
     "params": [
       {
@@ -5299,10 +5306,10 @@
         "type": "boolean",
         "location": "query",
         "required": false,
-        "description": "true = medias consideram so o horario de atendimento configurado"
+        "description": "true = as MEDIAS contam so o expediente — e so o das caixas que TEM horario de atendimento configurado (working_hours_enabled). [29/07] Nenhuma caixa configurada = os tempos voltam NULOS (travessao na tela), NAO zero. Evento gravado ANTES de 29/07 guarda 0 fabricado e puxa a media pra baixo; periodo que atravessa 29/07 mistura os dois e NAO e confiavel. NAO ligue por padrao: sem expediente configurado a resposta vira \"tempo medio de primeira resposta: 0 segundos\"."
       }
     ],
-    "returns": "array por time { id, name, conversations_count, avg_resolution_time (seg), avg_first_response_time (seg), avg_reply_time (seg), resolved_count } (sem paginacao/meta)",
+    "returns": "Array por time de { id, conversations_count, resolved_conversations_count, avg_first_response_time (seg), avg_reply_time (seg), avg_resolution_time (seg) } (sem paginacao/meta). NAO existem os campos `name`, `resolved_count` nem `csat_score_average` — pedir satisfacao por aqui devolve vazio e NAO significa que a conta nao tem pesquisa.",
     "common_use_cases": [
       "Dashboard: contar/exibir relatórios",
       "Buscar com filtros antes de outra operação",
@@ -5341,7 +5348,7 @@
         "type": "boolean",
         "location": "query",
         "required": false,
-        "description": "true = medias consideram so o horario de atendimento configurado"
+        "description": "true = as MEDIAS contam so o expediente — e so o das caixas que TEM horario de atendimento configurado (working_hours_enabled). [29/07] Nenhuma caixa configurada = os tempos voltam NULOS (travessao na tela), NAO zero. Evento gravado ANTES de 29/07 guarda 0 fabricado e puxa a media pra baixo; periodo que atravessa 29/07 mistura os dois e NAO e confiavel. NAO ligue por padrao: sem expediente configurado a resposta vira \"tempo medio de primeira resposta: 0 segundos\"."
       }
     ],
     "returns": "array por inbox (mesma estrutura do resumo); sem meta",
@@ -5383,7 +5390,7 @@
         "type": "boolean",
         "location": "query",
         "required": false,
-        "description": "true = medias consideram so o horario de atendimento configurado"
+        "description": "true = as MEDIAS contam so o expediente — e so o das caixas que TEM horario de atendimento configurado (working_hours_enabled). [29/07] Nenhuma caixa configurada = os tempos voltam NULOS (travessao na tela), NAO zero. Evento gravado ANTES de 29/07 guarda 0 fabricado e puxa a media pra baixo; periodo que atravessa 29/07 mistura os dois e NAO e confiavel. NAO ligue por padrao: sem expediente configurado a resposta vira \"tempo medio de primeira resposta: 0 segundos\"."
       }
     ],
     "returns": "array por label; sem meta",
@@ -5403,7 +5410,7 @@
     "method": "GET",
     "path": "/api/v2/accounts/{account_id}/summary_reports/channel",
     "title": "Relatorio por Canal",
-    "description": "Resumo de metricas por CANAL (period). Range max 6 meses. Aceita business_hours.",
+    "description": "Distribuicao de conversas por CANAL no periodo. Range maximo de 6 meses. [29/07] A resposta e um OBJETO indexado pelo tipo de canal (nao um array), e passou a incluir a chave `Channel::None` = conversas de caixa EXCLUIDA (a caixa some, a conversa fica). Ignorar essa chave subconta o total: medido em producao, a conta 60 perdia 76% e a conta 40 perdia 38%. Some TODAS as chaves do objeto ao dar o total.",
     "category": "Relatorios",
     "params": [
       {
@@ -5425,10 +5432,10 @@
         "type": "boolean",
         "location": "query",
         "required": false,
-        "description": "true = medias consideram so o horario de atendimento configurado"
+        "description": "SEM EFEITO neste relatorio — ele so CONTA conversas por status, nao calcula nenhum tempo. Mandar true nao muda nada na resposta."
       }
     ],
-    "returns": "array por canal; sem meta",
+    "returns": "OBJETO { \"<tipo de canal>\": { open, resolved, pending, snoozed, muted, total } }, uma chave por tipo (ex.: \"Channel::Whatsapp\", \"Channel::Waha\", \"Channel::Instagram\") mais \"Channel::None\" = conversas cuja caixa foi excluida. `total` ja soma os 5 status daquele canal, inclusive `muted` (silenciadas). Sem meta e sem paginacao.",
     "common_use_cases": [
       "Dashboard: contar/exibir relatórios",
       "Buscar com filtros antes de outra operação",
@@ -5495,7 +5502,7 @@
         "type": "boolean",
         "location": "query",
         "required": false,
-        "description": "Filtrar por horario comercial"
+        "description": "true = as MEDIAS contam so o expediente — e so o das caixas que TEM horario de atendimento configurado (working_hours_enabled). [29/07] Nenhuma caixa configurada = os tempos voltam NULOS (travessao na tela), NAO zero. Evento gravado ANTES de 29/07 guarda 0 fabricado e puxa a media pra baixo; periodo que atravessa 29/07 mistura os dois e NAO e confiavel. NAO ligue por padrao: sem expediente configurado a resposta vira \"tempo medio de primeira resposta: 0 segundos\"."
       },
       {
         "name": "timezone_offset",
@@ -5522,7 +5529,7 @@
     "method": "GET",
     "path": "/api/v2/accounts/{account_id}/reports/summary",
     "title": "Resumo Geral",
-    "description": "Retorna resumo geral de métricas da conta no período. Inclui contagens (conversas, mensagens, resoluções) e tempos médios (1ª resposta, resolução). Compara automaticamente com período anterior via campo `previous`. ⚠️ Tempos sempre em SEGUNDOS.",
+    "description": "Retorna resumo geral de metricas da conta no periodo. Inclui contagens (conversas, mensagens, resolucoes) e tempos (1a resposta, resolucao, resposta) em MEDIA e em MEDIANA. Compara automaticamente com o periodo anterior via campo `previous`. ⚠️ Tempos sempre em SEGUNDOS. [29/07] A TELA mostra a MEDIANA nos dois cartoes de tempo, porque a media e distorcida pela IDADE de conversa antiga respondida no periodo — medido na conta 38: media de 164,6 HORAS contra mediana de 1,1 HORA. Ao responder \"quanto tempo levamos pra responder?\", use median_* e diga que e a mediana; so cite a media se pedirem.",
     "category": "Relatorios",
     "params": [
       {
@@ -5558,7 +5565,7 @@
         "type": "boolean",
         "location": "query",
         "required": false,
-        "description": "Filtrar por horario comercial"
+        "description": "true = as MEDIAS contam so o expediente — e so o das caixas que TEM horario de atendimento configurado (working_hours_enabled). [29/07] Nenhuma caixa configurada = os tempos voltam NULOS (travessao na tela), NAO zero. Evento gravado ANTES de 29/07 guarda 0 fabricado e puxa a media pra baixo; periodo que atravessa 29/07 mistura os dois e NAO e confiavel. NAO ligue por padrao: sem expediente configurado a resposta vira \"tempo medio de primeira resposta: 0 segundos\"."
       },
       {
         "name": "timezone_offset",
@@ -5568,7 +5575,7 @@
         "description": "Deslocamento de fuso em horas (ex: -3). NAO altera os totais do summary — so afeta agrupamento em endpoints de serie temporal."
       }
     ],
-    "returns": "{ conversations_count, incoming_messages_count, outgoing_messages_count, resolutions_count, avg_first_response_time (seg), avg_resolution_time (seg), previous: {...mesma estrutura...} }",
+    "returns": "{ conversations_count, incoming_messages_count, outgoing_messages_count, resolutions_count, avg_first_response_time (seg), avg_resolution_time (seg), median_first_response_time (seg), median_resolution_time (seg), reply_time (seg — tempo medio de resposta), previous: {...mesma estrutura...} }",
     "common_use_cases": [
       "Pergunta \"como tá o desempenho da semana?\"",
       "Resumo executivo pra dashboard",
@@ -5617,7 +5624,7 @@
         "type": "boolean",
         "location": "query",
         "required": false,
-        "description": "Filtrar por horario comercial"
+        "description": "SEM EFEITO neste relatorio — ele so CONTA conversas por status, nao calcula nenhum tempo. Mandar true nao muda nada na resposta."
       },
       {
         "name": "timezone_offset",
@@ -5877,7 +5884,7 @@
     "method": "GET",
     "path": "/api/v2/accounts/{account_id}/live_reports/conversation_metrics",
     "title": "Metricas em Tempo Real",
-    "description": "Metricas ao vivo de conversas (conversation_metrics). Filtro opcional team_id. [2026-07-24] Aceita tambem inbox_id e assignee_id (opcionais) — e o mesmo recorte da tela Visao Geral. Combinaveis com team_id.",
+    "description": "Metricas AO VIVO de conversas (conversation_metrics). Filtros opcionais: team_id, inbox_id, assignee_id (combinaveis) — e o mesmo recorte da tela Visao Geral. [29/07] A FILA REAL de quem ainda espera e `open + pending + snoozed`, nunca so `open`: na conta 19 o cartao mostrava 105 abertas havendo 3.883 conversas sem resolucao (3.777 pendentes + 1 adiada), e o gestor lia que estava tranquilo com a fila cheia. Sempre some as tres ao responder \"quantas estao esperando agora?\".",
     "category": "Relatorios",
     "params": [
       {
@@ -5902,7 +5909,7 @@
         "description": "Opcional (2026-07-24): recorta as metricas por UM atendente responsavel."
       }
     ],
-    "returns": "{ open, unattended, unassigned, pending }",
+    "returns": "{ open, unattended, unassigned, pending, snoozed } — `snoozed` (adiadas) entrou em 29/07. Fila real = open + pending + snoozed. `unattended`/`unassigned` sao subconjuntos de `open`, nao somam com ele.",
     "common_use_cases": [
       "Dashboard: contar/exibir relatórios",
       "Buscar com filtros antes de outra operação",
@@ -6026,7 +6033,7 @@
     "description": "Lista as ferramentas do assistente (duplicata de tools).",
     "category": "Assistentes",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de assistentes AI)",
+    "returns": "Lista pura (array no topo, sem embrulho meta/payload): cada item e uma FERRAMENTA do assistente com id, title, description, icon, custom, kind ('native' | 'custom' | 'flow'), enabled e binding (so quando a ferramenta aceita parametro fixado). Nao sao assistentes. Sem paginacao. Aceita ?assistant_id (marca enabled/disabled) e ?include_flows=true (soma as flow tools) — include_flows SO tem efeito quando assistant_id tambem e enviado; sozinho ele e ignorado em silencio e a lista volta sem nenhuma flow tool.",
     "common_use_cases": [
       "Dashboard: contar/exibir assistentes AI",
       "Buscar com filtros antes de outra operação",
@@ -6061,7 +6068,7 @@
         "description": "Filtra cenarios ativos/inativos (true/false)"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de assistentes AI)",
+    "returns": "Objeto com `payload` + `meta`. `payload` = array de CENARIOS do assistente (id, title, description, instruction, tools, tool_bindings, enabled, assistant_id, account_id, datas e um resumo do assistente) — NAO e lista de assistentes. `meta` traz `total_count` e `page`, sendo que `page` vem sempre 1 (esta lista nao pagina). Por padrao devolve so os cenarios ativos; use `enabled=all` para incluir os desativados, ou `enabled=false` so os desativados.",
     "common_use_cases": [
       "Dashboard: contar/exibir assistentes AI",
       "Buscar com filtros antes de outra operação",
@@ -6554,7 +6561,7 @@
         "description": "Filtra as threads do Copiloto pela conversa (conversation_display_id)."
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de assistentes AI)",
+    "returns": "`{ payload: [...] }` — sem meta. E a lista de THREADS DO COPILOTO (conversas do usuario com o Copiloto), NAO de assistentes de IA. Cada item traz id, title, created_at (unix), account_id, `user` (dados do usuario dono da thread) e `assistant` (dados do assistente usado). Lista so as threads do usuario logado, mais recentes primeiro, 5 por pagina (parametro `page`). Com `conversation_id` filtra as threads daquela conversa. Nao ha contador total na resposta.",
     "common_use_cases": [
       "Dashboard: contar/exibir assistentes AI",
       "Buscar com filtros antes de outra operação",
@@ -6624,7 +6631,7 @@
         "description": "ID da thread"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de assistentes AI)",
+    "returns": "Objeto `{ payload: [...] }` — SEM meta e SEM contadores. O array em `payload` traz as MENSAGENS da thread do Copilot (nao assistentes), em ordem cronologica crescente (mais antigas primeiro), ate 1000 por pagina. Cada mensagem tem id, message (objeto com o conteudo; em proposta de acao vem `action` com tool/args/status), message_type (user/assistant/assistant_thinking), created_at (timestamp UNIX em segundos), account_id e copilot_thread (dados da thread). ATENCAO: esta ferramenta NAO tem parametro de pagina — se vierem 1000 itens, a resposta esta truncada e NAO ha como pedir a proxima pagina por aqui (mandar `page` e ignorado em silencio e devolve a mesma primeira pagina).",
     "common_use_cases": [
       "Dashboard: contar/exibir assistentes AI",
       "Buscar com filtros antes de outra operação",
@@ -6686,7 +6693,7 @@
     "description": "Lista ferramentas personalizadas do Captain. Lista assistentes AI paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de assistente AI).",
     "category": "Assistentes",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de assistentes AI)",
+    "returns": "{ payload: [ ...ferramentas personalizadas do AI Agente ], meta: { total_count, page } }. O embrulho existe, mas nao ha paginacao real: page vem sempre 1 e total_count e a contagem da propria lista devolvida. Retorna SOMENTE as ferramentas habilitadas (enabled) — as desligadas nunca aparecem. Cada ferramenta traz id, slug, title, description, endpoint_url, http_method, request_template, response_template, auth_type, auth_config, param_schema (array de {name, type, description, required}), enabled, account_id, created_at e updated_at (timestamps Unix).",
     "common_use_cases": [
       "Dashboard: contar/exibir assistentes AI",
       "Buscar com filtros antes de outra operação",
@@ -7332,7 +7339,7 @@
     "description": "Lista todas as inboxes da conta. Lista inboxes/caixas de entrada paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de inbox/caixa de entrada).",
     "category": "Caixas de Entrada",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de inboxes/caixas de entrada)",
+    "returns": "{ payload: [ ...caixas ] } — SO payload, SEM meta e SEM paginacao: vem todas as caixas que o usuario enxerga, ordenadas por nome. Campos da distribuicao automatica presentes em CADA caixa (todo tipo de canal, sem trava): has_assignment_policy (booleano) diz QUAL dos dois caminhos esta ativo naquela caixa — true = a caixa segue uma POLITICA de atribuicao (os numeros do freio estao na politica, nao aqui) e, nesse caso, o auto_assignment_config da propria caixa e IGNORADO (a secao 'Distribuicao Automatica' inclusive some da tela da caixa); false = vale a distribuicao simples da propria caixa, ligada/desligada por enable_auto_assignment e configurada em auto_assignment_config { assign_offline_agents, fair_distribution_limit, fair_distribution_window }. Significado: fair_distribution_limit = quantas conversas o robo entrega a CADA atendente dentro da janela (a vaga volta quando a conversa deixa de estar aberta); fair_distribution_window = tamanho da janela em SEGUNDOS (600 = 10 minutos); assign_offline_agents = entrega tambem para quem nao esta com o painel aberto. Para ver os numeros de uma caixa com has_assignment_policy = true, chame lionchat_inboxes_assignment_policies_list (politica vinculada aquela caixa). OBRIGATORIO: leia o valor da conta antes de responder — NUNCA recite o padrao de fabrica (10 a cada 600 segundos) como se fosse o numero do cliente; o padrao so vale quando NAO ha politica e a caixa nao escolheu numero (e nesse caso, caixa com assign_offline_agents ligado e sem numero escolhido fica SEM freio). Atencao ao ZERO: na CAIXA, fair_distribution_limit = 0 significa 'sem freio' de proposito (o freio so liga com limite maior que zero) — logo a caixa fica sem teto tanto com o campo vazio + offline ligado quanto com 0 escrito. Na POLITICA o 0 nao e aceito (cadastro exige maior que zero), entao caixa com politica vinculada SEMPRE tem freio.",
     "common_use_cases": [
       "Dashboard: contar/exibir inboxes/caixas de entrada",
       "Buscar com filtros antes de outra operação",
@@ -7358,7 +7365,7 @@
         "description": "ID da inbox"
       }
     ],
-    "returns": "inbox/caixa de entrada (objeto completo com associações)",
+    "returns": "Objeto PURO da caixa (sem envelope meta/payload), com os mesmos campos da listagem. Campos da distribuicao automatica: has_assignment_policy (booleano) diz QUAL dos dois caminhos esta ativo nesta caixa — true = a caixa segue uma POLITICA de atribuicao (os numeros do freio estao na politica, nao aqui) e o auto_assignment_config desta caixa e IGNORADO (a secao 'Distribuicao Automatica' some da tela da caixa; o valor antigo continua gravado e so volta a valer se a politica for desvinculada); false = vale a distribuicao simples da propria caixa, ligada/desligada por enable_auto_assignment e configurada em auto_assignment_config { assign_offline_agents, fair_distribution_limit, fair_distribution_window }. Significado: fair_distribution_limit = quantas conversas o robo entrega a CADA atendente dentro da janela (a vaga volta quando a conversa deixa de estar aberta); fair_distribution_window = tamanho da janela em SEGUNDOS (600 = 10 minutos); assign_offline_agents = entrega tambem para quem nao esta com o painel aberto. Com has_assignment_policy = true, busque os numeros com lionchat_inboxes_assignment_policies_list. OBRIGATORIO: leia o valor da conta antes de responder — NUNCA recite o padrao de fabrica (10 a cada 600 segundos) como se fosse o numero do cliente; o padrao so vale quando NAO ha politica e a caixa nao escolheu numero (e caixa com assign_offline_agents ligado e sem numero escolhido fica SEM freio). Atencao ao ZERO: na CAIXA, fair_distribution_limit = 0 significa 'sem freio' de proposito (o freio so liga com limite maior que zero) — logo a caixa fica sem teto tanto com o campo vazio + offline ligado quanto com 0 escrito. Na POLITICA o 0 nao e aceito (cadastro exige maior que zero), entao caixa com politica vinculada SEMPRE tem freio.",
     "common_use_cases": [
       "Ver dados completos antes de editar",
       "Verificar estado atual antes de uma ação",
@@ -7950,7 +7957,7 @@
         "type": "integer",
         "location": "query",
         "required": false,
-        "description": "Offset de paginacao"
+        "description": "Filtra QUEM ENVIOU a mensagem — NAO e offset de paginacao (para paginar use `page`). Formato FIXO: \"contact:<id>\" ou \"agent:<id>\"; qualquer outro texto e ignorado em silencio. Vale SO para os resultados de MENSAGEM e SO com a \"Busca avancada\" ligada na conta."
       },
       {
         "name": "inbox_id",
@@ -7964,14 +7971,14 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data inicial (ISO 8601)"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data final (ISO 8601)"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente."
       },
       {
         "name": "page",
@@ -8002,7 +8009,7 @@
         "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
-    "returns": "Resultado por tipo: conversations, contacts, messages, articles e kanban_items (cards do Kanban). Cada mensagem inclui previous_message/next_message (contexto vizinho).",
+    "returns": "{ payload: { conversations, contacts, messages, articles, kanban_items } } — sem meta. [29/07] Cada conversa vem com `status` e `labels` (etiquetas da conversa) e cada contato vem com `labels` (etiquetas do contato), entao NAO e preciso uma chamada extra por resultado so pra saber a etiqueta. Cada mensagem inclui previous_message/next_message (contexto vizinho) e NAO traz labels.",
     "common_use_cases": [
       "Localizar resultado de busca pelo nome",
       "Buscar pelo email/telefone parcial",
@@ -8030,28 +8037,28 @@
         "type": "integer",
         "location": "query",
         "required": false,
-        "description": "Offset de paginacao"
+        "description": "SEM EFEITO nesta rota. O filtro de remetente so existe na busca de MENSAGENS (lionchat_search_list_2). Para paginar conversas use `page`."
       },
       {
         "name": "inbox_id",
         "type": "integer",
         "location": "query",
         "required": false,
-        "description": "Filtrar por inbox"
+        "description": "SEM EFEITO nesta rota — e ignorado em SILENCIO. A busca de conversas ja e limitada as caixas a que o usuario tem acesso, mas este parametro nao recorta nada: pedir \"conversas da caixa Comercial\" por aqui devolve TODAS e a resposta parece filtrada. Para filtrar por caixa use lionchat_conversations_filter (inbox_id) ou passe inbox_id dentro de `conversation_filters`."
       },
       {
         "name": "since",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data inicial (ISO 8601)"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data final (ISO 8601)"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente."
       },
       {
         "name": "page",
@@ -8068,7 +8075,7 @@
         "description": "Filtros estruturados (mesmo formato de conversations_filter). JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de resultados de busca)",
+    "returns": "{ payload: { conversations: [...] } } — sem meta. [29/07] Cada conversa traz `labels` (etiquetas da conversa) e `status`, alem de contato, caixa, responsavel e ultima mensagem — nao e preciso outra chamada so pra saber a etiqueta.",
     "common_use_cases": [
       "Dashboard: contar/exibir resultados de busca",
       "Buscar com filtros antes de outra operação",
@@ -8095,6 +8102,20 @@
         "description": "Termo"
       },
       {
+        "name": "since",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras. Filtra pela ULTIMA ATIVIDADE do contato (last_activity_at)."
+      },
+      {
+        "name": "until",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente. Filtra pela ULTIMA ATIVIDADE do contato (last_activity_at)."
+      },
+      {
         "name": "page",
         "type": "integer",
         "location": "query",
@@ -8109,7 +8130,7 @@
         "description": "Filtros estruturados (mesmo formato de contacts_filter). JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de resultados de busca)",
+    "returns": "{ payload: { contacts: [...] } } — sem meta e sem total; 15 contatos por pagina, use `page` para as proximas, ordenados por atividade mais recente (last_activity_at desc). [29/07] Cada contato traz id, name, email, phone_number, identifier, `labels` (nomes das etiquetas do contato), `thumbnail` (foto), `last_activity_at` (unix) e `additional_attributes` — e dentro dele que ficam os dados cadastrais (`cadastral`: CPF/CNPJ/RG/endereco) e os atributos personalizados.",
     "common_use_cases": [
       "Dashboard: contar/exibir resultados de busca",
       "Buscar com filtros antes de outra operação",
@@ -8140,7 +8161,7 @@
         "type": "integer",
         "location": "query",
         "required": false,
-        "description": "Offset de paginacao"
+        "description": "Filtra QUEM ENVIOU a mensagem — NAO e offset de paginacao (para paginar use `page`). Formato FIXO: \"contact:<id>\" ou \"agent:<id>\"; qualquer outro texto e ignorado em silencio. Vale SO para os resultados de MENSAGEM e SO com a \"Busca avancada\" ligada na conta."
       },
       {
         "name": "inbox_id",
@@ -8154,14 +8175,14 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data inicial (ISO 8601)"
+        "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras."
       },
       {
         "name": "until",
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "Data final (ISO 8601)"
+        "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente."
       },
       {
         "name": "page",
@@ -8171,7 +8192,7 @@
         "description": "Página"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de resultados de busca)",
+    "returns": "{ payload: { messages: [...] } } — sem meta e sem total. 15 mensagens por pagina, das MAIS RECENTES para as mais antigas; para ver o resto use `page` (a resposta NAO informa quantas paginas existem, entao vindo 15 itens assuma que pode haver mais). Cada mensagem traz contact_name, contact_thumbnail, conversation_status e previous_message/next_message (as vizinhas da MESMA conversa, ou null). O resultado de MENSAGEM nao traz `labels` — as etiquetas so vem nos cards de conversa e de contato.",
     "common_use_cases": [
       "Dashboard: contar/exibir resultados de busca",
       "Buscar com filtros antes de outra operação",
@@ -8254,7 +8275,7 @@
         "description": "Data fim"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de tarefas/agenda)",
+    "returns": "LISTA PURA (array no topo, SEM embrulho meta/payload) — a resposta JA E a lista de tarefas da agenda. Cada tarefa traz todos os campos da tarefa (id, title, description, task_type, status, scheduled_at, completed, recurrence_*), mais assignees [{id, name, agenda_color}], assignee_ids, conversation_display_id, conversation_contact_name, contact_name/contact_phone/contact_email, meeting_url, calendar_color, is_readonly, is_private, guest_emails, attendee_rsvp e booking_id. Lista vazia = []. Com filtro de data (date_start/date_end) devolve TUDO do periodo sem paginar (teto de 10.000). Sem filtro de data, pagina por `page`/`per_page` — mas a resposta NAO traz numero de paginas nem total: pagina cheia sugere que ha mais.",
     "common_use_cases": [
       "Dashboard: contar/exibir tarefas/agenda",
       "Buscar com filtros antes de outra operação",
@@ -8734,7 +8755,7 @@
     "description": "Retorna tarefas agrupadas: atrasadas, hoje, amanhã, próximos 7 dias. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda).",
     "category": "Agenda / Tarefas",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de tarefas/agenda)",
+    "returns": "Objeto com QUATRO listas separadas, sem meta e sem payload: { overdue: [...], today: [...], tomorrow: [...], next_7_days: [...] }. Traz APENAS tarefas em aberto (status pendente ou adiada — concluida/cancelada nao aparece) e nao ocultas, ja filtradas pela permissao de quem chama (administrador ve todas; agente ve so as que criou ou em que e responsavel). Agrupamento pela data agendada: overdue = antes de hoje 00:00 (ordenado da mais recente para a mais antiga), today = hoje, tomorrow = amanha, next_7_days = ate 7 dias a frente. Cada item e a tarefa completa (serializacao do modelo AccountTask, ja com assignees/assignee_ids, completed, dados de recorrencia, conversation_display_id, nome/telefone/email do contato, meeting_url e links de booking). Sem paginacao (teto de 10 mil por grupo).",
     "common_use_cases": [
       "Dashboard: contar/exibir tarefas/agenda",
       "Buscar com filtros antes de outra operação",
@@ -8753,7 +8774,7 @@
     "description": "Retorna contagem para badge de tarefas pendentes. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda).",
     "category": "Agenda / Tarefas",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de tarefas/agenda)",
+    "returns": "Objeto simples, NAO e lista: { overdue_count, today_count }. `today_count` = quantas tarefas pendentes ou adiadas estao marcadas para HOJE. `overdue_count` vem SEMPRE 0 — de proposito, o contador do badge nao inclui atrasadas. Para ver as tarefas em si, use a listagem de tarefas.",
     "common_use_cases": [
       "Dashboard: contar/exibir tarefas/agenda",
       "Buscar com filtros antes de outra operação",
@@ -8794,7 +8815,7 @@
         "description": "Página"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de tarefas/agenda)",
+    "returns": "Lista pura (array), sem embrulho: a resposta E o array de tarefas do card, juntando as tarefas de TODAS as conversas vinculadas a ele. Cada tarefa traz os campos do registro mais `assignees` (id, nome, cor na agenda), `assignee_ids`, `completed`, dados de recorrencia (recurrence_type/count/group_id), `conversation_display_id`, `conversation_contact_name` e dados do contato (contact_name, contact_phone, contact_email). Paginada: 10 por pagina por padrao (parametros `page` e `per_page`, teto 100) e o total NAO vem no corpo. Filtro opcional `scope`: active (pendentes+adiadas) ou done (concluidas+canceladas).",
     "common_use_cases": [
       "Dashboard: contar/exibir tarefas/agenda",
       "Buscar com filtros antes de outra operação",
@@ -8811,7 +8832,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/next_task",
     "title": "Próxima Tarefa do Card",
-    "description": "Retorna a próxima tarefa pendente/adiada do card (por scheduled_at). Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda).",
+    "description": "Retorna a PROXIMA tarefa pendente ou adiada do card (a de menor scheduled_at), considerando a conversa principal e as vinculadas. Devolve UM OBJETO de tarefa — nao ha meta/payload nem paginacao — e `{}` (objeto vazio) quando nao ha nenhuma. Nao procure um array: procurar array aqui faz voce responder \"esse card nao tem proxima tarefa\" quando tem. ATENCAO: esta rota NAO filtra por privacidade de tarefa — pode devolver tarefa de OUTRO atendente, ao contrario do campo `next_task` que vem dentro do proprio card (esse so mostra tarefa de quem esta consultando).",
     "category": "Agenda / Tarefas",
     "params": [
       {
@@ -8822,7 +8843,7 @@
         "description": "ID do card Kanban"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de tarefas/agenda)",
+    "returns": "A tarefa (objeto unico, mesmo formato de uma tarefa da agenda) ou `{}` quando nao ha nenhuma pendente/adiada. Sem meta, sem payload e sem paginacao.",
     "common_use_cases": [
       "Dashboard: contar/exibir tarefas/agenda",
       "Buscar com filtros antes de outra operação",
@@ -8864,7 +8885,7 @@
         "description": "Página"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de mensagens agendadas)",
+    "returns": "Array PURO de mensagens agendadas — a resposta E a lista, sem meta e sem payload. Cada item traz os campos da mensagem agendada + conversation_display_id e conversation_contact_name. Ordenado por scheduled_at crescente, 10 por pagina (param page); a resposta NAO informa total nem numero de paginas.",
     "common_use_cases": [
       "Dashboard: contar/exibir mensagens agendadas",
       "Buscar com filtros antes de outra operação",
@@ -8892,7 +8913,7 @@
         "description": "Display ID"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de mensagens agendadas)",
+    "returns": "Objeto com UMA chave: { payload: [ mensagens agendadas da conversa ] }. NAO existe meta. Cada item: id, message (texto), title, scheduled_at (timestamp Unix), created_at (Unix), status, inbox_id, conversation_id, is_recurrent, period, recurrence_count, recurrence_sent, template_params e blocks (com URLs dos arquivos). Sem paginacao — todas as agendadas da conversa, de qualquer status. Conversa inexistente devolve 404 com {error}.",
     "common_use_cases": [
       "Dashboard: contar/exibir mensagens agendadas",
       "Buscar com filtros antes de outra operação",
@@ -9455,7 +9476,7 @@
         "description": "Filtra os flows vinculados a essa caixa de entrada."
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de flows)",
+    "returns": "Objeto { data: [flows] } — a lista fica em data, sem meta e sem payload. Sem paginacao nenhuma (o controller so filtra por inbox_id / with_webhook_trigger / with_campaign_trigger). Cada flow traz o flow_data inteiro, entao a resposta pode ser MUITO grande em conta com muitos fluxos.",
     "common_use_cases": [
       "Dashboard: contar/exibir flows",
       "Buscar com filtros antes de outra operação",
@@ -9710,7 +9731,7 @@
         "description": "ID do agente ou \"all\""
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de tipos de evento)",
+    "returns": "Lista pura: a resposta E o array, sem embrulho de meta/payload. Cada item e um tipo de evento de agendamento com os campos do registro mais `booking_availabilities`, `follow_up_schedules`, `public_url`, `agent_profile_url`, `account_booking_slug` e os dados do agente dono (`agent_name`, `agent_color`, `agent_avatar_url`). Traz ativos E inativos, ordenados do mais novo pro mais antigo, sem paginacao. Filtro opcional `user_id` (ou `user_id=all` para todos os agentes visiveis).",
     "common_use_cases": [
       "Dashboard: contar/exibir tipos de evento",
       "Buscar com filtros antes de outra operação",
@@ -10024,7 +10045,7 @@
     "description": "Lista todas as regras de automacao da conta. Lista regras de automação paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de regra de automação).",
     "category": "Regras de Automacao",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de regras de automação)",
+    "returns": "`{ payload: [...] }` — sem meta. Array com todas as regras de automacao da conta (sem paginacao e sem contador). Cada regra traz id, account_id, name, description, event_name, `conditions`, `actions`, `active`, `inbox_id` (caixa de envio, usado nas automacoes de webhook), `action_types` (subtipos do evento conversation_updated; vazio = todos), `created_on` (unix) e `files` (so quando a regra tem anexo).",
     "common_use_cases": [
       "Dashboard: contar/exibir regras de automação",
       "Buscar com filtros antes de outra operação",
@@ -10503,7 +10524,7 @@
     "method": "POST",
     "path": "/api/v1/accounts/{account_id}/bulk_actions",
     "title": "Acoes em Massa",
-    "description": "Executa acoes em massa em conversas. Cria novo operação em massa. Obrigatórios: type, ids. Valida unicidade quando aplicável. Retorna o operação em massa criado com ID atribuído.",
+    "description": "Executa acao em massa em CONVERSAS ou CONTATOS (roda em segundo plano: responde 200 e aplica depois). Obrigatorios: type e ids. ATENCAO ao `type`: escreva no SINGULAR com inicial maiuscula (Conversation / Contact) — o PLURAL e RECUSADO com 422. Teto de 300 ids por chamada. Esta e a acao de CONVERSAS e CONTATOS; card do Kanban tem ferramentas proprias (lionchat_kanban_bulk_create / _create_1 / _create_2).",
     "category": "Operacoes em Massa",
     "params": [
       {
@@ -10511,24 +10532,66 @@
         "type": "string",
         "location": "body",
         "required": true,
-        "description": "Tipo: conversations"
+        "description": "Objeto alvo: `Conversation` ou `Contact` — escreva assim, no SINGULAR e com inicial maiuscula (o servidor tambem aceita minusculo singular: \"conversation\"/\"contact\"). PLURAL (\"conversations\"/\"contacts\") e RECUSADO com 422 e faz TODA acao em massa falhar."
       },
       {
         "name": "ids",
         "type": "array",
         "location": "body",
         "required": true,
-        "description": "Array de IDs"
+        "description": "Array de IDs do objeto escolhido em `type` (display_id das conversas / id dos contatos). Maximo 300 por chamada — acima disso responde 422 (code \"bulk_ids_limit_exceeded\"). Unica excecao: contatos com select_all=true, que nao tem teto."
       },
       {
         "name": "fields",
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Campos a alterar"
+        "description": "SO para type=Conversation. Campos aceitos (lista FECHADA — chave fora dela e descartada em silencio): status, assignee_id, team_id, inbox_id e captain_assistant_id. Ex.: { \"assignee_id\": 6 }. `captain_assistant_id: 0` DESLIGA a IA e marca a conversa como desligada na mao (o robo nao religa depois). ATENCAO: ativar a IA em LOTE NAO arma o acompanhamento automatico nem faz a IA responder na hora — diferente de ativar conversa a conversa por lionchat_conversations_update."
+      },
+      {
+        "name": "labels",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Etiquetas a aplicar/remover: { \"add\": [\"vip\"], \"remove\": [\"frio\"] }. Vale para type=Conversation (add e remove) e para type=Contact (so `add`). Sem este campo, \"coloca a etiqueta X em 40 conversas\" responde 200 e NAO FAZ NADA."
+      },
+      {
+        "name": "snoozed_until",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "SO para type=Conversation: adia as conversas ate esta data/hora."
+      },
+      {
+        "name": "action_name",
+        "type": "string",
+        "location": "body",
+        "required": false,
+        "description": "SO para type=Contact: \"delete\" apaga os contatos em massa (destrutivo — exige permissao de exclusao e confirmacao do usuario). Sem action_name, a acao de contato e aplicar as etiquetas de `labels.add`."
+      },
+      {
+        "name": "select_all",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "SO para type=Contact: aplica a acao a TODOS os contatos do filtro, em lotes no fundo, SEM o teto de 300 ids. Com select_all=true nao se manda `ids` — manda-se `query` (filtro) ou `labels_filter` (etiqueta); sem nenhum dos dois, atinge TODOS os contatos da conta. Combinado com action_name=delete e a operacao mais destrutiva da plataforma: confirme com o usuario antes."
+      },
+      {
+        "name": "query",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "SO com type=Contact + select_all=true: condicoes de filtro no MESMO formato de lionchat_contacts_filter ([{attribute_key, filter_operator, query_operator, custom_attribute_type, values: []}]). Define quais contatos entram na acao."
+      },
+      {
+        "name": "labels_filter",
+        "type": "array",
+        "location": "body",
+        "required": false,
+        "description": "SO com type=Contact + select_all=true: nomes de etiqueta (\"marcado com\") que definem o conjunto alvo, no lugar de `query`."
       }
     ],
-    "returns": "operação em massa criado (com novo ID)",
+    "returns": "200 SEM CORPO — nao ha ID de operacao para acompanhar. A acao e enfileirada e aplicada em segundo plano, entao 200 significa \"aceito\", nao \"feito\". 422 quando o `type` nao e Conversation/Contact ou quando `ids` passa de 300.",
     "common_use_cases": [
       "Cadastro inicial de operação em massa",
       "Automação a partir de evento externo",
@@ -10720,7 +10783,7 @@
         "description": "Ordenação (asc/desc)"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de notificações)",
+    "returns": "{ data: { meta: { unread_count, count, current_page }, payload: [ ...notificacoes ] } }. ATENCAO: meta e payload ficam DENTRO de data — o caminho e resposta.data.payload, nunca resposta.payload. 15 por pagina.",
     "common_use_cases": [
       "Dashboard: contar/exibir notificações",
       "Buscar com filtros antes de outra operação",
@@ -10940,7 +11003,7 @@
         "description": "Busca por texto"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de anúncios)",
+    "returns": "ATENCAO: o embrulho fica DENTRO de `data` — { data: { meta: { current_page, total_count }, payload: [ anuncios ] } }. Procure em resposta.data.payload, NAO em resposta.payload. Cada anuncio: id, title, body, category (informative|important|urgent), audience, sent_at, read_at (nulo se o usuario ainda nao leu), created_at. Pagina de 5 em 5; `meta.total_count` e o total geral.",
     "common_use_cases": [
       "Dashboard: contar/exibir anúncios",
       "Buscar com filtros antes de outra operação",
@@ -11212,7 +11275,7 @@
     "description": "Lista todas as ofertas da conta, incluindo descrição, planos de preço e links. Lista ofertas paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de oferta).",
     "category": "Ofertas",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de ofertas)",
+    "returns": "Lista pura: a resposta E o array de ofertas, sem embrulho de meta/payload. Cada oferta traz id, title, description, value, currency, type, prices (array), links (array), image_url, created_at e updated_at. Sem paginacao e sem contador.",
     "common_use_cases": [
       "Dashboard: contar/exibir ofertas",
       "Buscar com filtros antes de outra operação",
@@ -11669,7 +11732,7 @@
         "description": "ID do contato"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de conversas)",
+    "returns": "Lista pura (array), sem embrulho: a resposta E o array de conversas daquele contato no widget/caixa publica. Cada conversa traz id (display_id), uuid, inbox_id, status, contact_last_seen_at e agent_last_seen_at (unix), o objeto `contact` e `messages` com o historico de mensagens da conversa embutido. Sem paginacao e sem contador. Endpoint publico (identificadores de caixa e de contato na URL, sem token de conta). Resposta pode ser pesada: cada conversa vem com as mensagens dentro.",
     "common_use_cases": [
       "Dashboard: contar/exibir conversas",
       "Buscar com filtros antes de outra operação",
@@ -11886,7 +11949,7 @@
         "description": ""
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de mensagens)",
+    "returns": "Lista PURA (a resposta E o array, sem embrulho: nao ha meta nem payload) e sem contadores. Traz as ULTIMAS 20 mensagens da conversa, em ordem cronologica crescente; para pegar as anteriores use o parametro `before` com o id da mensagem mais antiga recebida. Mensagens internas (notas privadas) sao excluidas. Cada mensagem tem id, content, message_type, content_type, content_attributes, created_at (unix), conversation_id (display_id), attachments (quando houver) e sender. Devolve `[]` se a conversa nao for encontrada. Nao existe per_page aqui: o teto e 20 fixo.",
     "common_use_cases": [
       "Dashboard: contar/exibir mensagens",
       "Buscar com filtros antes de outra operação",
@@ -12467,7 +12530,14 @@
         "type": "string",
         "location": "query",
         "required": false,
-        "description": "completed, failed, busy, no_answer"
+        "description": "Situacao da ligacao. Valores REAIS (unicos aceitos pelo modelo): initiated, ringing, active, answered, no_answer, failed, canceled. NAO existem \"completed\" nem \"busy\" — filtrar por eles devolve lista VAZIA pra sempre, sem erro. Ligacao atendida = `answered`."
+      },
+      {
+        "name": "provider",
+        "type": "string",
+        "location": "query",
+        "required": false,
+        "description": "Filtrar pelo sistema de ligacao: zenvia, wavoip, lioncalls ou vtcall. ATENCAO: o campo `provider` NAO volta na resposta — nem usando o filtro da pra rotular cada linha do historico. Para saber de qual sistema veio cada ligacao, faca uma chamada por provider e junte os resultados."
       },
       {
         "name": "agent_id",
@@ -12519,7 +12589,7 @@
         "description": "Itens por página"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de chamadas VoIP)",
+    "returns": "{ data: [ ...ligacoes ], meta: { total, page, per } }. A lista vem em data (NAO em payload). Cada ligacao traz id, protocol, status, duration_seconds, contact_phone, recording_url, custom_name, favorited, transcript_status/text, ai_summary, ai_score, called_at, direction, display_name, alem de contact {id,name,phone_number} e user {id,name}.",
     "common_use_cases": [
       "Dashboard: contar/exibir chamadas VoIP",
       "Buscar com filtros antes de outra operação",
@@ -12742,7 +12812,7 @@
     "description": "Lista agentes com tipos de evento ativos agrupados. Sem autenticação. Lista endpoints públicos paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de endpoint público).",
     "category": "Publica",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de endpoints públicos)",
+    "returns": "Objeto unico (NAO e lista, nao tem meta/payload): { account: { name }, agents: [ { name, avatar_url, slug, event_types: [ { slug, title, description, duration_minutes } ] } ] }. E o diretorio publico da equipe de agendamento. ARMADILHA: este endpoint SO aceita o SLUG publico da conta — chamado com o id numerico da conta ele SEMPRE responde 404 { error: 'Account not found' }. Endpoint publico, sem autenticacao.",
     "common_use_cases": [
       "Dashboard: contar/exibir endpoints públicos",
       "Buscar com filtros antes de outra operação",
@@ -12937,7 +13007,7 @@
     "description": "Lista as variáveis globais da conta. **Requer perfil Administrador.**. Lista variáveis de conta paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de variável de conta).",
     "category": "Variaveis da Conta",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de variáveis de conta)",
+    "returns": "Objeto com DUAS chaves paralelas, sem meta e sem payload: { definitions: [definicoes das variaveis], values: { chave_da_variavel: valor } }. Para variavel secreta o valor nao vem — em values aparece { has_value: true/false }. Para saber o valor de uma variavel e preciso cruzar definitions[].attribute_key com a chave em values. Sem paginacao. Exige perfil Administrador.",
     "common_use_cases": [
       "Dashboard: contar/exibir variáveis de conta",
       "Buscar com filtros antes de outra operação",
@@ -13092,7 +13162,7 @@
     "description": "Lista documentos indexados para uso pelos assistentes IA. Lista documentos KB paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de documento KB).",
     "category": "Base de Conhecimento",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de documentos KB)",
+    "returns": "Objeto com `payload` + `meta`. `payload` = array de documentos da base de conhecimento (id, name, content, content_preview, summary, content_type, status, error_message, description, external_link, display_url, file_size, pages_crawled, is_manual, datas e o assistente dono). `meta` traz `total_count` (total de documentos antes de paginar) e `page` (pagina atual). Pagina de 25 em 25 pelo parametro `page`; filtro opcional `assistant_id`.",
     "common_use_cases": [
       "Dashboard: contar/exibir documentos KB",
       "Buscar com filtros antes de outra operação",
@@ -13279,7 +13349,7 @@
     "description": "Lista todos os roles personalizados da conta. Lista papéis personalizados paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de papel personalizado).",
     "category": "Roles Personalizados",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de papéis personalizados)",
+    "returns": "Lista pura (array), sem embrulho: a resposta E o array de papeis personalizados da conta. Cada papel traz id, name, description, `permissions` (lista de permissoes) e created_at/updated_at. Sem paginacao e sem contador. Recurso Enterprise — em instalacao sem Enterprise a rota nao responde.",
     "common_use_cases": [
       "Dashboard: contar/exibir papéis personalizados",
       "Buscar com filtros antes de outra operação",
@@ -13448,7 +13518,7 @@
     "description": "Lista todas as politicas de capacidade de agentes. Lista políticas de capacidade paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de política de capacidade).",
     "category": "Politicas de Capacidade",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de políticas de capacidade)",
+    "returns": "Lista PURA (a resposta E o array, sem embrulho: nao ha meta nem payload) e sem paginacao — vem todas as politicas de capacidade da conta de uma vez. Cada politica traz id, name, description, exclusion_rules (exclude_older_than_hours e excluded_labels), account_id, created_at, updated_at, assigned_agent_count (quantos agentes usam a politica) e inbox_capacity_limits (array de {id, inbox_id, conversation_limit}). Devolve `[]` quando nao ha nenhuma. Recurso ENTERPRISE — em instalacao/plano sem enterprise a rota nao responde a lista.",
     "common_use_cases": [
       "Dashboard: contar/exibir políticas de capacidade",
       "Buscar com filtros antes de outra operação",
@@ -14150,7 +14220,7 @@
     "description": "Lista solicitacoes de acesso de suporte. Lista acessos de suporte paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de acesso de suporte).",
     "category": "Acesso de Suporte",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de acessos de suporte)",
+    "returns": "Array PURO de acessos de suporte — a resposta E a lista, sem meta e sem payload. Ordenado por created_at decrescente e SEM paginacao (traz todos). Cada item inclui valid_access? e os objetos granted_by, support_agent e revoked_by (id, name, email).",
     "common_use_cases": [
       "Dashboard: contar/exibir acessos de suporte",
       "Buscar com filtros antes de outra operação",
@@ -14442,7 +14512,7 @@
         "description": "ID da inbox"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de grupos WhatsApp)",
+    "returns": "Objeto { data: [grupos] } — a lista fica em data, sem meta e sem payload. Os grupos vem crus da API do WhatsApp (WAHA), no formato dela (id, subject, etc.), nao no formato do LionChat. Sem paginacao — devolve todos os grupos do aparelho. Erro da API do WAHA volta como JSON amigavel, nao como 500.",
     "common_use_cases": [
       "Dashboard: contar/exibir grupos WhatsApp",
       "Buscar com filtros antes de outra operação",
@@ -15016,7 +15086,7 @@
         "description": "Buscar por nome do template"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de templates WhatsApp)",
+    "returns": "Objeto `{ data: [...], meta: { total, limit } }` — a chave da lista e `data`, NAO `payload`. `data` = os templates guardados no cache da caixa, ja com os filtros aplicados (category, status, language, search). `meta.total` = quantidade TOTAL de templates em cache, ANTES do filtro (entao pode ser maior que o tamanho de `data`); `meta.limit` = 250 (teto da Meta). So funciona em caixa WhatsApp Cloud (oficial).",
     "common_use_cases": [
       "Dashboard: contar/exibir templates WhatsApp",
       "Buscar com filtros antes de outra operação",
@@ -15420,7 +15490,7 @@
     "description": "Verifica o status da conexao com Google Calendar. Lista configs Google Calendar paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config Google Calendar).",
     "category": "Google Calendar",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de configs Google Calendar)",
+    "returns": "Um OBJETO unico com o estado da conexao Google Agenda do usuario logado — nao e lista. Conectado: `{connected: true, state, calendar_id, calendar_name, sync_enabled, sync_disabled_reason, sync_error_code, sync_error, last_synced_at, token_expires_at, readonly_calendars, agenda_public}`. Desconectado: `{connected: false, state: 'disconnected', agenda_public}`. O campo `state` vale 'healthy', 'needs_calendar_selection', 'reactivatable', 'needs_reconnect' ou 'disconnected'. E por USUARIO, nao por conta. Nao existe array nenhum aqui: procurar payload/lista sempre da vazio. A lista de agendas disponiveis e outro endpoint (/google_calendar/calendars).",
     "common_use_cases": [
       "Dashboard: contar/exibir configs Google Calendar",
       "Buscar com filtros antes de outra operação",
@@ -15448,7 +15518,7 @@
         "description": "Pra onde voltar apos o OAuth (ex: 'agenda'); fora da whitelist = padrao"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de configs Google Calendar)",
+    "returns": "NAO e listagem: e um objeto unico `{ auth_url: \"https://accounts.google.com/...\" }` com o link de autorizacao do Google que o usuario precisa abrir para conectar a agenda. Nao ha meta, payload, array nem paginacao. Se as credenciais do Google nao estiverem configuradas na instalacao, responde 412 com `{ error: \"Credenciais do Google Calendar nao configuradas...\" }`. Para saber se a conexao ja existe use o endpoint de status, nao este. A conexao e POR USUARIO.",
     "common_use_cases": [
       "Dashboard: contar/exibir configs Google Calendar",
       "Buscar com filtros antes de outra operação",
@@ -15488,7 +15558,7 @@
     "description": "Lista calendarios disponiveis na conta Google. Lista configs Google Calendar paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config Google Calendar).",
     "category": "Google Calendar",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de configs Google Calendar)",
+    "returns": "{ calendars: [ { id, summary, primary, background_color } ] } — sem meta e sem payload. Sao os calendarios da conta Google conectada do usuario logado, buscados ao vivo na API do Google; sem paginacao. Se o usuario logado nao tiver conexao Google nesta conta, responde 404 com { error: 'Nao conectado ao Google Calendar' }. Se a chamada ao Google falhar (token expirado/revogado, erro da API), responde 422 com { error }.",
     "common_use_cases": [
       "Dashboard: contar/exibir configs Google Calendar",
       "Buscar com filtros antes de outra operação",
@@ -15631,7 +15701,7 @@
     "description": "Lista agentes que possuem agenda visivel. Lista configs Google Calendar paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config Google Calendar).",
     "category": "Google Calendar",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de configs Google Calendar)",
+    "returns": "Objeto unico (NAO tem meta/payload): { agents: [ { id, name, agenda_color } ] }. E a lista de agentes cujas agendas o usuario atual pode VER (admin ve todos; nao-admin ve so quem marcou agenda publica). Nao devolve config de Google Calendar. agenda_color cai no padrao '#3B82F6' quando o agente nao escolheu cor. Sem paginacao.",
     "common_use_cases": [
       "Dashboard: contar/exibir configs Google Calendar",
       "Buscar com filtros antes de outra operação",
@@ -15651,7 +15721,7 @@
     "description": "Lista calendarios compartilhados entre agentes. Lista configs Google Calendar paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config Google Calendar).",
     "category": "Google Calendar",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de configs Google Calendar)",
+    "returns": "Objeto { calendars: [...] } — a lista fica em calendars, sem meta e sem payload. Cada item traz google_calendar_id, name, color, assigned_user_id e assigned_user_name. Sem paginacao. Exclui o calendario pessoal (primary). Se o admin nao estiver conectado ao Google Calendar, devolve 404 com { error: 'Nao conectado ao Google Calendar' }.",
     "common_use_cases": [
       "Dashboard: contar/exibir configs Google Calendar",
       "Buscar com filtros antes de outra operação",
@@ -15699,7 +15769,7 @@
     "description": "Verifica status dos calendarios compartilhados. Lista configs Google Calendar paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config Google Calendar).",
     "category": "Google Calendar",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de configs Google Calendar)",
+    "returns": "Objeto simples, NAO e lista: { has_shared_calendar, calendar_name, owner_name, personal_calendar_readonly }. Diz se o usuario atual recebeu uma agenda compartilhada de outro agente. Quando nao ha, vem `has_shared_calendar: false` com `calendar_name` e `owner_name` nulos e `personal_calendar_readonly: false`.",
     "common_use_cases": [
       "Dashboard: contar/exibir configs Google Calendar",
       "Buscar com filtros antes de outra operação",
@@ -15719,7 +15789,7 @@
     "description": "Lista todas as politicas de atribuicao de conversas. Lista políticas de atribuição paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de política de atribuição).",
     "category": "Politicas de Atribuicao",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de políticas de atribuição)",
+    "returns": "Array PURO de politicas (json.array!) — NAO tem meta, NAO tem payload e NAO tem paginacao: vem TODAS as politicas da conta de uma vez. Cada item traz { id, name, description, assignment_order, conversation_priority, fair_distribution_limit, fair_distribution_window, enabled, assign_offline_agents, assigned_inbox_count, created_at, updated_at }. O que cada campo da distribuicao significa: fair_distribution_limit = quantas conversas o robo entrega a CADA atendente dentro da janela (freio de rajada; a vaga volta assim que a conversa deixa de estar aberta); fair_distribution_window = tamanho dessa janela em SEGUNDOS (600 = 10 minutos); assign_offline_agents = quando true, o robo tambem entrega para quem nao esta com o painel aberto; enabled = quando false, as caixas ligadas nesta politica nao recebem distribuicao automatica; assignment_order = round_robin (rodizio) ou balanced (por carga de trabalho, so no build Enterprise); conversation_priority = earliest_created (atende primeiro a conversa criada ha mais tempo) ou longest_waiting (a que esta esperando ha mais tempo); assigned_inbox_count = quantas caixas usam esta politica. OBRIGATORIO: leia estes valores da conta antes de responder qualquer pergunta sobre ritmo/limite de distribuicao — NUNCA recite o padrao de fabrica (10 a cada 600 segundos) como se fosse o numero do cliente; conta que mudou o valor faz o padrao virar mentira.",
     "common_use_cases": [
       "Dashboard: contar/exibir políticas de atribuição",
       "Buscar com filtros antes de outra operação",
@@ -15766,6 +15836,13 @@
         "location": "body",
         "required": false,
         "description": "Prioridade das conversas: earliest_created ou longest_waiting"
+      },
+      {
+        "name": "assign_offline_agents",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Distribuir tambem para atendentes OFFLINE (ausentes/fora do horario). Nasce DESLIGADO (29/07/2026). Quando a caixa tem esta politica vinculada, e a POLITICA que manda: o mesmo ajuste feito direto na caixa (auto_assignment_config) passa a ser ignorado e a secao de distribuicao SOME da tela da caixa."
       },
       {
         "name": "fair_distribution_limit",
@@ -15818,7 +15895,7 @@
         "description": "ID da politica"
       }
     ],
-    "returns": "política de atribuição (objeto completo com associações)",
+    "returns": "Objeto PURO da politica (sem envelope meta/payload e sem associacoes aninhadas): { id, name, description, assignment_order, conversation_priority, fair_distribution_limit, fair_distribution_window, enabled, assign_offline_agents, assigned_inbox_count, created_at, updated_at }. O que cada campo da distribuicao significa: fair_distribution_limit = quantas conversas o robo entrega a CADA atendente dentro da janela (freio de rajada; a vaga volta assim que a conversa deixa de estar aberta); fair_distribution_window = tamanho dessa janela em SEGUNDOS (600 = 10 minutos); assign_offline_agents = quando true, entrega tambem para quem nao esta com o painel aberto; enabled = quando false, as caixas ligadas nesta politica nao recebem distribuicao automatica; assignment_order = round_robin (rodizio) ou balanced (por carga, so no build Enterprise); conversation_priority = earliest_created ou longest_waiting; assigned_inbox_count = quantas caixas usam esta politica. IMPORTANTE: em toda caixa vinculada a esta politica, os numeros que valem sao os DAQUI — o auto_assignment_config da propria caixa e IGNORADO enquanto houver politica vinculada. OBRIGATORIO: leia estes valores da conta antes de responder — NUNCA recite o padrao de fabrica (10 a cada 600 segundos) como se fosse o numero do cliente.",
     "common_use_cases": [
       "Ver dados completos antes de editar",
       "Verificar estado atual antes de uma ação",
@@ -15835,7 +15912,7 @@
     "method": "PUT",
     "path": "/api/v1/accounts/{account_id}/assignment_policies/{id}",
     "title": "Atualizar Politica de Atribuicao",
-    "description": "Atualiza uma politica de atribuicao. Suporta atualização parcial — só campos enviados são alterados. Campos suportados: name, description, assignment_order, conversation_priority, fair_distribution_limit, fair_distribution_window, enabled.",
+    "description": "Atualiza uma politica de atribuicao. Suporta atualizacao parcial — so campos enviados sao alterados. Campos suportados: name, description, assignment_order, conversation_priority, assign_offline_agents, fair_distribution_limit, fair_distribution_window, enabled.",
     "category": "Politicas de Atribuicao",
     "params": [
       {
@@ -15872,6 +15949,13 @@
         "location": "body",
         "required": false,
         "description": "Prioridade das conversas: earliest_created ou longest_waiting"
+      },
+      {
+        "name": "assign_offline_agents",
+        "type": "boolean",
+        "location": "body",
+        "required": false,
+        "description": "Distribuir tambem para atendentes OFFLINE (ausentes/fora do horario). Nasce DESLIGADO (29/07/2026). Quando a caixa tem esta politica vinculada, e a POLITICA que manda: o mesmo ajuste feito direto na caixa (auto_assignment_config) passa a ser ignorado e a secao de distribuicao SOME da tela da caixa."
       },
       {
         "name": "fair_distribution_limit",
@@ -15952,7 +16036,7 @@
         "description": "ID da politica"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de políticas de atribuição)",
+    "returns": "Objeto `{ inboxes: [...] }` — a chave e `inboxes`, NAO `payload`, e nao ha meta nem paginacao. O array traz as caixas de entrada vinculadas a essa politica de atribuicao, no formato completo de caixa (id, name, channel_type, e demais campos da caixa). Devolve `{ \"inboxes\": [] }` quando nenhuma caixa usa a politica.",
     "common_use_cases": [
       "Dashboard: contar/exibir políticas de atribuição",
       "Buscar com filtros antes de outra operação",
@@ -16130,7 +16214,7 @@
     "description": "Lista todos os webhooks configurados. Lista webhooks paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de webhook).",
     "category": "Webhooks",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de webhooks)",
+    "returns": "{ payload: { webhooks: [ ...webhooks ] } } — SEM meta. A lista fica em payload.webhooks (payload e objeto, nao array). Traz todos os webhooks da conta, sem paginacao. Cada webhook tem id, name, url, account_id, subscriptions (lista de eventos assinados), secret e o estado do disjuntor de falhas: failure_count, blocked_until (data ISO — preenchida = webhook EM PAUSA), last_failure_at, last_success_at e last_failure_reason. Se o webhook estiver amarrado a uma caixa, vem tambem o bloco inbox { id, name }; webhook de conta inteira nao traz esse bloco.",
     "common_use_cases": [
       "Dashboard: contar/exibir webhooks",
       "Buscar com filtros antes de outra operação",
@@ -19620,7 +19704,7 @@
     "description": "Retorna configuracoes de notificacao do usuario. Lista configs de notificação paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config de notificação).",
     "category": "Config de Notificacao",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de configs de notificação)",
+    "returns": "Um objeto unico (NAO e lista): id, user_id, account_id, all_email_flags, selected_email_flags, all_push_flags, selected_push_flags e task_reminder_minutes. Sao as preferencias de notificacao do usuario logado nesta conta. Nao ha paginacao nem lista nenhuma.",
     "common_use_cases": [
       "Dashboard: contar/exibir configs de notificação",
       "Buscar com filtros antes de outra operação",
@@ -19700,7 +19784,7 @@
     "description": "Lista prompts salvos do Copilot. Lista prompts copilot paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de prompt copilot).",
     "category": "Prompts Salvos",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de prompts copilot)",
+    "returns": "Lista pura: a resposta E o array de prompts salvos do Copilot, sem embrulho de meta/payload. Cada item: id, account_id, created_by_id, title, prompt, position, created_at, updated_at. Ordenado por `position`; sem paginacao. Qualquer agente pode ler; so admin cria, edita ou exclui.",
     "common_use_cases": [
       "Dashboard: contar/exibir prompts copilot",
       "Buscar com filtros antes de outra operação",
@@ -19841,7 +19925,7 @@
     "description": "Retorna configuracoes do VoIP. Lista chamadas VoIP paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de chamada VoIP).",
     "category": "Chamadas",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de chamadas VoIP)",
+    "returns": "Um OBJETO unico com a configuracao de voz (Zenvia) da conta — NAO e lista de ligacoes. Sem configuracao: `{configured: false, has_parent_token}`. Com configuracao: `{configured: true, active, bina_number, default_bina_id, gravar_audio, transcription_provider, auto_transcribe, transcription_language, has_zenvia_token, has_transcription_key, has_parent_token, setup_mode, zenvia_account_id, zenvia_login}`. Segredos nao sao devolvidos — so os indicadores has_zenvia_token / has_transcription_key dizem se estao preenchidos. Historico de ligacoes fica em /voip/calls.",
     "common_use_cases": [
       "Dashboard: contar/exibir chamadas VoIP",
       "Buscar com filtros antes de outra operação",
@@ -19916,7 +20000,7 @@
     "description": "Lista numeros disponiveis para identificacao de chamada. Lista chamadas VoIP paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de chamada VoIP).",
     "category": "Chamadas",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de chamadas VoIP)",
+    "returns": "Repassa CRUA a resposta da operadora Zenvia (GET /bina/relatorio) — nao ha meta, payload nem paginacao nossa. O formato e `{ sucesso: true, dados: { relatorio: [ { id, numero_telefone, ... } ] } }`: os numeros ficam em `dados.relatorio`. O conteudo sao NUMEROS DE IDENTIFICACAO DE CHAMADA (binas), nao chamadas VoIP. Se a conta nao tiver VoIP configurado (sem token Zenvia), a chamada falha com erro de servidor. Em resposta nao-JSON da operadora, vem `{ status, body }`.",
     "common_use_cases": [
       "Dashboard: contar/exibir chamadas VoIP",
       "Buscar com filtros antes de outra operação",
@@ -19936,7 +20020,7 @@
     "description": "Retorna o saldo disponivel no provedor VoIP. Lista chamadas VoIP paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de chamada VoIP).",
     "category": "Chamadas",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de chamadas VoIP)",
+    "returns": "Objeto unico com a resposta crua do provedor Zenvia (endpoint /saldo) — NAO e lista de ligacoes e nao tem meta nem payload. O valor do saldo vem em dados.saldo (o painel le exatamente `data.dados.saldo`).",
     "common_use_cases": [
       "Dashboard: contar/exibir chamadas VoIP",
       "Buscar com filtros antes de outra operação",
@@ -19956,7 +20040,7 @@
     "description": "Retorna URL para recarga de creditos VoIP. Lista chamadas VoIP paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de chamada VoIP).",
     "category": "Chamadas",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de chamadas VoIP)",
+    "returns": "NAO devolve chamadas. Este endpoint repassa cru a resposta da Zenvia para a URL de recarga de credito: um OBJETO (ex.: { sucesso, url, ... }, chaves conforme a Zenvia), sem meta/payload. Em falha de parse vem { status, body }.",
     "common_use_cases": [
       "Dashboard: contar/exibir chamadas VoIP",
       "Buscar com filtros antes de outra operação",
@@ -19976,7 +20060,7 @@
     "description": "Retorna historico de recargas. Lista chamadas VoIP paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de chamada VoIP).",
     "category": "Chamadas",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de chamadas VoIP)",
+    "returns": "Repasse direto da resposta da Zenvia (/minha-conta/relatorio-recarga): objeto no formato dela, tipicamente com o campo 'sucesso' mais os dados da recarga. Nao tem meta, nao tem payload e nao sao chamadas VoIP — e o historico de RECARGAS de credito. Se a Zenvia devolver algo que nao e JSON, vem { status, body }.",
     "common_use_cases": [
       "Dashboard: contar/exibir chamadas VoIP",
       "Buscar com filtros antes de outra operação",
@@ -20036,7 +20120,7 @@
     "description": "Retorna configuracao do ramal do agente. Lista chamadas VoIP paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de chamada VoIP).",
     "category": "Chamadas",
     "params": [],
-    "returns": "meta (contadores globais) + payload (array de chamadas VoIP)",
+    "returns": "Objeto simples do RAMAL do usuario atual — NAO e lista de ligacoes. Sem ramal configurado: { configured: false }. Com ramal: { configured: true, ramal_number, webphone_url, status }. Para historico de ligacoes use a listagem de chamadas VoIP.",
     "common_use_cases": [
       "Dashboard: contar/exibir chamadas VoIP",
       "Buscar com filtros antes de outra operação",
@@ -20485,7 +20569,7 @@
         "type": "boolean",
         "location": "body",
         "required": false,
-        "description": "Define se o agente fica offline automaticamente por inatividade"
+        "description": "Privilegio \"Permanecer disponivel\". PADRAO true = o agente cai pra offline sozinho quando fecha o painel (comportamento normal). false = ele conta como DISPONIVEL 24h mesmo com o painel fechado — em conta que so distribui pra quem esta online, de madrugada ele vira o UNICO elegivel e leva TODOS os leads. Desde 30/07/2026 so ADMINISTRADOR concede (a rota de autoatendimento do proprio perfil passou a recusar), e o privilegio foi ZERADO para todo atendente comum na mesma data. Esta ferramenta e o caminho do admin e continua funcionando — mas nunca desligue sem o cliente pedir explicitamente."
       },
       {
         "name": "custom_role_id",
@@ -20587,7 +20671,7 @@
         "type": "boolean",
         "location": "body",
         "required": false,
-        "description": "Define se o agente fica offline automaticamente por inatividade"
+        "description": "Privilegio \"Permanecer disponivel\". PADRAO true = o agente cai pra offline sozinho quando fecha o painel (comportamento normal). false = ele conta como DISPONIVEL 24h mesmo com o painel fechado — em conta que so distribui pra quem esta online, de madrugada ele vira o UNICO elegivel e leva TODOS os leads. Desde 30/07/2026 so ADMINISTRADOR concede (a rota de autoatendimento do proprio perfil passou a recusar), e o privilegio foi ZERADO para todo atendente comum na mesma data. Esta ferramenta e o caminho do admin e continua funcionando — mas nunca desligue sem o cliente pedir explicitamente."
       },
       {
         "name": "custom_role_id",
@@ -20687,7 +20771,7 @@
         "description": "Incluir atributos do sistema (default false)"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de atributos personalizados)",
+    "returns": "Lista pura (array), sem embrulho: a resposta E o array de definicoes de atributos personalizados. Cada definicao traz id, attribute_display_name, attribute_display_type, attribute_description, attribute_key, regex_pattern, regex_cue, attribute_values, attribute_model, attribute_timezone, default_value, `system` e created_at/updated_at. O `attribute_model` tem TRES valores: contact_attribute (contato), conversation_attribute (conversa) e account_attribute (variaveis da conta) — sem filtro a lista mistura os tres, entao passe `attribute_model` pra separar. Por padrao os atributos do sistema (Meta/Guru/UTM/agendamento) ficam FORA — passe include_system=true pra inclui-los. Sem paginacao e sem contador.",
     "common_use_cases": [
       "Dashboard: contar/exibir atributos personalizados",
       "Buscar com filtros antes de outra operação",
@@ -20990,7 +21074,7 @@
         "description": "Filtrar por nota"
       }
     ],
-    "returns": "meta (contadores globais) + payload (array de respostas CSAT)",
+    "returns": "Lista PURA (a resposta E o array, sem embrulho: nao ha meta nem payload) — 25 respostas por pagina, use `page` para as proximas; NAO vem total nenhum na resposta (para totais e distribuicao de notas use a ferramenta de metricas de CSAT). So aparecem pesquisas RESPONDIDAS. Cada item traz id, rating, feedback_message, csat_review_notes, review_notes_updated_at/by, account_id, message_id, conversation_id (display_id), contact (objeto do contato), assigned_agent (objeto do agente) e created_at (unix). Devolve `[]` quando nao ha respostas no filtro. Atencao: agente nao-admin so ve o proprio CSAT — o filtro user_ids e ignorado para ele.",
     "common_use_cases": [
       "Dashboard: contar/exibir respostas CSAT",
       "Buscar com filtros antes de outra operação",
@@ -21141,7 +21225,7 @@
         "type": "array",
         "location": "body",
         "required": false,
-        "description": "Critérios de público — array de seções combináveis: { type: 'Label', id } | { type: 'Funnel', id, stages: ['slug_etapa'], include_won: bool, include_lost: bool } | { type: 'ConversationAttribute', key, value } (atributo personalizado da conversa, ex: origem_do_lead=instagram). OBRIGATÓRIO em one-off"
+        "description": "Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: []} (responsavel atual OU time da conversa). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga. OBRIGATORIO em campanha one-off. Use exatamente as MESMAS secoes que voce passou em lionchat_campaigns_estimate_audience — estimar com um tipo e criar com outro entrega um publico diferente do numero que voce mostrou."
       },
       {
         "name": "audience_mode",
@@ -21190,7 +21274,7 @@
         "type": "object",
         "location": "body",
         "required": false,
-        "description": "Regras da campanha (hash aberto). Carrega: 'audience_mode' ('sum'|'all', combinacao das secoes de publico) e 'exclusion' (array no MESMO formato do audience — publico a negativar/excluir do disparo). Ex.: {\"audience_mode\":\"sum\",\"exclusion\":[{\"type\":\"ContactLabel\",\"id\":12}]}. audience_mode top-level so vale no estimate_audience; ao criar/editar ele PRECISA ir aqui dentro."
+        "description": "Regras da campanha (hash aberto). Carrega: 'audience_mode' ('sum'|'all', combinacao das secoes de publico) e 'exclusion' (array no MESMO formato do audience — publico a negativar/excluir do disparo). Ex.: {\"audience_mode\":\"sum\",\"exclusion\":[{\"type\":\"ContactLabel\",\"id\":12}]}. audience_mode top-level so vale no estimate_audience; ao criar/editar ele PRECISA ir aqui dentro. A `exclusion` usa o MESMO formato e os MESMOS 7 tipos do audience, inclusive o `operator` nas secoes de atributo."
       },
       {
         "name": "template_params",
@@ -21204,7 +21288,7 @@
         "type": "integer",
         "location": "body",
         "required": false,
-        "description": "CAMPANHA DE FLUXO (28/07/2026): id do flow que sera disparado para cada pessoa do publico, em vez de mandar uma mensagem. Quando presente, `message` NAO e usado (quem manda texto sao os blocos do flow) e o ritmo vai em template_params (delay_min/delay_max/daily_cap). O flow PRECISA: estar ativo, ser do tipo conversa, ter o gatilho 'campaign_trigger' ligado no bloco start E estar vinculado a MESMA inbox da campanha — senao 422 explicando qual regra falhou. Em caixa WhatsApp OFICIAL o 1o bloco de mensagem do flow tem que ser um template aprovado (senao 422). Use lionchat_flows_list com with_campaign_trigger=true&inbox_id=N para achar os flows elegiveis ANTES de criar."
+        "description": "CAMPANHA DE FLUXO (28/07/2026): id do flow que sera disparado para cada pessoa do publico, em vez de mandar uma mensagem. Quando presente, `message` NAO e usado (quem manda texto sao os blocos do flow) e o ritmo vai em template_params (delay_min/delay_max/daily_cap). O flow PRECISA: estar ativo, ser do tipo conversa, ter o gatilho 'campaign_trigger' ligado no bloco start E estar vinculado a MESMA inbox da campanha — senao 422 explicando qual regra falhou. Em caixa WhatsApp OFICIAL o PRIMEIRO bloco de mensagem de CADA CAMINHO do flow tem que comecar por um modelo aprovado — com sorteio ou condicao no inicio, TODAS as variacoes contam, nao so a primeira (senao 422, e o erro nomeia ate 5 blocos culpados). Use lionchat_flows_list com with_campaign_trigger=true&inbox_id=N para achar os flows elegiveis ANTES de criar."
       }
     ],
     "returns": "{ campaign: {...} } (201)",
@@ -21276,7 +21360,7 @@
         "type": "array",
         "location": "body",
         "required": false,
-        "description": "Critérios de público — array de seções combináveis: { type: 'Label', id } | { type: 'Funnel', id, stages: ['slug_etapa'], include_won: bool, include_lost: bool } | { type: 'ConversationAttribute', key, value } (atributo personalizado da conversa, ex: origem_do_lead=instagram)"
+        "description": "Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: []} (responsavel atual OU time da conversa). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga. OBRIGATORIO em campanha one-off. Use exatamente as MESMAS secoes que voce passou em lionchat_campaigns_estimate_audience — estimar com um tipo e criar com outro entrega um publico diferente do numero que voce mostrou."
       },
       {
         "name": "audience_mode",
@@ -21304,7 +21388,7 @@
         "type": "integer",
         "location": "body",
         "required": false,
-        "description": "CAMPANHA DE FLUXO (28/07/2026): id do flow que sera disparado para cada pessoa do publico, em vez de mandar uma mensagem. Quando presente, `message` NAO e usado (quem manda texto sao os blocos do flow) e o ritmo vai em template_params (delay_min/delay_max/daily_cap). O flow PRECISA: estar ativo, ser do tipo conversa, ter o gatilho 'campaign_trigger' ligado no bloco start E estar vinculado a MESMA inbox da campanha — senao 422 explicando qual regra falhou. Em caixa WhatsApp OFICIAL o 1o bloco de mensagem do flow tem que ser um template aprovado (senao 422). Use lionchat_flows_list com with_campaign_trigger=true&inbox_id=N para achar os flows elegiveis ANTES de criar."
+        "description": "CAMPANHA DE FLUXO (28/07/2026): id do flow que sera disparado para cada pessoa do publico, em vez de mandar uma mensagem. Quando presente, `message` NAO e usado (quem manda texto sao os blocos do flow) e o ritmo vai em template_params (delay_min/delay_max/daily_cap). O flow PRECISA: estar ativo, ser do tipo conversa, ter o gatilho 'campaign_trigger' ligado no bloco start E estar vinculado a MESMA inbox da campanha — senao 422 explicando qual regra falhou. Em caixa WhatsApp OFICIAL o PRIMEIRO bloco de mensagem de CADA CAMINHO do flow tem que comecar por um modelo aprovado — com sorteio ou condicao no inicio, TODAS as variacoes contam, nao so a primeira (senao 422, e o erro nomeia ate 5 blocos culpados). Use lionchat_flows_list com with_campaign_trigger=true&inbox_id=N para achar os flows elegiveis ANTES de criar."
       }
     ],
     "returns": "{ campaign: {...} }",
@@ -21374,7 +21458,7 @@
         "type": "array",
         "location": "body",
         "required": true,
-        "description": "Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Cada secao: {type, ...}. Tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stage_id?} (etapa de funil Kanban); 'ConversationAttribute' {key, value}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value}; 'CardAttribute' {key, value} (atributo do card Kanban); 'AgentTeam' {assignee_ids:[], team_ids:[]} (responsavel atual OU time da conversa)."
+        "description": "Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: []} (responsavel atual OU time da conversa). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga."
       },
       {
         "name": "audience_mode",
@@ -21384,14 +21468,21 @@
         "description": "Como combinar as secoes: 'sum' (uniao — quem estiver em QUALQUER secao, padrao) | 'all' (intersecao — quem estiver em TODAS as secoes preenchidas). No estimate vai top-level; ao CRIAR a campanha o modo vai dentro de trigger_rules.audience_mode."
       },
       {
+        "name": "inbox_id",
+        "type": "integer",
+        "location": "body",
+        "required": false,
+        "description": "Caixa que vai disparar. Sem ele o `limit_info` volta todo NULO e o teto diario da Meta NAO aparece — o silencio parece \"nao ha limite\". Mande SEMPRE o mesmo inbox_id que sera usado na campanha. So caixa WhatsApp OFICIAL (Cloud) tem teto; QR Code/SMS devolvem nulo mesmo com o id."
+      },
+      {
         "name": "exclusion",
         "type": "array",
         "location": "body",
         "required": false,
-        "description": "Publico a EXCLUIR/negativar antes de estimar (mesmo formato do 'audience': lista de secoes por tipo). O contador desconta quem cair na exclusao. Tipos aceitos iguais aos do audience (Label, Funnel, ConversationAttribute, ContactLabel, ContactAttribute, CardAttribute, AgentTeam)."
+        "description": "Publico a EXCLUIR/negativar antes de estimar (mesmo formato do 'audience': lista de secoes por tipo). O contador desconta quem cair na exclusao. Tipos aceitos iguais aos do audience (Label, Funnel, ConversationAttribute, ContactLabel, ContactAttribute, CardAttribute, AgentTeam). As secoes de atributo aceitam o mesmo `operator` do audience (eq, neq, contains, not_contains, starts_with, present, blank)."
       }
     ],
-    "returns": "{ count: <int> }",
+    "returns": "{ estimated_count: <int>, limit_info: { tier, cap, used_24h, remaining, will_send_now, batches_preview: [{date, count}] } } — NAO existe o campo `count`. `limit_info` so vem preenchido quando se manda `inbox_id` de caixa WhatsApp OFICIAL (Cloud): `cap` = teto de contatos NOVOS por dia que a Meta libera, `used_24h` = quanto ja foi usado nas ultimas 24h, `remaining` = o que sobra hoje, `will_send_now` = quanto sai agora e `batches_preview` = o cronograma dia a dia do restante. Em caixa QR Code/SMS, ou sem inbox_id, `tier`/`cap`/`used_24h`/`remaining` vem NULOS, `batches_preview` vem VAZIO e `will_send_now` e a lista inteira — nulo NAO significa \"sem limite\". Sempre mostre o teto do dia junto com o numero, senao voce promete 5.000 disparos num numero que so fala com 2.000.",
     "common_use_cases": [
       "Validar público antes do disparo",
       "Comparar união vs interseção dos critérios"
@@ -21429,7 +21520,7 @@
     "method": "GET",
     "path": "/api/v1/accounts/{account_id}/campaigns/{id}/flow_report",
     "title": "Andamento da Campanha de Fluxo",
-    "description": "Andamento da agenda de uma CAMPANHA DE FLUXO (campanha criada com flow_id). Retorna scheduled (total agendado), fired (ja disparados), pending (ainda na fila), skipped (pulados), cancelled, failed, skips (quebra por MOTIVO do pulo) e ends_at (previsao de termino). Motivos possiveis em skips[].reason: sessao_ja_ativa (a pessoa ja estava nesse mesmo flow — evita receber em dobro), contato_sem_telefone, template_necessario (caixa oficial exige template aprovado no 1o bloco), caixa_desvinculada, gatilho_removido, flow_inativo, flow_removido, conversa_falhou, sessao_duplicada, erro_interno. Quando a campanha termina os numeros ficam CONGELADOS (a agenda e limpa em 30 dias). 422 se a campanha nao for de fluxo.",
+    "description": "Andamento da agenda de uma CAMPANHA DE FLUXO (campanha criada com flow_id). Retorna scheduled (total agendado), fired (ja disparados), pending (ainda na fila), skipped (pulados), cancelled, failed, skips (quebra por MOTIVO do pulo) e ends_at (previsao de termino). Motivos possiveis em skips[].reason: sessao_ja_ativa (a pessoa ja estava nesse mesmo flow — evita receber em dobro), contato_sem_telefone, template_necessario (caixa oficial: algum CAMINHO do flow abre sem modelo aprovado no primeiro bloco de mensagem daquele caminho — com sorteio/condicao no inicio, todas as variacoes contam), caixa_desvinculada, gatilho_removido, flow_inativo, flow_removido, conversa_falhou, sessao_duplicada, erro_interno. Quando a campanha termina os numeros ficam CONGELADOS (a agenda e limpa em 30 dias). 422 se a campanha nao for de fluxo.",
     "category": "Campanhas",
     "params": [
       {
@@ -25184,6 +25275,13 @@
         "description": "Atribuição automática"
       },
       {
+        "name": "auto_assignment_config",
+        "type": "object",
+        "location": "body",
+        "required": false,
+        "description": "Bloco de configuracao da Distribuicao Automatica da propria caixa (29/07/2026): { assign_offline_agents (bool — distribuir tambem para quem esta offline), fair_distribution_limit (int — quantas conversas o robo entrega a cada atendente por janela), fair_distribution_window (int — tamanho da janela em SEGUNDOS) }. ATENCAO: o envio SUBSTITUI o bloco INTEIRO — reenvie as chaves que ja existem, senao elas somem. Chave fora dessas 3 e DESCARTADA em silencio (responde 200 e nada muda). Aqui `fair_distribution_limit: 0` E aceito e significa SEM FREIO (na Politica de Atribuicao o 0 e recusado). So vale quando a caixa NAO tem politica vinculada — com politica, este bloco e ignorado e a secao some da tela da caixa."
+      },
+      {
         "name": "additional_attributes",
         "type": "object",
         "location": "body",
@@ -25810,10 +25908,10 @@
     "params": [
       {
         "name": "file",
-        "type": "string",
+        "type": "file",
         "location": "body",
         "required": true,
-        "description": "Arquivo CSV (mesmo formato do import_csv)"
+        "description": "Arquivo CSV (multipart, mesmo formato do import_csv). E um ARQUIVO de verdade, nao o texto da planilha colado — mandar o conteudo como texto derruba o servidor com erro 500."
       },
       {
         "name": "mappings",
