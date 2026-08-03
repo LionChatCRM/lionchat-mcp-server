@@ -131,6 +131,42 @@ Regra prática:
 Quem entra no rodízio: só `inbox_members` com `auto_assignable: true` (supervisor de caixa fica de
 fora) e, se "distribuir para agentes offline" estiver desligado, só quem está online.
 
+### A fila do TIME tem preferência sobre a da caixa (novo 2026-07-31)
+
+Existe um TERCEIRO nível de distribuição, e ele vem ANTES dos dois de cima. A regra, por conversa:
+
+> **conversa está num time que distribui → manda o TIME (quem entra e qual o teto).
+> Senão → cai pra caixa/política, exatamente como antes.**
+
+Decisão do dono: **time tem preferência, caixa é reserva.** O time decide QUEM e QUANTO; a
+caixa/política continua decidindo a ORDEM da fila, as exclusões e a capacidade por atendente.
+
+Campos do time (tools `lionchat_teams_create` / `_update`):
+
+| Campo | O que faz | Padrão |
+|---|---|---|
+| `allow_auto_assign` | liga/desliga a distribuição do time | `true` |
+| `assignment_mode` | `online_only` (só quem está online) ou `include_offline` (todo mundo do time) | `online_only` |
+| `fair_distribution_limit` | teto de conversas por atendente na janela | `10` |
+| `fair_distribution_window` | tamanho da janela, **em segundos** | `600` |
+
+Quem entra no bolo do time: membros com `auto_assignable: true` (supervisor de time fica de fora)
+**que também sejam membros da caixa** — quem não é da caixa nunca entra, senão a conversa cairia com
+alguém que nem enxerga aquela caixa.
+
+Antes de 31/07 o time sorteava UMA vez, no instante em que a conversa caía nele; não achando ninguém
+disponível, desistia PARA SEMPRE e a conversa ficava aberta sem dono. Agora a mesma varredura que já
+existia para a caixa reprocessa a fila do time. Se o cliente reclamar de "conversas com time e sem
+dono" de antes dessa data, a causa é essa — e já está corrigida.
+
+**LEIA o valor do time antes de responder** — a resposta de `lionchat_teams_list` / `_show` traz os
+quatro campos. Como em toda configuração, nunca recite o padrão de fábrica como se fosse o que o
+cliente configurou: cite o número que a API devolveu.
+
+> Nota de compatibilidade: `fair_distribution_limit` e `fair_distribution_window` só passaram a sair
+> na resposta em **03/08/2026**. Se vierem ausentes, a instalação é anterior a essa data — nesse caso
+> não afirme o valor, mande conferir em Configurações → Times → editar o time.
+
 **LEIA o valor da conta antes de responder — NUNCA recite um número de cabeça.** Os valores reais
 vêm na resposta da API:
 - `has_assignment_policy` (resposta da caixa) diz QUAL dos dois caminhos vale ali. `true` = política
@@ -265,6 +301,41 @@ Conversation
 1. Tem automation rule com `event_name: conversation_updated` ou similar?
 2. Tem SLA policy ativando state change?
 3. Veio de external API call?
+
+## Pesquisa de satisfação (CSAT) — vale em TODO canal (corrigido 2026-07-31)
+
+A pesquisa de satisfação é enviada **dentro da própria conversa** (modo `in_chat`) em **todos os
+canais** — WhatsApp, Telegram, Instagram, SMS, site. O backend sempre funcionou assim; era a TELA que
+só mostrava a configuração quando a caixa era WhatsApp, então de 01/04 a 31/07 quem usava outro canal
+via a aba quase vazia e herdava um texto padrão que não conseguia editar. Hoje a configuração aparece
+igual pra todos.
+
+Duas coisas pra não errar ao explicar:
+- **A regra de etiqueta (`survey_rules`) agora é respeitada de verdade.** Ela aparecia na tela e era
+  IGNORADA no envio — a pesquisa saía pra todo mundo. Se o cliente configurou "só enviar quando a
+  conversa tem a etiqueta X" antes de 31/07 e reclamou que ia pra todos, a causa era essa e já está
+  corrigida.
+- **Caixa que nunca teve a aba salva** pode continuar sem `csat_mode` gravado e cair no caminho antigo.
+  Se duas caixas iguais se comportarem diferente, mande abrir a aba de Pesquisa de Satisfação e salvar
+  uma vez.
+
+## Migrar conversas entre caixas de WhatsApp (2026-08-01)
+
+Serve pra quem está saindo do WhatsApp por QR Code e indo pro Oficial (ou trocando de número): leva as
+conversas e os contatos da caixa antiga pra nova. Tools: `lionchat_inboxes_inbox_migration_list`
+(prévia), `_execute` (executa) e o acompanhamento de status. **Admin-only e irreversível** — mostre os
+números da prévia e confirme antes.
+
+O que a prévia devolve (e o que ela conta): a contagem é de **CONVERSAS**, dividida em migráveis,
+conflitantes e não-migráveis; contato sem conversa é ignorado, e os baldes fecham com o total.
+
+**Regras que mudam o resultado — diga ao cliente ANTES de executar:**
+- **Grupos não vão pro canal Oficial.** A Meta não tem grupos: conversa de grupo (`@g.us`), lista de
+  transmissão e canal ficam na caixa de ORIGEM e aparecem contados como pulados. Não é falha.
+- QR Code → Oficial passou a funcionar de verdade em 01/08. Antes a migração falhava — em uma conta
+  gravou "0 migradas" por causa de um grupo, e na prática teria falhado em 100% dos contatos, porque o
+  formato de identificador do QR Code não estava sendo convertido. Se o cliente tentou migrar antes
+  dessa data e não deu certo, mande tentar de novo.
 
 ## Receitas de ação (qual tool usar pra cada coisa)
 

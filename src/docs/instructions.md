@@ -90,6 +90,25 @@ daquela caixa, mas fica FORA da distribuição automática (round-robin nunca at
 caixas das quais participa — exceção é estar atribuído a um card, que libera só aquela conversa (ver
 `lionchat://docs/kanban-deep-dive`).
 
+### Supervisor de time (TeamMember.auto_assignable) — novo 2026-07-30
+
+O TIME passou a ter os MESMOS dois papéis da caixa. Supervisor de time é membro pra TUDO — menção ao
+time, e-mail de automação, acesso ao funil do Kanban, relatório, contagem e atribuição MANUAL — mas
+fica FORA da distribuição automática do time (nem conversa, nem rodízio de card do funil).
+
+- Flag: `team_members.auto_assignable` (`false` = supervisor, `true` = agente). A coluna nasce `true`:
+  todo vínculo anterior a 30/07 é Agente.
+- Tools: `lionchat_team_members_create` / `_update`. **O contrato é DIFERENTE do da caixa, de
+  propósito:** aqui `user_ids[]` é a lista COMPLETA de membros e `supervisor_ids[]` é um SUBCONJUNTO
+  dela. Chave `supervisor_ids` **ausente = não mexe em papel nenhum** (só entra/sai membro) — assim um
+  cliente antigo que só manda `user_ids` não zera em silêncio os supervisores marcados na tela.
+- `lionchat_team_members_list` traz `is_supervisor` por agente.
+
+**As duas marcas são INDEPENDENTES (decisão do dono 30/07):** a da caixa protege da distribuição da
+CAIXA; a do time protege da distribuição do TIME. Supervisor de caixa que é agente de um time
+CONTINUA recebendo conversa por aquele time — é intencional, não é defeito. Nunca diga ao cliente que
+marcar supervisor num lugar protege no outro.
+
 ## 3. Convenções da API
 
 ### Datas
@@ -302,6 +321,7 @@ e pular evita que ela receba tudo em dobro. Quem está sendo atendido pela equip
 | Rate limit leitura | 1200/min por token |
 | Rate limit escrita | 600/min por token |
 | Loop detection | bloqueia chamada idêntica >10x em 10s |
+| Variável de Conta — tamanho do valor | 32 KB por variável (novo 01/08/2026; passou disso = HTTP 422 na conta). Vale só pra variável DECLARADA na tela; chave interna do sistema não é barrada. É por variável, não pela soma — conta com dezenas de tokens legítimos não é punida |
 
 Exceção ao teto de 300: em ação em massa de **contatos** com `select_all: true` (agir sobre todos os
 contatos do filtro) não há teto de IDs — o servidor refaz o filtro e processa em lotes no fundo. O
@@ -352,6 +372,9 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | **Importar histórico** de caixa WhatsApp Cloud (QR) | `lionchat_inboxes_whatsapp_history_start` / `_status` / `_cancel` | Admin-only + flag `qr_history_import`; só caixa oficial. Acompanhe `state` no `_status` |
 | Ver / limpar **falhas de envio** de uma caixa | `lionchat_inboxes_failed_messages_summary` primeiro; depois `_bulk_retry` (reenviar) ou `_bulk_cancel` (descartar) | Admin-only. Reenvio em massa e cancelamento em massa são ações irreversíveis: mostre as contagens do summary e confirme (seção 7a/7b). Numa mensagem só: `lionchat_conversations_messages_create_1` (reenviar) / `lionchat_conversations_messages_cancel_retry` (cancelar) |
 | **Definir supervisor** de caixa | `lionchat_inbox_members_create` / `_update` com `supervisor_ids[]` | Supervisor vê TUDO da caixa mas fica fora do rodízio (ver abaixo) |
+| **Definir supervisor** de time | `lionchat_team_members_create` / `_update` com `supervisor_ids[]` | Contrato diferente do da caixa: `user_ids[]` é a lista COMPLETA e `supervisor_ids[]` um subconjunto dela. Omitir `supervisor_ids` não mexe em papel nenhum (seção 2) |
+| **Mudar a fila do time** (teto por atendente, janela, online/offline) | `lionchat_teams_update` (`assignment_mode`, `fair_distribution_limit`, `fair_distribution_window`) | Time tem PREFERÊNCIA sobre a caixa na distribuição. Leia a config atual antes de mudar (ver `lionchat://docs/conversation-flows`) |
+| **Migrar conversas** de uma caixa WhatsApp pra outra (ex.: QR Code → Oficial) | `lionchat_inboxes_inbox_migration_list` (prévia) → `_execute` → acompanhar status | Admin-only e IRREVERSÍVEL: sempre mostre os números da prévia e confirme (seção 7a). Grupos não vão pro canal oficial — ficam na caixa de origem |
 | Qualquer coisa de Ligação WP (Wavoip) | **NÃO HÁ TOOL** — removidas em 2026-07-16 por decisão do dono | Ligação WP é contratada e configurada **manualmente pelo cliente no painel**. O MCP não conecta, não desconecta, não entrega token de discagem nem muda config. Oriente o usuário a fazer pelo painel (Configurações da caixa → Ligação WP). |
 | Restringir agendas que a IA oferece | `lionchat_captain_assistants_update` (`config.booking_event_type_ids: [Int]`) | binding de agenda por cenário NÃO é settable via API |
 | Configurar o Copiloto (modelo/temperatura/prompt base) | `lionchat_copilot_settings_update` | admin-only; copiloto tem motor próprio (padrão temp 0.3) |

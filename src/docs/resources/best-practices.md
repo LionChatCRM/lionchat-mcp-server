@@ -247,6 +247,24 @@ pula o follow-up). Tipos:
   (não empurra pra frente — evita disparo em massa na abertura); a cadência segue nos passos seguintes.
   `start == end` = janela inválida (ignorada). Ideal pra não incomodar cliente de madrugada.
 
+## Follow-up fora da janela de 24h usa TEMPLATE (novo 2026-07-30)
+
+Em caixa **WhatsApp oficial**, passadas 24h da última mensagem do cliente, a Meta recusa qualquer texto
+escrito pela IA. Até 30/07 o follow-up nem perguntava: escrevia, o canal recusava e sobrava um balão
+vermelho com o erro enganoso "Template not found or invalid template name" (392 balões assim num único
+dia numa conta). Agora o gerador de follow-up recebe os modelos aprovados da caixa ANTES de escrever e
+escolhe um deles quando a janela está fechada.
+
+O que isso significa na prática, pra explicar ao cliente:
+- **Conta em caixa oficial que quer follow-up depois de 24h PRECISA ter template aprovado na Meta.**
+  Sem nenhum template, não há como falar fora da janela — não é limitação da plataforma, é regra da Meta.
+- **Mandar template não reabre a janela.** Só a resposta do cliente reabre. Um follow-up por template
+  pode ser respondido — e é a resposta dele que libera texto livre de novo.
+- **Trava anti-repetição:** modelo já enviado naquele ciclo de follow-up sai da lista. Numa conta com um
+  único template (normalmente o mesmo da campanha), sem essa trava o cliente receberia minutos depois o
+  mesmo texto que acabou de ler.
+- Dentro da janela nada muda: o follow-up continua sendo texto livre, escrito pela IA.
+
 ## Desligar a IA quando um humano assume (2026-07)
 
 `config.feature_pause_on_human_reply` (bool, padrão false). Ligado, a IA **se desliga sozinha** na
@@ -379,6 +397,17 @@ o `exclusion` (e o `audience_mode`) vão TOP-LEVEL; ao CRIAR/EDITAR a campanha e
 `{assignee_id, priority, labels}`: `contact_labels: []` (aplica etiqueta ao CONTATO que recebeu) e
 `attribute_changes: [{scope:'contact'|'conversation', key, value}]` (grava/sobrescreve atributo de quem recebeu).
 
+**Público por PLANILHA (novo 2026-07-31):** o painel passou a aceitar CSV/XLS como público do disparo,
+nas três abas de campanha. **Não existe tipo novo de público** — a importação marca os contatos da
+planilha com uma **etiqueta de contato** e/ou um **atributo de contato**, e a campanha usa os tipos que
+já existiam (`ContactLabel` / `ContactAttribute`).
+
+Ou seja: **dá pra reproduzir pela API.** Importe os contatos aplicando uma marca própria da lista (ex.:
+etiqueta `lista-black-friday`) e monte o `audience` com `{"type": "ContactLabel", "id": <id>}`. Se o
+cliente pedir "disparar pra essa planilha", esse é o caminho. A marcação em lote é feita em silêncio
+(sem callback nem evento), então importar uma lista grande **não acorda automação nem fluxo** — foi
+desenhada assim de propósito, pra não repetir a tempestade de eventos de 29/07.
+
 SEMPRE rode `campaigns_estimate_audience` com o MESMO audience + audience_mode + exclusion antes de
 criar a campanha e mostre a contagem ao usuário — estimativa e disparo usam o mesmo motor (não divergem).
 
@@ -399,6 +428,12 @@ Pra dados fixos que se repetem (slogans, endereços, horários):
 - Resolve em: mensagens, respostas prontas, campanhas e automações. NÃO resolve nas instruções do AI Agente (base/cenário) — ali só `contact.*` e `conversation.*`.
 - `secret` nunca aparece em template (sai vazio); só resolve em nós API Request do FlowBuilder.
 - Atualiza UMA vez, propaga pra todo lugar.
+- **Teto de 32 KB por variável (novo 01/08/2026).** Valor maior que isso é recusado com HTTP 422. É por
+  VARIÁVEL, não pela soma — conta com dezenas de tokens legítimos (uma delas tem 23 tokens de
+  integração) não é punida. A maior variável legítima medida na plataforma tem 348 bytes, então o teto
+  dá ~90x de folga: cabe qualquer token, URL, endereço ou texto de configuração; **não** cabe base de
+  dados, JSON gigante nem script. Se o cliente quiser guardar algo desse tamanho, o lugar é um arquivo
+  ou uma integração, não uma Variável de Conta.
 
 Nunca hard-code esses dados em respostas geradas.
 

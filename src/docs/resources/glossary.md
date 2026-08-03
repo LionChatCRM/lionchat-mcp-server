@@ -168,6 +168,23 @@ do rodízio).
 aceitam `supervisor_ids[]` além de `user_ids[]` — os IDs em `supervisor_ids` viram supervisores;
 os de `user_ids` viram membros comuns. A resposta traz `is_supervisor` (boolean) por agente.
 
+### Supervisor de TIME (novo 2026-07-30) — é outra marca, independente da de caixa
+
+O time ganhou os mesmos dois papéis. Supervisor de time continua membro pra tudo (menção, e-mail de
+automação, acesso a funil do Kanban, relatório, contagem, atribuição MANUAL) e fica fora da
+distribuição automática do time — tanto de conversa quanto do rodízio de card do funil.
+
+**Onde fica armazenado:** flag `team_members.auto_assignable` (espelho da de caixa).
+
+**Como definir/ler via tools:** `lionchat_team_members_create` / `_update` com `supervisor_ids[]`.
+**Diferença importante do contrato da caixa:** aqui `user_ids[]` é sempre a lista COMPLETA de membros
+e `supervisor_ids[]` é um SUBCONJUNTO dela; omitir `supervisor_ids` não mexe em papel nenhum.
+`lionchat_team_members_list` traz `is_supervisor`.
+
+**As duas marcas NÃO se comunicam:** a da caixa protege da distribuição da caixa, a do time da
+distribuição do time. Supervisor de caixa que é agente num time continua recebendo por aquele time —
+comportamento intencional.
+
 ## KanbanItem (Card do CRM)
 
 ### Estrutura

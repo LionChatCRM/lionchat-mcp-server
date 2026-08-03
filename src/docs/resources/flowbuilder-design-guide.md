@@ -186,6 +186,13 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 - `title` = texto **EXATO** do botão quick-reply aprovado na Meta (o WhatsApp devolve o TÍTULO no clique; o match é por ele). `value` = slug do título (deduplicado se dois títulos colidem).
 - Handles: `button_<value>` por botão + `no_response` (sempre — texto livre em vez de clique) + `no_reply_timeout` (só com `buttons_timeout > 0`; `buttons_timeout_unit` `minutes|hours|days`; `0` = sem timeout).
 - Modo síncrono (`ai_tool`) e `dry_run` NÃO pausam/roteiam — o template só é enviado (botões decorativos). Só faz sentido em caixa WhatsApp com template de botões aprovado.
+- **O item guarda uma FOTO do template** (corpo + botões) tirada quando foi configurado. Se o modelo for
+  alterado na Meta depois disso, a foto envelhece: até 2026-07-30 a atualização automática ao reabrir o
+  bloco comparava só o CORPO, então mudança APENAS de botão passava batido — a tela mostrava os botões
+  novos (ela lê o modelo vivo) e o flow continuava roteando pelos ANTIGOS. Caso real: um botão renomeado
+  fazia todo mundo cair em "outra resposta". Hoje corpo E botões são comparados. **Se você mudou os
+  botões de um template na Meta, avise que é preciso reabrir o bloco e RELIGAR a saída renomeada** — a
+  aresta do botão antigo é removida junto.
 
 > ⚠️ **SAÍDAS CONDICIONAIS — NUNCA ligue edge nelas sem ativar a condição.** Estas saídas SÓ existem
 > quando a config abaixo está presente. Ligar edge nelas sem isso cria uma **aresta fantasma** (linha
@@ -269,6 +276,13 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 
 **REGRA:** depois de wait_response com `options` OU `varied_options`, NUNCA coloque node `condition` pra ramificar — ligue os edges direto nos handles `option_X` (em `varied_options`, `X` é o `id` do grupo).
 
+**Node que NÃO salva também avança (corrigido 2026-08-01):** até essa data, o avanço do `wait_response`
+dependia de ter uma variável configurada — com `saveTo: ""` o node RECEBIA a resposta e reentrava em si
+mesmo, e quem respondia no prazo acabava saindo pelo caminho de `timeout`. Sintoma que o cliente
+relatava: "mando a mensagem e o fluxo trava em aguardando resposta". Hoje o node avança sempre; salvar
+o valor é opcional de novo, como o schema sempre prometeu. Se um flow antigo tiver ganhado uma variável
+só pra destravar, ela pode sair.
+
 ### 2.4 `condition`
 
 ```json
@@ -325,7 +339,8 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 | `equal_any` / `not_equal_any` / `contains_any` / `not_contains_any` | multi-valor (usa `values` array). `contains_any` = contém ALGUMA; `not_contains_any` = não contém NENHUMA (útil pra "seguir só quando a msg não tem nenhuma das palavras-chave de outros flows") |
 | `business_hours` / `outside_business_hours` | horário comercial (par: dentro/fora). `business_hours` aceita `start_hour`/`end_hour` (0-23), `days` (array 0=Dom..6=Sab, ausente=todos) e **`timezone`** (IANA, ex.: `America/Sao_Paulo` — default se ausente). **REGRA:** a saída `outside_business_hours` HERDA `start_hour`/`end_hour`/`days`/`timezone` da `business_hours` ANTERIOR no array — pode deixá-los ausentes na "fora" (o backend preenche). O horário é avaliado no `timezone` (não em UTC) |
 | `can_reply` / `can_reply_closed` | janela 24h aberta/fechada |
-| `conversation_has_agent` / `conversation_no_agent` / `conversation_not_agent` | agente atribuído |
+| `conversation_has_agent` / `conversation_no_agent` / `conversation_not_agent` | agente atribuído (HUMANO) |
+| `conversation_has_ai_agent` / `conversation_no_ai_agent` / `conversation_not_ai_agent` | agente de IA atribuído (novo 2026-08-01) — ver abaixo |
 | `contact_has_label` / `contact_no_label` / `conversation_has_label` / `conversation_no_label` | labels |
 | `kanban_exists` / `kanban_in_stage` / `kanban_won` / `kanban_lost` | card no funil. `funnel_id` é CHAVE SEPARADA da condição (número, ex.: `"funnel_id": 37`). A etapa vai em `value` (slug puro da etapa, ex.: `"avaliacao_aceita"`) ou em `stage` — NÃO no formato `"37:etapa"`. Ex.: `{ "operator": "kanban_in_stage", "funnel_id": 37, "value": "avaliacao_aceita" }` |
 | `card_attr_equals` / `card_attr_contains` | atributo do card (`attrSource: 'card'` + `attr_key`; aceita `card_source: 'trigger'` p/ ler o card que iniciou o flow) |
@@ -341,6 +356,22 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 - **Data e Hora (`datetime`):** `equal`, `not_equal`, **`greater_than`, `less_than`** (novo 2026-07-21). Em `greater_than`/`less_than` o `value` é ISO `YYYY-MM-DDTHH:MM` (UI = calendário + hora). Backend compara HORÁRIO DE PAREDE (dia+hora até o minuto, IGNORA o fuso — o valor gravado tem offset `-03:00` mas a comparação é feita no relógio local, não no instante UTC).
 
 `greater_than`/`less_than` valem em atributo número (valor numérico) E temporais `date`/`time`/`datetime` (o backend detecta o formato do valor: instante > dia > minutos > número). `number_range` SÓ em número. Nunca use maior/menor em texto/lista.
+
+**Agente de IA — `conversation_has_ai_agent` e irmãos (novo 2026-08-01):** o flow sempre soube LIGAR e
+DESLIGAR a IA (ações `assign_captain` / `deactivate_captain`), mas não sabia PERGUNTAR se ela estava
+ligada. Agora sabe. É o espelho exato do trio do agente humano:
+
+| Forma | Verdadeiro quando |
+|---|---|
+| `{ "operator": "conversation_has_ai_agent" }` (sem valor) | tem QUALQUER IA atribuída |
+| `{ "operator": "conversation_has_ai_agent", "values": [12, 15] }` | a IA atribuída é uma dessas |
+| `{ "operator": "conversation_has_ai_agent", "value": 12 }` | a IA atribuída é exatamente essa |
+| `{ "operator": "conversation_no_ai_agent" }` | não tem IA nenhuma |
+| `{ "operator": "conversation_not_ai_agent", "values": [12] }` | tem IA, mas não é nenhuma dessas |
+
+**Semântica (decisão do dono 01/08): reflete ATRIBUIÇÃO, não "vai responder agora".** Assistente
+pausado no botão de pânico global continua contando como atribuído. Se o cliente perguntar "a IA está
+respondendo?", essa condição NÃO responde isso — ela responde "a IA está ligada nesta conversa?".
 
 **SLA — operador `sla_check` (2026-06):** verifica se a conversa está dentro/fora do prazo de SLA. A regra NÃO usa `field`, só `value` (código fixo):
 
@@ -812,6 +843,41 @@ disponível sob o envelope `webhook` — navegação por ponto e índice de list
 continua servindo pra GRAVAR no contato). Teto: payload acima de 256KB não vira variável. Flow
 disparado por OUTRO gatilho (mensagem, card, data): `{{webhook.*}}` resolve vazio. O autocomplete
 do editor mostra o grupo WEBHOOK com os campos do último payload recebido.
+
+**Variáveis do gatilho `{{trigger.*}}` (novo 2026-08-01):** todo flow — não importa o gatilho — passa
+a saber O QUE o disparou. Antes só existia o tipo, e um flow com VÁRIOS gatilhos não tinha como se
+ramificar por qual deles disparou. Agora dá: `{{trigger.type}}` num node `condition`.
+
+Sempre presente:
+
+| Variável | Conteúdo |
+|---|---|
+| `{{trigger.type}}` | chave do evento (`message_created`, `conversation_created`, `label_added`, `kanban_item_stage_changed`, `webhook_received`, `date_trigger`, `flow_campaign`, `manual`, `pagetrack_visited`…) |
+| `{{trigger.name}}` | rótulo legível do MESMO evento ("Mensagem recebida", "Card mudou de etapa") — use este pra ESCREVER pro cliente, e o `type` pra COMPARAR em condição |
+| `{{trigger.activated_at}}` | quando disparou (ISO 8601) |
+| `{{trigger.kanban_item_id}}` / `{{trigger.funnel_id}}` | só quando veio do Kanban |
+
+Presentes conforme o evento (ausente = resolve vazio, sem erro):
+
+| Bloco | Campos |
+|---|---|
+| `{{trigger.message.*}}` | `id`, `content` (texto da mensagem, cortado em 2.000 caracteres), `type`, `created_at` |
+| `{{trigger.conversation.*}}` | `id` (o display_id), `status`, `channel` (nome amigável: `Waha`, `Whatsapp`, `Instagram`), `inbox_id`, `inbox_name`, `created_at` |
+| `{{trigger.contact.*}}` | `id`, `name`, `phone` |
+| `{{trigger.ad.*}}` (anúncio/CTWA) | `id`, `name`, `creative_id`, `creative_name`, `adset_id`, `adset_name`, `campaign_id`, `campaign_name`, `source`, `headline`, `description`, `cta`, `url` |
+| `{{trigger.attribute.*}}` | `name`, `previous_value`, `current_value`, `changed_at` — o valor ANTES e DEPOIS do atributo que disparou (só nos gatilhos de mudança de atributo) |
+
+Dois atalhos: `{{trigger}}` devolve o contexto INTEIRO em JSON e `{{trigger.data}}` devolve o mesmo
+sem os metadados — úteis pra jogar tudo dentro de um node `ai` ou `api`. Bloco (Hash/Array) inteiro
+sai em JSON; valor simples sai cru.
+
+**NÃO duplique o que já tem variável própria.** `{{contact.name}}`, `{{conversation.status}}`,
+`{{inbox.name}}` e os atributos `ctwa_*` continuam existindo e são a forma canônica. O `{{trigger.*}}`
+serve pra perguntar "o que veio COM o gatilho", não pra ser um segundo nome do mesmo dado.
+
+**Variáveis do agente de IA `{{ai_agent.*}}` (novo 2026-08-01):** `{{ai_agent.name}}` e
+`{{ai_agent.id}}` trazem o AI Agente atribuído à conversa (vazio se não houver). Prefixo `ai_agent` de
+propósito — `agent` sozinho é o atendente HUMANO, e confundir os dois seria pior que não ter.
 
 ---
 
