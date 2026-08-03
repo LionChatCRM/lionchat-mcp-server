@@ -29,12 +29,43 @@ E/OU é encadeado condição a condição (sem parênteses).
 | `display_id` | equal_to, not_equal_to, contains, does_not_contain (o `contains`, busca por trecho do número, passou a funcionar de verdade em 2026-07-25 — antes dava erro de banco) |
 | `referer`, `mail_subject` | equal_to, not_equal_to, contains, does_not_contain |
 | `browser_language`, `conversation_language` | equal_to, not_equal_to |
-| `created_at`, `last_activity_at` (valor = data) | is_greater_than, is_less_than, days_before |
+| `created_at`, `last_activity_at` (valor = data) | is_greater_than, is_less_than, days_before + relativos `today`, `yesterday`, `last_days`, `days_ago` (novo 01/08 — ver abaixo) |
 | `card_funnel_stage` (conversa POR CARD do Kanban — valor `funnel:<id>` ou `stage:<id>:<chave_etapa>`) | equal_to, not_equal_to |
 | **qualquer outra chave** = atributo personalizado | conforme o tipo do atributo (ver tabela em api-conventions) |
 
 Atributo personalizado: informe `custom_attribute_type` na condição — `'conversation_attribute'`
 (atributo da conversa) ou `'contact_attribute'`. Sem ele o escopo pode sair errado.
+
+### Data relativa — "Hoje", "Ontem", "últimos X dias" (novo 2026-08-01)
+
+Não calcule data no seu lado pra perguntar "quantas conversas entraram hoje". Existem operadores
+próprios, e eles resolvem tudo em **dias INTEIROS no fuso da CONTA** (`Account#timezone`, padrão
+`America/Sao_Paulo`). Valem em `created_at` e `last_activity_at`, tanto em
+`lionchat_conversations_filter` quanto em `lionchat_contacts_filter`.
+
+| Operador | Valor | Janela |
+|---|---|---|
+| `today` | **nenhum** | hoje, 00:00 → 23:59 |
+| `yesterday` | **nenhum** | ontem, 00:00 → 23:59 |
+| `last_days` | `values: [N]` | últimos N dias **incluindo hoje** (N=7 → de 6 dias atrás 00:00 até hoje 23:59) |
+| `days_ago` | `values: [N]` | o dia EXATO de N dias atrás (um dia só, não um intervalo) |
+| `days_before` | `values: [N]` | tudo **mais antigo** que N dias atrás (o comportamento que já existia) |
+
+```json
+{ "attribute_key": "created_at", "filter_operator": "today", "values": [], "query_operator": null }
+{ "attribute_key": "created_at", "filter_operator": "last_days", "values": [7], "query_operator": null }
+```
+
+**Regras que derrubam a chamada se ignoradas:**
+- `today` e `yesterday` NÃO levam valor — o servidor nem espera o campo.
+- Nos outros três, N tem que ser inteiro entre **1 e 998**. Zero, negativo, texto ou vazio = HTTP 422
+  (`InvalidValue`). Não existe `last_days: 0` pra dizer "hoje" — pra hoje use `today`.
+- `is_greater_than` / `is_less_than` continuam sendo o caminho da data FIXA (`values: ["2026-08-01"]`).
+  Use-os quando o cliente citou um dia específico; use os relativos quando ele disse "hoje", "ontem"
+  ou "últimos X dias".
+
+Por que mudou: até 01/08 a borda do dia era montada em UTC, o que errava **3 horas** no Brasil —
+conversa criada às 22h aparecia no dia seguinte. Agora a borda é a do fuso da conta.
 
 ## 2. Contatos — `lionchat_contacts_filter`
 

@@ -283,6 +283,42 @@ Cancelar vale pra TODOS os grupos (inclusive `permanent`, `window_expired`, `cam
 que nunca seriam reenviados) — é assim que se limpa o painel. Ações irreversíveis: confirme com o
 usuário e mostre as contagens do summary antes.
 
+### "Erro 131026 / Message undeliverable" — NUNCA chute a causa (30/07)
+A Meta devolve o MESMO código 131026 pra duas coisas diferentes: **o número não tem WhatsApp** e **a
+pessoa não está recebendo** (bloqueou, aparelho fora, não aceita mensagem de empresa). A Meta não diz
+qual das duas — então a plataforma carimba um fato NOSSO em
+`content_attributes.undeliverable_history`:
+
+| Carimbo | O que significa | O que dizer ao cliente |
+|---|---|---|
+| `never_delivered` | nunca entregamos nada pra esse contato | provavelmente o número não tem WhatsApp — vale conferir o número |
+| `delivered_before` | já entregamos antes, hoje não entrega | o número existe; a pessoa é que não está recebendo agora |
+| ausente (mensagem antiga) | sem histórico carimbado | enuncie as DUAS possibilidades, sem escolher |
+
+**Nunca afirme "esse número não tem WhatsApp" sem o carimbo `never_delivered`.** Foi exatamente esse
+palpite que fez atendente encerrar conversa de paciente que existia (conta 56, conv 3629).
+
+### "Mídia recusada pela Meta (131053) e a faixa vermelha sumiu sozinha" (30/07)
+Comportamento novo, não é bug. O 131053 é um balde: uma das variantes (a que menciona `weblink`) é
+TRANSITÓRIA — o buscador da Meta falhou ao baixar o arquivo pela URL. Nesse caso a plataforma reenvia
+sozinha, agora por upload direto, e a mensagem fica verde sem precisar de F5. As demais variantes do
+131053 (formato/tamanho recusado) NÃO são resgatadas — regra fail-closed de propósito, pra não ficar
+reenviando eternamente algo que a Meta nunca vai aceitar.
+
+### "A mensagem falhou dizendo 'Template not found or invalid template name'" (30/07)
+Se a caixa é **WhatsApp oficial** e faz mais de 24h que o cliente não fala, a causa quase sempre é a
+**janela de 24h fechada** — não um template faltando. Até 30/07 o erro gravado era esse texto
+enganoso; hoje a mensagem diz que a janela fechou, e o classificador põe a falha no grupo
+`window_expired` (fora do reenvio em lote — reenviar não adiantaria).
+
+Regras de produto pra explicar ao cliente:
+- **Mandar template NÃO abre a janela.** Só a mensagem do CLIENTE abre.
+- Fora da janela, só template aprovado sai. Texto livre é recusado pela Meta.
+- O follow-up automático da IA passou a entender isso: fora das 24h ele escolhe um modelo aprovado em
+  vez de escrever texto livre e tomar recusa (ver `lionchat://docs/best-practices`).
+- Erro sem tradução deixou de existir: todo `external_error` agora vira texto em português na bolha e
+  no painel de falhas. Se aparecer erro em inglês cru pro usuário, isso é reportável.
+
 ### "O Messenger parou de enviar / 'Invalid parameter'" (24/07)
 Causa raiz do apagão de 22 a 24/07: a Meta **aposentou a message tag** que o sistema mandava em todo
 envio de Messenger. Corrigido em 24/07. Agora o Messenger respeita a **janela de 24h** de verdade:

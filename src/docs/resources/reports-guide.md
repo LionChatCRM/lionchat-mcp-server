@@ -489,6 +489,25 @@ viraram conversa). É um relatório de LEITURA puro — não cria nem altera nad
 **Perguntas que esse relatório responde:** "qual plataforma trouxe mais leads?", "qual campanha/
 conjunto converteu melhor?", "quantos leads únicos vieram esse mês e quantos fecharam?".
 
+### Atributos de anúncio (`ctwa_*`) — dois novos e nomes alinhados (2026-08-01)
+
+Conversa que veio de anúncio "Clique para WhatsApp" carrega atributos `ctwa_*` (`ctwa_campaign_name`,
+`ctwa_adset_name`, `ctwa_ad_name`, `ctwa_creative_name`, `ctwa_source_url`…). Eles são atributos de
+conversa normais: dá pra filtrar (`lionchat_conversations_filter`), usar em público de campanha e ler
+em flow (`{{trigger.ad.*}}`).
+
+Dois deles apareciam no painel **sem cadastro nenhum** e por isso não dava pra filtrar por eles em
+lugar algum. Foram criados em 01/08 e agora funcionam como os demais:
+
+| Chave | Rótulo | Tipo |
+|---|---|---|
+| `ctwa_conversion_source` | Plataforma de Origem do Anúncio | texto |
+| `ctwa_conversion_delay_seconds` | Tempo até a Conversão (s) | número |
+
+Na mesma data os rótulos de exibição dos `ctwa_*` foram alinhados com os do painel. **As CHAVES não
+mudaram** — flow, automação, campanha e filtro guardam a chave, nunca o rótulo, então nada que já
+existia quebrou. Se o cliente disser que "o nome do campo mudou", é só o rótulo na tela.
+
 ## Quando o usuário pede algo MUITO específico que não existe num endpoint
 
 Se a pergunta requer cálculos custom (ex: "conversas por agente que duraram mais de X minutos"):
