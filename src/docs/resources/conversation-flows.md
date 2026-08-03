@@ -420,6 +420,95 @@ POST /api/v1/accounts/{account_id}/automation_rules
   "event_name": "conversation_updated",
   "action_types": ["label_added"],
   "conditions": [{"attribute_key": "labels", "filter_operator": "contains", "values": ["vip"]}],
-  "actions": [{"action_name": "send_email_to_team", "action_params": {"team_ids": [1], "message": "VIP!"}}]
+  "actions": [{"action_name": "send_email_to_team", "action_params": [{"team_ids": [1], "message": "VIP!"}]}]
 }
 ```
+
+---
+
+## Acoes de automacao — formato do `action_params`
+
+> **REGRA DE OURO:** `action_params` e SEMPRE um **array**, mesmo quando so tem um item.
+> O backend le `params[0]`. Passar um objeto solto (`{...}` em vez de `[{...}]`) quebra a acao.
+
+> **PERIGO — falha silenciosa:** o `action_params` e um campo livre (JSONB). A API **aceita e grava
+> qualquer formato**, sem validar. Se as chaves estiverem erradas, a regra e salva com sucesso, o
+> painel mostra a acao na tela, e na hora de disparar ela **nao faz nada e nao registra erro nenhum**
+> — sem log, sem mensagem falhada, sem aviso. Por isso: **nunca invente nome de chave**. Se a acao
+> nao estiver documentada abaixo, leia uma regra existente com `lionchat_automation_rules_show` e
+> copie o formato exato dela.
+>
+> Incidente real (conta 39, 02-03/08/2026): uma IA gravou `template_name`/`template_id` em vez de
+> `name`/`id`. A regra ficou 14 horas sem enviar nada, 9 leads pagos entraram e ninguem foi avisado.
+
+### `send_whatsapp_template` — ATENCAO ESPECIAL
+
+Envia um modelo aprovado da Meta. **So funciona em caixa WhatsApp API Oficial (Cloud).**
+
+```json
+{
+  "action_name": "send_whatsapp_template",
+  "action_params": [{
+    "name": "confirmacao_pedido",
+    "id": "1071396275361941",
+    "language": "pt_BR",
+    "category": "UTILITY",
+    "processed_params": {"body": {"1": "{{contact.first_name}}"}}
+  }]
+}
+```
+
+| Chave | Obrigatoria | O que e |
+|---|---|---|
+| `name` | **SIM** | Nome EXATO do modelo aprovado na Meta. E por ele que o envio acontece |
+| `id` | nao | ID do modelo na Meta. Serve so de reserva se `name` faltar |
+| `language` | nao (padrao `pt_BR`) | Precisa bater com o idioma do modelo aprovado |
+| `category` | nao | `UTILITY`, `MARKETING` ou `AUTHENTICATION` |
+| `processed_params` | nao | Valores das variaveis: `{"body": {"1": "...", "2": "..."}}`. Aceita Liquid (`{{contact.first_name}}`) |
+
+**NUNCA use `template_name`, `template_id`, `template_category` nem `template_language` aqui.**
+Esse e o formato dos **nos do FlowBuilder**, que e outra coisa. Na automacao, essas chaves sao
+ignoradas e a acao vira um nada silencioso.
+
+Antes de gravar, confirme que o modelo existe e esta aprovado com
+`lionchat_inboxes_whatsapp_templates_list` — o envio so acha o modelo se `name` + `language`
+casarem e o status for `approved`.
+
+### Demais acoes
+
+Todos os formatos abaixo foram conferidos linha a linha em `app/services/action_service.rb` e
+`app/services/automation_rules/action_service.rb`.
+
+| `action_name` | `action_params` |
+|---|---|
+| `send_message` | `["texto da mensagem"]` |
+| `add_private_note` | `["nota interna"]` |
+| `send_canned_response` | `[12]` — id da resposta pronta |
+| `add_label` / `remove_label` | `["etiqueta1", "etiqueta2"]` |
+| `assign_agent` | `[70]` — o agente precisa ser membro da caixa. `["nil"]` desatribui |
+| `assign_team` | `[3]`. `["nil"]` desatribui |
+| `assign_captain_assistant` | `[17]` ou `[{"assistant_id": 17, "proactive": true}]` — `proactive` false = a IA assume mas nao fala na hora |
+| `send_email_to_team` | `[{"team_ids": [1], "message": "texto"}]` |
+| `send_webhook_event` | `["https://..."]` |
+| `send_attachment` | `[blob_ids]` — so funciona se a regra ja tiver arquivo anexado; nao da pra montar so por API |
+| `change_status` | `["resolved"]`, `["open"]`, `["pending"]` ou `["snoozed"]` |
+| `change_priority` | `["urgent"]`, `["high"]`, `["medium"]`, `["low"]`. `["nil"]` limpa |
+| `send_email_transcript` | `["a@b.com,c@d.com"]` — UMA string, varios e-mails separados por virgula |
+| `mute_conversation` | `[]` |
+| `snooze_conversation` | `[]` |
+| `resolve_conversation` / `open_conversation` / `pending_conversation` | `[]` |
+| `update_contact_attribute` / `update_conversation_attribute` | `[{"attribute_key": "chave", "value": "texto ou {{contact.phone_number}}"}]` |
+| `create_kanban_item` | `[{"funnel_id": 31, "funnel_stage": "prospeccao", "allow_duplicates": false}]` |
+| `move_kanban_item_to_stage` | `[{"funnel_id": 31, "funnel_stage": "qualificacao"}]` |
+| `assign_agent_to_kanban_item` | `[{"funnel_id": 31, "agent_id": 70, "mode": "add"}]` — `mode` aceita `add` (padrao) ou `remove_all` |
+| `add_note_to_kanban_item` | `[{"funnel_id": 31, "text": "texto da nota"}]` — a chave e **`text`**, nao `note` |
+| `set_kanban_item_status` | `[{"funnel_id": 31, "status": "won"}]` — `won`, `lost` ou `open`. Status fora disso e ignorado |
+| `start_kanban_item_timer` / `stop_kanban_item_timer` | `[{"funnel_id": 31}]` |
+
+**Acoes de Kanban:** todas precisam que a conversa ja tenha um card no funil informado. Sem card,
+a acao e pulada (fica so no log do servidor). Use `create_kanban_item` antes, na mesma regra.
+
+Lista autoritativa de nomes validos: `AutomationRule#actions_attributes` no backend. Nome de acao
+fora dessa lista e recusado com 422 ao salvar — isso a API valida. O que ela **nao** valida e o
+conteudo do `action_params`. `apply_kanban_checklist_template` existe no motor mas **nao** e uma
+acao de automacao valida (e so do FlowBuilder) — usar aqui devolve 422.

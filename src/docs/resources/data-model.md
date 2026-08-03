@@ -396,11 +396,12 @@ Booking (agendamento confirmado)
 
 ## e-Clínicas (Efficient) — integração de clínicas
 
-9 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica:
+13 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica:
 `cliente_novo`, `agendamento_novo`, `falta`, `pagamento` (os 4 da doc oficial) +
 `agendamento_atendido`, `agendamento_alterado`, `agendamento_desmarcado`,
-`agendamento_transferido`, `cliente_baixa_pagamento` (capturados ao vivo, não documentados
-pelo e-Clínica).
+`agendamento_transferido`, `cliente_baixa_pagamento`, `cliente_alteracao`,
+`cliente_inclusao_pagamento`, `controle_laboratorio_novo`, `controle_laboratorio_alterado`
+(capturados ao vivo, não documentados pelo e-Clínica).
 
 Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como variável):
 
