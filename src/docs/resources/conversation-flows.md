@@ -426,6 +426,65 @@ POST /api/v1/accounts/{account_id}/automation_rules
 
 ---
 
+## Condicoes de automacao — e a REGRA DO CONECTOR
+
+```json
+"conditions": [
+  {"attribute_key": "status",  "filter_operator": "equal_to", "values": ["resolved"], "query_operator": "AND"},
+  {"attribute_key": "labels",  "filter_operator": "equal_to", "values": ["vip"],      "query_operator": null}
+]
+```
+
+### O conector (`query_operator`) — leia isto antes de gravar
+
+O conector **liga a condicao com a SEGUINTE**. Logo:
+
+- A **ULTIMA** condicao **TEM** que ter `query_operator: null`.
+- Condicao **UNICA** = `query_operator: null` (nao ha proxima pra ligar).
+- Valores aceitos nas demais: `"AND"` ou `"OR"`.
+
+> **A API valida o VALOR do conector, mas NAO a POSICAO.** Conector na ultima condicao **salva com
+> sucesso**, aparece certo na tela — e a regra nunca dispara.
+>
+> Incidente real: **8 regras criadas pelo conector de IA entre 26 e 30/07/2026, em 3 contas
+> diferentes, todas com conector na ultima condicao. Todas nasceram mortas.** A pergunta ao banco
+> saia pela metade (`... IN ($1) and`), o erro era engolido e a regra respondia "nada casou". A conta
+> 62 ficou com as **6** regras de etiquetagem automatica paradas. Medido em producao em 03/08:
+> **732 erros por hora**.
+>
+> O motor foi corrigido em 03/08 (a limpeza acontece ao montar a consulta), entao regra torta nao
+> quebra mais. **Mas continue gravando certo:** a tela de edicao le o dado cru e formato errado
+> aparece estranho ali — mesmo efeito do campo de template que sumia da tela.
+
+### Campos da condicao
+
+| Campo | Obrigatorio | O que e |
+|---|---|---|
+| `attribute_key` | SIM | Campo padrao (ver abaixo) ou a chave de um atributo personalizado que **exista na conta** |
+| `filter_operator` | SIM | Como comparar |
+| `values` | SIM (menos em `is_present`/`is_not_present`) | Array, sempre |
+| `query_operator` | SIM em todas | `"AND"`/`"OR"`; **`null` na ultima** |
+| `custom_attribute_type` | so p/ atributo personalizado | `conversation_attribute` ou `contact_attribute` |
+
+### Operadores de filtro
+
+`equal_to`, `not_equal_to`, `contains`, `does_not_contain`, `is_present`, `is_not_present`,
+`is_greater_than`, `is_less_than`, `starts_with`, `days_before`, `days_ago`, `last_days`, `today`,
+`yesterday`.
+
+**Cada campo aceita so um subconjunto.** Operador que o campo nao aceita faz a regra inteira falhar
+na validacao. Na duvida, leia uma regra que ja funciona com `lionchat_automation_rules_show` e copie.
+
+### Chave que a conta nao conhece
+
+Se `attribute_key` nao for um campo padrao **nem** um atributo personalizado existente na conta, a
+regra **inteira** falha na validacao e nunca dispara — erro
+`Automation conditions <chave> not supported`. Aconteceu de verdade na conta 62 (`tipo_interesse`).
+Antes de usar atributo personalizado numa condicao, confirme que ele existe com
+`lionchat_custom_attributes_list`.
+
+---
+
 ## Acoes de automacao — formato do `action_params`
 
 > **REGRA DE OURO:** `action_params` e SEMPRE um **array**, mesmo quando so tem um item.

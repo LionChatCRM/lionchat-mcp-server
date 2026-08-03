@@ -10091,7 +10091,7 @@
         "type": "array",
         "location": "body",
         "required": true,
-        "description": "[{attribute_key, filter_operator, query_operator, values[]}]"
+        "description": "[{attribute_key, filter_operator, query_operator, values[]}] REGRA DO CONECTOR (query_operator) — LEIA ANTES DE GRAVAR: o conector liga a condicao com a SEGUINTE, logo a ULTIMA condicao TEM que ter query_operator: null (condicao UNICA tambem = null). Nas demais: 'AND' ou 'OR'. A API valida o VALOR do conector mas NAO a POSICAO — conector na ultima condicao SALVA COM SUCESSO, aparece certo na tela e a regra NUNCA dispara. Incidente real: 8 regras criadas pelo conector de IA entre 26 e 30/07/2026 em 3 contas, todas com conector na ultima condicao, todas nasceram mortas (732 erros/hora medidos em producao 03/08; a conta 62 ficou com as 6 regras de etiquetagem automatica paradas). attribute_key precisa ser campo padrao OU atributo personalizado que EXISTA na conta (senao a regra inteira falha na validacao: 'Automation conditions <chave> not supported') — conferir antes com lionchat_custom_attributes_list; atributo personalizado exige tambem custom_attribute_type ('conversation_attribute' ou 'contact_attribute'). filter_operator: equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present, is_greater_than, is_less_than, starts_with, days_before, days_ago, last_days, today, yesterday — cada campo aceita so um subconjunto. Na duvida, leia uma regra que ja funciona com lionchat_automation_rules_show e copie o formato. Detalhe no resource 'conversation-flows'."
       },
       {
         "name": "actions",
@@ -10189,7 +10189,7 @@
         "type": "array",
         "location": "body",
         "required": false,
-        "description": "Condicoes"
+        "description": "Condicoes REGRA DO CONECTOR (query_operator) — LEIA ANTES DE GRAVAR: o conector liga a condicao com a SEGUINTE, logo a ULTIMA condicao TEM que ter query_operator: null (condicao UNICA tambem = null). Nas demais: 'AND' ou 'OR'. A API valida o VALOR do conector mas NAO a POSICAO — conector na ultima condicao SALVA COM SUCESSO, aparece certo na tela e a regra NUNCA dispara. Incidente real: 8 regras criadas pelo conector de IA entre 26 e 30/07/2026 em 3 contas, todas com conector na ultima condicao, todas nasceram mortas (732 erros/hora medidos em producao 03/08; a conta 62 ficou com as 6 regras de etiquetagem automatica paradas). attribute_key precisa ser campo padrao OU atributo personalizado que EXISTA na conta (senao a regra inteira falha na validacao: 'Automation conditions <chave> not supported') — conferir antes com lionchat_custom_attributes_list; atributo personalizado exige tambem custom_attribute_type ('conversation_attribute' ou 'contact_attribute'). filter_operator: equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present, is_greater_than, is_less_than, starts_with, days_before, days_ago, last_days, today, yesterday — cada campo aceita so um subconjunto. Na duvida, leia uma regra que ja funciona com lionchat_automation_rules_show e copie o formato. Detalhe no resource 'conversation-flows'."
       },
       {
         "name": "actions",
