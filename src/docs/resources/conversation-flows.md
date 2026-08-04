@@ -255,6 +255,33 @@ Conversa resolvida que recebe nova mensagem do cliente:
 - Default: cria NOVA conversa (mantém histórico)
 - Se locked: reabre a mesma conversa (`status` volta a 0)
 
+### 10. Criar conversa por API — REGRA NOVA (2026-08-04)
+
+**Nunca nasce conversa nova se o contato já tem uma ABERTA naquela caixa.** Vale para todo caminho
+iniciado por nós: `lionchat_conversations_create`, campanha, flow, booking, integração.
+
+| Situação do contato naquela caixa | O que `conversations_create` devolve |
+|---|---|
+| Tem conversa **aberta / pendente / adiada / silenciada** | A **conversa existente**, com o mesmo `id`. Não cria |
+| Só tem conversa **resolvida** | Cria conversa NOVA (invariante do produto: "fechou = abre nova") |
+| Caixa com `lock_to_single_conversation` LIGADO | **Sempre** a existente, mesmo resolvida — reabre |
+| Caixa de **e-mail** | Sempre cria nova (o assunto da thread vem da conversa; reusar mandaria o e-mail com o assunto velho) |
+
+**Como saber se reusou:** compare o `id` devolvido com o que você esperava. Vem HTTP 200 nos dois
+casos, sem aviso. Se precisa garantir conversa nova, feche a anterior antes
+(`conversations_toggle_status` para `resolved`).
+
+**O que é DESCARTADO no reuso** (a conversa já existe; o disparo não reescreve o estado dela):
+`status`, `snoozed_until`, `additional_attributes` e `assignee_id`. Se você precisa trocar o
+responsável, chame `conversations_update` depois — não adianta mandar junto na criação.
+
+**O que É aproveitado:** `custom_attributes` entram por merge, **sem sobrescrever chave que já tem
+valor**. A conversa mantém a origem com que nasceu e só ganha o que ainda não tinha.
+
+**Reuso não dispara `conversation_created`** — automação, gatilho de flow, webhook de saída,
+notificação e a Agenda não rodam. Se o seu fluxo depende de um desses, ele não vai acontecer
+quando houver reuso.
+
 ## Estado relacional
 
 ```
@@ -634,9 +661,40 @@ Todos os formatos abaixo foram conferidos linha a linha em `app/services/action_
 | `add_note_to_kanban_item` | `[{"funnel_id": 31, "text": "texto da nota"}]` — a chave e **`text`**, nao `note` |
 | `set_kanban_item_status` | `[{"funnel_id": 31, "status": "won"}]` — `won`, `lost` ou `open`. Status fora disso e ignorado |
 | `start_kanban_item_timer` / `stop_kanban_item_timer` | `[{"funnel_id": 31}]` |
+| `wait` | `[30]` — segundos. Ver "Acao Aguardar" abaixo |
 
 **Acoes de Kanban:** todas precisam que a conversa ja tenha um card no funil informado. Sem card,
 a acao e pulada (fica so no log do servidor). Use `create_kanban_item` antes, na mesma regra.
+
+### Acao `wait` (Aguardar) — novo 2026-08-04
+
+Pausa a regra: as acoes **seguintes** so rodam depois do tempo passar. As anteriores ja rodaram.
+
+```json
+{ "action_name": "wait", "action_params": [30] }
+```
+
+| Regra | Detalhe |
+|---|---|
+| Unidade | **segundos** |
+| Teto | **300** (5 minutos). Valor maior e limitado a 300 em silencio, sem erro |
+| Formatos aceitos | `[30]`, `30`, `"30"` e `{"seconds": 30}` — todos funcionam |
+| Tempo invalido | `[]`, `[0]`, `[""]` ou ausente = **nao pausa**, a regra segue direto. Nao da erro |
+| Ultima acao da regra | Nao agenda nada (nao ha o que retomar depois) |
+| Pilula "Automacao X disparou" | So aparece na 1a rodada, nao se repete na volta |
+
+**Para que serve.** O caso que originou: a regra mandava a mensagem **antes** da politica de
+atribuicao carimbar o responsavel, entao a variavel com o nome do atendente saia vazia. Meio
+segundo de espera resolve. Use quando a acao seguinte depende de algo que outro processo ainda
+esta gravando (atribuicao, card recem-criado, atributo que outra regra vai escrever).
+
+**Precisa de mais de 5 minutos?** O lugar certo e o FlowBuilder, que tem espera em horas e sessao
+propria pra sustentar o estado. A automacao nao foi feita pra isso.
+
+**A regra nao "dorme":** ao encontrar a espera ela encerra a rodada e agenda a retomada. Varias
+conversas esperam ao mesmo tempo sem travar o atendimento. Na volta, o sistema confere se a regra
+ainda existe e esta ligada, se a conversa ainda existe e se a caixa nao foi excluida — se algo
+disso mudou, ele simplesmente nao retoma.
 
 Lista autoritativa de nomes validos: `AutomationRule#actions_attributes` no backend. Nome de acao
 fora dessa lista e recusado com 422 ao salvar — isso a API valida. O que ela **nao** valida e o

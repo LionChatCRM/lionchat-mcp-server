@@ -179,6 +179,61 @@ Feature flag específica (ex: `feature_kanban`, `feature_captain`) está OFF.
 
 ## Cenários problemáticos
 
+### "A busca não acha o contato, mas ele existe" (novo 2026-08-04)
+
+Primeira coisa a conferir: **o termo tem menos de 3 letras?** Desde 04/08 termo com letra precisa
+de 3 caracteres; abaixo disso a busca é recusada e volta **vazia, sem erro**. Termo só de dígitos
+é isento.
+
+```
+q=Bo   -> payload: []   (recusado, NÃO significa que não existe)
+q=Bor  -> busca normal
+q=42   -> busca normal (dígito é isento)
+```
+
+Vale nas cinco buscas: contato, conversa, mensagem, card e artigo. Um termo curto **invalida a
+busca inteira**, mesmo com filtro estruturado junto.
+
+O que fazer: complete o termo, peça o nome inteiro, ou use `lionchat_contacts_filter` com
+`filter_operator: "contains"` — o `/filter` não tem esse piso.
+
+**Nunca responda "esse contato não existe" a partir de uma busca de 1-2 letras.**
+
+### "Criei uma conversa e voltou o id de uma que já existia" (novo 2026-08-04)
+
+É o comportamento novo, não é defeito. Desde 04/08 não nasce conversa nova se o contato já tem uma
+**aberta** naquela caixa — o sistema devolve a existente, com HTTP 200 e sem aviso.
+
+- Contato com conversa aberta/pendente/adiada/silenciada → devolve a existente
+- Só conversa resolvida → cria nova
+- Caixa com "conversa única" ligada → sempre a existente, mesmo resolvida
+- Caixa de e-mail → sempre cria nova
+
+Se você PRECISA de conversa nova, feche a anterior antes (`conversations_toggle_status` para
+`resolved`). E lembre: no reuso, `assignee_id` e `status` mandados na criação são **descartados** —
+troque depois com `conversations_update`.
+
+### "Token de cargo restrito passou a receber 403 em conversa que antes abria" (novo 2026-08-04)
+
+Mudança de segurança, não é defeito. Até 04/08 as ações de conversa autorizavam a **CAIXA**, não a
+**conversa** — então qualquer membro da caixa conseguia agir numa conversa que nem consegue abrir.
+As 19 ações do controller de conversa agora conferem a conversa.
+
+Na prática, com token de cargo restrito:
+
+| Ação | Antes | Agora |
+|---|---|---|
+| `conversations_transcript` (mandar a conversa por e-mail) | Passava em qualquer conversa da caixa | Só nas que o cargo enxerga |
+| Anexos e download do áudio | Idem | Idem |
+| Resolver/reabrir, prioridade, silenciar, marcar não-lida, atributos | Idem | Idem |
+| `conversations_scheduled_messages_list` / `_create` | **Sem autorização nenhuma** | Confere a conversa |
+
+Dois acessos continuam valendo de propósito: conversa **órfã** (cuja caixa foi apagada) é de toda a
+conta, e quem tem o **card do Kanban** enxerga a conversa vinculada mesmo sem ser membro da caixa.
+
+Se o seu fluxo dependia do comportamento antigo, o caminho é dar acesso à caixa/time certo ao cargo
+— não existe como pedir exceção pela API.
+
 ### "Estou recebendo 401 mesmo com token correto"
 Possíveis causas:
 - Token foi revogado

@@ -131,6 +131,32 @@ Pra reativar: `paused=false`. Toggle é auditado (`audited only: [:paused]`).
 
 O `config` DEVE ser enviado como **objeto** (ex.: `config: { disabled_tools: [...] }`), NUNCA como string/texto. Se vier em formato errado, o backend retorna **422** (não salva ignorando em silêncio). O update do `config` é **merge parcial** — mandar só o subset que muda (ex.: só `disabled_tools`) preserva os demais campos.
 
+## AI Agente roteando por TIME (novo 2026-08-03)
+
+O AI Agente ganhou 3 ferramentas de time: **Listar Times**, **Mover para Time** e **Tirar do Time**.
+Antes ele só conseguia atribuir uma PESSOA; trocar de time exigia automação ou bloco de fluxo, com
+o time escolhido de antemão por quem montou a regra.
+
+**A descrição do time virou peça funcional.** É lendo `teams.description` que a IA decide para onde
+mandar a conversa. Time sem descrição obriga a chumbar o nome no cenário — que é justamente o que
+essas ferramentas vieram resolver.
+
+> **Ao criar ou atualizar time (`lionchat_teams_create` / `_update`), preencha `description`
+> dizendo QUANDO mandar para lá.** Ex.: `"Financeiro — cobrança, boleto, nota fiscal, reembolso,
+> segunda via"`. Não é enfeite de tela: é o que a IA lê.
+
+Travas que valem conhecer (não dá pra desligar):
+
+| Trava | Efeito |
+|---|---|
+| Conta sem nenhum time | As 3 ferramentas nem aparecem para o agente |
+| Alguém está atendendo (`assignee_id` preenchido) | Mover e Tirar **não agem**. Evita a IA arrancar a conversa da mão do atendente |
+| Nome do time no cenário | Resolve por nome exato; não achando, tenta CONTÉM. Se der mais de um candidato, devolve a lista e **não adivinha** |
+| Mover de time | **Não** faz handoff sozinho. Se a intenção é o humano assumir, o cenário precisa mandar chamar o handoff no mesmo turno |
+
+`list_teams` é ferramenta de descoberta: fica escondida da tela de ferramentas e só carrega se
+"Mover para Time" estiver ativa. Não tente ligá-la ou desligá-la sozinha em `config.disabled_tools`.
+
 ## Limite do prompt e cache OpenAI (2026-05-22)
 
 - `config.instructions` (system prompt do agente) aceita até **20.000 caracteres** (antes 10k). Acima de 15k, o frontend mostra aviso "lost in the middle" — prefira colocar instruções críticas no início ou final.
@@ -501,6 +527,20 @@ opcional `variable_mapping` junto.
 - Formato: objeto com chave = posição da variável (`"1"`, `"2"`...) e valor = `{ source, field, label }`.
 - Só entram no mapping as que devem auto-preencher; as demais `{{N}}` continuam manuais.
 - O `variable_mapping` é salvo localmente (NÃO vai pra Meta) e usado no momento do envio.
+
+**Variável sem mapping tem preço (2026-08-04).** Placeholder que ninguém disse como preencher:
+
+1. **Tira o modelo do alcance do AI Agente.** Basta UMA variável sem mapping para o modelo inteiro
+   deixar de ser oferecido no follow-up automático fora da janela de 24h.
+2. **Faz o envio manual falhar** com o erro `#132000` da Meta (número de parâmetros não bate).
+
+Vale para os dois formatos de marcador: posicional (`{{1}}`) e nomeado (`{{nome_cliente}}`).
+
+> Ao registrar modelo por API, **mapeie todas as variáveis do corpo** — ou preencha na hora do envio
+> via `processed_params`. Modelo com variável órfã é modelo que a IA não usa e que o disparo derruba.
+
+Confira o que ficou de fora lendo o modelo com `lionchat_inboxes_whatsapp_templates_list` e
+comparando os `{{...}}` do texto do BODY com as chaves do `variable_mapping`.
 
 Exemplo — `{{1}}` vira o primeiro nome do contato:
 

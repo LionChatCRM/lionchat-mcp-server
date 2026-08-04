@@ -115,7 +115,8 @@ Um card individual dentro de uma etapa.
 | `funnel_stage` | Chave da etapa (ex: `"novo_lead"`) |
 | `position` | Ordem dentro da etapa |
 | `stage_entered_at` | Quando entrou na etapa atual (pra métrica de tempo) |
-| `conversation_display_id` | Conversa principal vinculada |
+| `conversation_display_id` | Conversa principal vinculada. **O sistema move este ponteiro sozinho (desde 04/08/2026)**: quando nasce uma conversa nova do mesmo contato naquela caixa, o card passa a apontar pra ela. O card é da PESSOA, não do atendimento. **NÃO trate este valor como estável** — releia antes de usar. Enviar `conversation_display_id` num UPDATE de card é ignorado de propósito (senão o reenvio do formulário regravaria o número antigo por cima). |
+| `origin_conversation_display_id` | Conversa em que o card NASCEU (só preenchida se o vínculo já foi movido). É o que o relatório de origem de lead usa, pra uma venda não mudar de mês nem de anúncio quando o card anda. |
 | `linked_conversations` | jsonb array `[{display_id: 123}, {display_id: 456}]` — múltiplas conversas |
 | `item_details` | jsonb (ver abaixo) |
 | `custom_attributes` | jsonb — campos custom (igual contatos) |

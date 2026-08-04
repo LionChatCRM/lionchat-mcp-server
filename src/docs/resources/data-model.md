@@ -412,14 +412,25 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_idagenda` | text | ID do último agendamento |
 | `eclinica_data_consulta` | date | Data da consulta, ISO |
 | `eclinica_hora_consulta` | **time** | Hora da consulta 24h `"HH:MM"` (novo 2026-07-06) |
+| `eclinica_hora_final` | **time** | Hora final da consulta (novo 2026-07-27) |
 | `eclinica_status_agendamento` | text | agendado / no_show / atendido / desmarcado |
-| `eclinica_compromisso` | text | Tipo da consulta (ex: Consulta, Retorno, Exame) |
+| `eclinica_situacao` | text | Situação crua da agenda (age_situacao do webhook) |
+| `eclinica_compromisso` | text | Tipo da consulta — TEXTO LIVRE da recepção (ex: Consulta, Retorno) |
+| `eclinica_agendatipo` | text | Tipo de Agendamento — NOME da lista fixa do painel, resolvido por unidade (novo 2026-07-28). **Filtrar sempre pelo NOME, nunca pelo número: os números colidem entre filiais** |
+| `eclinica_agendatipo_id` | text | Tipo de Agendamento — número cru (não comparável entre filiais) |
+| `eclinica_profissional` | text | NOME do profissional, resolvido por unidade (novo 2026-07-10) |
+| `eclinica_profissional_id` | text | Número do profissional (não comparável entre filiais) |
+| `eclinica_convenio_id` | text | Convênio (número) |
+| `eclinica_ultimo_evento` | text | Tipo do último webhook recebido (ex: falta, agendamento_novo) |
 | `eclinica_ultimo_pagamento` | text | Valor do último pagamento |
 | `eclinica_ultimo_pagamento_data` | date | Data do último pagamento/baixa (novo 2026-07-06) |
 | `eclinica_ultimo_pagamento_descricao` | text | Descrição da baixa (ex: CONSULTA INICIAL) |
 | `eclinica_laboratorio_data_prevista` | date | Previsão de entrega da medicação (novo 2026-07-23) |
 | `eclinica_laboratorio_data_moldagem` | date | Data do pedido da medicação |
-| `eclinica_laboratorio_data_entrega` | date | Data de entrega da medicação |
+| `eclinica_laboratorio_data_entrega` | date | Data em que a medicação CHEGOU na unidade — é a data que dispara o aviso de retirada do flow |
+| `eclinica_laboratorio_data_retirada` | date | Data em que o paciente RETIROU a medicação (coa_datainstalacao; novo 2026-08-03). NÃO confundir com a entrega. Vazia = peça atual não retirada |
+| `eclinica_laboratorio_trabalho_id` | text | Trabalho/tipo da medicação — número cru (aparelho_id; novo 2026-08-03). Lista própria de cada unidade (COMPRIMIDO/POMADA/SPRAY...); número não comparável entre filiais |
+| `eclinica_laboratorio_trabalho` | text | Trabalho/tipo da medicação — NOME resolvido na lista da própria unidade ("SPRAY", "POMADA"...; novo 2026-08-03). Best-effort: pode ficar vazio se a API da unidade estiver fora do ar. Para filtrar/personalizar flows, use SEMPRE este NOME, nunca o número |
 | `eclinica_laboratorio_situacao` | text | Situação do pedido no laboratório |
 | `eclinica_ultima_cobranca_valor` | text | Valor da última cobrança/carnê gerado |
 | `eclinica_ultima_cobranca_vencimento` | date | Vencimento da última cobrança |

@@ -379,6 +379,29 @@ falha silenciosa, sem erro na tela. Conversa se altera por `fields` (+ `labels: 
 **Multi-termo com E:** `q` aceita String (espaços = AND implícito) ou Array (`q[]=joao&q[]=silva`),
 cap de 5 termos — cada termo precisa bater (cada um mantém seu OR entre campos).
 
+**PISO DE 3 LETRAS (novo 2026-08-04) — leia antes de concluir "não existe".**
+
+Termo com LETRA precisa de **3 caracteres ou mais**. Termo **só de dígitos** é isento (é assim
+que se busca pelo número da conversa ou do card, e conta nova tem todos com 1-2 dígitos).
+
+| Busca | O que acontece |
+|---|---|
+| `q=Bo` | Devolve **vazio**. Não é erro, não é 422 — vem `payload: []` |
+| `q=Bor` | Busca normal |
+| `q=42` | Busca normal (só dígitos, isento) |
+| `q=jo silva` | Vale: basta **um** termo utilizável na frase |
+| `q=zq` + `contact_filters=[...]` | Vazio. O termo curto **invalida a busca inteira**, mesmo com filtro junto |
+
+Vale nas CINCO buscas (contato, conversa, mensagem, card e artigo).
+
+**Consequência prática:** resultado vazio com termo de 1-2 letras **não significa que o registro
+não existe** — significa que a busca não rodou. Nunca responda "não encontrei esse contato" nessa
+situação. Ou complete o termo, ou pergunte o nome inteiro, ou use `/contacts/filter` com
+`filter_operator: "contains"`, que não tem esse piso.
+
+Sem `q` e só com filtros estruturados continua funcionando normalmente (contrato antigo, busca só
+por condições) — o piso só descarta termo de texto curto, não o pedido inteiro.
+
 **Busca cadastral:** CPF/CNPJ/RG/endereço/profissão entram na busca de contatos e conversas, com
 match por dígitos que ignora pontuação (`31.104.475/0001-51` == `31104475000151`; mín 3 dígitos).
 Telefone idem. Cards do Kanban são achados pelo contato/conversa vinculados.
