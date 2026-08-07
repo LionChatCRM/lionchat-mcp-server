@@ -108,6 +108,12 @@ stage_id/inbox_id/sort_by/sort_direction/page foram REMOVIDOS, eram ignorados pe
 - `funnel_id` (obrigatório), `stages[]` (chaves internas das etapas), `priorities[]`,
   `statuses[]` (open/won/lost), `agent_id`, `value_min`/`value_max`
 - `date_start`/`date_end` (criação do card, YYYY-MM-DD)
+- `stage_date_start`/`stage_date_end` (2026-08-07) — **quando o card ENTROU na etapa em que ele está
+  agora** (`stage_entered_at`, caindo em `created_at` para card que nunca se moveu). NÃO confundir com
+  `date_start`/`date_end`: um card criado em janeiro e arrastado ontem casa AQUI e não casa lá. É o que
+  responde "o que se mexeu essa semana". Pontas independentes, e os dois períodos podem ser combinados.
+  Nuance ao explicar pro usuário: card criado ontem que nunca se moveu TAMBÉM entra (ele entrou na
+  etapa ao nascer) — o que o filtro separa de verdade é o card VELHO que se moveu.
 - `scheduled_date_start`/`scheduled_date_end` (agendamento: scheduled_at/deadline_at do card E
   tarefas da agenda vinculadas)
 - `task_filter`: has_task | no_task | today | tomorrow | this_week | overdue
@@ -125,8 +131,27 @@ NÃO há filtro por time aqui (por time: use o relatório agregado abaixo, ou fi
 
 `GET /kanban_items/reports` — a resposta é um OBJETO de métricas (não lista): valores GANHOS,
 contagem/valor por etapa, forecast ponderado, top negócios, cards parados, metas do funil.
-Params: `funnel_id` (obrigatório), `from`, `to`, `user_ids[]` (agentes), `team_id`.
+Params: `funnel_id` (obrigatório), `from`, `to`, `user_ids[]` (agentes), `team_id`, `date_basis`.
 É a ferramenta certa pra "relatório de vendas/ganhos do mês por agente ou time".
+
+**`date_basis` (2026-08-07) — qual data o período considera.** A resposta devolve a régua aplicada em
+`dateBasis`; valor inválido cai no padrão sem erro.
+
+| Valor | O que o período recorta | Quando usar |
+|---|---|---|
+| `any` (PADRÃO) | criado no período **OU** fechado no período | É a régua histórica e a mais larga. **Omitir mantém exatamente os números de sempre.** É a certa pra RECEITA: com qualquer outra, venda fechada no período de um lead antigo some (medido 07/08: 17% dos ganhos da frota) |
+| `created` | só quando o card nasceu | "quantos leads entraram" |
+| `moved` | só quando entrou na etapa atual (mesma expressão do `stage_date_*` da seção 3) | "o que se mexeu no período" |
+| `closed` | só ganhos/perdidos no período | **a pergunta de receita** — é a régua certa pra "quanto vendemos em julho" |
+
+O relatório de UMA etapa (`GET /funnels/:id/stage_report`, o painel que abre dentro do quadro) tem as
+MESMAS 4 opções, mesmo parâmetro `date_basis` e as MESMAS expressões — mas o **padrão dele é `moved`**,
+não `any`. Não é inconsistência: ele responde uma pergunta só ("quantos cards entraram nesta etapa no
+período"), enquanto o `/kanban_items/reports` é uma rede larga que alimenta várias métricas de uma vez.
+Se o usuário disser que as duas telas não batem, a resposta é: escolha a MESMA régua nas duas.
+
+Ao apresentar número pro usuário, DIGA qual régua usou. Duas réguas diferentes respondem a mesma
+pergunta com números diferentes, e o usuário conclui que o relatório está errado.
 
 ## 5. Busca com filtro estruturado
 

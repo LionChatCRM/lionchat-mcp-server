@@ -3547,7 +3547,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/filter",
   "title": "Filtrar Items",
-  "description": "Filtra cards do Kanban com o filtro RICO da plataforma (mesmo motor da tela '+ Filtro'). Filtros REAIS aplicados: etapas (stages), prioridades, status do card (open/won/lost), agente, faixa de valor, periodo de criacao (date_start/end), periodo de agendamento (scheduled_date_*), tarefas (task_filter), canal, etiqueta da conversa, oferta e atributos personalizados de card/contato/conversa (JSON-string + custom_attribute_match all/any). ATENCAO: SEM paginacao — retorna ate 5000 cards em ordem created_at DESC, shape {items:[], total, filters}. NAO existe filtro por time aqui (use lionchat_kanban_items_list_3 pra relatorio por time, ou filtre por agent_id); ordenacao e fixa. (2026-07-24: removidos os parametros stage_id/inbox_id/sort_by/sort_direction/page — eram aceitos mas IGNORADOS pelo backend; use stages[] no lugar de stage_id.)",
+  "description": "Filtra cards do Kanban com o filtro RICO da plataforma (mesmo motor da tela '+ Filtro'). Filtros REAIS aplicados: etapas (stages), prioridades, status do card (open/won/lost), agente, faixa de valor, periodo de criacao (date_start/end), periodo de MOVIMENTACAO PARA A ETAPA atual (stage_date_start/end), periodo de agendamento (scheduled_date_*), tarefas (task_filter), canal, etiqueta da conversa, oferta e atributos personalizados de card/contato/conversa (JSON-string + custom_attribute_match all/any). ATENCAO: SEM paginacao — retorna ate 5000 cards em ordem created_at DESC, shape {items:[], total, filters}. NAO existe filtro por time aqui (use lionchat_kanban_items_list_3 pra relatorio por time, ou filtre por agent_id); ordenacao e fixa. (2026-07-24: removidos os parametros stage_id/inbox_id/sort_by/sort_direction/page — eram aceitos mas IGNORADOS pelo backend; use stages[] no lugar de stage_id.)",
   "category": "Itens",
   "params": [
    {
@@ -3615,6 +3615,20 @@
     "location": "query",
     "required": false,
     "description": "Criado ate (YYYY-MM-DD)"
+   },
+   {
+    "name": "stage_date_start",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Movido para a etapa a partir de (YYYY-MM-DD) — recorta por QUANDO O CARD ENTROU na etapa em que ele esta agora (stage_entered_at, caindo em created_at quando o card nunca se moveu). E DIFERENTE de date_start, que e a data de CRIACAO: card criado em janeiro e arrastado ontem casa aqui e NAO casa em date_start. Pontas independentes (pode mandar so uma)."
+   },
+   {
+    "name": "stage_date_end",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Movido para a etapa ate (YYYY-MM-DD) — cobre o dia inteiro."
    },
    {
     "name": "scheduled_date_start",
@@ -3742,9 +3756,51 @@
     "location": "query",
     "required": false,
     "description": "Valor máx"
+   },
+   {
+    "name": "date_start",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Criado a partir de (YYYY-MM-DD) — filtra created_at do card"
+   },
+   {
+    "name": "date_end",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Criado ate (YYYY-MM-DD)"
+   },
+   {
+    "name": "stage_date_start",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Movido para a etapa a partir de (YYYY-MM-DD) — recorta por QUANDO O CARD ENTROU na etapa em que ele esta agora (stage_entered_at, caindo em created_at quando o card nunca se moveu). E DIFERENTE de date_start, que e a data de CRIACAO: card criado em janeiro e arrastado ontem casa aqui e NAO casa em date_start. Pontas independentes (pode mandar so uma)."
+   },
+   {
+    "name": "stage_date_end",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Movido para a etapa ate (YYYY-MM-DD) — cobre o dia inteiro."
+   },
+   {
+    "name": "scheduled_date_start",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Agendamento a partir de (YYYY-MM-DD) — considera scheduled_at/deadline_at do card"
+   },
+   {
+    "name": "scheduled_date_end",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Agendamento ate (YYYY-MM-DD)"
    }
   ],
-  "returns": "NAO devolve JSON. Devolve um ARQUIVO CSV pra download (text/csv, anexo `kanban_items_<funil>_<data>.csv`), com cabecalho e uma linha por card: id, titulo, descricao, status, prioridade, valor, etapa (nome amigavel), funil, agentes, cliente, email, telefone, criado em, atualizado em, prazo, id da conversa, conversas vinculadas e ofertas. Nao ha `meta` nem `payload` — o corpo e o CSV cru. `funnel_id` e OBRIGATORIO (sem ele volta 400 `{error}`). Filtros opcionais: priorities, value_min, value_max, agent_id, date_start/date_end, scheduled_date_start/scheduled_date_end. So exporta cards das caixas que o usuario pode ver.",
+  "returns": "NAO devolve JSON. Devolve um ARQUIVO CSV pra download (text/csv, anexo `kanban_items_<funil>_<data>.csv`), com cabecalho e uma linha por card: id, titulo, descricao, status, prioridade, valor, etapa (nome amigavel), funil, agentes, cliente, email, telefone, criado em, atualizado em, prazo, id da conversa, conversas vinculadas e ofertas. Nao ha `meta` nem `payload` — o corpo e o CSV cru. `funnel_id` e OBRIGATORIO (sem ele volta 400 `{error}`). Filtros opcionais: priorities, value_min, value_max, agent_id, date_start/date_end (CRIACAO), stage_date_start/stage_date_end (quando o card ENTROU na etapa atual) e scheduled_date_start/scheduled_date_end. So exporta cards das caixas que o usuario pode ver.",
   "common_use_cases": [
    "Dashboard: contar/exibir itens Kanban",
    "Buscar com filtros antes de outra operação",
@@ -3869,6 +3925,13 @@
     "location": "query",
     "required": false,
     "description": "ID do time — restringe aos cards dos agentes do time"
+   },
+   {
+    "name": "date_basis",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Qual data o periodo (from/to) considera. 'any' = PADRAO e regua historica (card CRIADO no periodo OU FECHADO no periodo) — omitir mantem exatamente os numeros de sempre. 'created' = so criados. 'moved' = so os que entraram na etapa atual no periodo. 'closed' = so ganhos/perdidos no periodo (a pergunta de receita). Valor invalido cai no padrao sem erro, e a regua aplicada volta em dateBasis."
    }
   ],
   "returns": "objeto de metricas agregadas do funil (valores ganhos, por etapa, forecast, top deals, stale) — NAO e array de itens",

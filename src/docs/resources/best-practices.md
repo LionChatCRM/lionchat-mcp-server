@@ -573,6 +573,29 @@ Fontes/campos disponíveis (`source` / `field`):
 Lembrete: todo template recém-criado pelo MCP só mostra o texto na tela depois de **sincronizar**
 (o MCP cria na Meta, mas o "puxar de volta" o conteúdo é o que a tela faz com o botão Sincronizar).
 
+### Apontar variáveis SEM reenviar pra Meta (2026-08-07)
+
+Antes, mudar o `variable_mapping` de um template JÁ APROVADO exigia o endpoint de update
+(`POST .../whatsapp_templates/{id}`) — que reenvia o modelo pra Meta e o status volta pra
+**Pendente** à toa. Agora existe um endpoint SÓ pro apontamento local:
+
+```
+PATCH /api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates/{template_id}/variable_mapping
+Body: { "variable_mapping": { "1": { "source": "contact", "field": "name", "label": "Nome do contato" } } }
+```
+
+- **ZERO chamada à Meta**: o template continua Aprovado, sem nova revisão. Use SEMPRE este quando a
+  mudança for só o apontamento; o update de verdade fica pra quando o TEXTO/estrutura mudar.
+- `{template_id}` é o **id numérico da Meta** (o campo `id` do template na listagem), não o nome.
+- O conjunto enviado **substitui** todos os apontamentos de corpo: mande TODAS as variáveis que
+  devem ficar apontadas, não só a que mudou (a ausente é removida). Vazio `{}` limpa tudo.
+- Chaves `_` (`_button_url`, `_header_media`, `_header_location`) são preservadas sozinhas e
+  **recusadas** como entrada — pra mexer nelas, use o update normal.
+- Recusas (422): categoria AUTHENTICATION, chave que não existe no corpo aprovado, valor sem
+  `{source, field}`, `source` fora de contact/conversation/account/custom, caixa que não seja
+  WhatsApp Cloud oficial.
+- Papel: administrador.
+
 ### Botão de link do template com variável — link rastreável por cliente (2026-07-25)
 
 O botão de URL do template pode terminar com uma variável, pra montar um link diferente por contato

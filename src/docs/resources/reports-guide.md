@@ -90,10 +90,12 @@ um número errado com confiança.
 | Cumprimento de prazo (SLA) | "100%" para conta com ZERO prazo aplicado — escondia "o SLA não está rodando" | Vazio = sem dados |
 | Por CANAL — conversa de caixa EXCLUÍDA (29/07) | Sumia do relatório: excluir a caixa deixa a conversa sem caixa, e o join descartava essas linhas em silêncio. 512 conversas órfãs de 10 contas em 30 dias; a **conta 60 perdia 76%** do total, a 40 perdia 38%, a 38 perdia 24% | Entram sob a chave **`Channel::None`** ("Caixa excluída"). Some essa chave também — se ignorar, você subconta de novo |
 | Horário de PICO do mapa de calor (29/07) | Dias e horas saíam em **UTC** mesmo mandando `timezone_offset`: no Brasil, o pico aparecia **3 horas adiantado** (o movimento das 11:00 de Brasília era rotulado como 14:00). O cabeçalho do CSV escrevia "(GMT-03:00) Brasília", o que dava aparência de certo | Balde de dia/hora sai do fuso pedido |
+| "Nº de Conversas" por ETIQUETA (07/08) | Contava conversas **CRIADAS** no período que têm a etiqueta — etiquetar hoje uma conversa antiga não mexia no relatório de hoje (caso real: dono etiquetou 2 e o número ficou em 1) | Conta conversas que **RECEBERAM a etiqueta** no período (`taggings.created_at`), no resumo E no detalhe (cartão + gráfico). Renomear etiqueta preserva as datas. Consequência: mês fechado passa a MUDAR se etiquetas forem adicionadas/removidas retroativamente |
 
 **Como reconhecer instalação antiga:** soma dos canais menor que o total do resumo; tempo médio por
 etiqueta absurdamente baixo perto do tempo por atendente; "pendentes" zerado no ao vivo tendo
-conversa pendente na lista; "100%" de prazo com nenhum prazo aplicado.
+conversa pendente na lista; "100%" de prazo com nenhum prazo aplicado; etiqueta aplicada hoje em
+conversa antiga que NÃO aparece no relatório de hoje (régua antiga por criação da conversa).
 
 ## Mapeamento dos endpoints `lionchat_reports_*`
 
