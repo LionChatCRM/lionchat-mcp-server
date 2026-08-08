@@ -427,15 +427,17 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-07-30)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-08-07)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
 ═══ DOIS TIPOS DE FLOW (e o modo do conversation) ═══
 - conversation (default): dispara por evento de inbox. Criar via lionchat_flows_create.
   conversation_mode: 'individual' (1-a-1, default) ou 'group' (grupo WhatsApp). IMUTAVEL apos criar.
-  So 'group' aceita o node update_group (Configurar Grupo: nome/foto/permissoes). 'group' NAO tem
-  gatilhos/condicoes de LionTrack (pagetrack). Na UI aparecem como 3 opcoes: Mensagem / Grupo / IA Agente.
+  O node update_group (Gestao de Grupos, 17 operacoes) roda em fluxo de QUALQUER modo/canal desde que a
+  conta tenha caixa WhatsApp QR Code (Channel::Waha) — em fluxo nao-grupo informe data.groupInboxId
+  (ver o node update_group). 'group' NAO tem gatilhos/condicoes de LionTrack (pagetrack). Na UI aparecem
+  como 3 opcoes: Mensagem / Grupo / IA Agente.
 - ai_tool: ferramenta que o AI Agente invoca. Criar via lionchat_flow_tools_create (NAO flows_create!),
   com tool_name (snake_case, max 50) + tool_description (max 500). SEM inbox_ids. No 'end' OBRIGATORIO.
   Nodes permitidos em ai_tool: start, end, api, condition, set_variable, ai, randomizer, action,
@@ -500,6 +502,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     cron, webhook. NOVO message_sent (2026-06-11): par do message_received pra mensagens de
     SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
     'desativar IA' com esse trigger sem keywords = a propria resposta da IA dispara o flow.
+    group_participant_joined / group_participant_left (NOVO 07/08 — 'Entrou no grupo' / 'Saiu do
+    grupo', evento de grupo WhatsApp QR Code). Item {key:'group_participant_joined'|
+    'group_participant_left', config:{group_match:'any'|'contains'|'does_not_contain'|'equal_to'|
+    'not_equal_to'|'starts_with'|'ends_with', group_name:'<termo>', group_ids:['<id ou 1203..@g.us>']}}
+    — os dois filtros se SOMAM (E logico), cada um vazio deixa passar: group_match/group_name filtra
+    pelo NOME do grupo; group_ids (so via API/MCP, compara por digitos) mira grupos exatos. Vale nos 2
+    tipos de flow: em flow de grupo roda na conversa do grupo; em flow individual roda na conversa da
+    PESSOA que entrou/saiu ('entrou no grupo -> manda no privado').
   WEBHOOK EMBUTIDO (Webhook Universal): 1) criar flow; 2) POST /custom_webhook_integrations com
     {custom_webhook_integration:{flow_id}} (idempotente, retorna URL unica); 3) flows_update com
     item {type:'webhook_received', config:{integration_id}} no data.items do start. Remover o item
@@ -587,7 +597,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   First-match-wins: avalia em ordem e PARA na primeira que bate.
   Operadores: equal/not_equal, contains/not_contains, starts_with/ends_with,
     is_empty/is_not_empty (NAO existe is_present/is_blank), greater_than/less_than,
-    number_range ("min-max"), regex, equal_any/contains_any (values[]),
+    number_range ("min-max"), regex,
+    equal_any/not_equal_any/contains_any/not_contains_any/starts_with_any/ends_with_any (multi-valor
+      via values[], case-insensitive; starts_with_any/ends_with_any NOVOS 07/08 — o texto COMECA/TERMINA
+      com alguma das palavras da lista),
     business_hours/outside_business_hours (campos opcionais days[0=dom..6=sab]/start_hour/end_hour/timezone
       IANA ex. America/Sao_Paulo; outside_business_hours HERDA days/start_hour/end_hour/timezone da
       business_hours ANTERIOR no array — pode deixar ausentes que o backend preenche),
@@ -603,6 +616,13 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     datetime (value "YYYY-MM-DDTHH:MM", compara HORARIO DE PAREDE — ignora fuso/offset).
     Backend detecta o FORMATO do value: instante > dia > minutos > numero.
     number_range SO em numero. NUNCA maior/menor em texto/lista.
+  RESPOSTA DO CLIENTE (valueType 'response_multi', tipicamente field '{{last_response}}'): campo
+    especial cuja "resposta" e uma LISTA de palavras — oferece EXATAMENTE 8 operadores: equal_any,
+    contains_any, not_equal_any, not_contains_any, starts_with_any, ends_with_any (todos multi-valor
+    via values[]) + is_empty / is_not_empty (SEM values[]).
+  EQUIPE (condicao "Esta na equipe", field '{{conversation.team_id}}'): aceita VARIAS equipes de uma
+    vez — passe values:['24','25'] (array de ids) em vez de value unico; casa se bater qualquer uma.
+    Array de values vazio cai no value unico legado.
 
 ▸ action
   data: { label, items: [ { key, config: {...} } ] }
@@ -619,9 +639,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         Redis; gere um unico por acao, ex 'd_ab12cd'). Ordem da lista = ordem do rodizio, sem porcentagem.
         DIFERENTE do randomizer mode distribute_agents (sorteio ponderado),
       change_status({status: open|resolved|pending|snoozed}), change_priority({priority}),
-      mute_conversation({}), add_private_note({content}), send_email_transcript({email}),
+      mute_conversation({}), mark_unread({}), add_private_note({content}), send_email_transcript({email}),
       add_conversation_label({labels:[...]}), remove_conversation_label({labels:[...]}),  // etiqueta NA CONVERSA
       assign_captain({assistant_id}), deactivate_captain({}),
+      // mark_unread({}) — NOVO 07/08: deixa a conversa NAO LIDA pro time (badge acende). Tipico logo
+      //   apos assign_agent/assign_team numa transferencia. Conversa ja nao-lida nao e mexida.
       add_sla({sla_policy_id}) — NOVO 24/07: aplica politica de SLA na conversa (id de sla_list;
         aceita variavel Liquid). NO-OP se a conversa JA tem SLA (nunca troca/reinicia); politica
         inexistente nao quebra o fluxo
@@ -714,7 +736,36 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     (pode cair no mesmo agente varias vezes seguidas). Pra RODIZIO exato use a ACAO distribute_agents.
   Handles: o id de cada branch (mode branches); "success" (mode distribute_agents).
 
-▸ update_group (WAHA, conversa de grupo apenas)
+▸ update_group (Gestao de Grupos WhatsApp — REESCRITO 07/08: UMA operacao por bloco, 17 no total)
+  Roda em fluxo de QUALQUER canal desde que a conta tenha caixa WhatsApp QR Code (Channel::Waha).
+  Em flow de GRUPO o campo de caixa e opcional (vazio = caixa da conversa); em flow NAO-grupo
+  data.groupInboxId e OBRIGATORIO (id de inbox Channel::Waha da conta).
+  data comum:
+    groupOperation: <uma das 17 abaixo>   // ausente/vazio = 'legacy' (comportamento antigo — NAO usar em node novo)
+    groupTargetId: "<id do grupo>"        // vazio = grupo da conversa; aceita '1203..@g.us', so digitos ou {{var}}. Ignorado nas TARGETLESS (create, find_by_name)
+    groupInboxId: <id inbox QR Code>      // OBRIGATORIO em flow nao-grupo
+    groupResponseVar: "grupo"             // nome da variavel de resposta (default 'grupo'); leia depois {{grupo.CAMPO}}
+  Teto de 20 participantes por execucao (add/remove/promote/demote) — trava ANTI-BANIMENTO.
+  Operacoes -> chaves de data (+ campos que a resposta devolve em {{grupo.*}}):
+    create            -> groupName(obrig), groupDescription, groupPicture(url), groupInitialAdmins, groupParticipants -> id,name,description,picture,participants_count  [risco de banimento]
+    find_by_id        -> (groupTargetId) -> id,name,description,picture,participants,participants_count
+    find_by_name      -> groupSearchName(obrig), groupSearchMode(contains[padrao]|does_not_contain|equal_to|not_equal_to|starts_with|ends_with) -> results,results_count  [TARGETLESS]
+    update_subject    -> updateSubject(obrig) -> id,name
+    update_description -> updateDescription -> id,description
+    update_picture    -> updatePicture(obrig, url) -> id
+    leave             -> (groupTargetId) -> id  [IRREVERSIVEL]
+    list_participants -> (groupTargetId) -> id,participants(ate 100),participants_count
+    add_participants  -> groupParticipants(obrig; array de telefones/JIDs ex ['5511999999999@c.us'] ou lista por virgula; aceita {{var}}) -> id,added,not_added,added_count,not_added_count  [risco de banimento]
+    remove_participants -> groupParticipants(obrig) -> id,removed,not_removed,removed_count,not_removed_count
+    promote_admin     -> groupParticipants(obrig) -> id,participants
+    demote_admin      -> groupParticipants(obrig) -> id,participants
+    get_invite        -> (groupTargetId) -> id,invite_link
+    revoke_invite     -> (groupTargetId) -> id,invite_link  [IRREVERSIVEL — invalida o link antigo]
+    send_invite       -> groupInviteTo(obrig, telefone), groupInviteMessage(opcional) -> id,invite_link,invite_sent_to
+    settings          -> pelo menos UMA de: infoAdminOnly(bool), messagesAdminOnly(bool), membersCanAddNewMember(bool) -> id,settings_updated
+  ATENCAO settings: membersCanAddNewMember tem semantica INVERTIDA (true = TODOS podem adicionar);
+    infoAdminOnly/messagesAdminOnly seguem o padrao (true = SO admin).
+  Toda operacao tambem devolve {{grupo.ok}} (bool) e {{grupo.error.message}}.
   Handles: "success", "error"
 
 ▸ end
@@ -760,6 +811,14 @@ agent.* = o RESPONSAVEL da conversa: agent.name, agent.first_name, agent.last_na
 inbox.id, inbox.name (antes resolviam vazio fora do Enviar Mensagem — corrigido 23/07)
 account.name, account.id (id NOVO 23/07), account.custom_attribute.X (inclui variaveis de conta e
   segredos — NAO existe env.X), {{var_criada_no_set_variable}}, {{ai_intent}}, {{api_response_var}}
+trigger.* (variaveis do GATILHO que iniciou o flow — NOVO 07/08 no autocomplete de TODO bloco):
+  trigger.type (codigo do gatilho), trigger.name, trigger.activated_at (hora do disparo),
+  trigger.message.content (msg que iniciou), trigger.conversation.channel (canal de origem),
+  trigger.conversation.status, trigger.kanban_item_id (numero do card), trigger.funnel_id,
+  trigger.user_name (quem acionou manual), trigger.campaign_title (campanha que disparou),
+  trigger.event_name (evento no site), trigger.page_url (pagina visitada),
+  trigger.source_flow_name (fluxo que chamou). Cada uma so tem valor quando o gatilho fornece (ex:
+  page_url so em gatilho de site) — fora disso resolve vazio.
 DESDE 23/07 essas variaveis padrao funcionam em TODOS os nodes (Chamada API, Condicoes, IA, Definir
   Variavel) — antes so no Enviar Mensagem. Campo vazio resolve pra string vazia (nunca trava o flow).
 REGRA-MAE: variavel FORA da lista acima SOME do texto, sem erro em lugar nenhum — nao quebra o save,

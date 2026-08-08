@@ -551,6 +551,78 @@
 
 ---
 
+## 17. Gestão de Grupos WhatsApp por fluxo (`update_group`)
+
+**Caso:** ao marcar um lead como GANHO no Kanban, criar automaticamente um grupo de onboarding com ele e
+confirmar pela conversa. Usa o node `update_group` (bloco "Gestão de Grupos") na operação `create`. Só
+funciona em conta com caixa **WhatsApp QR Code (`Channel::Waha`)** — a caixa vai em `groupInboxId`
+(OBRIGATÓRIO neste fluxo, que não é de grupo).
+
+```json
+{
+  "nodes": [
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "card_won", "funnel_ids": ["1"] }] } },
+    { "id": "n2", "type": "update_group", "position": { "x": 370, "y": 300 }, "data": {
+      "label": "Cria grupo de onboarding",
+      "groupOperation": "create",
+      "groupInboxId": 5,
+      "groupName": "Onboarding — {{contact.name}}",
+      "groupParticipants": ["5511999999999@c.us"],
+      "groupResponseVar": "grupo"
+    } },
+    { "id": "n3", "type": "send_message", "position": { "x": 690, "y": 300 }, "data": { "label": "Confirma", "messageItems": [
+      { "id": "m1", "type": "text", "content": "Prontinho, {{contact.name}}! Criei seu grupo de onboarding (id {{grupo.id}}) com {{grupo.participants_count}} participante(s). Já te chamo por lá." }
+    ] } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "n1", "target": "n2", "sourceHandle": "success", "type": "deletable", "animated": true },
+    { "id": "e2", "source": "n2", "target": "n3", "sourceHandle": "success", "type": "deletable", "animated": true }
+  ]
+}
+```
+
+**Chaves de `data` por operação (`groupOperation`):**
+
+Comuns a (quase) todas:
+- `groupOperation` — a operação (uma por bloco).
+- `groupTargetId` — o grupo alvo. Vazio = grupo da conversa (só faz sentido em fluxo de grupo); aceita
+  `"1203...@g.us"`, só dígitos ou uma variável `{{var}}`. **Ignorado** em `create` e `find_by_name` (não têm alvo).
+- `groupInboxId` — id da caixa QR Code que fala com o WhatsApp. **OBRIGATÓRIO em fluxo não-grupo**; opcional em
+  fluxo de grupo (padrão = grupo da conversa).
+- `groupResponseVar` — nome da variável de saída (padrão `"grupo"`); leia com `{{grupo.CAMPO}}`.
+
+| Operação | Chaves específicas | Retorno (`{{grupo.*}}`) |
+|---|---|---|
+| `create` | `groupName` (obrig), `groupDescription`, `groupPicture` (url), `groupInitialAdmins`, `groupParticipants` | `id`, `name`, `participants_count` |
+| `add_participants` | `groupParticipants` (obrig — ex.: `["5511999999999@c.us"]` ou lista) | `added`, `not_added`, `added_count` |
+| `send_invite` | `groupInviteTo` (obrig — telefone de destino), `groupInviteMessage` (opc) | `invite_link` |
+| `settings` | pelo menos uma de `infoAdminOnly` / `messagesAdminOnly` / `membersCanAddNewMember` (booleans) | — |
+
+**ATENÇÃO na `settings` — semântica INVERTIDA de `membersCanAddNewMember`:** `true` = **TODOS** podem adicionar
+membros. Já `infoAdminOnly: true` e `messagesAdminOnly: true` = **SÓ admin** edita infos / manda mensagem.
+Confundir os dois LIBERA o grupo achando que está trancando.
+
+**Gatilho novo `group_participant_joined` (entrou no grupo → manda boas-vindas):** em um flow de grupo
+(`conversation_mode: "group"`), o start pode ter o item `{ "key": "group_participant_joined", "config": {
+"group_match": "any", "group_name": "", "group_ids": [] } }`. Filtro OPCIONAL de quais grupos disparam:
+`group_match` (`any` padrão, ou os mesmos operadores do "Buscar por nome": `contains`, `equal_to`, `starts_with`,
+`ends_with`, `does_not_contain`, `not_equal_to`) + `group_name`, e/ou `group_ids` (mira exata por id — casa por
+dígitos, aceita `1203...@g.us` ou só o número). Quando alguém entra, o `send_message` seguinte cai **no próprio
+grupo** (o grupo é a conversa do flow).
+
+**Lembretes:**
+- **Teto de 20 participantes por execução** (`add_participants`/`create`) — trava ANTI-BANIMENTO, não performance.
+  Adicionar em lote é o que mais rápido derruba número no WhatsApp não-oficial.
+- O fluxo só dispara/roda em caixa `Channel::Waha` (QR Code). WhatsApp oficial/Instagram/Facebook/e-mail não
+  têm grupo.
+- No fluxo de card ganho acima, o `send_message` vai para a conversa do CONTATO (o lead), não para o grupo
+  criado. Para postar DENTRO do grupo, use um flow de grupo (`conversation_mode: "group"`) — normalmente com o
+  gatilho `group_participant_joined`.
+- Em `add_participants`, quem tem privacidade de grupo ligada pode não entrar mesmo com resposta de sucesso do
+  WhatsApp: confira `{{grupo.not_added}}` / `{{grupo.not_added_count}}`.
+
+---
+
 ## Como usar este catálogo
 
 1. **Identifique o pattern mais próximo** do que o cliente pediu

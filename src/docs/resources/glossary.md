@@ -254,7 +254,10 @@ comportamento intencional.
 - `config.instructions`: prompt sistema (Liquid template, até 20.000 chars)
 - `config.activation_label`: etiqueta que ativa o agente na conversa (única por conta)
 - **Cenário (Captain::Scenario)**: instrução situacional inline do assistente; o raciocínio de
-  aplicação fica no "caderninho do cenário" da conversa (scenario_checklist, card Raciocínio)
+  aplicação fica no "caderninho do cenário" da conversa (scenario_checklist, card Raciocínio).
+  Pode apontar páginas da base de conhecimento escrevendo `[@Nome](document://ID)` na instrução
+  (campo derivado `document_ids`, teto de 3) para a IA PRIORIZAR a busca RAG naquelas páginas —
+  prioridade, não exclusividade
 - **Regra DITO ≠ SALVO**: a IA só considera coletado o dado que foi PERSISTIDO — salva cada dado
   na hora e não repergunta o que já salvou
 - **Cenário com parâmetro fixo (tool_bindings)**: o admin pode fixar o parâmetro de uma ferramenta do cenário — quais mídias enviar, qual funil+etapa criar/mover o card, quais agendas usar no agendamento. Com 1 cenário fixando a tool, a execução é DETERMINÍSTICA (a IA não escolhe): mídia/kanban rodam pós-turno (BindingResolver); o agendamento força/restringe a agenda mas a IA ainda escolhe a data/hora.

@@ -24,7 +24,7 @@ Como criar fluxos do LionChat (FlowBuilder) que abrem certinhos no canvas, sem n
 | Analisar sentimento | `ai` mode `sentiment` | - |
 | Encerrar fluxo no meio | `action` com `key: 'deactivate_flow'` OU `exit_conditions` no nível do flow | - |
 | Distribuir aleatório entre branches | `randomizer` | - |
-| Atualizar info de grupo WhatsApp (WAHA) | `update_group` | - |
+| Gerir grupo WhatsApp: criar/buscar, nome/foto/descrição, participantes, admins, convite (WAHA) | `update_group` (uma operação por bloco via `groupOperation`) | - |
 | Iniciar outro fluxo | `action` com `key: 'start_flow'` OU node `activate_flow` | - |
 | Encerrar ramo / definir retorno de ai_tool | `end` | - |
 | Anotação visual no canvas (não executa) | `note` | - |
@@ -337,6 +337,7 @@ só pra destravar, ela pode sair.
 | `is_number` / `is_letter` / `is_email` / `is_phone` | validação de formato |
 | `regex` | padrão regex em `value` |
 | `equal_any` / `not_equal_any` / `contains_any` / `not_contains_any` | multi-valor (usa `values` array). `contains_any` = contém ALGUMA; `not_contains_any` = não contém NENHUMA (útil pra "seguir só quando a msg não tem nenhuma das palavras-chave de outros flows") |
+| `starts_with_any` / `ends_with_any` (novo 2026-08-07) | multi-valor (usa `values` array), caixa-insensível. `starts_with_any` = o texto COMEÇA com ALGUMA das palavras da lista; `ends_with_any` = o texto TERMINA com alguma |
 | `business_hours` / `outside_business_hours` | horário comercial (par: dentro/fora). `business_hours` aceita `start_hour`/`end_hour` (0-23), `days` (array 0=Dom..6=Sab, ausente=todos) e **`timezone`** (IANA, ex.: `America/Sao_Paulo` — default se ausente). **REGRA:** a saída `outside_business_hours` HERDA `start_hour`/`end_hour`/`days`/`timezone` da `business_hours` ANTERIOR no array — pode deixá-los ausentes na "fora" (o backend preenche). O horário é avaliado no `timezone` (não em UTC) |
 | `can_reply` / `can_reply_closed` | janela 24h aberta/fechada |
 | `conversation_has_agent` / `conversation_no_agent` / `conversation_not_agent` | agente atribuído (HUMANO) |
@@ -433,6 +434,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `add_conversation_label` | `{ labels: ['slug'] }` | Adiciona labels à CONVERSA (não ao contato) |
 | `remove_conversation_label` | `{ labels: ['slug'] }` | Remove labels da CONVERSA |
 | `mute_conversation` | `{}` | Silencia notificações |
+| `mark_unread` | `{}` | Marca a conversa como NÃO LIDA pro time (espelho do `mute_conversation`; típico logo após `assign_agent`/`assign_team` numa transferência) |
 | `add_private_note` | `{ content: 'texto' }` | Adiciona nota interna |
 | `create_kanban_item` | `{ funnel_id, funnel_stage, title?, description? }` | Cria card no Kanban — `funnel_id` e `funnel_stage` OBRIGATÓRIOS; `title`/`description` aceitam variáveis `{{ }}` |
 | `move_kanban_item_to_stage` | `{ funnel_stage }` | Move card (precisa ter card vinculado) |
@@ -696,9 +698,29 @@ tela do cliente (a tela lê só `percent`).
 
 **Handles que SAEM:** o `id` de cada branch (`A`, `B`, ...). Em `mode: 'distribute_agents'` é `success`.
 
-### 2.11 `update_group` (WAHA apenas)
+### 2.11 `update_group` — Gestão de Grupos (WAHA apenas)
 
-Atualiza nome/descrição/foto de grupo WhatsApp. Use só quando flow roda em inbox WAHA e a conversa for de grupo.
+Bloco "Gestão de Grupos". Faz **UMA operação por bloco** (não mais um formulário-só com nome/foto/descrição
+juntos) — a operação vai em `data.groupOperation`. São **17 operações**, agrupadas por tema:
+
+- **Grupo:** `create` (criar), `find_by_id` (buscar por id), `find_by_name` (buscar por nome), `update_subject`
+  (mudar nome), `update_description` (mudar descrição), `update_picture` (mudar foto), `settings` (3
+  permissões: quem edita infos, quem manda mensagem, quem adiciona membro), `leave` (sair do grupo).
+- **Participantes:** `list_participants` (listar), `add_participants` (adicionar), `remove_participants` (remover).
+- **Admins:** `promote_admin` (promover a admin), `demote_admin` (rebaixar).
+- **Convite:** `get_invite` (pegar link/código de convite), `revoke_invite` (revogar), `send_invite` (mandar
+  o convite por mensagem a um telefone).
+
+**Disponível em fluxo de QUALQUER canal**, desde que a conta tenha uma caixa **WhatsApp QR Code
+(`Channel::Waha`)** — informe a caixa em `data.groupInboxId`. Esse campo é **OBRIGATÓRIO em fluxo não-grupo**
+(individual/qualquer canal) e **opcional em fluxo de grupo** (ali o padrão é o grupo da própria conversa).
+
+Cada operação guarda o resultado na variável `data.groupResponseVar` (padrão `"grupo"`) — leia depois com
+`{{grupo.CAMPO}}` (ex.: `{{grupo.id}}`, `{{grupo.participants_count}}`, `{{grupo.invite_link}}`).
+
+Teto de **20 participantes por execução** (trava anti-banimento — adicionar em lote é o que mais rápido
+derruba número no WhatsApp não-oficial). Detalhe das chaves de `data` por operação: ver o pattern
+"Gestão de Grupos WhatsApp por fluxo" no `flowbuilder-patterns`.
 
 **Handles que SAEM:** `success`, `error`.
 
@@ -803,14 +825,15 @@ Na tela o usuário vê isso como TRÊS opções ao criar: "Mensagem" (= `convers
 
 | | individual (Mensagem) | group (Grupo) |
 |---|---|---|
-| Node `update_group` (Configurar Grupo: nome, foto, permissões — WAHA) | NÃO existe | **SÓ aqui** |
+| Node `update_group` (Gestão de Grupos — WAHA) | disponível se a conta tem caixa QR Code — exige `groupInboxId` | disponível; `groupInboxId` opcional (padrão = grupo da conversa) |
 | Gatilhos e condições de **LionTrack** (visita de página / evento do site) | disponíveis | **NÃO** (grupo não tem um contato único navegando) |
 | Gatilho `date_trigger` (data do contato) | disponível | **NÃO** (grupo não tem um contato único) |
 | Todos os outros nodes (`send_message`, `wait_response`, `condition`, `action`, `api`, `ai`, `set_variable`, `wait`, `randomizer`, `note`, `end`) | iguais | iguais |
 
 Regras práticas ao montar via API:
-- Só use o node `update_group` se o flow foi criado com `conversation_mode: "group"`. Colocá-lo num flow
-  individual é rejeitado pela validação.
+- O node `update_group` (Gestão de Grupos) funciona em fluxo de QUALQUER canal, desde que a conta tenha
+  caixa WhatsApp QR Code (`Channel::Waha`): informe a caixa em `data.groupInboxId` (OBRIGATÓRIO em fluxo
+  não-grupo; opcional em fluxo de grupo, onde o padrão é o grupo da própria conversa).
 - Não use gatilho/condição de LionTrack (pagetrack) em flow de grupo.
 - Na dúvida entre os dois, é `individual` (o default).
 Não tente contornar criando flows intermediários.
@@ -866,6 +889,14 @@ Presentes conforme o evento (ausente = resolve vazio, sem erro):
 | `{{trigger.contact.*}}` | `id`, `name`, `phone` |
 | `{{trigger.ad.*}}` (anúncio/CTWA) | `id`, `name`, `creative_id`, `creative_name`, `adset_id`, `adset_name`, `campaign_id`, `campaign_name`, `source`, `headline`, `description`, `cta`, `url` |
 | `{{trigger.attribute.*}}` | `name`, `previous_value`, `current_value`, `changed_at` — o valor ANTES e DEPOIS do atributo que disparou (só nos gatilhos de mudança de atributo) |
+| `{{trigger.user_name}}` | nome do usuário/atendente que disparou (gatilho manual ou ativação manual) |
+| `{{trigger.campaign_title}}` | título da campanha (quando disparado por Campanha de Fluxo) |
+| `{{trigger.event_name}}` | nome do evento do site que disparou (LionTrack / visita de página) |
+| `{{trigger.page_url}}` | URL da página (LionTrack / visita de página) |
+| `{{trigger.source_flow_name}}` | nome do flow de origem (quando outro flow iniciou este, ex.: action `start_flow`) |
+
+Os cinco últimos são **novos 2026-08-07** e passam a aparecer no autocomplete de TODO bloco (ausente para
+o gatilho que não os fornece = resolve vazio, sem erro).
 
 Dois atalhos: `{{trigger}}` devolve o contexto INTEIRO em JSON e `{{trigger.data}}` devolve o mesmo
 sem os metadados — úteis pra jogar tudo dentro de um node `ai` ou `api`. Bloco (Hash/Array) inteiro

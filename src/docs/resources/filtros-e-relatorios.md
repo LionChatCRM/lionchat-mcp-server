@@ -144,11 +144,30 @@ Params: `funnel_id` (obrigatório), `from`, `to`, `user_ids[]` (agentes), `team_
 | `moved` | só quando entrou na etapa atual (mesma expressão do `stage_date_*` da seção 3) | "o que se mexeu no período" |
 | `closed` | só ganhos/perdidos no período | **a pergunta de receita** — é a régua certa pra "quanto vendemos em julho" |
 
-O relatório de UMA etapa (`GET /funnels/:id/stage_report`, o painel que abre dentro do quadro) tem as
-MESMAS 4 opções, mesmo parâmetro `date_basis` e as MESMAS expressões — mas o **padrão dele é `moved`**,
-não `any`. Não é inconsistência: ele responde uma pergunta só ("quantos cards entraram nesta etapa no
-período"), enquanto o `/kanban_items/reports` é uma rede larga que alimenta várias métricas de uma vez.
-Se o usuário disser que as duas telas não batem, a resposta é: escolha a MESMA régua nas duas.
+O relatório de UMA etapa — tool `lionchat_funnels_stage_report` (`GET /funnels/:id/stage_report`, o
+painel que abre dentro do quadro) — tem as MESMAS 4 opções de régua, mesmo parâmetro `date_basis` e as
+MESMAS expressões da seção 3, mas o **padrão dele é `moved`**, não `any`. Não é inconsistência: ele
+responde uma pergunta só ("quantos cards entraram nesta etapa no período"), enquanto o
+`/kanban_items/reports` é uma rede larga que alimenta várias métricas de uma vez. Se o usuário disser
+que as duas telas não batem, a resposta é: escolha a MESMA régua nas duas.
+
+Ela devolve números calculados no SERVIDOR (total de cards da etapa, faixa de valores, ganhos/perdidos,
+distribuição por prioridade, ranking de vendedores da etapa) — antes a tela só somava os cards já
+carregados na coluna.
+
+**Parâmetros de `lionchat_funnels_stage_report`:**
+
+| Param | Obrigatório | O que faz |
+|---|---|---|
+| `id` (path) | sim | id do funil |
+| `stage` | sim | chave interna da etapa |
+| `date_basis` | não | `any` / `created` / `moved` / `closed` — **PADRÃO `moved`** (entrada na etapa). ATENÇÃO: no relatório agregado do funil o padrão é `any`; aqui é `moved` de propósito |
+| `report_from` / `report_to` | não | janela (YYYY-MM-DD) da régua de data do relatório |
+| `priorities[]` | não | array de prioridades |
+| `agent_id` | não | responsável; `-1` = sem responsável |
+| `value_min` / `value_max` | não | faixa de valor do card (número) |
+| `date_start` / `date_end` | não | filtro por data de CRIAÇÃO do card |
+| `scheduled_date_start` / `scheduled_date_end` | não | filtro por agendamento |
 
 Ao apresentar número pro usuário, DIGA qual régua usou. Duas réguas diferentes respondem a mesma
 pergunta com números diferentes, e o usuário conclui que o relatório está errado.

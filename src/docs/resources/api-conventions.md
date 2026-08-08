@@ -198,7 +198,7 @@ Ou para listas grandes (cursors):
 - `includes` / `excludes` (relacionamentos)
 - `before` / `after` (datas)
 
-### Atributos personalizados — operadores por TIPO (2026-07-21)
+### Atributos personalizados — operadores por TIPO (2026-08-07)
 
 Vale pra automações, filtro avançado de conversas/contatos e busca "+ Filtro" (motor compartilhado):
 
@@ -207,10 +207,17 @@ Vale pra automações, filtro avançado de conversas/contatos e busca "+ Filtro"
 | texto / link | equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present |
 | lista | equal_to, not_equal_to, is_present, is_not_present |
 | número / data | equal_to, not_equal_to, is_present, is_not_present, is_greater_than, is_less_than |
+| moeda / porcentagem / hora / data+hora | equal_to, not_equal_to, is_present, is_not_present, is_greater_than, is_less_than |
 | sim/não (checkbox) | equal_to, not_equal_to, is_present, is_not_present |
 
 - Em atributo de LISTA, `equal_to` com vários `values[]` casa QUALQUER um deles (multi-seleção).
 - NUNCA use `contains` em número/data/checkbox — o backend rejeita (cast inválido).
+- Moeda e porcentagem são castados como número, hora como hora e data+hora como data —
+  por isso desde 30/07 (filtros) e 07/08 (automações) esses quatro tipos também aceitam
+  `is_greater_than` / `is_less_than`. Base técnica: `FilterService::ATTRIBUTE_TYPES` casta
+  currency/percent como `numeric`, time como `time` e datetime como `date`; `coerce_lt_gt_value`
+  aceita numeric/date/time. Tipo NOVO de atributo sem entrada em `ATTRIBUTE_TYPES` quebra o
+  filtro com erro de sintaxe SQL (não "não acha nada") — a entrada é obrigatória no mesmo commit.
 
 > **Contatos — busca parcial por nome/ID externo:** no `POST /contacts/filter`, os campos `name` e
 > `identifier` aceitam `contains` / `does_not_contain` (match parcial, case-insensitive). Use isso

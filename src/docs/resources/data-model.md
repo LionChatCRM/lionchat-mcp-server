@@ -286,12 +286,16 @@ Captain::Scenario (cenários do assistente — instruções inline, sem handoff)
 │     ⚠️ trigger_type NAO é editável via API hoje — todo cenário criado por API fica em
 │     llm_interpreted (a IA decide aplicar lendo a conversa). Os modos programáticos só
 │     via banco/console por enquanto.
-└── tool_bindings (jsonb — parâmetro FIXADO pelo admin por tool; "IA decide" = ausente/vazio)
-      send_media_asset → { asset_ids: [Int] } | create_kanban_item / move_kanban_item →
-        { funnel_id: Int, stage: "<key>" } | create_booking → { event_type_ids: [Int] }
-      Obs: via API/MCP, scenarios_update SÓ persiste send_media_asset/create_kanban_item/
-        move_kanban_item. O binding create_booking é só de UI/runtime — NÃO round-trippa pela API.
-        Use config.booking_event_type_ids no assistente pra restringir agendas via MCP.
+├── tool_bindings (jsonb — parâmetro FIXADO pelo admin por tool; "IA decide" = ausente/vazio)
+│     send_media_asset → { asset_ids: [Int] } | create_kanban_item / move_kanban_item →
+│       { funnel_id: Int, stage: "<key>" } | create_booking → { event_type_ids: [Int] }
+│     Obs: via API/MCP, scenarios_update SÓ persiste send_media_asset/create_kanban_item/
+│       move_kanban_item. O binding create_booking é só de UI/runtime — NÃO round-trippa pela API.
+│       Use config.booking_event_type_ids no assistente pra restringir agendas via MCP.
+└── document_ids (jsonb, default [] — DERIVADO das menções [@Nome](document://ID) escritas na
+      instruction; NUNCA aceito como param na API/MCP (é ignorado se enviado); re-escopado por
+      assistente+conta; teto de 3 documentos. Serve pra IA PRIORIZAR a busca RAG naquelas páginas —
+      NÃO é exclusividade: o resto da base continua pesquisável)
 
 Captain::AssistantResponse (FAQ)
 ├── assistant_id (FK)

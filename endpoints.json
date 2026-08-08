@@ -2516,6 +2516,117 @@
   "related_tools": []
  },
  {
+  "id": "lionchat_funnels_stage_report",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/funnels/{id}/stage_report",
+  "title": "Relatorio de UMA Etapa do Funil (Kanban)",
+  "description": "Numeros de UMA etapa do funil calculados no SERVIDOR (antes a tela so somava os cards carregados na tela, mostrando '100' numa etapa de 432): total de cards, faixa de valores, ganhos/perdidos, distribuicao por prioridade e ranking de vendedores da etapa. Aceita escolher a REGUA de data e recortar por periodo. FUNIL = KANBAN (mesma coisa no LionChat).",
+  "category": "Funis",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "stage",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "Chave interna da etapa (slug/uuid da etapa no funil, NAO o nome exibido). Pegue de funnels_show (funnel.stages)"
+   },
+   {
+    "name": "date_basis",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Regua de data: any | created (criacao do card) | moved (entrada na etapa) | closed (fechamento). PADRAO 'moved' — DIFERENTE do relatorio agregado do funil, que usa 'any'; as duas telas so batem se usar a mesma regua"
+   },
+   {
+    "name": "report_from",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Inicio da janela do relatorio (YYYY-MM-DD), aplicado conforme date_basis"
+   },
+   {
+    "name": "report_to",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim da janela do relatorio (YYYY-MM-DD)"
+   },
+   {
+    "name": "priorities",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por prioridade dos cards (ex: ['high','urgent'])"
+   },
+   {
+    "name": "agent_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por responsavel do card; -1 = cards SEM responsavel"
+   },
+   {
+    "name": "value_min",
+    "type": "number",
+    "location": "query",
+    "required": false,
+    "description": "Valor minimo do card"
+   },
+   {
+    "name": "value_max",
+    "type": "number",
+    "location": "query",
+    "required": false,
+    "description": "Valor maximo do card"
+   },
+   {
+    "name": "date_start",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtro por data de CRIACAO do card (YYYY-MM-DD), independente do date_basis"
+   },
+   {
+    "name": "date_end",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim do filtro por data de criacao (YYYY-MM-DD)"
+   },
+   {
+    "name": "scheduled_date_start",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtro por data de agendamento do card (YYYY-MM-DD)"
+   },
+   {
+    "name": "scheduled_date_end",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim do filtro por agendamento (YYYY-MM-DD)"
+   }
+  ],
+  "returns": "objeto com os numeros da etapa: total de cards, faixa/soma de valores, ganhos vs perdidos, distribuicao por prioridade e ranking de vendedores da etapa",
+  "common_use_cases": [
+   "Ver os numeros REAIS de uma etapa do funil num periodo",
+   "Comparar desempenho de vendedores numa etapa especifica"
+  ],
+  "related_tools": [
+   "lionchat_funnels_show",
+   "lionchat_kanban_items_list_3",
+   "lionchat_funnels_open_counts"
+  ]
+ },
+ {
   "id": "lionchat_funnels_update",
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/funnels/{id}",
@@ -5969,7 +6080,7 @@
     "description": "Filtra cenarios ativos/inativos (true/false)"
    }
   ],
-  "returns": "Objeto com `payload` + `meta`. `payload` = array de CENARIOS do assistente (id, title, description, instruction, tools, tool_bindings, enabled, assistant_id, account_id, datas e um resumo do assistente) — NAO e lista de assistentes. `meta` traz `total_count` e `page`, sendo que `page` vem sempre 1 (esta lista nao pagina). Por padrao devolve so os cenarios ativos; use `enabled=all` para incluir os desativados, ou `enabled=false` so os desativados.",
+  "returns": "Objeto com `payload` + `meta`. `payload` = array de CENARIOS do assistente (id, title, description, instruction, tools, tool_bindings, document_ids, enabled, assistant_id, account_id, datas e um resumo do assistente) — NAO e lista de assistentes. `meta` traz `total_count` e `page`, sendo que `page` vem sempre 1 (esta lista nao pagina). Por padrao devolve so os cenarios ativos; use `enabled=all` para incluir os desativados, ou `enabled=false` so os desativados.",
   "common_use_cases": [
    "Dashboard: contar/exibir assistentes AI",
    "Buscar com filtros antes de outra operação",
@@ -6015,7 +6126,7 @@
     "type": "string",
     "location": "body",
     "required": true,
-    "description": "Instrucao do cenario (markdown). Pode conter referencias de tools com sintaxe `[Label](tool://tool_id)`"
+    "description": "Instrucao do cenario (markdown). Pode conter referencias de tools com sintaxe `[Label](tool://tool_id)` [07/08] Para APONTAR uma pagina da base pra IA priorizar a busca, escreva a mencao [@Nome](document://ID) (ID numerico do documento) DENTRO deste texto. NAO existe param document_ids (seria descartado em silencio); teto de 3 documentos por cenario."
    },
    {
     "name": "enabled",
@@ -6075,7 +6186,7 @@
     "description": "ID do cenario"
    }
   ],
-  "returns": "assistente AI (objeto completo com associações)",
+  "returns": "assistente AI (objeto completo com associações). Inclui document_ids (array de ids das paginas da base apontadas pela instruction via [@Nome](document://ID); so-leitura, derivado).",
   "common_use_cases": [
    "Ver dados completos antes de editar",
    "Verificar estado atual antes de uma ação",
@@ -6128,7 +6239,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Instrucao do cenario (markdown). Pode conter referencias de tools com sintaxe `[Label](tool://tool_id)`"
+    "description": "Instrucao do cenario (markdown). Pode conter referencias de tools com sintaxe `[Label](tool://tool_id)` [07/08] Para APONTAR uma pagina da base pra IA priorizar a busca, escreva a mencao [@Nome](document://ID) (ID numerico do documento) DENTRO deste texto. NAO existe param document_ids (seria descartado em silencio); teto de 3 documentos por cenario."
    },
    {
     "name": "enabled",
@@ -13073,7 +13184,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/captain/documents",
   "title": "Adicionar Documento",
-  "description": "Adiciona URL ou arquivo à base de conhecimento. Cria novo documento KB. Valida unicidade quando aplicável. Retorna o documento KB criado com ID atribuído.",
+  "description": "Adiciona URL ou arquivo à base de conhecimento. Cria novo documento KB. Valida unicidade quando aplicável. Retorna o documento KB criado com ID atribuído. [07/08] Ao salvar com `content`, o texto e reorganizado automaticamente (titulos/blocos) pela IA da conta pra IA conseguir ler o documento inteiro — com rede de seguranca: mantem o texto ORIGINAL se o resultado ficar vazio, sem titulo, encolher mais de 15%, deixar bloco acima de 400 caracteres ou alterar qualquer numero/CEP/telefone/valor.",
   "category": "Base de Conhecimento",
   "params": [
    {
@@ -15182,6 +15293,46 @@
   ]
  },
  {
+  "id": "lionchat_inboxes_whatsapp_templates_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates/{id}/variable_mapping",
+  "title": "Apontar Variaveis do Template (sem reenviar a Meta)",
+  "description": "Salva SO o apontamento LOCAL das variaveis de um template JA APROVADO — ZERO chamada a Meta, o status/review do modelo fica intacto (continua 'Aprovado'). SOMENTE Channel::Whatsapp Cloud e SOMENTE administrador. Use pra dizer de onde vem o valor de cada variavel {{N}} do CORPO no envio. O mapa e AUTORITATIVO: substitui todos os apontamentos de corpo (chave ausente e removida; {} limpa tudo). Recusa 422 se: template de categoria AUTHENTICATION (OTP); chave que nao existe no corpo aprovado; valor sem source/field; source fora de contact/conversation/account/custom. 404 se o id nao existir na caixa. Cabecalho/botao (chaves com _) NAO entram aqui — use o create/update normal.",
+  "category": "Templates WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (caixa WhatsApp Cloud)"
+   },
+   {
+    "name": "id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID NUMERICO da Meta do template (campo 'id' da listagem de templates, NAO o nome)"
+   },
+   {
+    "name": "variable_mapping",
+    "type": "object",
+    "location": "body",
+    "required": true,
+    "description": "Mapa das variaveis do CORPO. Chave = texto interno de {{...}} do corpo aprovado ('1','2'... ou nomeada). Valor = {source: contact|conversation|account|custom, field: <campo>, label: <opcional>}. Fontes/campos validos: contact/name, contact/name.split.first, contact/phone_number, contact/email, contact/id, conversation/display_id, conversation/assignee.name, conversation/team.name, account/name, {contact|conversation|account}/custom_attribute.<chave>, custom/<texto fixo>. Ex: {\"1\": {\"source\": \"contact\", \"field\": \"name.split.first\", \"label\": \"Primeiro nome\"}}. AUTORITATIVO: substitui TODO o apontamento de corpo; {} limpa tudo. NAO aceita chaves com _ (cabecalho/botao)."
+   }
+  ],
+  "returns": "template atualizado com o variable_mapping local salvo; status/review na Meta inalterados",
+  "common_use_cases": [
+   "Apontar {{1}} = primeiro nome do contato sem reenviar o modelo pra Meta",
+   "Corrigir de onde vem o valor de uma variavel de um template ja aprovado"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_whatsapp_templates_list",
+   "lionchat_inboxes_whatsapp_templates_create_2"
+  ]
+ },
+ {
   "id": "lionchat_inboxes_sync_templates",
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/sync_templates",
@@ -15401,7 +15552,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/google_calendar/connect",
   "title": "Conectar Google Calendar",
-  "description": "Inicia o fluxo de conexao com Google Calendar. Lista configs Google Calendar paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config Google Calendar).",
+  "description": "Inicia o fluxo de conexao com Google Calendar. Lista configs Google Calendar paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config Google Calendar). [07/08] SO ADMINISTRADOR conecta (usuario nao-admin recebe 403) e SO UMA conta Google por conta LionChat — se ja houver uma conectada por outro admin, a nova e recusada; desconecte a atual antes.",
   "category": "Google Calendar",
   "params": [
    {
