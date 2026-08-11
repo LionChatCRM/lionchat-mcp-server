@@ -353,7 +353,10 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | Intenção do usuário | Tool certa | Cuidado |
 |---|---|---|
 | Listar / ver não lidas | `lionchat_conversations_list` (`conversation_type: 'unread'`) ou `lionchat_conversations_meta` | NÃO use `lionchat_conversations_unread` — é AÇÃO DE ESCRITA (marca como não-lida) |
-| Buscar por texto (nome, telefone, conteúdo) | `lionchat_conversations_search` / `lionchat_contacts_search` | NÃO baixe tudo com `*_list` e filtre na mão. Busca aceita multi-termo (AND) e dados cadastrais (CPF/CNPJ por dígitos) |
+| Achar a conversa **de uma pessoa/empresa** (nome, telefone, e-mail, CPF/CNPJ, nº da conversa) | `lionchat_search_list` (`/search/conversations`) ou `lionchat_contacts_search` | RÁPIDO. **NÃO use `lionchat_conversations_search`**: apesar do nome, ele é o legado que procura dentro das mensagens e leva **15 a 22 s** (medido em produção 11/08). O sufixo `_list` aqui é histórico — `lionchat_search_list*` **são buscas**, não listagens; a regra "não baixe tudo com `*_list`" vale para `lionchat_<recurso>_list` |
+| Achar **onde foi dito** algo (palavra dentro da conversa) | `lionchat_search_list_2` (`/search/messages`) | RÁPIDO: índice trigram próprio e teto de tempo em duas fases (2 s / 14 s). É a substituta certa do `lionchat_conversations_search` |
+| Não sei se o termo é nome de alguém ou algo dito no papo | `lionchat_search_search` (`/search`) | Cobre os dois numa chamada. Opção mais segura quando a intenção é ambígua |
+| (qualquer busca) termo com menos de 3 caracteres | — | Volta **vazio de propósito** em todas as buscas. Vazio ≠ "não existe": quer dizer que a busca não rodou. Refaça com 3+ caracteres. Só-dígitos é isento nas rotas `/search/*`, mas **não** no `lionchat_conversations_search` legado |
 | Só a contagem / números | `lionchat_conversations_meta` / `lionchat_reports_summary` | Não liste o conteúdo completo |
 | Criar contato | `lionchat_contacts_create` base (path `/contacts`) | NÃO use as variantes `_1` … `_9` |
 | Pausar a IA agora (botão de pânico) | `lionchat_captain_assistants_update` (`paused: true`, top-level) | — |

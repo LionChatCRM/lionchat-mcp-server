@@ -1464,7 +1464,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/conversations/search",
   "title": "Buscar Conversas",
-  "description": "Busca conversas por texto (no conteúdo das mensagens). Diferente de filter — pesquisa free-text. Use quando o usuário menciona uma palavra específica que provavelmente apareceu na conversa.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "LENTO — EVITE. Busca conversas por texto (no conteúdo das mensagens). Diferente de filter — pesquisa free-text.\n\nCUSTO MEDIDO EM PRODUCAO (11/08/2026): 15 a 22 SEGUNDOS por chamada. E o endpoint legado: alem da varredura, ele devolve todas as mensagens que casaram, e so a montagem da resposta consome ate 8 s. As rotas /search/* fazem o mesmo trabalho com indice proprio e teto de tempo.\n\nPREFIRA: para achar a conversa DE UMA PESSOA/EMPRESA (nome, telefone, e-mail, CPF/CNPJ, numero da conversa) use lionchat_search_list. Para achar ONDE FOI DITO algo dentro da conversa use lionchat_search_list_2. Para as duas coisas de uma vez, sem ter que adivinhar, use lionchat_search_search.\n\nPISO DE 3 CARACTERES (desde 11/08/2026): termo com menos de 3 caracteres — INCLUSIVE so-digitos — e recusado e a resposta vem VAZIA sem nenhum aviso. Vazio NAO quer dizer que a conversa nao existe, quer dizer que a busca nem rodou; refaca com 3+ caracteres. (Aqui digito NAO e isento, diferente de /search/messages, porque este caminho nao tem teto de tempo.)\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
   "category": "Conversas",
   "params": [
    {
@@ -7954,7 +7954,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search",
   "title": "Busca Global",
-  "description": "Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). Sempre retorna todos os tipos: conversations, contacts, messages, articles e kanban_items. Mensagens trazem previous_message/next_message.",
+  "description": "RAPIDO, e a opcao mais segura quando nao se sabe se o termo e o nome de alguem ou algo dito no papo — cobre os dois casos numa chamada. Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nPREFIRA esta ao lionchat_conversations_search legado, que leva 15 a 22 segundos (medido em producao 11/08/2026).\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). Sempre retorna todos os tipos: conversations, contacts, messages, articles e kanban_items. Mensagens trazem previous_message/next_message.",
   "category": "Busca",
   "params": [
    {
@@ -8034,7 +8034,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/conversations",
   "title": "Buscar Conversas",
-  "description": "Busca apenas em conversas por texto.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Acha a conversa PELA PESSOA/EMPRESA: nome, e-mail, telefone, identificador, CPF/CNPJ por digitos, atributos personalizados da conversa e numero da conversa.\n\nNAO procura dentro do texto das mensagens — para isso use lionchat_search_list_2 (ou lionchat_search_search para as duas coisas). E a substituta rapida do lionchat_conversations_search legado (15 a 22 s) quando a intencao e achar a conversa de alguem.\n\nDevolve payload.conversations[], 15 por pagina. Termo de texto com menos de 3 caracteres e descartado (so-digitos e isento); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
   "category": "Busca",
   "params": [
    {
@@ -8158,7 +8158,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/messages",
   "title": "Buscar Mensagens",
-  "description": "Busca apenas em mensagens por texto.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha.",
+  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nE A SUBSTITUTA CERTA do lionchat_conversations_search legado, que faz a mesma busca em 15 a 22 segundos: aqui ha indice trigram proprio e teto de tempo em duas fases (2 s na primeira tentativa, 14 s no limite absoluto), entao nao trava. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha.",
   "category": "Busca",
   "params": [
    {
