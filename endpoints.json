@@ -7516,6 +7516,27 @@
     "location": "body",
     "required": false,
     "description": "Modo de atribuicao de conversas no time. Valores: 'online_only' (padrao — so atribui a agentes com status online no momento) ou 'include_offline' (rodizio entre TODOS os agentes do time, mesmo offline)."
+   },
+   {
+    "name": "fair_distribution_limit",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Teto de conversas que o robo entrega a CADA atendente do time dentro da janela (freio de rajada; a vaga volta quando a conversa deixa de estar aberta). Padrao 10. Zero = sem freio. So tem efeito com assignment_mode 'online_only'."
+   },
+   {
+    "name": "fair_distribution_window",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Tamanho da janela do freio em SEGUNDOS (600 = 10 minutos). Padrao 600."
+   },
+   {
+    "name": "assignment_order",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Ordem de atribuicao do time: 'round_robin' (rodizio — distribui igualmente, por ordem de vez) ou 'balanced' (equilibrado — entrega pra quem tem MENOS conversas abertas no momento). OMITIR o campo (ou mandar null) significa 'o time nao escolheu' e a decisao HERDA do nivel de cima: politica da caixa, depois auto_assignment_config da caixa, e por fim rodizio. NUNCA mandar 'round_robin' so pra preencher: isso vira escolha EXPLICITA do time e rebaixa em silencio uma caixa que roda equilibrado por politica. 'balanced' exige o recurso advanced_assignment na conta."
    }
   ],
   "returns": "time/equipe criado (com novo ID)",
@@ -7533,7 +7554,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/teams/{team_id}",
   "title": "Atualizar Time",
-  "description": "Atualiza um time/equipe existente. Campos suportados: name, description, allow_auto_assign, assignment_mode. Edita o time em si (não os membros — para membros use lionchat_team_members_update).",
+  "description": "Atualiza um time/equipe existente. Campos suportados: name, description, allow_auto_assign, assignment_mode, fair_distribution_limit, fair_distribution_window, assignment_order. Edita o time em si (não os membros — para membros use lionchat_team_members_update).",
   "category": "Times",
   "params": [
    {
@@ -7570,6 +7591,27 @@
     "location": "body",
     "required": false,
     "description": "Modo de atribuicao de conversas no time. Valores: 'online_only' (padrao — so atribui a agentes com status online no momento) ou 'include_offline' (rodizio entre TODOS os agentes do time, mesmo offline)."
+   },
+   {
+    "name": "fair_distribution_limit",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Teto de conversas que o robo entrega a CADA atendente do time dentro da janela (freio de rajada; a vaga volta quando a conversa deixa de estar aberta). Padrao 10. Zero = sem freio. So tem efeito com assignment_mode 'online_only'."
+   },
+   {
+    "name": "fair_distribution_window",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Tamanho da janela do freio em SEGUNDOS (600 = 10 minutos). Padrao 600."
+   },
+   {
+    "name": "assignment_order",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Ordem de atribuicao do time: 'round_robin' (rodizio — distribui igualmente, por ordem de vez) ou 'balanced' (equilibrado — entrega pra quem tem MENOS conversas abertas no momento). OMITIR o campo (ou mandar null) significa 'o time nao escolheu' e a decisao HERDA do nivel de cima: politica da caixa, depois auto_assignment_config da caixa, e por fim rodizio. NUNCA mandar 'round_robin' so pra preencher: isso vira escolha EXPLICITA do time e rebaixa em silencio uma caixa que roda equilibrado por politica. 'balanced' exige o recurso advanced_assignment na conta."
    }
   ],
   "returns": "time/equipe atualizado",
