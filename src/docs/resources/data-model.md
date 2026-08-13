@@ -522,12 +522,10 @@ WhatsappCall (Ligação WhatsApp — enterprise, voz via Cloud API)
 ├── custom_name (observação) / favorited (bool)
 └── transcript / transcript_status (pending/processing/completed/failed — IA da conta)
 
-WavoipSetting (Ligação WP em caixa QR Code — 1 por inbox) — SEM TOOL NO MCP (2026-07-16)
-├── inbox_id (FK) / device_id / device_token (cripto) / status / due_date
-├── record_all_calls (bool) / auto_transcribe (bool) / transcription_provider (groq|openai)
-├── feature flag wavoip_calling; limite de plano wavoip_voice_inboxes
-└── NAO ha tool pra ler nem escrever isto. Ligação WP e contratada/configurada MANUALMENTE pelo
-    cliente no painel. Aqui so pra voce entender o modelo — nao tente operar.
+WavoipSetting — TABELA REMOVIDA em 13/08/2026 (integração Wavoip encerrada; último uso 30/07)
+└── Não existe mais modelo, tabela, tela nem rota. Ligações ANTIGAS do Wavoip continuam no
+    histórico (CallLog com provider "wavoip"), com quem ligou, quando e quanto durou; as gravações
+    ficavam no servidor da Wavoip e vão sumir. Para voz em caixa QR Code hoje: LionCalls.
 
 ContactDocument (aba Documentos do contato, 2026-06-11)
 ├── 3 fontes agregadas: upload direto + espelho dos cards Kanban + espelho das conversas (só image/file)
