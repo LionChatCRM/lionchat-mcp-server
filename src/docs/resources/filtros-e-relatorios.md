@@ -114,6 +114,20 @@ stage_id/inbox_id/sort_by/sort_direction/page foram REMOVIDOS, eram ignorados pe
   responde "o que se mexeu essa semana". Pontas independentes, e os dois períodos podem ser combinados.
   Nuance ao explicar pro usuário: card criado ontem que nunca se moveu TAMBÉM entra (ele entrou na
   etapa ao nascer) — o que o filtro separa de verdade é o card VELHO que se moveu.
+- `updated_date_start`/`updated_date_end` (2026-08-13) — **última alteração no card**
+  (`updated_at`). Pega QUALQUER mexida: mover, trocar etapa, etiqueta, valor, nota, anexo, marcar
+  ganho/perdido. É o "o que teve alguma ação no período", independentemente de qual ação foi.
+  Medido em 13/08: 97,7% das escritas correspondem a uma atividade visível no histórico do card.
+- `closed_date_start`/`closed_date_end` (2026-08-13) — **data do DESFECHO** (quando o card foi
+  marcado como Ganho ou Perdido). É o que responde *"quantos ganhos eu dei no mês passado"*, e é
+  a régua `closed` do `Kanban::DateBasis` — a MESMA da página Relatórios > Kanban, então os dois
+  batem. Use junto de `statuses: ['won']` para ver só os ganhos.
+  **NÃO confundir com as outras três datas:** um negócio pode ter nascido em janeiro
+  (`date_*`), estar parado na mesma etapa desde março (`stage_date_*`), ter sido editado ontem
+  (`updated_date_*`) e ter sido GANHO em julho (`closed_date_*`). Só este último responde à
+  pergunta de fechamento. Pontas independentes; combinável com os demais períodos.
+  Nuance: card cujo desfecho nunca foi carimbado cai na data da última alteração (é o 3º ramo da
+  régua, e continua valendo para card importado por planilha, que nasce fechado sem data).
 - `scheduled_date_start`/`scheduled_date_end` (agendamento: scheduled_at/deadline_at do card E
   tarefas da agenda vinculadas)
 - `task_filter`: has_task | no_task | today | tomorrow | this_week | overdue

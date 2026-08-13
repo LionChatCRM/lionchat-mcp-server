@@ -3658,7 +3658,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/filter",
   "title": "Filtrar Items",
-  "description": "Filtra cards do Kanban com o filtro RICO da plataforma (mesmo motor da tela '+ Filtro'). Filtros REAIS aplicados: etapas (stages), prioridades, status do card (open/won/lost), agente, faixa de valor, periodo de criacao (date_start/end), periodo de MOVIMENTACAO PARA A ETAPA atual (stage_date_start/end), periodo de agendamento (scheduled_date_*), tarefas (task_filter), canal, etiqueta da conversa, oferta e atributos personalizados de card/contato/conversa (JSON-string + custom_attribute_match all/any). ATENCAO: SEM paginacao — retorna ate 5000 cards em ordem created_at DESC, shape {items:[], total, filters}. NAO existe filtro por time aqui (use lionchat_kanban_items_list_3 pra relatorio por time, ou filtre por agent_id); ordenacao e fixa. (2026-07-24: removidos os parametros stage_id/inbox_id/sort_by/sort_direction/page — eram aceitos mas IGNORADOS pelo backend; use stages[] no lugar de stage_id.)",
+  "description": "Filtra cards do Kanban com o filtro RICO da plataforma (mesmo motor da tela '+ Filtro'). Filtros REAIS aplicados: etapas (stages), prioridades, status do card (open/won/lost), agente, faixa de valor, periodo de criacao (date_start/end), periodo de MOVIMENTACAO PARA A ETAPA atual (stage_date_start/end), periodo de agendamento (scheduled_date_*), tarefas (task_filter), canal, etiqueta da conversa, oferta e atributos personalizados de card/contato/conversa (JSON-string + custom_attribute_match all/any). ATENCAO: SEM paginacao — retorna ate 5000 cards em ordem created_at DESC, shape {items:[], total, filters}. NAO existe filtro por time aqui (use lionchat_kanban_items_list_3 pra relatorio por time, ou filtre por agent_id); ordenacao e fixa. (2026-07-24: removidos os parametros stage_id/inbox_id/sort_by/sort_direction/page — eram aceitos mas IGNORADOS pelo backend; use stages[] no lugar de stage_id.) NOVO 2026-08-13: updated_date_start/end (ultima alteracao, qualquer mexida) e closed_date_start/end (data do DESFECHO — ganho/perdido; use com statuses=['won'] pra 'os ganhos do mes').",
   "category": "Itens",
   "params": [
    {
@@ -3740,6 +3740,34 @@
     "location": "query",
     "required": false,
     "description": "Movido para a etapa ate (YYYY-MM-DD) — cobre o dia inteiro."
+   },
+   {
+    "name": "updated_date_start",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Ultima alteracao a partir de (YYYY-MM-DD) — QUALQUER mexida no card (mover, trocar etapa, etiqueta, valor, nota, anexo, marcar ganho/perdido). Responde 'o que teve alguma acao no periodo', sem distinguir qual acao. Pontas independentes."
+   },
+   {
+    "name": "updated_date_end",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Ultima alteracao ate (YYYY-MM-DD) — cobre o dia inteiro."
+   },
+   {
+    "name": "closed_date_start",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Ganho ou perdido a partir de (YYYY-MM-DD) — data do DESFECHO do card. E o filtro que responde 'quantos ganhos eu dei no mes passado': use junto com statuses=['won']. Mesma regua da pagina Relatorios > Kanban (date_basis 'closed'), entao os numeros batem. NAO confundir com as outras tres datas: um negocio pode ter nascido em janeiro (date_start), estar parado na etapa desde marco (stage_date_start), ter sido editado ontem (updated_date_start) e ter sido GANHO em julho (closed_date_start). Card cujo desfecho nunca foi carimbado cai na data da ultima alteracao. Pontas independentes."
+   },
+   {
+    "name": "closed_date_end",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Ganho ou perdido ate (YYYY-MM-DD) — cobre o dia inteiro."
    },
    {
     "name": "scheduled_date_start",
