@@ -9841,6 +9841,13 @@
     "description": "Título"
    },
    {
+    "name": "booking_event_type.user_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "ID do agente responsável pelo Booking (Agente responsável). Só admin pode definir para outro agente; sem isso fica em nome de quem cria. Pegue o ID em agents_list."
+   },
+   {
     "name": "booking_event_type.duration_minutes",
     "type": "integer",
     "location": "body",
@@ -9937,6 +9944,13 @@
     "location": "body",
     "required": false,
     "description": "Título"
+   },
+   {
+    "name": "booking_event_type.user_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "ID do novo agente responsável (só admin pode trocar o dono do Booking)."
    },
    {
     "name": "booking_event_type.active",
