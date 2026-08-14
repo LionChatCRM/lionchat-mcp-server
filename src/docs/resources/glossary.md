@@ -404,32 +404,35 @@ Campos MUTÁVEIS (atualizáveis livremente por IA/integração): `marital_status
 
 | Sistema | O que é | Tools | Canal |
 |---|---|---|---|
-| **Ligação WP (Wavoip)** | Voz pelo WhatsApp em caixa **QR Code/WAHA** — QR conecta um "device" Wavoip (pago, por caixa); widget de discagem, gravação e transcrição automática | **NENHUMA — sem tool no MCP** (ver nota abaixo) | WhatsApp QR Code |
 | **LionCalls** | Voz pelo WhatsApp em caixa **QR Code**, mas pelo **motor próprio do LionChat** (credencial global, 1 sessão por caixa; flag `lioncalls_calling`, nasce desligada e é ligada conta a conta) | **NENHUMA — sem tool no MCP** | WhatsApp QR Code |
 | **WhatsApp Calling (Cloud)** | Voz pelo WhatsApp na **API oficial** (enterprise) | `whatsapp_calls_*` + enable/disable_whatsapp_calling | WhatsApp oficial |
 | **VoIP (Zenvia)** | Telefonia COMUM com softphone no navegador (ramais, saldo, recarga) | `voip_*` | Telefone |
 | **VTCall** | Telefonia por **PABX click-to-call**, config por conta + ramal por atendente; **sem softphone no navegador** — o atendente fala pelo app/ramal do VTCall | `vtcall_settings_*` (show/update/test_connection), `vtcall_ramals_*` (list/create/destroy) | Telefone (PABX do cliente) |
 
-Quando o usuário falar "ligação", descubra o canal ANTES de responder: caixa QR Code → Wavoip **ou**
-LionCalls (dois motores diferentes para o MESMO tipo de caixa — veja qual está conectado nela); caixa
-oficial → `whatsapp_calls`; telefone/ramal → Zenvia (softphone) ou VTCall (PABX).
+Quando o usuário falar "ligação", descubra o canal ANTES de responder: caixa QR Code → **LionCalls**;
+caixa oficial → `whatsapp_calls`; telefone/ramal → Zenvia (softphone) ou VTCall (PABX).
 
-**Histórico é compartilhado.** Wavoip, LionCalls, Zenvia e VTCall gravam na MESMA tabela de ligações,
-então `voip_calls_list` (`/voip/calls`) devolve as quatro juntas — mesmo as que não têm tool própria.
-Só o WhatsApp Calling (Cloud) fica fora, em `whatsapp_calls_*`.
+**Histórico é compartilhado.** LionCalls, Zenvia e VTCall gravam na MESMA tabela de ligações, então
+`voip_calls_list` (`/voip/calls`) devolve as três juntas — mesmo as que não têm tool própria. Só o
+WhatsApp Calling (Cloud) fica fora, em `whatsapp_calls_*`. Ligações antigas do **Wavoip** (integração
+encerrada em 30/07/2026) continuam aparecendo nesse histórico, com `provider: "wavoip"`.
 
-**Wavoip — SEM TOOL NO MCP (decisão do dono, 2026-07-16).** As 8 tools `wavoip_*` (status, token,
-calls, connect, disconnect, settings, should_ring, flag_rejected) foram REMOVIDAS dos dois conectores.
-Motivo: cada device custa **R$70/mês na conta de revenda do LionChat** (não do cliente), e o MCP
-conseguia CRIAR device pago, DERRUBAR a linha de um cliente e ainda entregar o `token` — que permite
-FAZER ligações, gerando custo. Ligação WP é contratada e configurada **manualmente pelo cliente no
-painel**. Se o usuário pedir algo de Ligação WP, oriente-o ao painel (Configurações da caixa →
-Ligação WP) — **não existe tool e não deve existir**. NÃO re-adicionar sem ordem explícita do dono.
+**Wavoip — INTEGRAÇÃO REMOVIDA (12/08/2026).** O vínculo com a Wavoip acabou; o último uso real foi
+em 30/07/2026. Saíram do produto: a aba "Ligação WP" da caixa, o discador, o Super Admin, as rotas,
+os webhooks, as tarefas automáticas e a tabela. As 8 tools `wavoip_*` já haviam sido removidas do MCP
+em 16/07 — **não re-adicionar**, não há mais o que chamar.
 
-Contexto (só pra conversar, não pra operar): config por inbox (`record_all_calls`, `auto_transcribe`,
-`transcription_provider` groq|openai), feature flag `wavoip_calling`, limite de plano
-`wavoip_voice_inboxes`. WhatsappCall (Cloud, esse SIM tem tool): `status`, `custom_name`,
-`favorited`, `transcript`/`transcript_status`.
+Se o usuário perguntar por "Ligação WP" ou "Wavoip": a integração **não existe mais**; para voz em
+caixa QR Code hoje o caminho é o **LionCalls**. Nunca orientar o usuário a "Configurações da caixa →
+Ligação WP" — essa aba não existe.
+
+**O que SOBRA e continua funcionando:** as **2.927 ligações antigas** seguem no histórico com
+`provider: "wavoip"`, com quem ligou, quando e quanto durou. As **gravações** ficavam no servidor da
+Wavoip e vão sumir — ao tentar ouvir, o painel mostra "Esta gravação não está mais disponível" em vez
+de um botão que não funciona. Isso é esperado, não é defeito.
+
+WhatsappCall (Cloud, esse SIM tem tool): `status`, `custom_name`, `favorited`,
+`transcript`/`transcript_status`.
 
 ## Chat interno da equipe (InternalChat)
 
