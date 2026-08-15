@@ -471,6 +471,37 @@ pode ser disparado por **webhook externo próprio**: cria-se a integração embu
 resolve contato/conversa (mesmas regras do Webhook Universal) e dispara o flow.
 Receita completa no resource **FlowBuilder — Guia de Design** (seção do trigger `webhook`).
 
+### Disparo de flow por FORMULÁRIO público de captação (2026-08)
+
+Um flow pode ser disparado pelo que o lead faz num **Formulário público** (resource
+`lionchat://docs/formularios-publicos`). São **três gatilhos**, todos no node `start`:
+
+| Gatilho | Quando dispara |
+|---|---|
+| `lead_form_completed` | O lead **concluiu** o formulário |
+| `lead_form_milestone` | O lead **atingiu um marco** dentro do formulário (sem precisar concluir) |
+| `lead_form_abandoned` | O lead **parou no meio** e a janela de abandono do formulário venceu |
+
+Como montar o item do gatilho:
+- **`lead_form_id` é obrigatório** — o gatilho só casa com o formulário apontado; sem ele o flow
+  fica MUDO (nenhum erro, nenhum disparo).
+- Pelo caminho **API/MCP**, `lead_form_id` (e `milestone_node_id`) vão no **topo do item**; a
+  **tela** grava os mesmos campos dentro de `config`. O motor lê os dois formatos — não precisa
+  duplicar.
+- `milestone_node_id` é **opcional** e só existe no `lead_form_milestone`: preenchido, o flow
+  dispara só naquele marco; **vazio = qualquer marco** daquele formulário.
+- Só vale em **flow individual** (`conversation_mode: 'individual'`). Flow de grupo e ferramenta
+  de IA (`ai_tool`) nunca são disparados por formulário.
+
+Comportamento no disparo:
+- Cada gatilho dispara **uma vez por resposta** (`completed`, `milestone:<node_id>` e `abandoned`
+  são chaves independentes) — retentativa não dobra o flow.
+- Exige **contato** na resposta: lead que não deixou nome+telefone não dispara nada. Em caixa
+  WhatsApp (oficial ou QR Code), contato sem telefone também é pulado.
+- O disparo **cria ou reabre uma conversa** na primeira caixa vinculada ao flow — ou seja, acorda
+  os ouvintes de `conversation_created` (automação, outros flows, webhook de saída, Kanban, SLA,
+  notificação). Conte com isso ao desenhar a cadeia.
+
 ### Proteção anti-loop entre motores (2026-06)
 
 Automações e flows podem se encadear (automação dispara flow, flow dispara automação...).
@@ -491,6 +522,11 @@ ficar muda (2026-06-05).
 | `conversation_updated` | Acao na conversa — filtrada por `action_types` (UI: "Acao na conversa") |
 | `message_created` | Nova mensagem (incoming ou outgoing) |
 | `first_reply_created` | Primeira resposta humana |
+
+**Os gatilhos de Formulário público (`lead_form_completed`, `lead_form_milestone`,
+`lead_form_abandoned`) NÃO entram nessa tabela** — são gatilhos de **flow**, não eventos de
+automação. Não adianta criar `automation_rule` com esses nomes em `event_name`; o caminho é o node
+`start` de um flow (ver a seção acima).
 
 ### Subtipos de `conversation_updated` (campo `action_types`)
 

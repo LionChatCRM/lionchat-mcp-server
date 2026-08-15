@@ -330,7 +330,7 @@ Como a coleta de dados/cenários funciona hoje (importante pra diagnosticar "IA 
 
 - O admin pode FIXAR o parâmetro de uma ferramenta no cenário (campo scenario.tool_bindings): quais mídias enviar, qual funil+etapa do card, quais agendas no agendamento. "Deixar a IA decidir" = binding vazio.
 - Quando UM cenário fixa a tool, a execução vira determinística (a IA não escolhe): mídia e kanban são aplicados pós-turno pelo BindingResolver (ordem texto→ação, sem duplicar, idempotente); o agendamento força/restringe a agenda mas a IA ainda define data/hora.
-- Via MCP: scenarios_create/update persiste binding de send_media_asset e create_kanban_item/move_kanban_item (re-escopados por conta). O binding de create_booking NÃO é aceito pela API — pra limitar agendas via MCP, use config.booking_event_type_ids no assistente (captain_assistants_update).
+- Via MCP: scenarios_create/update persiste binding de send_media_asset e create_kanban_item/move_kanban_item (re-escopados por conta). O binding de create_booking NÃO é aceito pela API — pra limitar agendas via MCP, use config.booking_event_type_ids no assistente (captain_assistants_update). **Atualização 15/08:** o modo direto/avulso do create_booking foi REMOVIDO — agenda de Booking é o ÚNICO caminho de agendamento da IA (ver seção "O que mudou no agendamento DA IA").
 - Receita pra criar/editar cenário com binding via MCP (scenarios_create / scenarios_update): (1) o corpo vai SEMPRE embrulhado em `scenario`; (2) a instrução PRECISA mencionar a ferramenta como link markdown `[Rótulo](tool://slug)` — menção crua `(tool://slug)` NÃO conta e o binding é descartado no salvamento; (3) envie `tool_bindings` com o shape: `send_media_asset` → `{ "asset_ids": [Int] }`, `create_kanban_item`/`move_kanban_item` → `{ "funnel_id": Int, "stage": "<chave da etapa>" }`. Não precisa mandar `tools` (é auto-extraído da instrução e sobrescrito). `create_booking` NÃO entra em tool_bindings pela API.
 - Pra APONTAR uma página da base de conhecimento num cenário via MCP, escreva `[@Nome](document://ID)` (o ID numérico do documento) DENTRO do texto da `instruction` — igual ao link de tool, o motor deriva daí o campo `document_ids`. NÃO existe param `document_ids` na API/MCP (mandar seria descartado em silêncio). Teto de 3 documentos; a página apontada ganha PRIORIDADE na busca RAG, NÃO exclusividade (o resto da base continua pesquisável).
 
@@ -444,6 +444,32 @@ criar a campanha e mostre a contagem ao usuário — estimativa e disparo usam o
   retry de rede é seguro.
 - Rate limit da reserva pública: 10/5min por IP + 20/min por conta (429 ao estourar).
 - Todo agendamento aparece vinculado a uma conversa (cria/reusa a conversa do contato).
+
+### O que mudou no agendamento DA IA (2026-08-15)
+
+**1. A IA só agenda por AGENDA de Booking.** `view_booking_option` virou a ÚNICA fonte de horário
+— o modo direto/avulso do `create_booking` foi REMOVIDO (era o único caminho que criava
+compromisso fora do motor de reservas). Consequência prática: a IA passou a respeitar os dias em
+que a agenda NUNCA abre (parou de oferecer domingo) e não inventa mais identificador de agenda —
+com uma única agenda liberada ela assume essa; com duas ou mais, recusa nomeando as válidas. Para
+restringir quais agendas a IA oferece, continua valendo `captain_assistants_update` com
+`config.booking_event_type_ids`.
+
+**2. A IA entrega o link do Meet sozinha.** O link do Google Meet não existe no instante em que o
+agendamento é criado (nasce depois da ida ao Google), e antes a IA prometia o link e nunca voltava.
+Agora o sistema arma uma volta de ~25s; sem link ainda, ele remarca sozinho (+40s) sem gastar turno
+de IA; com link, a IA manda o endereço literal. Se na segunda tentativa o link não veio, ela avisa
+o cliente e aciona um humano (nota privada com menção). Requisitos: o tipo de agendamento precisa
+gerar Meet e o dono da agenda precisa ter o Google conectado. `{{conversation.custom_attribute.meet_link}}`
+e o `{{meet_link}}` da mensagem de confirmação do Booking passaram a vir preenchidos (antes saíam
+vazios) — isso vale inclusive para cliente que não usa IA.
+
+**3. A IA não confirma reunião que não existe.** No último instante antes da resposta virar
+mensagem: se ela afirma agendamento concluído, a agenda está liberada e não há compromisso real na
+conversa, o sistema roda UMA tentativa guiada que agenda de verdade com a data/hora prometidas.
+Agendou, sai a confirmação verdadeira; não agendou, a frase é trocada por uma honesta — nunca
+silêncio. Diagnóstico: se o cliente disser "a IA confirmou e não tem nada na agenda", esse é o
+comportamento ANTIGO (medido: 39 afirmações falsas em 30 dias antes do conserto).
 
 ## Variáveis de conta (account_variables)
 
@@ -685,6 +711,9 @@ automática. Ver a seção de variáveis de conta acima.
    ```
    Cada item de `attachments` é o `blob_id` retornado pelo upload. Pode mandar vários.
 3. O mesmo padrão vale pra anexar mídia num card do Kanban (use o `blob_id` no campo de anexo do card).
+4. **Anexo de MENSAGEM aceita QUALQUER tipo de arquivo (novo 15/08)** — só o TAMANHO reprova. Se
+   houver dúvida sobre um arquivo grande, confira antes com `lionchat_upload_limits_show` (segue
+   sendo a fonte dos tetos).
 
 ## Cuidados com tools de criação
 

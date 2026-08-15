@@ -12573,7 +12573,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/flow_sessions/{id}",
   "title": "Atualizar Sessão do Flow",
-  "description": "Pausa, retoma ou remove a sessao de flow (action_type: pause/resume/remove).",
+  "description": "Pausa, retoma ou remove a sessao de flow (action_type: pause/resume/remove). remove = o botao Parar do Historico de execucoes: encerra a sessao DE VEZ (status completed) e registra atividade na conversa dizendo quem parou. Valor fora da lista e no-op.",
   "category": "Sessoes",
   "params": [
    {
@@ -28253,6 +28253,545 @@
    "lionchat_conversations_captain_history_reset",
    "lionchat_captain_assistants_show",
    "lionchat_conversations_show"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/lead_forms",
+  "title": "Listar Formularios",
+  "description": "Lista os formularios publicos de captacao da conta (estilo Typeform/Typebot), mais recentes primeiro. Cada item traz form_data (rascunho), settings, public_url e counts {views, responses, completed}. NAO traz media_urls (so no show). Leitura liberada a qualquer agente.",
+  "category": "Formularios",
+  "params": [],
+  "returns": "array de formularios (id, name, slug, display_mode, active, form_data, published_at, settings, public_url, counts)",
+  "common_use_cases": [
+   "Ver os formularios da conta e seus numeros",
+   "Achar o id antes de editar/publicar",
+   "Copiar o link publico (public_url)"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_show",
+   "lionchat_lead_forms_create",
+   "lionchat_lead_forms_stats"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/lead_forms",
+  "title": "Criar Formulario",
+  "description": "Cria um formulario publico de captacao. So name e obrigatorio (o desenho pode vir depois via update). O slug do link publico e GERADO pelo servidor e imutavel. Nasce inativo e nao publicado — publique com lead_forms_publish e ative com update {active: true}. Escrita admin-only (401 para agente comum). Guia completo do form_data: resource lionchat://docs/formularios-publicos.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome do formulario"
+   },
+   {
+    "name": "display_mode",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Formato da pagina publica: cards (um bloco por tela, estilo Typeform) ou chat (conversa, estilo Typebot). Default cards"
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Liga/desliga o link publico (so responde ativo E publicado)"
+   },
+   {
+    "name": "form_data",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Desenho do formulario {nodes:[{id,type,position:{x,y},data}], edges:[{id,source,target,sourceHandle}]}. Tipos: start, question, choice, message, condition, action, send_message, end, api_request, ai. Chave de data fora da lista permitida do tipo e DESCARTADA em silencio. Teto 2MB. Contrato completo, variaveis e exemplos: resource lionchat://docs/formularios-publicos. ATENCAO: substitui o desenho INTEIRO — leia com lead_forms_show antes de editar."
+   },
+   {
+    "name": "settings",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Configuracao visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..1440 (default 15), button_label: string|null}."
+   }
+  ],
+  "returns": "formulario criado (201) com slug gerado e public_url; 422 {errors} em validacao",
+  "common_use_cases": [
+   "Criar formulario de captacao do zero via API",
+   "Importar um desenho pronto (form_data completo)"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_list",
+   "lionchat_lead_forms_show",
+   "lionchat_lead_forms_update",
+   "lionchat_lead_forms_publish",
+   "lionchat_lead_forms_stats"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/lead_forms/{id}",
+  "title": "Detalhe do Formulario",
+  "description": "Retorna o formulario completo, incluindo form_data (rascunho atual) e media_urls (mapa blob_id -> url das imagens de bloco/opcao — SO neste endpoint). published_data (a foto que o publico usa) nunca sai pela API.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do formulario"
+   }
+  ],
+  "returns": "formulario (objeto completo + media_urls + counts)",
+  "common_use_cases": [
+   "Ler o form_data atual antes de editar (update substitui o desenho inteiro)",
+   "Conferir estado publicado/ativo e o link publico"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_update",
+   "lionchat_lead_forms_publish",
+   "lionchat_lead_forms_responses_list"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/lead_forms/{id}",
+  "title": "Atualizar Formulario",
+  "description": "Atualiza nome, desenho (form_data), settings, formato ou ativo. IMPORTANTE: mudanca no form_data so vale pro PUBLICO depois de lead_forms_publish (quem preenche usa sempre a foto publicada). form_data enviado SUBSTITUI o desenho inteiro — leia com lead_forms_show antes. Admin-only.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do formulario"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome do formulario"
+   },
+   {
+    "name": "display_mode",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "cards ou chat"
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Liga/desliga o link publico"
+   },
+   {
+    "name": "form_data",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Desenho do formulario {nodes:[{id,type,position:{x,y},data}], edges:[{id,source,target,sourceHandle}]}. Tipos: start, question, choice, message, condition, action, send_message, end, api_request, ai. Chave de data fora da lista permitida do tipo e DESCARTADA em silencio. Teto 2MB. Contrato completo, variaveis e exemplos: resource lionchat://docs/formularios-publicos. ATENCAO: substitui o desenho INTEIRO — leia com lead_forms_show antes de editar."
+   },
+   {
+    "name": "settings",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Configuracao visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..1440 (default 15), button_label: string|null}."
+   }
+  ],
+  "returns": "formulario atualizado; 422 {errors} em validacao",
+  "common_use_cases": [
+   "Editar o desenho do formulario",
+   "Ativar/desativar o link publico",
+   "Trocar tema/cor/tempo de abandono"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_show",
+   "lionchat_lead_forms_publish"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/lead_forms/{id}",
+  "title": "Excluir Formulario",
+  "description": "Exclui o formulario e (assincronamente) todas as respostas. Irreversivel — confirme com o usuario antes. Admin-only.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do formulario"
+   }
+  ],
+  "returns": "204 sem corpo",
+  "common_use_cases": [
+   "Remover formulario descontinuado"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_list"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_publish",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/lead_forms/{id}/publish",
+  "title": "Publicar Formulario",
+  "description": "Valida o desenho e copia form_data para a foto publicada (published_data) — e o que faz as edicoes chegarem ao publico. Falha de validacao devolve 422 {errors: [chaves]} com chaves como no_start, no_reachable_end, question_without_label, condition_without_else, api_without_url, api_without_error_exit, ai_without_prompt, ai_without_other_exit (lista completa e significado: resource lionchat://docs/formularios-publicos). Admin-only.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do formulario"
+   }
+  ],
+  "returns": "formulario com published_at carimbado; 422 {errors: [chaves i18n]} se o desenho nao passa",
+  "common_use_cases": [
+   "Colocar edicoes do desenho no ar",
+   "Descobrir o que falta no desenho (as chaves do 422 dizem exatamente)"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_update",
+   "lionchat_lead_forms_show"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_duplicate",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/lead_forms/{id}/duplicate",
+  "title": "Duplicar Formulario",
+  "description": "Cria uma copia do formulario: nome + ' (copia)', slug novo, INATIVA e NAO publicada; as imagens dos blocos sao duplicadas (arquivos novos). Admin-only.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do formulario"
+   }
+  ],
+  "returns": "201 + copia serializada",
+  "common_use_cases": [
+   "Usar um formulario existente como modelo"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_list",
+   "lionchat_lead_forms_update"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_stats",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/lead_forms/{id}/stats",
+  "title": "Funil do Formulario",
+  "description": "Estatisticas agregadas: views, starts, completed, abandoned, completion_rate (%), funil bloco a bloco (reached + percent, so blocos visiveis, ordem do desenho publicado) e marcos (milestones).",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do formulario"
+   },
+   {
+    "name": "days",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Janela em dias (default 30, maximo 90)"
+   }
+  ],
+  "returns": "{views, starts, completed, abandoned, completion_rate, funnel: [{node_id, type, label, reached, percent}], milestones: [{node_id, name, reached}]}",
+  "common_use_cases": [
+   "Onde os leads abandonam (funil por bloco)",
+   "Taxa de conclusao do formulario",
+   "Alcance de cada marco"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_responses_list",
+   "lionchat_lead_forms_list"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_responses_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/lead_forms/{lead_form_id}/responses",
+  "title": "Listar Respostas do Formulario",
+  "description": "Lista as respostas (25 por pagina, colunas leves — as respostas em si NAO vem na lista, use o show). Filtra por status e janela de dias.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "lead_form_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do formulario"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "in_progress, completed ou abandoned (fora da lista e ignorado)"
+   },
+   {
+    "name": "days",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Janela em dias (default 30, maximo 90)"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Pagina (default 1)"
+   }
+  ],
+  "returns": "{payload: [{id, status, contact: {id,name,phone}|null, current_node_label, answered_count, created_at, completed_at}], meta: {current_page, per_page, total_count}}",
+  "common_use_cases": [
+   "Ver quem respondeu/abandonou",
+   "Achar o id de uma resposta pro detalhe"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_responses_show",
+   "lionchat_lead_forms_stats"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_responses_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/lead_forms/{lead_form_id}/responses/{id}",
+  "title": "Detalhe da Resposta do Formulario",
+  "description": "Resposta completa: answers legiveis [{label, value_label, at, download_url? (so arquivo enviado)}], marcos, utm_params e effects — o desfecho de cada bloco de API/IA ({node_id, label, state done|error|pending, error, status HTTP, url_short}) pra investigar consulta que falhou.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "lead_form_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do formulario"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da resposta"
+   }
+  ],
+  "returns": "{id, status, contact, answers: [...], milestones: [...], effects: [...], utm_params, started_at, completed_at, abandoned_at}",
+  "common_use_cases": [
+   "Ler o que o lead respondeu",
+   "Investigar por que a consulta externa/IA falhou (effects)",
+   "Ver a origem (utm_params)"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_responses_list",
+   "lionchat_lead_forms_stats"
+  ]
+ },
+ {
+  "id": "lionchat_guru_subscription_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/guru_subscription",
+  "title": "Ver Assinatura (Guru)",
+  "description": "Assinatura da PROPRIA conta na plataforma, direto do Guru (passthrough) + dados locais do plano (plan_name, billing_period, subscription_expires_at, valor). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "category": "Assinatura",
+  "params": [],
+  "returns": "{subscription: <objeto do Guru>, local: {plan_name, plan_slug, billing_period, subscription_expires_at, subscription_value_cents}}",
+  "common_use_cases": [
+   "Ver status/vencimento da assinatura da conta",
+   "Conferir o plano atual antes de simular troca"
+  ],
+  "related_tools": [
+   "lionchat_guru_subscription_available_plans",
+   "lionchat_guru_subscription_invoices"
+  ]
+ },
+ {
+  "id": "lionchat_guru_subscription_available_plans",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/guru_subscription/available_plans",
+  "title": "Planos Disponiveis (Guru)",
+  "description": "Ofertas do Guru FILTRADAS: so aparecem ofertas vinculadas a um plano da plataforma (cada uma com local_plan {plan_name, plan_slug, period}). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "category": "Assinatura",
+  "params": [],
+  "returns": "{offers: [...com local_plan], local: {...}}",
+  "common_use_cases": [
+   "Listar opcoes de upgrade/downgrade antes de simular"
+  ],
+  "related_tools": [
+   "lionchat_guru_subscription_simulate",
+   "lionchat_guru_subscription_change_plan"
+  ]
+ },
+ {
+  "id": "lionchat_guru_subscription_invoices",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/guru_subscription/invoices",
+  "title": "Faturas da Assinatura (Guru)",
+  "description": "Faturas da assinatura, direto do Guru (passthrough). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "category": "Assinatura",
+  "params": [],
+  "returns": "{invoices: <passthrough do Guru>}",
+  "common_use_cases": [
+   "Historico de faturas da conta"
+  ],
+  "related_tools": [
+   "lionchat_guru_subscription_transactions",
+   "lionchat_guru_subscription_show"
+  ]
+ },
+ {
+  "id": "lionchat_guru_subscription_transactions",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/guru_subscription/transactions",
+  "title": "Transacoes da Assinatura (Guru)",
+  "description": "Transacoes de pagamento da assinatura, direto do Guru (passthrough). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "category": "Assinatura",
+  "params": [],
+  "returns": "{transactions: <passthrough do Guru>}",
+  "common_use_cases": [
+   "Conferir pagamentos aprovados/recusados"
+  ],
+  "related_tools": [
+   "lionchat_guru_subscription_invoices"
+  ]
+ },
+ {
+  "id": "lionchat_guru_subscription_activities",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/guru_subscription/activities",
+  "title": "Atividades da Assinatura (Guru)",
+  "description": "Linha do tempo de eventos da assinatura no Guru (passthrough). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "category": "Assinatura",
+  "params": [],
+  "returns": "{activities: <passthrough do Guru>}",
+  "common_use_cases": [
+   "Auditar mudancas recentes da assinatura"
+  ],
+  "related_tools": [
+   "lionchat_guru_subscription_show"
+  ]
+ },
+ {
+  "id": "lionchat_guru_subscription_simulate",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/guru_subscription/simulate",
+  "title": "Simular Troca de Plano (Guru)",
+  "description": "Previa do rateio de uma troca de plano SEM efetivar nada. offer_id precisa estar entre as ofertas vinculadas (available_plans) — senao 422 offer_not_allowed. Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "category": "Assinatura",
+  "params": [
+   {
+    "name": "offer_id",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "ID da oferta do Guru (das available_plans)"
+   }
+  ],
+  "returns": "previa de rateio (passthrough do Guru)",
+  "common_use_cases": [
+   "Mostrar ao usuario quanto custaria a troca antes de confirmar"
+  ],
+  "related_tools": [
+   "lionchat_guru_subscription_available_plans",
+   "lionchat_guru_subscription_change_plan"
+  ]
+ },
+ {
+  "id": "lionchat_guru_subscription_change_plan",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/guru_subscription/change_plan",
+  "title": "Trocar Plano (Guru)",
+  "description": "EFETIVA a troca de plano: upgrade cobra o proporcional NA HORA; downgrade agenda pro fim do ciclo. Confirme com o usuario e rode simulate antes. Acoes de escrita tem trava de 30s por conta — segunda tentativa na janela devolve 422 'operacao em andamento'. Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "category": "Assinatura",
+  "params": [
+   {
+    "name": "offer_id",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "ID da oferta do Guru (das available_plans)"
+   }
+  ],
+  "returns": "resultado da troca (passthrough do Guru)",
+  "common_use_cases": [
+   "Upgrade/downgrade da assinatura da propria conta apos confirmacao explicita"
+  ],
+  "related_tools": [
+   "lionchat_guru_subscription_simulate",
+   "lionchat_guru_subscription_show"
+  ]
+ },
+ {
+  "id": "lionchat_guru_subscription_cancel",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/guru_subscription/cancel",
+  "title": "Cancelar Assinatura (Guru)",
+  "description": "ACAO SENSIVEL: cancela a assinatura da conta. Por padrao cancela no FIM do ciclo (cancel_at_cycle_end true); so false explicito cancela imediato. SEMPRE confirme com o usuario antes. Acoes de escrita tem trava de 30s por conta — segunda tentativa na janela devolve 422 'operacao em andamento'. Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "category": "Assinatura",
+  "params": [
+   {
+    "name": "comment",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Motivo do cancelamento (opcional)"
+   },
+   {
+    "name": "cancel_at_cycle_end",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Default true (cancela no fim do ciclo). false = imediato"
+   }
+  ],
+  "returns": "resultado do cancelamento (passthrough do Guru)",
+  "common_use_cases": [
+   "Cancelamento pedido explicitamente pelo dono da conta"
+  ],
+  "related_tools": [
+   "lionchat_guru_subscription_revert_cancel",
+   "lionchat_guru_subscription_show"
+  ]
+ },
+ {
+  "id": "lionchat_guru_subscription_revert_cancel",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/guru_subscription/revert_cancel",
+  "title": "Reverter Cancelamento (Guru)",
+  "description": "Desfaz um cancelamento agendado pro fim do ciclo (enquanto ainda nao venceu). Acoes de escrita tem trava de 30s por conta — segunda tentativa na janela devolve 422 'operacao em andamento'. Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "category": "Assinatura",
+  "params": [],
+  "returns": "resultado (passthrough do Guru)",
+  "common_use_cases": [
+   "Cliente desistiu de cancelar"
+  ],
+  "related_tools": [
+   "lionchat_guru_subscription_cancel",
+   "lionchat_guru_subscription_show"
   ]
  }
 ]

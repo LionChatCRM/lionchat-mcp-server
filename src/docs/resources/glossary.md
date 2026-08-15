@@ -70,6 +70,10 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 - `private`: `true` = nota privada (só visível pra equipe, não pro cliente)
 - `sender_type`: `User`, `Contact`, `Captain::Assistant`, `AgentBot`
 - `processed_message_content`: texto após processamento (com markdown removido, links resolvidos)
+- `content_attributes.forwarded`: `true` = a mensagem foi ENCAMINHADA pelo cliente (nos dois canais
+  de WhatsApp — oficial e QR Code). A bolha mostra o selo "Encaminhada"
+- `content_attributes.frequently_forwarded`: `true` = encaminhada MUITAS vezes (o "encaminhada com
+  frequência" do WhatsApp). Útil pra responder "essa mensagem foi encaminhada?" sem chutar
 
 ## Attachment (Anexo)
 
@@ -92,6 +96,13 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 - `meta.image_description`: descrição gerada pela IA (cache, se disponível)
 - `file_size`: bytes
 - `width`/`height`: pixels (imagens/vídeos)
+
+### Tipo de arquivo não reprova mais (15/08/2026)
+
+No anexo de **mensagem**, QUALQUER extensão é aceita — a validação é só de TAMANHO. Tipo sem teto
+próprio cai no teto de "documento" (o maior). O `file_type` `file` cobre tudo que não é
+imagem/áudio/vídeo. **Dois caminhos continuam com lista fechada de tipos permitidos**: o upload por
+URL (o teste de mídia do FlowBuilder) e o chat interno da equipe — não confunda os três.
 
 ## Contact (Contato)
 
@@ -300,6 +311,12 @@ comportamento intencional.
 - `start_time`, `end_time`: ISO 8601
 - `status`: `scheduled`, `cancelled`, `completed`
 
+**A IA agenda EXCLUSIVAMENTE por agenda de Booking (15/08/2026).** Não existe mais agendamento
+avulso/direto pela IA — ela consulta as agendas liberadas, respeita os dias em que a agenda não
+abre e só então cria a reserva. Depois de agendar, ela mesma entrega o link do Google Meet quando o
+tipo de agendamento gera Meet (o link nasce alguns segundos depois; o sistema espera e volta pra
+mandar). Detalhes em `lionchat://docs/best-practices`.
+
 ## Métricas (Reports)
 
 ### Endpoints `lionchat_reports_*` retornam métricas em SEGUNDOS por padrão
@@ -460,3 +477,39 @@ cards daquele funil).
 A plataforma opera com 6 idiomas: `en`, `es`, `fr`, `it`, `pt`, `pt_BR` (default das contas
 brasileiras: pt_BR). Conta com idioma antigo/descontinuado cai em inglês. Notas internas geradas
 pela IA saem no idioma da conta.
+
+## LeadForm (Formulário público de captação)
+
+Formulário de captura próprio da conta, com página pública (link `/forms/<conta>/<slug>`), montado
+num construtor de blocos. Feature liberada conta a conta.
+
+### `LeadFormResponse.status`
+| Valor | Significado |
+|---|---|
+| `in_progress` | O lead começou e ainda está preenchendo |
+| `completed` | Chegou ao fim do formulário |
+| `abandoned` | Parou no meio e a janela de abandono do formulário venceu |
+
+O contato é criado assim que nome e telefone entram — **mesmo sem concluir**. Por isso resposta
+`abandoned` normalmente JÁ tem contato para trabalhar.
+
+Detalhes completos (construtor, página pública, blocos, gatilhos de flow, tetos e limites) no
+resource `lionchat://docs/formularios-publicos`.
+
+## Assinatura (Guru)
+
+Gestão da assinatura da **própria conta** no LionChat (plano, faturas, troca de plano,
+cancelamento), que roda por cima do Digital Manager Guru. Não confunda com a integração de
+pagamento que traz vendas do cliente para dentro do CRM.
+
+- **Feature liberada conta a conta** (`guru_subscription_management`, nasce desligada). Desligada,
+  toda chamada volta **404 com `code: "feature_disabled"`** — isso NÃO quer dizer "assinatura não
+  existe".
+- **Somente administrador** da conta. Agente comum recebe 403.
+- **Ações de escrita** (trocar de plano, cancelar, reverter cancelamento) têm trava de **30
+  segundos** por conta: a segunda tentativa dentro da janela volta 422 `action_in_progress`. Não é
+  erro — é a primeira ainda processando. Espere e confira o resultado antes de repetir.
+- Erros: **422** = validação do Guru (a mensagem vem do próprio Guru, repasse ao usuário) ou
+  assinatura não configurada; **404** = assinatura inexistente no Guru (ou a feature desligada, ver
+  acima — o `code` distingue); **503** = Guru fora do ar / tempo esgotado, aí sim cabe uma nova
+  tentativa depois.

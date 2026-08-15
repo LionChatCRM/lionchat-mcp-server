@@ -442,6 +442,13 @@ mantém o comportamento antigo (só as colunas pedidas).
 `GET /upload_limits` retorna o teto em MB por tipo (`image`, `video`, `audio`, `document`,
 `fallback`). Consulte 1x antes de subir anexo grande — evita 422 no meio do fluxo.
 
+**Desde 15/08/2026 o TIPO não rejeita mais anexo de mensagem** — a validação passou a ser só de
+tamanho. Tipo sem balde próprio (nem imagem, nem vídeo, nem áudio) cai no balde de **documento**,
+que é o maior. Ou seja: `upload_limits` continua sendo a única fonte dos tetos, mas a resposta
+"esse formato não é aceito" deixou de existir nesse caminho. Os caminhos que **continuam** com
+lista fechada de tipos são o upload por URL (`/upload` com `#validate`, usado no teste de mídia do
+FlowBuilder) e o chat interno da equipe.
+
 ### Webhooks de saída — evento novo (2026-06)
 
 `inbox_updated` entrou na lista de eventos assináveis (`webhooks_create/update`): dispara quando

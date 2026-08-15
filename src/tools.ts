@@ -427,7 +427,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-08-07)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-08-15)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -499,6 +499,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Escreva o 1o bloco assumindo CONTATO FRIO (a pessoa nao mandou nada — a campanha e que
     iniciou). Receita: flows_update com o item -> flows_list com with_campaign_trigger=true e
     inbox_id pra confirmar -> campaigns_create com flow_id.
+    lead_form_completed / lead_form_milestone / lead_form_abandoned (NOVOS 2026-08-15 — gatilhos
+    de FORMULARIO PUBLICO, feature Formularios): disparados pelo formulario de captacao, NAO por
+    evento de conversa (inertes no matcher). Item: {key:'lead_form_completed', lead_form_id:<id>}
+    — lead_form_id pode ir no topo do item (caminho API/MCP) ou dentro de config (tela);
+    lead_form_milestone aceita milestone_node_id (vazio = qualquer marco); lead_form_abandoned
+    dispara pelo tempo de abandono configurado no formulario. SO flow individual (nunca grupo).
+    O flow nasce com variaveis form_* + respostas planas (form_<slug_da_pergunta>). Ver tools
+    lionchat_lead_forms_* e o resource formularios-publicos.
     cron, webhook. NOVO message_sent (2026-06-11): par do message_received pra mensagens de
     SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
     'desativar IA' com esse trigger sem keywords = a propria resposta da IA dispara o flow.
@@ -566,6 +574,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   saveTo "attribute"/"contact_attribute" NAO EXISTEM — nao salvam nada.
   TIMEOUT DISPARA DE VERDADE (corrigido 2026-06-09): waitTime estourou -> handle "timeout"
   (ou "option_{val}_timeout" no modo options). Sempre ligue um edge no timeout.
+  FALLBACK DE SAIDA (mudou 2026-08-15): quando o handle esperado nao tem fio, o avanco de ultimo
+    recurso NUNCA segue fio negativo (timeout/no_reply_timeout/retries_exhausted/no_response/error).
+    Antes ele podia "roubar" o fio do timeout e rotear resposta valida pro caminho de silencio;
+    agora o ramo simplesmente PARA. Nao conte com o comportamento antigo: ligue o fio de sucesso.
   Respostas invalidas alem de maxRetries -> handle "retries_exhausted" (distinto do timeout de silencio;
     se nao houver edge nele, cai no "timeout").
   Handles validation='options': "option_{val}" por opcao + "timeout"
@@ -605,6 +617,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       IANA ex. America/Sao_Paulo; outside_business_hours HERDA days/start_hour/end_hour/timezone da
       business_hours ANTERIOR no array — pode deixar ausentes que o backend preenche),
     can_reply/can_reply_closed, conversation_has_agent/no_agent,
+    conversation_no_team (NOVO 2026-08-15: conversa SEM equipe atribuida — e o preset "Sem equipe"
+      da tela; operador dedicado, sem value), conversation_has_ai_agent/conversation_no_ai_agent
+      (IA ativa/inativa na conversa; not_ai_agent = sinonimo de no_ai_agent),
     contact_has_label/conversation_has_label,
     kanban_exists/kanban_in_stage/kanban_won/kanban_lost (funnel_id e CHAVE SEPARADA da condicao,
       numero ex funnel_id:37; a etapa vai em value=slug puro ex value:"avaliacao_aceita" ou em stage,
@@ -747,7 +762,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     groupResponseVar: "grupo"             // nome da variavel de resposta (default 'grupo'); leia depois {{grupo.CAMPO}}
   Teto de 20 participantes por execucao (add/remove/promote/demote) — trava ANTI-BANIMENTO.
   Operacoes -> chaves de data (+ campos que a resposta devolve em {{grupo.*}}):
-    create            -> groupName(obrig), groupDescription, groupPicture(url), groupInitialAdmins, groupParticipants -> id,name,description,picture,participants_count  [risco de banimento]
+    create            -> groupName(obrig), groupDescription, groupPicture(url), groupInitialAdmins, groupParticipants, groupAttributes (opcional, NOVO 2026-08-08: linhas {attr_source,attr_key,attr_value} — grava atributos personalizados no contato-grupo recem-criado; {{grupo.id}}/{{grupo.conversation_id}} ja valem em attr_value; campos nativos name/email/card sao recusados) -> id,name,description,picture,participants_count  [risco de banimento]
     find_by_id        -> (groupTargetId) -> id,name,description,picture,participants,participants_count
     find_by_name      -> groupSearchName(obrig), groupSearchMode(contains[padrao]|does_not_contain|equal_to|not_equal_to|starts_with|ends_with) -> results,results_count  [TARGETLESS]
     update_subject    -> updateSubject(obrig) -> id,name

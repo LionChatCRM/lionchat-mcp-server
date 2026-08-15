@@ -18,7 +18,9 @@ Comprovado em produção (24/07): a sessão que dizia "não há função de list
 - **Famílias principais pra pesquisar:** conversations, conversations_messages, contacts,
   kanban_items, funnels, flows, flow_tools, campaigns, macros, automation_rules, agents, teams,
   inboxes, labels, canned_responses, reports, sla, csat, captain_assistants, captain_documents,
-  scheduled_messages, custom_attributes, webhooks, eclinica_integrations, tasks, notifications.
+  scheduled_messages, custom_attributes, webhooks, eclinica_integrations, tasks, notifications,
+  lead_forms (Formulários públicos de captação), guru_subscription (gestão da assinatura da PRÓPRIA
+  conta no LionChat — feature liberada conta a conta).
 - Só depois de pesquisar e não encontrar é que se pode dizer que a função não existe.
 - **Trabalho volumoso** (relatório de muitas conversas/cards): as listas são paginadas (25-100 por
   página) — faça em ETAPAS ao longo de várias respostas, acumulando os resultados; nunca desista
@@ -47,6 +49,8 @@ Account (conta/empresa)
  ├─ Captain::Assistant (AI Agente / IA de atendimento)
  │   └─ Captain::Scenario (instrução situacional; pode FIXAR parâmetro de tool em tool_bindings)
  ├─ AccountTask (agenda/tarefas)
+ ├─ LeadForm (formulário público de captação)
+ │   └─ LeadFormResponse (preenchimento: in_progress / completed / abandoned)
  └─ Booking (agendamento de demonstração/reunião)
 ```
 
@@ -360,6 +364,7 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | Só a contagem / números | `lionchat_conversations_meta` / `lionchat_reports_summary` | Não liste o conteúdo completo |
 | Criar contato | `lionchat_contacts_create` base (path `/contacts`) | NÃO use as variantes `_1` … `_9` |
 | Pausar a IA agora (botão de pânico) | `lionchat_captain_assistants_update` (`paused: true`, top-level) | — |
+| Criar/editar **formulário público de captação** (página de captura própria) | `lionchat_lead_forms_create` / `_update` | Leia `lionchat://docs/formularios-publicos` ANTES — o desenho vai em `form_data` e só entra no ar depois do `publish` (que valida o desenho e pode voltar 422 com a lista de pendências). Escrita é só de administrador |
 | Anexar arquivo a uma mensagem | `lionchat_upload_create` primeiro, depois usar o retorno em `lionchat_conversations_messages_create` | Confira `lionchat_upload_limits` se o arquivo for grande |
 | Marcar conversa como **lida** | `lionchat_conversations_update_last_seen` | NÃO use `unread` (esse marca como NÃO-lida) |
 | Criar/gerenciar **campanha** (disparo WhatsApp/SMS) | `lionchat_campaigns_*` (criar, estatísticas) | SEMPRE rode `campaigns_estimate_audience` antes de criar e mostre a contagem. Disparo em massa = confirmação obrigatória (seção 7b) |

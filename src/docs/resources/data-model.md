@@ -502,6 +502,20 @@ MetaLeadIntegration (Facebook Lead Ads)
 ├── status (active/token_expired/paused)
 └── meta_lead_forms (has_many)
 
+LeadForm (Formulário público de captação — feature flag lead_forms, por conta)
+├── account_id (FK)
+├── name / slug (8 chars, gerado na criação e imutável) / display_mode (cards|chat) / active
+├── form_data (jsonb: o desenho do construtor) — published_data (a FOTO publicada, que a página usa)
+├── settings (jsonb: primary_color, theme, abandon_minutes, button_label) / published_at
+└── counts: views / responses / completed (contadores) + lead_form_responses (has_many)
+
+LeadFormResponse (um preenchimento do formulário)
+├── lead_form_id (FK) / account_id (FK)
+├── contact_id (FK opcional — o contato nasce assim que nome+telefone entram, mesmo sem concluir)
+├── status (in_progress / completed / abandoned)
+└── answers (respostas) / milestones (marcos atingidos) / utm_params / started_at / completed_at /
+    abandoned_at
+
 CustomWebhookIntegration (Webhook Universal — entrada)
 ├── account_id (FK)
 ├── name / token (URL única) / active
