@@ -93,6 +93,13 @@ export const RESOURCES: ResourceDef[] = [
       '10 templates de fluxos prontos pra adaptar: saudacao, captura, qualificacao BANT, CSAT, horario comercial, IA intent, re-engajamento, escalation, agendamento, webhook. Cada um com layout valido e handles certos.',
     filename: 'flowbuilder-patterns.md',
   },
+  {
+    uri: 'lionchat://docs/formularios-publicos',
+    name: 'Formularios Publicos',
+    description:
+      'Feature Formularios (captacao estilo Typeform/Typebot): contrato completo do form_data (blocos, handles, variaveis, blocos de API e IA), regras de publicacao, tetos e receitas. Use SEMPRE antes de criar/editar formularios via lionchat_lead_forms_*.',
+    filename: 'formularios-publicos.md',
+  },
 ];
 
 function findDocsPath(filename: string): string | null {
