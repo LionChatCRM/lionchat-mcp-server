@@ -432,15 +432,6 @@ mal montado — bloco de API sem saída de erro, pergunta sem para onde ir, esco
 cobra está em `lionchat://docs/formularios-publicos`. Enquanto não publicar, a página pública
 continua servindo a última versão publicada (ou nada, se nunca houve).
 
-### "A gestão de assinatura volta 404 dizendo feature_disabled" (15/08)
-Não é assinatura inexistente. O 404 com `code: "feature_disabled"` significa que a **feature de
-gestão de assinatura está desligada** para essa conta (é liberada conta a conta no painel de
-suporte). O 404 é de propósito — não anuncia a tela para quem não tem acesso.
-
-**Ação:** não retry, não procure outro ID. Oriente o usuário a pedir a liberação ao suporte. Se o
-`code` NÃO vier, aí sim é 404 de verdade: a assinatura não existe no Guru. E 403 é outra coisa —
-a feature está ligada, mas quem chamou não é administrador da conta.
-
 ## Webhooks como alternativa a polling
 
 Se você precisa monitorar mudanças em conversas/mensagens, NÃO faça polling:

@@ -19,8 +19,11 @@ Comprovado em produção (24/07): a sessão que dizia "não há função de list
   kanban_items, funnels, flows, flow_tools, campaigns, macros, automation_rules, agents, teams,
   inboxes, labels, canned_responses, reports, sla, csat, captain_assistants, captain_documents,
   scheduled_messages, custom_attributes, webhooks, eclinica_integrations, tasks, notifications,
-  lead_forms (Formulários públicos de captação), guru_subscription (gestão da assinatura da PRÓPRIA
-  conta no LionChat — feature liberada conta a conta).
+  lead_forms (Formulários públicos de captação).
+- **Fora do MCP por decisão do dono (19/08): assinatura, plano, fatura, forma de pagamento, cartão,
+  saldo e recarga.** Não existem ferramentas dessas áreas e não devem ser criadas. Se o usuário
+  pedir, diga que isso se resolve no painel, na área de assinatura da conta — não tente por
+  ferramenta nem por chamada direta.
 - Só depois de pesquisar e não encontrar é que se pode dizer que a função não existe.
 - **Trabalho volumoso** (relatório de muitas conversas/cards): as listas são paginadas (25-100 por
   página) — faça em ETAPAS ao longo de várias respostas, acumulando os resultados; nunca desista
