@@ -423,7 +423,7 @@ Campos MUTÁVEIS (atualizáveis livremente por IA/integração): `marital_status
 |---|---|---|---|
 | **LionCalls** | Voz pelo WhatsApp em caixa **QR Code**, mas pelo **motor próprio do LionChat** (credencial global, 1 sessão por caixa; flag `lioncalls_calling`, nasce desligada e é ligada conta a conta) | **NENHUMA — sem tool no MCP** | WhatsApp QR Code |
 | **WhatsApp Calling (Cloud)** | Voz pelo WhatsApp na **API oficial** (enterprise) | `whatsapp_calls_*` + enable/disable_whatsapp_calling | WhatsApp oficial |
-| **VoIP (Zenvia)** | Telefonia COMUM com softphone no navegador (ramais, saldo, recarga) | `voip_*` | Telefone |
+| **VoIP (Zenvia)** | Telefonia COMUM com softphone no navegador (ramais, ligações) | `voip_*` | Telefone |
 | **VTCall** | Telefonia por **PABX click-to-call**, config por conta + ramal por atendente; **sem softphone no navegador** — o atendente fala pelo app/ramal do VTCall | `vtcall_settings_*` (show/update/test_connection), `vtcall_ramals_*` (list/create/destroy) | Telefone (PABX do cliente) |
 
 Quando o usuário falar "ligação", descubra o canal ANTES de responder: caixa QR Code → **LionCalls**;
@@ -490,26 +490,21 @@ num construtor de blocos. Feature liberada conta a conta.
 | `completed` | Chegou ao fim do formulário |
 | `abandoned` | Parou no meio e a janela de abandono do formulário venceu |
 
-O contato é criado assim que nome e telefone entram — **mesmo sem concluir**. Por isso resposta
-`abandoned` normalmente JÁ tem contato para trabalhar.
+O contato nasce em TRÊS momentos (mudou em 16/08): conclusão, fechamento do abandono, ou logo
+antes de um bloco de Enviar WhatsApp. Resposta `abandoned` ganha o contato no fechamento do
+abandono — com as respostas que a pessoa deu. Enquanto preenche, a lista de respostas mostra
+`contact: {id: null, ..., pending: true}`.
+
+Termos do formulário (18/08):
+- **Caixa vinculada** — a caixa de WhatsApp do formulário (`inbox_id`); obrigatória pra publicar.
+- **Link identificado** — link de formulário enviado numa conversa sai carimbado (`lt_form`) e o
+  formulário pula nome/telefone/e-mail já conhecidos, sem nunca exibir o dado.
+- **Simulador** — `lead_forms_test_run`: roda o rascunho no motor real sem deixar rastro.
+- **Página externa (`embed`)** — bloco que exibe um site de fora dentro do formulário (checkout,
+  simulador, agenda), com conferência prévia de "aceita iframe?" (`check_embed`).
+- **Definir variável (`set_variable`)** — bloco invisível que cria `{{var.<nome>}}`.
+- **Agendamento (`booking`)** — calendário dentro do formulário, ligado a um tipo de evento.
 
 Detalhes completos (construtor, página pública, blocos, gatilhos de flow, tetos e limites) no
 resource `lionchat://docs/formularios-publicos`.
 
-## Assinatura (Guru)
-
-Gestão da assinatura da **própria conta** no LionChat (plano, faturas, troca de plano,
-cancelamento), que roda por cima do Digital Manager Guru. Não confunda com a integração de
-pagamento que traz vendas do cliente para dentro do CRM.
-
-- **Feature liberada conta a conta** (`guru_subscription_management`, nasce desligada). Desligada,
-  toda chamada volta **404 com `code: "feature_disabled"`** — isso NÃO quer dizer "assinatura não
-  existe".
-- **Somente administrador** da conta. Agente comum recebe 403.
-- **Ações de escrita** (trocar de plano, cancelar, reverter cancelamento) têm trava de **30
-  segundos** por conta: a segunda tentativa dentro da janela volta 422 `action_in_progress`. Não é
-  erro — é a primeira ainda processando. Espere e confira o resultado antes de repetir.
-- Erros: **422** = validação do Guru (a mensagem vem do próprio Guru, repasse ao usuário) ou
-  assinatura não configurada; **404** = assinatura inexistente no Guru (ou a feature desligada, ver
-  acima — o `code` distingue); **503** = Guru fora do ar / tempo esgotado, aí sim cabe uma nova
-  tentativa depois.

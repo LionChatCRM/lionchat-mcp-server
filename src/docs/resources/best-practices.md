@@ -833,3 +833,21 @@ Custom attribute em lugar errado vira:
 1. Procure no `kanban-deep-dive.md` (Kanban) ou na doc da feature relevante
 2. Liste o config global do recurso (`kanban_config_list`, `voip_settings_list`, etc) — campos `nil`/vazios mas presentes na response = espera input
 3. Olhe `data-model.md` pra colunas jsonb no model — costumam guardar feature nativa
+
+
+## Regras rápidas de 18/08
+
+- **Mensagens: ordene SEMPRE por `created_at`, nunca por `id`.** Conversa com histórico importado
+  tem id fora de ordem por desenho (o id cresce na importação, a data é a original). A API já
+  devolve em ordem cronológica.
+- **Import de contatos: o DDI é da planilha.** O sistema não completa 55; sem DDI = erro na linha;
+  `contacts_import_validate` NÃO valida telefone. No import do Kanban, telefone inválido cria card
+  SEM contato em silêncio. Oriente o cliente a subir `5511988887777` ou `+351912345678`.
+- **Caixa oficial com aviso de bloqueio por pagamento** (`whatsapp_send_blocked_billing`):
+  `GET /inboxes/{id}/health` consulta a Meta e LIMPA o aviso se o envio voltou — além de sucesso
+  de template, é o único jeito de limpar.
+- **Template Cloud que falhou pode virar `sent` sozinho** (socorro automático, até ~1h; o
+  `source_id` muda). Não reenvie por conta própria uma mensagem de template recém-falhada de erro
+  passageiro — o socorro cuida; reenviar por cima entrega em dobro.
+- **Filtros de data fixa cortam o dia no fuso da CONTA** (padrão America/Sao_Paulo) — e mudar o
+  `timezone` da conta move essa fronteira.

@@ -19,8 +19,11 @@ Comprovado em produção (24/07): a sessão que dizia "não há função de list
   kanban_items, funnels, flows, flow_tools, campaigns, macros, automation_rules, agents, teams,
   inboxes, labels, canned_responses, reports, sla, csat, captain_assistants, captain_documents,
   scheduled_messages, custom_attributes, webhooks, eclinica_integrations, tasks, notifications,
-  lead_forms (Formulários públicos de captação), guru_subscription (gestão da assinatura da PRÓPRIA
-  conta no LionChat — feature liberada conta a conta).
+  lead_forms (Formulários públicos de captação).
+- **Fora do MCP por decisão do dono (19/08): assinatura, plano, fatura, forma de pagamento, cartão,
+  saldo e recarga.** Não existem ferramentas dessas áreas e não devem ser criadas. Se o usuário
+  pedir, diga que isso se resolve no painel, na área de assinatura da conta — não tente por
+  ferramenta nem por chamada direta.
 - Só depois de pesquisar e não encontrar é que se pode dizer que a função não existe.
 - **Trabalho volumoso** (relatório de muitas conversas/cards): as listas são paginadas (25-100 por
   página) — faça em ETAPAS ao longo de várias respostas, acumulando os resultados; nunca desista
@@ -364,7 +367,9 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | Só a contagem / números | `lionchat_conversations_meta` / `lionchat_reports_summary` | Não liste o conteúdo completo |
 | Criar contato | `lionchat_contacts_create` base (path `/contacts`) | NÃO use as variantes `_1` … `_9` |
 | Pausar a IA agora (botão de pânico) | `lionchat_captain_assistants_update` (`paused: true`, top-level) | — |
-| Criar/editar **formulário público de captação** (página de captura própria) | `lionchat_lead_forms_create` / `_update` | Leia `lionchat://docs/formularios-publicos` ANTES — o desenho vai em `form_data` e só entra no ar depois do `publish` (que valida o desenho e pode voltar 422 com a lista de pendências). Escrita é só de administrador |
+| Criar/editar **formulário público de captação** (página de captura própria) | `lionchat_lead_forms_create` / `_update` | Leia `lionchat://docs/formularios-publicos` ANTES — o desenho vai em `form_data` e só entra no ar depois do `publish` (que valida o desenho e pode voltar 422 com a lista de pendências). Caixa de WhatsApp vinculada (`inbox_id`) é obrigatória pra publicar. Escrita é só de administrador |
+| **Testar um formulário** antes de publicar | `lionchat_lead_forms_test_run` | Roda o RASCUNHO no motor real e desfaz tudo no fim — zero rastro. Mande `answers: [{node_id, value}]` (até 60) pra reproduzir um caminho; a resposta traz o bloco atual + o log do percurso |
+| Conferir se um site **aceita ser exibido dentro do formulário** (bloco Página externa) | `lionchat_lead_forms_check_embed` | Body `{url}`; devolve `{status: allowed\|blocked\|unknown, reason}`. Grave o veredito em `embed_allowed` do bloco. Admin-only |
 | Anexar arquivo a uma mensagem | `lionchat_upload_create` primeiro, depois usar o retorno em `lionchat_conversations_messages_create` | Confira `lionchat_upload_limits` se o arquivo for grande |
 | Marcar conversa como **lida** | `lionchat_conversations_update_last_seen` | NÃO use `unread` (esse marca como NÃO-lida) |
 | Criar/gerenciar **campanha** (disparo WhatsApp/SMS) | `lionchat_campaigns_*` (criar, estatísticas) | SEMPRE rode `campaigns_estimate_audience` antes de criar e mostre a contagem. Disparo em massa = confirmação obrigatória (seção 7b) |

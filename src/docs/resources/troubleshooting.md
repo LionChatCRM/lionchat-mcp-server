@@ -334,9 +334,24 @@ Dois comportamentos novos e propositais no painel Falhas de envio
   contato, horário e o **motivo original** da falha. É registro, então não tem botão de reenviar
   nem de cancelar e fica fora de `retryable_count` e do `total`.
 
-Cancelar vale pra TODOS os grupos (inclusive `permanent`, `window_expired`, `campaign` e `partial`,
-que nunca seriam reenviados) — é assim que se limpa o painel. Ações irreversíveis: confirme com o
-usuário e mostre as contagens do summary antes.
+Cancelar vale pra TODOS os grupos (inclusive `permanent`, `window_expired`, `campaign`, `partial` e
+`accepted_then_failed`, que nunca seriam reenviados) — é assim que se limpa o painel. Ações
+irreversíveis: confirme com o usuário e mostre as contagens do summary antes.
+
+### Grupos novos no painel de falhas (18/08) — e o `partial` mudou de significado
+Três mudanças no `lionchat_inboxes_failed_messages_summary`:
+- **`accepted_then_failed`** (campo `accepted_then_failed_count`): mensagem COM recibo da Meta
+  (aceita no envio, recusada depois por aviso assíncrono) e até 1 anexo. Antes essas caíam em
+  `partial` com a explicação errada de "3 fotos e só a 1ª chegou". O motivo real de cada uma está na
+  própria linha (`error`). Nunca reenviáveis em lote (anti-duplicata) — reenvio é disparar de novo
+  pela conversa.
+- **`partial`** agora é SÓ o caso que o rótulo sempre descreveu: recibo presente E **mais de um
+  anexo** (envio multi-anexo que foi pela metade). `bulk_cancel` com `classification: "partial"`
+  **deixou de atingir** as mensagens de 1 anexo — elas agora são `accepted_then_failed`.
+- **`account_locked`** (dentro de `groups`): conta comercial TRANCADA pela Meta (erro 131031).
+  Nunca reenviável — nem aqui, nem pelo "Reenviar falhas" da campanha (bloqueado na fonte). A ação é
+  humana: resolver no Business Manager. Aparece também na aba Saúde da caixa e na quebra de falhas
+  do card de campanha.
 
 ### "Erro 131026 / Message undeliverable" — NUNCA chute a causa (30/07)
 A Meta devolve o MESMO código 131026 pra duas coisas diferentes: **o número não tem WhatsApp** e **a
@@ -359,6 +374,20 @@ TRANSITÓRIA — o buscador da Meta falhou ao baixar o arquivo pela URL. Nesse c
 sozinha, agora por upload direto, e a mensagem fica verde sem precisar de F5. As demais variantes do
 131053 (formato/tamanho recusado) NÃO são resgatadas — regra fail-closed de propósito, pra não ficar
 reenviando eternamente algo que a Meta nunca vai aceitar.
+
+### "Template falhou e depois ficou verde sozinho" — socorro de TEMPLATE (18/08)
+O socorro automático passou a cobrir também mensagens de MODELO (template) da caixa oficial —
+qualquer tipo: só texto, imagem, vídeo ou documento no cabeçalho. Quando a falha é passageira
+(inclusive erro desconhecido), a plataforma remonta o modelo INTEIRO (mesmo texto, variáveis e
+botões) e reenvia em ondas de até ~1h; com mídia no cabeçalho, entrega o arquivo direto pra Meta em
+vez do link (imune ao buscador). Regras que valem explicar ao usuário:
+- Ficam FORA de propósito: campanha (tem reenvio próprio), modelo de código de verificação (OTP),
+  conta trancada (131031), número sem WhatsApp (131026), freios de spam/limite da Meta e erros de
+  configuração do modelo — nesses, reenviar não resolve e a mensagem fica vermelha com o motivo.
+- Mensagem com mais de 2 horas não é mais entregue pelo socorro (lembrete velho não chega atrasado).
+- O histórico do FLUXO pode continuar mostrando o bloco vermelho mesmo com a mensagem entregue pelo
+  socorro — o contador do nó não é revertido (limitação declarada).
+- Pesquisa de satisfação (CSAT) por modelo NÃO tem socorro (não guarda os dados do modelo).
 
 ### "A mensagem falhou dizendo 'Template not found or invalid template name'" (30/07)
 Se a caixa é **WhatsApp oficial** e faz mais de 24h que o cliente não fala, a causa quase sempre é a
@@ -402,15 +431,6 @@ mal montado — bloco de API sem saída de erro, pergunta sem para onde ir, esco
 **Ação:** conserte o desenho (`form_data`) e publique de novo; a lista das chaves e o que cada uma
 cobra está em `lionchat://docs/formularios-publicos`. Enquanto não publicar, a página pública
 continua servindo a última versão publicada (ou nada, se nunca houve).
-
-### "A gestão de assinatura volta 404 dizendo feature_disabled" (15/08)
-Não é assinatura inexistente. O 404 com `code: "feature_disabled"` significa que a **feature de
-gestão de assinatura está desligada** para essa conta (é liberada conta a conta no painel de
-suporte). O 404 é de propósito — não anuncia a tela para quem não tem acesso.
-
-**Ação:** não retry, não procure outro ID. Oriente o usuário a pedir a liberação ao suporte. Se o
-`code` NÃO vier, aí sim é 404 de verdade: a assinatura não existe no Guru. E 403 é outra coisa —
-a feature está ligada, mas quem chamou não é administrador da conta.
 
 ## Webhooks como alternativa a polling
 
@@ -465,6 +485,41 @@ Toda resposta da API tem header `X-Request-ID`. Inclua no relatório se algo fal
 - Painel Portainer → serviço `mcp_remote` → logs
 - Cloudflare Worker logs (se proxy)
 - Sentry pra exceptions
+
+## "Import de contatos deu erro de telefone em toda linha" — regra do DDI (18/08)
+
+O import (de contatos e do Kanban) **não completa mais o DDI**: o telefone precisa vir da planilha
+COM o código do país (`5511988887777` ou `+5511988887777`; o `+` é opcional). Quem sobe sem DDI
+recebe **erro na linha** — "Telefone ... em formato invalido — confira se veio COM o DDI" — e o
+contato NÃO é criado (antes o sistema completava 55, o que colava 55 em número estrangeiro).
+Regras: número que não existe em país nenhum é recusado; começando com 0 (zero de operadora) é
+recusado; brasileiro com 55 e 12-13 dígitos é aceito mesmo no formato antigo sem o 9º dígito.
+**Armadilhas**: `contacts_import_validate` NÃO valida telefone (validate verde não garante import
+sem erro de telefone); no import do KANBAN, telefone inválido cria o card SEM contato e SEM
+conversa, em silêncio — comportamento diferente do import de contatos.
+
+## "A caixa oficial parou de disparar / de receber" — avisos automáticos da Meta (18/08)
+
+Duas famílias de chaves novas em `additional_attributes` da caixa `Channel::Whatsapp`
+(visíveis em `inboxes_show`/`inboxes_list`):
+- **Bloqueio por pagamento** (erro Meta 131042): `whatsapp_send_blocked_billing` (true) +
+  `whatsapp_send_blocked_at`. A caixa CONTINUA recebendo e respondendo dentro da janela; só o
+  disparo iniciado pela empresa está travado. Limpa sozinha no próximo envio de TEMPLATE
+  bem-sucedido — ou chamando `GET /inboxes/{id}/health`, que consulta a Meta e apaga o aviso se
+  ela disser que o envio voltou (é o único GET da plataforma que escreve).
+- **Desconexão** (aparelho/parceiro removido na Meta): `whatsapp_disconnect_event`,
+  `whatsapp_disconnect_reason`, `whatsapp_disconnect_initiated_by`, `whatsapp_disconnected_at` —
+  e `reauthorization_required` vira `true` SOZINHO. Com `reauthorization_required: true` a caixa
+  fica MUDA (descarta o que chega) até reconectar. A ausência dessas chaves NÃO prova que a caixa
+  está conectada (caixa antiga só ganha o aviso após reinscrição).
+
+## "O filtro de etiqueta 'não está presente' mente" — NUNCA mentiu pela API
+
+O defeito corrigido em 17/08 era SÓ do navegador (a tela travava). O SQL de
+`contacts_filter`/`conversations_filter` sempre esteve correto para `is_not_present` em etiquetas.
+Se alguma anotação antiga disser que esse filtro mente por API, está errada. O que MUDOU de
+verdade nos filtros: data FIXA com `is_greater_than`/`is_less_than` passou a cortar o dia no fuso
+da CONTA (ver resource `filtros-e-relatorios`).
 
 ## Quando reportar pro suporte
 

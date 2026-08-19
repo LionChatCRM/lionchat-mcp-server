@@ -422,6 +422,7 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_compromisso` | text | Tipo da consulta — TEXTO LIVRE da recepção (ex: Consulta, Retorno) |
 | `eclinica_agendatipo` | text | Tipo de Agendamento — NOME da lista fixa do painel, resolvido por unidade (novo 2026-07-28). **Filtrar sempre pelo NOME, nunca pelo número: os números colidem entre filiais** |
 | `eclinica_agendatipo_id` | text | Tipo de Agendamento — número cru (não comparável entre filiais) |
+| `eclinica_cor` | text | Cor do agendamento na agenda (hex, ex `#556B2F`) — novo 2026-08-18. Campo ESPARSO: evento sem cor APAGA a chave (nunca herda a da consulta anterior). No filtro, escrever com o `#`. Nos lembretes, a variável de sessão `{{cor}}` traz a cor da consulta daquele lembrete |
 | `eclinica_profissional` | text | NOME do profissional, resolvido por unidade (novo 2026-07-10) |
 | `eclinica_profissional_id` | text | Número do profissional (não comparável entre filiais) |
 | `eclinica_convenio_id` | text | Convênio (número) |
@@ -599,3 +600,13 @@ Account.feature_enabled?('captain_v2')  # checa bitfield
 - Contact pode ser deletado (raro) — destroi conversations em cascata (cuidado)
 - KanbanItem pode ser deletado livremente
 - Funnel `archived = true` → não aparece na UI mas dados permanecem
+
+
+## Limites da conta (18/08)
+
+Os limites que a API devolve (`resource_limits.*` da conta, `email_usage.limit`,
+`ai_agent_usage.limit`) são a SOMA de: limite do plano + ajustes manuais do Super Admin +
+**adicionais contratados na tela de Cobrança** (recurso liberado na hora da contratação). Ou seja:
+duas contas no MESMO plano podem ter limites diferentes — não é defeito. Limite `0` significa
+ILIMITADO em toda a plataforma. A contratação/remoção de adicionais é feita SÓ pela tela de
+Cobrança do painel (não há ferramenta MCP para isso, por decisão do dono).
