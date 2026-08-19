@@ -698,7 +698,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/filter",
   "title": "Filtrar Contatos",
-  "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422. [2026-07-25] Nova chave id (id interno do contato, equal_to/not_equal_to) — serve pra exportar/checar UM contato especifico.",
+  "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422. [2026-07-25] Nova chave id (id interno do contato, equal_to/not_equal_to) — serve pra exportar/checar UM contato especifico. NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas.",
   "category": "Contatos",
   "params": [
    {
@@ -904,7 +904,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/import",
   "title": "Importar Contatos",
-  "description": "Importa contatos em lote via CSV. **Requer perfil Administrador.**. Cria novo contato. Obrigatórios: import_file. Valida unicidade quando aplicável. Retorna o contato criado com ID atribuído.",
+  "description": "Importa contatos em lote via CSV. **Requer perfil Administrador.**. Cria novo contato. Obrigatórios: import_file. Valida unicidade quando aplicável. Retorna o contato criado com ID atribuído. REGRA DO DDI (18/08): o telefone precisa vir COM o codigo do pais (5511988887777 ou +351912345678; o + e opcional). O sistema NAO completa mais 55: sem DDI ou numero que nao existe em pais nenhum = ERRO na linha (o contato nao e criado; o relatorio de erros mostra linha a linha); comecando com 0 = recusado; brasileiro com 55 e 12-13 digitos e aceito mesmo no formato antigo sem o 9o digito.",
   "category": "Contatos",
   "params": [
    {
@@ -1433,7 +1433,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/conversations/filter",
   "title": "Filtrar Conversas",
-  "description": "Filtra conversas com condicoes avancadas (payload de condicoes, mesmas da tela). Ordenacao fixa last_activity_at DESC, 25/pagina.\n\nCHAVES FILTRAVEIS (attribute_key -> operadores): status, chat_type, priority (equal_to/not_equal_to); assignee_id, inbox_id, team_id, campaign_id, captain_assistant_id, labels (equal_to/not_equal_to/is_present/is_not_present); display_id (equal_to/not_equal_to/contains/does_not_contain); created_at, last_activity_at (is_greater_than/is_less_than/days_before — valor de data); browser_language, conversation_language, referer, mail_subject; card_funnel_stage (conversa POR CARD do Kanban — valor 'funnel:<id>' ou 'stage:<id>:<chave_etapa>'); QUALQUER outra chave = atributo personalizado (use custom_attribute_type na condicao: 'conversation_attribute' ou 'contact_attribute').\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422 'Operador invalido' (ex: labels NAO aceita 'includes' — use equal_to). [2026-07-25] O operador contains em display_id agora funciona de verdade (busca por trecho do numero da conversa; antes dava erro de banco).",
+  "description": "Filtra conversas com condicoes avancadas (payload de condicoes, mesmas da tela). Ordenacao fixa last_activity_at DESC, 25/pagina.\n\nCHAVES FILTRAVEIS (attribute_key -> operadores): status, chat_type, priority (equal_to/not_equal_to); assignee_id, inbox_id, team_id, campaign_id, captain_assistant_id, labels (equal_to/not_equal_to/is_present/is_not_present); display_id (equal_to/not_equal_to/contains/does_not_contain); created_at, last_activity_at (is_greater_than/is_less_than/days_before — valor de data); browser_language, conversation_language, referer, mail_subject; card_funnel_stage (conversa POR CARD do Kanban — valor 'funnel:<id>' ou 'stage:<id>:<chave_etapa>'); QUALQUER outra chave = atributo personalizado (use custom_attribute_type na condicao: 'conversation_attribute' ou 'contact_attribute').\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422 'Operador invalido' (ex: labels NAO aceita 'includes' — use equal_to). [2026-07-25] O operador contains em display_id agora funciona de verdade (busca por trecho do numero da conversa; antes dava erro de banco). NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas.",
   "category": "Conversas",
   "params": [
    {
@@ -3984,7 +3984,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/import",
   "title": "Importar Items",
-  "description": "Importa cards em massa (job async).",
+  "description": "Importa cards em massa (job async). REGRA DO DDI (18/08): telefone sem codigo do pais e considerado invalido e o card e criado SEM contato e SEM conversa, EM SILENCIO (diferente do import de contatos, que da erro na linha). Oriente a planilha a vir com DDI.",
   "category": "Itens",
   "params": [
    {
@@ -9571,7 +9571,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/flows",
   "title": "Criar Flow",
-  "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. conversation_mode: 'individual' (default) | 'group'. Sticky note (type 'note'): data usa title+body+color(yellow|teal|blue|violet|pink|orange|slate)+width+height — NUNCA 'content'. ORGANIZAÇÃO: preencha tags ao criar (reutilizando as tags já existentes nos flows da conta — veja flows_list) pra manter a lista organizada. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas).",
+  "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. conversation_mode: 'individual' (default) | 'group'. Sticky note (type 'note'): data usa title+body+color(yellow|teal|blue|violet|pink|orange|slate)+width+height — NUNCA 'content'. ORGANIZAÇÃO: preencha tags ao criar (reutilizando as tags já existentes nos flows da conta — veja flows_list) pra manter a lista organizada. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas). REGRAS 18/08: acao start_flow com flow_id do PROPRIO flow e aceita no save mas IGNORADA EM SILENCIO na execucao (o fluxo para ali) — aponte sempre pra OUTRO flow. Condicoes: preencha operator E field juntos (tabela dos pares no resource flowbuilder-patterns), senao a regra roda certa e aparece errada na tela do cliente.",
   "category": "Flows",
   "params": [
    {
@@ -9666,7 +9666,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/flows/{id}",
   "title": "Atualizar Flow",
-  "description": "Atualiza nome, descricao, caixas de entrada ou dados dos blocos. Mesmo schema de flow_data do tool lionchat_flows_create — consulte a descricao daquele tool para o schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable) e dos edges. RECAP RAPIDO: action items[].config (nao params); send_message messageItems (nao items); wait_response validation='options' gera handles 'option_X' (dispensa condition node); edges sourceHandle DEVE casar com handle real do node source. Atualiza campos do flow existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, inbox_ids, flow_data. IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas).",
+  "description": "Atualiza nome, descricao, caixas de entrada ou dados dos blocos. Mesmo schema de flow_data do tool lionchat_flows_create — consulte a descricao daquele tool para o schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable) e dos edges. RECAP RAPIDO: action items[].config (nao params); send_message messageItems (nao items); wait_response validation='options' gera handles 'option_X' (dispensa condition node); edges sourceHandle DEVE casar com handle real do node source. Atualiza campos do flow existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, inbox_ids, flow_data. IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas). REGRAS 18/08: acao start_flow com flow_id do PROPRIO flow e aceita no save mas IGNORADA EM SILENCIO na execucao (o fluxo para ali) — aponte sempre pra OUTRO flow. Condicoes: preencha operator E field juntos (tabela dos pares no resource flowbuilder-patterns), senao a regra roda certa e aparece errada na tela do cliente.",
   "category": "Flows",
   "params": [
    {
@@ -9881,6 +9881,13 @@
     "location": "body",
     "required": false,
     "description": "Janelas de disponibilidade"
+   },
+   {
+    "name": "slug",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Endereco do link publico do tipo de evento. EDITAVEL (18/08): normalizado no servidor, 3..60 chars, minusculas+numeros+hifen, unico. Vazio = mantem; duplicado = 422. Trocar derruba link ja enviado, codigo de incorporar e anuncio — NAO quebra agendamentos feitos, IA nem links de cancelar/remarcar (trabalham por id)."
    }
   ],
   "returns": "tipo de evento criado (com novo ID)",
@@ -9958,6 +9965,13 @@
     "location": "body",
     "required": false,
     "description": "Ativo?"
+   },
+   {
+    "name": "slug",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Endereco do link publico do tipo de evento. EDITAVEL (18/08): normalizado no servidor, 3..60 chars, minusculas+numeros+hifen, unico. Vazio = mantem; duplicado = 422. Trocar derruba link ja enviado, codigo de incorporar e anuncio — NAO quebra agendamentos feitos, IA nem links de cancelar/remarcar (trabalham por id)."
    }
   ],
   "returns": "tipo de evento atualizado",
@@ -22871,7 +22885,7 @@
     "description": "ID da caixa de entrada"
    }
   ],
-  "returns": "{ window_hours, eligible_channel, bulk_retry_running, groups:{billing,transient,window_expired,permanent}, group_details, campaign_count, partial_count, retryable_count, total }",
+  "returns": "{window_hours, eligible_channel, bulk_retry_running, groups: {billing, transient, window_expired, permanent, limit, spam_limit, account_locked}, group_details (cada classe + campaign + partial + accepted_then_failed + deleted, itens ate 30), campaign_count, partial_count, accepted_then_failed_count, deleted_count, retryable_count, total}. NOVO 18/08: account_locked = conta comercial TRANCADA pela Meta (erro 131031, nunca reenviavel); accepted_then_failed = aceita pelo canal e recusada depois (tem recibo — reenviar entregaria em dobro); 'partial' MUDOU de significado: agora e so envio MULTI-anexo com recibo parcial.",
   "common_use_cases": [
    "Diagnosticar por que mensagens nao chegaram (agrupado por motivo, com erro real)",
    "Ver quantas falhas sao reenviaveis antes de disparar o reenvio em massa",
@@ -22936,7 +22950,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Opcional: restringe o cancelamento a UM grupo — 'billing', 'transient', 'window_expired', 'permanent', 'campaign' ou 'partial'. Ausente = cancela TODAS as falhadas da janela de 24h. Valor fora dessa lista responde 422 invalid_classification."
+    "description": "Classe a cancelar: billing, transient, window_expired, permanent, limit, spam_limit, account_locked, campaign, partial, accepted_then_failed. Ausente = todas. ATENCAO 18/08: 'partial' deixou de atingir mensagem de 1 anexo com recibo — essas agora saem por 'accepted_then_failed'. Valor fora da lista = 422 invalid_classification."
    }
   ],
   "returns": "{cancelled: N} — quantidade de mensagens canceladas",
@@ -24982,7 +24996,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations",
   "title": "Listar Integração e-Clínica",
-  "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). ATENÇÃO: o mapeamento evento→flow NÃO é editável via MCP (somente pelo painel). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes NAO sao editaveis via MCP — somente pelo painel (Integracoes > e-Clinica > Lembretes).",
+  "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). ATENÇÃO: o mapeamento evento→flow NÃO é editável via MCP (somente pelo painel). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes NAO sao editaveis via MCP — somente pelo painel (Integracoes > e-Clinica > Lembretes). Cada unidade em units[] traz tambem settings {} (18/08). O atributo eclinica_cor (cor da agenda, hex com #) virou campo fresco dos lembretes: filtravel por filter_field e disponivel como variavel {{cor}}.",
   "category": "Integracoes",
   "params": [],
   "returns": "200 {payload: {eclinica_integrations: [...]}}",
@@ -25170,7 +25184,7 @@
     "description": "ID do contato"
    }
   ],
-  "returns": "{ documents: [{ id, name, source (upload|kanban|conversation), favorited, url, created_at }] }",
+  "returns": "{payload: [...]} ordenado por favorito e depois data. source tem 5 origens: contact, kanban, conversation, agenda e lead_form (NOVO 18/08 — arquivos que o lead enviou num formulario publico; itens trazem lead_form_id e lead_form_name; aparecem depois que a resposta e ligada ao contato). Anexo de lead_form aceita mirror (renomear/favoritar) mas NAO aceita destroy_mirror (422) — o arquivo pertence a resposta do formulario.",
   "common_use_cases": [
    "Ver todos os arquivos de um cliente num lugar só"
   ],
@@ -26032,7 +26046,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/import_validate",
   "title": "Validar Import de Contatos (pré-check)",
-  "description": "Valida o CSV de import ANTES de importar: confere tipos dos valores contra os atributos de destino (data, número, lista...) e devolve os problemas por linha/coluna. Aceita os mesmos file + mappings + value_mappings do import_csv. Use pra conferir antes de rodar o import de verdade.",
+  "description": "Valida o CSV de import ANTES de importar: confere tipos dos valores contra os atributos de destino (data, número, lista...) e devolve os problemas por linha/coluna. Aceita os mesmos file + mappings + value_mappings do import_csv. Use pra conferir antes de rodar o import de verdade. ATENCAO (18/08): esta conferencia NAO valida telefone — so coercao de tipo dos atributos. Validate verde NAO garante import sem erro de DDI; os erros de telefone aparecem so no relatorio do import.",
   "category": "Contatos",
   "params": [
    {
@@ -26072,7 +26086,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}",
   "title": "Atualizar Configurações da Conta",
-  "description": "Atualiza as configurações GERAIS da conta (Configurações > Conta). Inclui o FUSO HORÁRIO próprio da conta (novo 2026-07-21): timezone IANA, default America/Sao_Paulo — caixas novas e o Gatilho de Data do FlowBuilder herdam. ATENÇÃO: timezone inválido é DESCARTADO em silêncio (não dá erro) — confirme com account_show depois. Não confundir com account_update (que é o PERFIL do usuário logado).",
+  "description": "Atualiza as configurações GERAIS da conta (Configurações > Conta). Inclui o FUSO HORÁRIO próprio da conta (novo 2026-07-21): timezone IANA, default America/Sao_Paulo — caixas novas e o Gatilho de Data do FlowBuilder herdam. ATENÇÃO: timezone inválido é DESCARTADO em silêncio (não dá erro) — confirme com account_show depois. Não confundir com account_update (que é o PERFIL do usuário logado). NOTA 18/08: mudar o timezone da conta move a fronteira do dia dos filtros de DATA FIXA e das datas relativas (contatos, conversas, segmentos e condicoes de automacao).",
   "category": "Conta",
   "params": [
    {
@@ -28280,7 +28294,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/lead_forms",
   "title": "Criar Formulario",
-  "description": "Cria um formulario publico de captacao. So name e obrigatorio (o desenho pode vir depois via update). O slug do link publico e GERADO pelo servidor e imutavel. Nasce inativo e nao publicado — publique com lead_forms_publish e ative com update {active: true}. Escrita admin-only (401 para agente comum). Guia completo do form_data: resource lionchat://docs/formularios-publicos.",
+  "description": "Cria um formulario publico de captacao. So name e obrigatorio (o desenho pode vir depois via update). Nasce inativo e nao publicado — publique com lead_forms_publish e ative com update {active: true}. Pra publicar e OBRIGATORIO vincular uma caixa de WhatsApp (inbox_id). O slug pode ser escolhido (normalizado no servidor) ou fica sorteado. Escrita admin-only (401 para agente comum). Guia completo do form_data: resource lionchat://docs/formularios-publicos.",
   "category": "Formularios",
   "params": [
    {
@@ -28309,17 +28323,31 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Desenho do formulario {nodes:[{id,type,position:{x,y},data}], edges:[{id,source,target,sourceHandle}]}. Tipos: start, question, choice, message, condition, action, send_message, end, api_request, ai. Chave de data fora da lista permitida do tipo e DESCARTADA em silencio. Teto 2MB. Contrato completo, variaveis e exemplos: resource lionchat://docs/formularios-publicos. ATENCAO: substitui o desenho INTEIRO — leia com lead_forms_show antes de editar."
+    "description": "Desenho do formulario {nodes:[{id,type,position:{x,y},data}], edges:[{id,source,target,sourceHandle}]}. Tipos: start, question, choice, message, condition, action, send_message, booking, set_variable, embed, end, api_request, ai. Bloco action usa items:[{key,config}]; send_message usa messageItems; api_request aceita method (GET/POST/PUT/PATCH/DELETE) e body. Chave de data fora da lista permitida do tipo e DESCARTADA em silencio. Teto 2MB. Contrato completo, variaveis e exemplos: resource lionchat://docs/formularios-publicos. ATENCAO: substitui o desenho INTEIRO — leia com lead_forms_show antes de editar."
    },
    {
     "name": "settings",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..1440 (default 15), button_label: string|null}."
+    "description": "Configuracao visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..15 (default 15), button_label: string|null, resume: bool (continuar de onde parou, default true), chat_avatar: id de blob ja subido (foto dos baloes no formato chat)}."
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa de WhatsApp vinculada (obrigatoria pra PUBLICAR). So Channel::Whatsapp (oficial) ou Channel::Waha (QR). Trocar de caixa pode; trocar de TIPO de canal nao (422 'channel type cannot change'). A troca so vale ao republicar (a foto guarda a caixa)."
+   },
+   {
+    "name": "slug",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Endereco do link publico. EDITAVEL (mudou 16/08): normalizado no servidor (acento vira letra, resto vira hifen), 3..60 chars, minusculas+numeros+hifen, unico na conta. Vazio = mantem o atual; duplicado = 422. Trocar derruba links ja divulgados."
    }
   ],
-  "returns": "formulario criado (201) com slug gerado e public_url; 422 {errors} em validacao",
+  "returns": "formulario criado (201) com slug, public_url, inbox {id,name,channel_type}|null e published_inbox_id; 422 {errors} em validacao (inclusive errors.inbox_id)",
   "common_use_cases": [
    "Criar formulario de captacao do zero via API",
    "Importar um desenho pronto (form_data completo)"
@@ -28364,7 +28392,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/lead_forms/{id}",
   "title": "Atualizar Formulario",
-  "description": "Atualiza nome, desenho (form_data), settings, formato ou ativo. IMPORTANTE: mudanca no form_data so vale pro PUBLICO depois de lead_forms_publish (quem preenche usa sempre a foto publicada). form_data enviado SUBSTITUI o desenho inteiro — leia com lead_forms_show antes. Admin-only.",
+  "description": "Edita um formulario. form_data SUBSTITUI o desenho inteiro (leia antes com lead_forms_show). Aceita trocar inbox_id (so por caixa do MESMO tipo de canal) e slug (editavel, normalizado; trocar derruba links ja divulgados). Mudancas no desenho/caixa so valem pra quem preenche depois de um novo publish. Admin-only.",
   "category": "Formularios",
   "params": [
    {
@@ -28400,14 +28428,28 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Desenho do formulario {nodes:[{id,type,position:{x,y},data}], edges:[{id,source,target,sourceHandle}]}. Tipos: start, question, choice, message, condition, action, send_message, end, api_request, ai. Chave de data fora da lista permitida do tipo e DESCARTADA em silencio. Teto 2MB. Contrato completo, variaveis e exemplos: resource lionchat://docs/formularios-publicos. ATENCAO: substitui o desenho INTEIRO — leia com lead_forms_show antes de editar."
+    "description": "Desenho do formulario {nodes:[{id,type,position:{x,y},data}], edges:[{id,source,target,sourceHandle}]}. Tipos: start, question, choice, message, condition, action, send_message, booking, set_variable, embed, end, api_request, ai. Bloco action usa items:[{key,config}]; send_message usa messageItems; api_request aceita method (GET/POST/PUT/PATCH/DELETE) e body. Chave de data fora da lista permitida do tipo e DESCARTADA em silencio. Teto 2MB. Contrato completo, variaveis e exemplos: resource lionchat://docs/formularios-publicos. ATENCAO: substitui o desenho INTEIRO — leia com lead_forms_show antes de editar."
    },
    {
     "name": "settings",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..1440 (default 15), button_label: string|null}."
+    "description": "Configuracao visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..15 (default 15), button_label: string|null, resume: bool (continuar de onde parou, default true), chat_avatar: id de blob ja subido (foto dos baloes no formato chat)}."
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa de WhatsApp vinculada (obrigatoria pra PUBLICAR). So Channel::Whatsapp (oficial) ou Channel::Waha (QR). Trocar de caixa pode; trocar de TIPO de canal nao (422 'channel type cannot change'). A troca so vale ao republicar (a foto guarda a caixa)."
+   },
+   {
+    "name": "slug",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Endereco do link publico. EDITAVEL (mudou 16/08): normalizado no servidor (acento vira letra, resto vira hifen), 3..60 chars, minusculas+numeros+hifen, unico na conta. Vazio = mantem o atual; duplicado = 422. Trocar derruba links ja divulgados."
    }
   ],
   "returns": "formulario atualizado; 422 {errors} em validacao",
@@ -28450,7 +28492,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/lead_forms/{id}/publish",
   "title": "Publicar Formulario",
-  "description": "Valida o desenho e copia form_data para a foto publicada (published_data) — e o que faz as edicoes chegarem ao publico. Falha de validacao devolve 422 {errors: [chaves]} com chaves como no_start, no_reachable_end, question_without_label, condition_without_else, api_without_url, api_without_error_exit, ai_without_prompt, ai_without_other_exit (lista completa e significado: resource lionchat://docs/formularios-publicos). Admin-only.",
+  "description": "Publica: valida o desenho e tira a foto (form_data + inbox_id -> published_data). Quem preenche usa SEMPRE a foto. 422 {errors: [chaves]} quando o desenho nao passa — 34 chaves possiveis (tabela completa no resource formularios-publicos). As mais comuns: form_without_inbox (sem caixa de WhatsApp vinculada), form_requires_phone_question (todo formulario exige pergunta com map_to contact.phone), *_without_exit (saida obrigatoria desligada). Admin-only.",
   "category": "Formularios",
   "params": [
    {
@@ -28476,7 +28518,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/lead_forms/{id}/duplicate",
   "title": "Duplicar Formulario",
-  "description": "Cria uma copia do formulario: nome + ' (copia)', slug novo, INATIVA e NAO publicada; as imagens dos blocos sao duplicadas (arquivos novos). Admin-only.",
+  "description": "Cria uma copia do formulario: nome + ' (copia)', slug novo, INATIVA e NAO publicada; as imagens dos blocos sao duplicadas (arquivos novos). Admin-only. A copia nasce inativa e nao publicada, com slug novo, imagens duplicadas de verdade e o MESMO inbox_id do original.",
   "category": "Formularios",
   "params": [
    {
@@ -28567,7 +28609,7 @@
     "description": "Pagina (default 1)"
    }
   ],
-  "returns": "{payload: [{id, status, contact: {id,name,phone}|null, current_node_label, answered_count, created_at, completed_at}], meta: {current_page, per_page, total_count}}",
+  "returns": "{payload: [{id, status, contact, current_node_label, answered_count, created_at, completed_at}], meta}. contact pode vir {id: null, name, phone, pending: true} = pessoa AINDA preenchendo (o contato so nasce ao concluir, no fechamento do abandono ou antes de um envio de WhatsApp). NUNCA traz as respostas em si.",
   "common_use_cases": [
    "Ver quem respondeu/abandonou",
    "Achar o id de uma resposta pro detalhe"
@@ -28600,7 +28642,7 @@
     "description": "ID da resposta"
    }
   ],
-  "returns": "{id, status, contact, answers: [...], milestones: [...], effects: [...], utm_params, started_at, completed_at, abandoned_at}",
+  "returns": "Resposta completa: answers [{label, value_label, at, download_url?}] (ATENCAO: o bloco de Acoes grava entradas sinteticas com chave '<node_id>::<n>' — nem toda chave e id de bloco), conversation {id, display_id}|null (a conversa aberta na caixa vinculada), milestones, effects [{node_id, label, state, error, status, url_short, at}] e utm_params",
   "common_use_cases": [
    "Ler o que o lead respondeu",
    "Investigar por que a consulta externa/IA falhou (effects)",
@@ -28609,6 +28651,65 @@
   "related_tools": [
    "lionchat_lead_forms_responses_list",
    "lionchat_lead_forms_stats"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_test_run",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/lead_forms/{lead_form_id}/test_runs",
+  "title": "Testar Formulario (simulador)",
+  "description": "Roda o RASCUNHO (form_data, nao a foto publicada) no motor de verdade e desfaz tudo no fim — nada fica no banco: sem contato, sem conversa, sem WhatsApp, sem pixel, sem resposta nos relatorios. NAO exige admin (qualquer agente da conta). O estado do teste vive em quem chama: cada chamada reproduz o caminho inteiro a partir da lista de respostas. Item cujo node_id nao e o bloco atual PARA a reproducao ali.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "lead_form_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do formulario"
+   },
+   {
+    "name": "answers",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Respostas a reproduzir, na ordem: [{node_id, value}]. Ate 60 itens. Vazio/ausente = comeca do inicio (devolve o primeiro bloco). value null avanca bloco sem resposta (start/message/embed)."
+   }
+  ],
+  "returns": "{block, log, answers, variables, form}. block = envelope do bloco atual (mesmo shape da pagina publica); log = caminho percorrido [{node_id, type, label, answer, detail}] (detail mostra variavel criada, acoes executadas, resultado de consulta/IA e o rumo das condicoes); 422 {error: 'invalid_value'|'test_run_failed', reason}",
+  "common_use_cases": [
+   "Validar um formulario recem-montado antes de publicar",
+   "Reproduzir o caminho de um lead pra depurar condicao/consulta/IA",
+   "Conferir mensagens e variaveis sem enviar WhatsApp de verdade"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_show",
+   "lionchat_lead_forms_publish"
+  ]
+ },
+ {
+  "id": "lionchat_lead_forms_check_embed",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/lead_forms/check_embed",
+  "title": "Conferir site pra Pagina externa",
+  "description": "Confere no SERVIDOR se um site aceita ser exibido em iframe (bloco 'embed' / Pagina externa). O navegador de quem preenche NAO consegue detectar recusa — site bloqueado vira quadrado vazio sem erro; por isso a conferencia e feita aqui, lendo os cabecalhos de recusa, seguindo ate 3 redirects (cada salto validado contra rede interna) com 5s por salto. Grave o veredito em embed_allowed do bloco. Admin-only. Aviso: paginas de CHECKOUT sao as que mais recusam iframe.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "url",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Endereco a conferir (precisa comecar com https://; {{variaveis}} sao ignoradas na conferencia)"
+   }
+  ],
+  "returns": "{status, reason}. status: 'allowed' (aceita) | 'blocked' (reason: not_https, x_frame_options, frame_ancestors, url_blocked) | 'unknown' (reason: unreachable ou http_<codigo> — nao deu pra conferir; a pagina tenta o iframe e o botao de abrir fora cobre)",
+  "common_use_cases": [
+   "Antes de salvar um bloco Pagina externa, saber se o site vai aparecer embutido",
+   "Explicar ao cliente por que o checkout dele nao abre dentro do formulario"
+  ],
+  "related_tools": [
+   "lionchat_lead_forms_update"
   ]
  },
  {
@@ -28634,7 +28735,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/guru_subscription/available_plans",
   "title": "Planos Disponiveis (Guru)",
-  "description": "Ofertas do Guru FILTRADAS: so aparecem ofertas vinculadas a um plano da plataforma (cada uma com local_plan {plan_name, plan_slug, period}). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "description": "Ofertas do Guru FILTRADAS: so aparecem ofertas vinculadas a um plano da plataforma (cada uma com local_plan {plan_name, plan_slug, period}). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar. NOVO 18/08: cada oferta traz offer_kind ('upgrade' cobra a diferenca proporcional NA HORA; 'downgrade' so vale na renovacao). Oferta sem plano correspondente e omitida da lista.",
   "category": "Assinatura",
   "params": [],
   "returns": "{offers: [...com local_plan], local: {...}}",
@@ -28651,7 +28752,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/guru_subscription/invoices",
   "title": "Faturas da Assinatura (Guru)",
-  "description": "Faturas da assinatura, direto do Guru (passthrough). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "description": "Faturas da assinatura, direto do Guru (passthrough). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar. 18/08: a lista vem SEMPRE como array (sem paginacao exposta). Data de fatura = charge_at; situacao: paid, waiting_payment, pastdue, canceled; pagar so pelo payment_url da propria fatura em aberto.",
   "category": "Assinatura",
   "params": [],
   "returns": "{invoices: <passthrough do Guru>}",
@@ -28668,7 +28769,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/guru_subscription/transactions",
   "title": "Transacoes da Assinatura (Guru)",
-  "description": "Transacoes de pagamento da assinatura, direto do Guru (passthrough). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar.",
+  "description": "Transacoes de pagamento da assinatura, direto do Guru (passthrough). Requer a feature 'Gestao de assinatura (Guru)' ligada pra conta no Super Admin — desligada devolve 404 {code: 'feature_disabled'} (diferente do 404 de assinatura inexistente no Guru). Somente administrator (403). 422 = validacao/nao configurado; 503 = Guru fora do ar. 18/08: a lista vem SEMPRE como array (sem paginacao exposta). Data de fatura = charge_at; situacao: paid, waiting_payment, pastdue, canceled; pagar so pelo payment_url da propria fatura em aberto.",
   "category": "Assinatura",
   "params": [],
   "returns": "{transactions: <passthrough do Guru>}",

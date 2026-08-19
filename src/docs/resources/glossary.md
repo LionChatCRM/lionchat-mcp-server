@@ -490,8 +490,20 @@ num construtor de blocos. Feature liberada conta a conta.
 | `completed` | Chegou ao fim do formulário |
 | `abandoned` | Parou no meio e a janela de abandono do formulário venceu |
 
-O contato é criado assim que nome e telefone entram — **mesmo sem concluir**. Por isso resposta
-`abandoned` normalmente JÁ tem contato para trabalhar.
+O contato nasce em TRÊS momentos (mudou em 16/08): conclusão, fechamento do abandono, ou logo
+antes de um bloco de Enviar WhatsApp. Resposta `abandoned` ganha o contato no fechamento do
+abandono — com as respostas que a pessoa deu. Enquanto preenche, a lista de respostas mostra
+`contact: {id: null, ..., pending: true}`.
+
+Termos do formulário (18/08):
+- **Caixa vinculada** — a caixa de WhatsApp do formulário (`inbox_id`); obrigatória pra publicar.
+- **Link identificado** — link de formulário enviado numa conversa sai carimbado (`lt_form`) e o
+  formulário pula nome/telefone/e-mail já conhecidos, sem nunca exibir o dado.
+- **Simulador** — `lead_forms_test_run`: roda o rascunho no motor real sem deixar rastro.
+- **Página externa (`embed`)** — bloco que exibe um site de fora dentro do formulário (checkout,
+  simulador, agenda), com conferência prévia de "aceita iframe?" (`check_embed`).
+- **Definir variável (`set_variable`)** — bloco invisível que cria `{{var.<nome>}}`.
+- **Agendamento (`booking`)** — calendário dentro do formulário, ligado a um tipo de evento.
 
 Detalhes completos (construtor, página pública, blocos, gatilhos de flow, tetos e limites) no
 resource `lionchat://docs/formularios-publicos`.

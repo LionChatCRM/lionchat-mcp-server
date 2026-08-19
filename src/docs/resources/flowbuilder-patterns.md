@@ -633,3 +633,30 @@ grupo** (o grupo é a conversa do flow).
 6. Após criar, **ative** com `flows_toggle` se o cliente quiser que rode já. ATENÇÃO (2026-06-16): se já existir outro flow ATIVO com o mesmo gatilho na mesma inbox (e mesmo modo), a ativação retorna **422 `flow_trigger_conflict`** — exceto `webhook_received`/`manual_trigger`, que podem coexistir. Não fique reativando: explique o conflito ao usuário (qual flow + qual caixa) e ofereça desativar o outro ou mudar o gatilho. Dá pra checar antes com `POST /flows/check_conflicts` (não salva). Detalhes no `flowbuilder-design-guide` (seção 2.1, "Trava de gatilho duplicado").
 
 Se a necessidade não bate com nenhum pattern, monte do zero seguindo o **`flowbuilder-design-guide`** — mas use estes templates como referência de layout/handle/schema válidos.
+
+
+## Regras de autoria por API (18/08)
+
+**`start_flow` nunca pode apontar pro PRÓPRIO flow.** O save aceita (sem 422), mas na execução o
+passo é IGNORADO EM SILÊNCIO (só um aviso no log do servidor; nada no histórico de execução) e o
+fluxo para ali. A tela esconde o próprio flow do seletor; por API a responsabilidade é sua:
+`flow_id` do item `start_flow` tem que ser DIFERENTE do flow que está sendo editado.
+
+**Condição: preencha `operator` E `field` JUNTOS.** O motor executa pelo `operator`, mas a tela
+reabre a regra casando `operator`+`field` — condição escrita só com um dos dois roda certo e
+APARECE errada pro cliente. Pares corretos:
+
+| Condição | `field` | `operator` | `valueType` |
+|---|---|---|---|
+| Conversa TEM etiqueta | `{{conversation.label}}` | `conversation_has_label` | `labels_multi` |
+| Conversa SEM etiqueta | `{{conversation.label}}` | `conversation_no_label` | `labels_multi` |
+| Contato TEM etiqueta | `{{contact.label}}` | `contact_has_label` | `labels_multi` |
+| Contato SEM etiqueta | `{{contact.label}}` | `contact_no_label` | `labels_multi` |
+| Existe card | `_kanban_check` | `kanban_exists` | `funnel_stage` |
+| Card em etapa | `_kanban_stage` | `kanban_in_stage` | `funnel_stage` |
+| Card ganho | `_kanban_status` | `kanban_won` | `funnel_only` |
+| Card perdido | `_kanban_status` | `kanban_lost` | `funnel_only` |
+| Resposta do cliente | `{{last_response}}` | `equal_any` (e variações `_any`) | `response_multi` |
+| Resposta do atendente | `{{last_agent_response}}` | `equal_any` (e variações `_any`) | `response_multi` |
+
+Nas condições de etiqueta, `values` aceita array de títulos ou string separada por vírgula.

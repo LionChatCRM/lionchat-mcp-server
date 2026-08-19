@@ -1,27 +1,31 @@
 # Formulários Públicos — Guia Profundo
 
 Tudo sobre os Formulários Públicos do LionChat (captação estilo Typeform/Typebot): link público,
-desenho dos blocos, publicação, respostas, funil e integração com fluxos.
+caixa de WhatsApp vinculada, desenho dos blocos, publicação, respostas, funil, simulador e
+integração com fluxos. Atualizado em 18/08/2026 (v4.10.226).
 
 ## O que é
 
 Um formulário público é uma página de captação hospedada pelo próprio LionChat. O visitante abre um
-link, responde bloco a bloco, e o LionChat cria o contato, guarda as respostas e (opcionalmente)
-dispara um fluxo do FlowBuilder no fim.
+link, responde bloco a bloco, e o LionChat cria o contato, guarda as respostas, abre a conversa na
+caixa de WhatsApp vinculada e (opcionalmente) dispara um fluxo do FlowBuilder no fim.
 
 - **Link público**: `{FRONTEND_URL}/forms/<referência da conta>/<slug>` — a referência da conta é o
-  `booking_public_slug` (o mesmo usado na agenda pública) e o `slug` do formulário tem 8 caracteres
-  alfanuméricos minúsculos. O campo `public_url` já vem pronto na resposta das tools.
+  `booking_public_slug` (o mesmo da agenda pública). O `slug` do formulário nasce sorteado (8
+  caracteres) e **pode ser trocado** (ver Campos). O campo `public_url` já vem pronto na resposta.
+- **Caixa de WhatsApp vinculada é OBRIGATÓRIA para publicar** (`inbox_id`). Só canais
+  `Channel::Whatsapp` (oficial) e `Channel::Waha` (QR Code). É por ela que o bloco Enviar mensagem
+  dispara e que a conversa do lead nasce.
 - **Dois formatos de exibição** (`display_mode`): `cards` (um bloco por tela, estilo Typeform) ou
   `chat` (bolhas de conversa, estilo Typebot).
 - **Feature flag `lead_forms`, por conta, nasce desligada.** Com a flag desligada a **página pública
   responde 404** — ninguém consegue preencher. As tools de dashboard (listar, criar, editar,
-  publicar, ver respostas) **funcionam mesmo assim**: não há gate de feature no backend do
-  dashboard. Ou seja: dá pra montar o formulário inteiro antes de ligar a flag, mas não adianta
-  divulgar o link antes.
-- **Escrita é só de administrador.** `create`, `update`, `destroy`, `publish` e `duplicate` passam
-  por `check_admin_authorization?`; usuário não-admin recebe **401**. Leitura (`list`, `show`,
-  `stats`, `responses`) é liberada a qualquer agente da conta.
+  publicar, ver respostas, simular) **funcionam mesmo assim**. Dá pra montar tudo antes de ligar a
+  flag; não adianta divulgar o link antes.
+- **Escrita é só de administrador.** `create`, `update`, `destroy`, `publish`, `duplicate` e
+  `check_embed` passam por `check_admin_authorization?`; usuário não-admin recebe **401**. Leitura
+  (`list`, `show`, `stats`, `responses`) e o **simulador** (`test_run`) são liberados a qualquer
+  agente da conta.
 
 ### Não confundir
 
@@ -38,13 +42,15 @@ dispara um fluxo do FlowBuilder no fim.
 | `lionchat_lead_forms_list` | `GET /lead_forms` | Lista os formulários da conta (mais novos primeiro). Não traz `media_urls` |
 | `lionchat_lead_forms_create` | `POST /lead_forms` | Cria. Admin-only |
 | `lionchat_lead_forms_show` | `GET /lead_forms/:id` | Detalhe completo, único lugar que traz `media_urls` |
-| `lionchat_lead_forms_update` | `PATCH /lead_forms/:id` | Edita. Admin-only |
+| `lionchat_lead_forms_update` | `PATCH /lead_forms/:id` | Edita (inclusive `inbox_id` e `slug`). Admin-only |
 | `lionchat_lead_forms_destroy` | `DELETE /lead_forms/:id` | Exclui (204 sem corpo). Admin-only |
-| `lionchat_lead_forms_publish` | `POST /lead_forms/:id/publish` | Publica: tira a foto do desenho. Admin-only |
-| `lionchat_lead_forms_duplicate` | `POST /lead_forms/:id/duplicate` | Cópia completa com slug novo. Admin-only |
+| `lionchat_lead_forms_publish` | `POST /lead_forms/:id/publish` | Publica: tira a foto do desenho (com a caixa dentro). Admin-only |
+| `lionchat_lead_forms_duplicate` | `POST /lead_forms/:id/duplicate` | Cópia completa com slug novo (copia o `inbox_id`). Admin-only |
 | `lionchat_lead_forms_stats` | `GET /lead_forms/:id/stats` | Números e funil por bloco |
 | `lionchat_lead_forms_responses_list` | `GET /lead_forms/:id/responses` | Lista de respostas (leve, sem as respostas em si) |
 | `lionchat_lead_forms_responses_show` | `GET /lead_forms/:id/responses/:rid` | Detalhe de uma resposta, com o que a pessoa respondeu |
+| `lionchat_lead_forms_test_run` | `POST /lead_forms/:lead_form_id/test_runs` | Simulador: roda o RASCUNHO no motor real, sem deixar rastro. Qualquer agente da conta |
+| `lionchat_lead_forms_check_embed` | `POST /lead_forms/check_embed` | Confere se um site aceita ser exibido em iframe (bloco Página externa). Admin-only |
 
 **Imagens não têm ferramenta MCP.** O upload de imagem de bloco (`POST /lead_forms/:id/media`,
 máximo 5 MB, só `image/*`) existe no painel. Pela API dá pra referenciar um `image` que já foi
@@ -57,12 +63,26 @@ subido, nunca subir um novo.
 | `name` | string | **Obrigatório** |
 | `display_mode` | string | `cards` (padrão) ou `chat` |
 | `active` | boolean | Formulário inativo devolve 404 na página pública |
+| `inbox_id` | integer | Caixa de WhatsApp vinculada. Obrigatória para publicar. Ver regras abaixo |
 | `form_data` | jsonb | O desenho (rascunho). Teto de 2 MB serializado |
 | `settings` | jsonb | Ver abaixo |
-| `slug` | string | **Gerado no create e imutável** — nunca aceita valor do cliente |
+| `slug` | string | **Editável** em create e update. Normalizado no servidor (acento vira letra, resto vira hífen), 3 a 60 caracteres, minúsculas + números + hífen, único dentro da conta. Vazio/só espaços = mantém o atual (não é erro). Duplicado = 422. Ausente no create = sorteia 8 caracteres |
 | `published_at` | timestamp | Quando a foto foi tirada. Nulo = nunca publicado |
 | `public_url` | string | Montado pelo servidor |
 | `counts` | objeto | `{views, responses, completed}` — contadores do banco |
+
+**A resposta de `show`/`list`/`create`/`update` traz também:** `inbox` (`{id, name, channel_type}`
+ou `null` — a caixa resolvida), e `published_inbox_id` (a caixa que está NA FOTO publicada).
+
+### Regras do `inbox_id`
+
+- Caixa que não é da conta → 422 `{errors: {inbox_id: ["not found in this account"]}}`.
+- Canal fora de `Channel::Whatsapp`/`Channel::Waha` → `["channel not supported"]`.
+- **Trocar de caixa pode; trocar de TIPO de canal não** → `["channel type cannot change"]`.
+  Os blocos foram montados pro canal atual (oficial exige modelo aprovado; QR aceita texto livre e
+  mídia). Formulário que ainda não tinha caixa escolhe livremente.
+- **A troca só vale depois de republicar**: `publish` grava o `inbox_id` DENTRO da foto
+  (`published_data`), e o motor lê sempre a foto.
 
 ### `settings`
 
@@ -70,32 +90,48 @@ subido, nunca subir um novo.
 |---|---|---|
 | `primary_color` | hex | `#7C3AED` |
 | `theme` | `light` ou `dark` (valor fora da lista cai em `light`) | `light` |
-| `abandon_minutes` | inteiro, limitado a 1..1440 | 15 |
+| `abandon_minutes` | inteiro, limitado a 1..15 (minutos) | 15 |
 | `button_label` | string — rótulo do botão da página pública | — |
+| `resume` | booleano — continuar de onde parou entre visitas | `true` |
+| `chat_avatar` | id numérico de blob já subido (`media`) — foto redonda ao lado dos balões, só no formato `chat`. O público recebe `chat_avatar_url` resolvida (nunca o id) | — |
 
 ## Ciclo de vida
 
 1. **Criar** com `lionchat_lead_forms_create` (nome + `form_data`, mesmo que mínimo).
-2. **Montar o desenho** em `form_data` (contrato na próxima seção).
-3. **Publicar** com `lionchat_lead_forms_publish` — copia `form_data` para `published_data` e carimba
-   `published_at`.
-4. **Ativar** (`active: true`) e ligar a feature flag `lead_forms` da conta.
-5. **Divulgar** o `public_url`.
+2. **Vincular a caixa de WhatsApp** (`inbox_id`) — sem ela a publicação recusa (`form_without_inbox`).
+3. **Montar o desenho** em `form_data` (contrato na próxima seção). Todo formulário precisa de uma
+   pergunta com `map_to: contact.phone` (`form_requires_phone_question`).
+4. **Testar** com `lionchat_lead_forms_test_run` — roda o rascunho de verdade, sem sujar nada.
+5. **Publicar** com `lionchat_lead_forms_publish` — copia `form_data` (+ `inbox_id`) para
+   `published_data` e carimba `published_at`.
+6. **Ativar** (`active: true`) e ligar a feature flag `lead_forms` da conta.
+7. **Divulgar** o `public_url`.
 
 **Quem preenche usa SEMPRE a foto publicada, nunca o rascunho.** Editar `form_data` não muda nada
-para quem está preenchendo até um novo `publish`. Isso é de propósito: dá pra mexer no formulário
-com gente respondendo sem quebrar ninguém no meio.
+para quem está preenchendo até um novo `publish`.
 
-**O contato nasce no MEIO do preenchimento**, não no fim: assim que existem respostas mapeadas para
-`contact.name` E `contact.phone`, o LionChat cria (ou reaproveita) o contato, carimba a origem do
-lead e aplica os atributos personalizados já respondidos. Quem começa e abandona depois disso
-**continua virando contato com as respostas que deu** — é a diferença mais valiosa em relação a um
-formulário tradicional.
+**O contato nasce em TRÊS momentos**: quando a pessoa conclui, quando a resposta é marcada como
+abandonada (padrão e teto de 15 minutos sem atividade), ou logo antes de um bloco de Enviar
+WhatsApp. Enquanto isso nada é criado — nem contato, nem conversa, nem card. Efeitos que dependem de
+contato (evento de pixel, gatilho de marco) ficam guardados e disparam no nascimento, com a hora
+original de cada etapa. Quando o contato nasce ali, a conversa começa com uma pílula dizendo qual
+formulário o originou. Contato apagado no painel solta o vínculo — a resposta pode renascer no
+próximo momento. Os textos `{{contact.name}}`/`{{contact.phone}}`/`{{contact.email}}` saem do que a
+pessoa RESPONDEU, não da ficha.
+
+### Link identificado (pula perguntas já conhecidas)
+
+Toda mensagem de TEXTO enviada numa conversa que contenha um link `/forms/` sai **carimbada
+automaticamente** com `?lt_form=<código>` (sem depender de LionTrack; vale pra mensagem de flow e
+de IA também; nunca em grupo). Quem abre o link carimbado tem a resposta ligada ao contato desde o
+início, e o formulário **PULA as perguntas de identidade que já têm valor** — só as três nativas:
+nome, telefone e e-mail. A resposta pulada é gravada com o valor da ficha e o selo `prefilled`.
+
+Seguranças: o valor pulado **nunca aparece na tela nem no payload público**, e o botão Voltar **não
+alcança** a pergunta pulada. Código de outra conta, contato apagado ou qualquer pane = o formulário
+roda anônimo normal. Link copiado do editor e colado fora de uma conversa NÃO tem carimbo.
 
 ## O contrato do `form_data`
-
-Esta é a parte que permite construir formulários pela API. O `form_data` é um desenho de nós e
-arestas:
 
 ```json
 {
@@ -116,15 +152,18 @@ arestas:
 
 | `type` | Chaves de `data` permitidas | Saídas (`sourceHandle`) | Aparece pro lead? |
 |---|---|---|---|
-| `start` | `title, description, button_label, image` | `success` | sim |
-| `question` | `label, description, field_type, placeholder, required, map_to, scale, image, accept, invalid_message` | `success` | sim |
+| `start` | `title, description, button_label, image, video_url` | `success` | sim |
+| `question` | `label, description, field_type, placeholder, required, map_to, scale, image, video_url, accept, invalid_message` | `success` | sim |
 | `choice` | `label, description, options, multiple, map_to` | `option_<id da opção>` (escolha única) / `success` (múltipla) | sim |
-| `message` | `title, description, button_label, image` | `success` | sim |
+| `message` | `title, description, button_label, image, video_url` | `success` | sim |
 | `condition` | `branches` | `cond_<id do ramo>` + `else` | não |
-| `action` | `action_type, labels, name, event_name` | `success` | não |
-| `send_message` | `inbox_id, content, template_name, template_params` | `success`, `skipped` | não |
-| `end` | `title, description, redirect_url, button_label, image` | — | sim |
-| `api_request` | `label, url, headers, timeout` | `success`, `error` | não (mostra bloco de espera) |
+| `action` | `items, label` (+ formato antigo `action_type, labels, name, event_name`) | `success` | não |
+| `send_message` | `messageItems` (+ formato antigo `content, template_name, template_params`) | `success`, `skipped` | não |
+| `booking` | `label, description, event_type_id, required` | `success` (agendou) + `no_booking` (seguiu sem agendar; some quando `required`) | sim |
+| `set_variable` | `label, assignments` | `success` | não |
+| `embed` | `title, description, url, height, button_label, embed_allowed, show_open_external` | `success` | sim |
+| `end` | `title, description, redirect_url, button_label, image, video_url` | — | sim |
+| `api_request` | `label, method, url, headers, body, timeout` | `success`, `error` | não (mostra bloco de espera) |
 | `ai` | `label, mode, prompt, categories, include_answers, model` | modo `generate`: `success`, `error` / modo `classify`: um `cat_<id>` por categoria + `other` | não (mostra bloco de espera) |
 
 **Chave fora da lista não é lida pelo motor** e o editor a **remove no próximo salvamento pela
@@ -134,94 +173,171 @@ depois some. A lista é fonte única (`LeadForm::NODE_DATA_KEYS` no servidor, es
 
 ### Detalhes por chave
 
-**`field_type`** (do `question`): `short_text`, `long_text`, `email`, `phone`, `date`, `number`,
-`rating` (usa `scale`), `url`, `file_upload` (usa `accept`).
+**`field_type`** (do `question`): `short_text`, `long_text`, `email`, `phone`, `date`, `time`,
+`datetime`, `number`, `rating` (usa `scale`), `url`, `file_upload` (usa `accept`), e os documentos
+com validação de verdade: `cpf`, `cnpj`, `cep` (dígito verificador/8 dígitos; gravam só números;
+erros `invalid_cpf`/`invalid_cnpj`/`invalid_cep`).
+- `time` grava `HH:MM` (24h; erro `invalid_time`).
+- `datetime` grava `AAAA-MM-DDTHH:MM` — hora local de quem preencheu, SEM fuso; o fuso de leitura é
+  o da definição do atributo de destino (erro `invalid_datetime`).
+
+**`video_url`** (em `start`, `question`, `message`, `end`): link de YouTube, Vimeo ou arquivo de
+vídeo direto. Com vídeo válido, ele ocupa o lugar da imagem. Link fora do formato conhecido não
+renderiza e não dá erro.
 
 **`accept`** (só em `file_upload`): `'any'` ou um array de categorias entre `image`, `video`,
-`audio`, `pdf`, `spreadsheet`, `document`, `xml`. Arquivo executável é recusado sempre, antes de
-qualquer categoria.
+`audio`, `pdf`, `spreadsheet`, `document`, `xml`. Arquivo executável é recusado sempre.
 
-**`map_to`**: `''` (não guarda em lugar nenhum), `contact.name`, `contact.email`, `contact.phone`
-ou `custom.<chave de atributo personalizado de contato>`.
+**`map_to`** — para onde vai a resposta:
+- `''` — não guarda em lugar nenhum (só em `answers`).
+- `contact.name`, `contact.email`, `contact.phone` — os três nativos.
+- `contact.cadastral.<campo>` — `cpf`, `rg`, `cnpj`, `passport`, `profession`, `marital_status`,
+  `gender`, `date_of_birth` (os dois últimos sem tela; funcionam por API e são normalizados:
+  "solteira" vira `solteiro`, "masculino" vira `m`).
+- `contact.address.<campo>` — `cep`, `street`, `number`, `complement`, `neighborhood`, `city`,
+  `state`, `country`.
+- `custom.<chave>` — atributo personalizado de CONTATO.
+- `conversation_custom.<chave>` — atributo personalizado da CONVERSA (só chave definida na conta;
+  coerção de tipo; teto 1500 caracteres).
+- **Lista de recusa no servidor** (o valor é pulado de forma visível, sem erro): `name`, `email`,
+  `phone_number`, `identifier`, `card` e chaves começando com `captain_`, `eclinica_`, `origin_`,
+  `lt_`, `booking_`, `waha_`, `whatsapp_`, `ctwa_`, `meta_lead_`.
+- Contato pré-existente recebe valor **só em campo vazio** — exceto o que ESTA resposta gravou e
+  ninguém mudou depois (correção via Voltar).
 
-**`options`** (do `choice`): `[{ "id": "abc123", "label": "Sim", "image": "" }]`. O `image` por
-opção é o que faz a "escolha com fotos".
+**`options`** (do `choice`): `[{ "id": "abc123", "label": "Sim", "image": "" }]`.
 
 **`branches`** (do `condition`): lista avaliada em ordem; nenhum ramo casando cai no handle `else`.
-
-```json
-[{ "id": "b1", "source_node_id": "q_cidade", "operator": "equals", "value": "São Paulo" }]
-```
-
 Operadores: `equals`, `not_equals`, `contains`, `filled`, `not_filled`, `greater_than`,
-`less_than`. Quando a fonte (`source_node_id`) é um `api_request`, o ramo **precisa** de `path` —
-o caminho dentro da resposta da consulta (ex.: `"path": "localidade"`).
+`less_than`. Fonte `api_request` exige `path` (caminho dentro da resposta).
 
-**`action_type`**: `add_label` (usa `labels: []`), `milestone` (usa `name` — é o marco que aparece
-no funil e pode disparar fluxo), `meta_pixel_event` e `ga4_event` (usam `event_name`).
+**`items`** (do `action`) — o formato novo, uma LISTA de ações `[{key, config}]`:
 
-**`send_message`**: caixa WhatsApp QR Code usa `content` (texto com variáveis); caixa WhatsApp
-oficial usa `template_name` + `template_params`. Um formulário com `send_message` **obriga** existir
-uma pergunta com `map_to: contact.phone` — sem telefone não há para quem mandar.
+| `key` | `config` mínimo para publicar | O que faz |
+|---|---|---|
+| `update_contact_attribute` | `attr_key` | Grava atributo personalizado do CONTATO |
+| `update_conversation_attribute` | `attr_key` | Grava atributo personalizado da CONVERSA |
+| `add_label` | `labels` com ≥1 título | Etiqueta o contato |
+| `milestone` | `name` | Marco do funil (pode disparar fluxo) |
+| `meta_pixel_event` | `event_name` | Evento Meta CAPI (`[a-zA-Z0-9_]`, até 40) |
+| `ga4_event` | `event_name` | Evento GA4 |
 
-**`api_request`**: **só GET**, sem corpo. A `url` precisa ter **domínio literal** (nada de variável
-no host). Variáveis só entram no caminho e nos valores de query. `headers` aceita valor literal ou
-`{{conta.<variável>}}` (o cofre de variáveis da conta) — variável derivada do lead em cabeçalho é
-recusada na publicação. `timeout` em segundos: padrão 8, teto 15.
+O `config` das ações de atributo aceita também `attr_value` (texto com variáveis) e `attr_op`:
+`set` (sobrescrever, padrão), `plus`, `minus`, `times`, `divided_by`. **A conta é feita no
+servidor** sobre o valor atual, com trava de repetição (roda UMA vez por preenchimento); valor que
+não vira número não grava; divisão por zero não grava. A operação aritmética é a única que passa
+por cima do "só grava em campo vazio". Identidade (nome/telefone/e-mail) NÃO se grava por aqui.
+Formato antigo (`action_type` + campos soltos) continua sendo lido.
+
+**`messageItems`** (do `send_message`) — LISTA de mensagens, enviadas na ordem:
+- `{type: "text", content: "..."}` — texto com variáveis (caixa QR).
+- `{type: "whatsapp_template" | "template", template_params: {name, category, language, namespace,
+  processed_params}}` — modelo aprovado (caixa oficial; `language` padrão `pt_BR`).
+- `{type: "image" | "video" | "audio" | "file" | "document" | "attachment" | "url_media",
+  url | file_url | blob_signed_id, caption}` — mídia.
+Item que falha **não derruba os outros** — vira `skipped_item {index, reason}` em `answers`.
+A caixa é a DO FORMULÁRIO (`inbox_id`) — o bloco não tem caixa própria. Formato antigo
+(`content`/`template_name`/`template_params` soltos) continua sendo lido.
+
+**`booking`** — calendário DENTRO do formulário:
+- `event_type_id` = id de um tipo de evento de Agendamento da conta (ativo).
+- `required: true` = só avança depois de agendar (a saída `no_booking` some do desenho).
+- O payload público leva `booking` (slug público, título, duração, `task_type`, `ask_email`,
+  `ask_description`), `prefill` (nome/telefone/e-mail já respondidos) e `missing` (o que o tipo
+  exige e o formulário não perguntou — e-mail só quando `task_type` é `video_call`). O id interno
+  do tipo NUNCA sai. Tipo apagado/desativado depois de publicado: a tela mostra "indisponível" com
+  botão de continuar (o `required` é liberado — ninguém fica preso).
+- O valor gravado na resposta é o id do agendamento criado (validado contra a conta).
+
+**`set_variable`** — cria variáveis temporárias da resposta (invisível pro lead):
+- `assignments: [{key, value}]` — até 20 linhas, 1000 caracteres por valor; `key` vira
+  `{{var.<key>}}` nos blocos seguintes. Linha com `key` vazia é ignorada.
+- SÓ variável. Gravar em contato/conversa é papel do bloco de Ações (um `target` em um item é
+  ignorado pelo motor e descartado pela tela).
+
+**`embed`** — "Página externa", um site de fora exibido DENTRO do formulário (checkout, simulador,
+agenda externa):
+- `url` precisa começar com `https://` LITERAL (variável só do meio pra frente). Na montagem, as
+  variáveis resolvem por posição, com codificação de URL, e o https é reconferido — URL que não
+  for https sai VAZIA do payload (proteção contra script via variável).
+- `embed_allowed` NÃO é configuração sua: é o veredito de `lionchat_lead_forms_check_embed`
+  gravado no desenho (`true`/`false`/`null`). Com `false`, a página mostra o aviso educado + botão
+  "Abrir em nova página" em vez de um quadrado vazio. Escrever `true` na mão mente pro renderizador.
+- `height` em pixels (padrão 480, limitado 240..1200). `show_open_external` (padrão `true`) mostra
+  o botão de abrir fora; com o site recusando o iframe, o botão aparece mesmo desligado — é a
+  única saída da pessoa.
+- O bloco avança por botão (a página embutida é caixa fechada — não dá pra saber quando um
+  pagamento terminou lá dentro). Checkout é justamente o tipo de página que MAIS recusa iframe.
+
+**`api_request`**: `method` aceita `GET`, `POST`, `PUT`, `PATCH`, `DELETE` (padrão `GET`). `body`
+(até 64 KB) aceita variáveis — inclusive `{{conta.<variável>}}`; valor do lead entra escapado em
+corpo JSON. A `url` precisa ter **domínio literal** (variáveis só no caminho e nos valores de
+query; `{{conta.*}}` NÃO vale na URL). `headers` aceita literal ou `{{conta.<variável>}}` —
+variável do lead em cabeçalho é recusada na publicação. `timeout` em segundos: padrão 8, teto 15.
 
 **`ai`**: `mode` é `generate` (devolve texto em `{{ia.<node_id>}}`) ou `classify` (roteia por
 categoria). `categories` é obrigatório no modo `classify`. `include_answers` (booleano) manda as
-respostas já dadas como contexto. `model` é validado contra a lista suportada
-(`gpt-4.1-nano`, `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-5.4-nano`, `gpt-5.4-mini`, `gpt-4o`, `gpt-4.1`,
-`gpt-5-mini`, `gpt-5.4`, `o3-mini`, `o4-mini`, `gpt-5`, `gpt-5.2`, `gpt-5.5`, `o1`, `o3`);
-`''` = usa o modelo padrão da conta. A IA usa a **chave da própria conta** — conta sem chave faz o
-bloco sair pela saída de erro.
+respostas já dadas como contexto. `model` é validado contra a lista suportada; `''` = modelo padrão
+da conta. A IA usa a **chave da própria conta** — conta sem chave faz o bloco sair pela saída de
+erro.
 
 ### Variáveis
 
-Usáveis no texto de `send_message`, no `prompt` da IA e na `url` do `api_request`:
-
 | Variável | O que traz | Onde vale |
 |---|---|---|
-| `{{answer.<node_id>}}` | O que a pessoa respondeu naquele bloco (rótulo da opção ou texto) | mensagem, prompt, caminho/query da URL |
-| `{{contact.name}}` `{{contact.phone}}` `{{contact.email}}` | Dados do contato já identificado | mensagem, prompt, caminho/query da URL |
-| `{{api.<node_id>.<caminho>}}` | Um pedaço da resposta de uma consulta | mensagem, prompt, caminho/query da URL |
-| `{{ia.<node_id>}}` | O texto que a IA gerou naquele bloco | mensagem, prompt, caminho/query da URL |
-| `{{conta.<variável>}}` | Variável da conta (cofre, aceita segredo) | **só em cabeçalho de `api_request`** |
+| `{{answer.<node_id>}}` | O que a pessoa respondeu naquele bloco (rótulo da opção ou texto) | mensagem, prompt, valores do bloco, URL/corpo de consulta |
+| `{{contact.name}}` `{{contact.phone}}` `{{contact.email}}` | O que a pessoa respondeu (a ficha é reserva) | idem |
+| `{{api.<node_id>.<caminho>}}` | Um pedaço da resposta de uma consulta | idem |
+| `{{ia.<node_id>}}` | O texto que a IA gerou naquele bloco | idem |
+| `{{var.<nome>}}` | Variável criada pelo bloco Definir variável | idem |
+| `{{conta.<variável>}}` | Variável da conta (cofre) | cabeçalho e CORPO de `api_request` (com segredo); em `set_variable` e no valor das Ações só as NÃO-secretas |
 
-Variável desconhecida vira string vazia, em silêncio. `{{conta.*}}` fora do cabeçalho sai vazia
-mesmo que a variável exista — é proteção, não defeito.
+Variável desconhecida vira string vazia, em silêncio. `{{conta.*}}` em texto público sai vazia
+mesmo que exista — é proteção, não defeito.
 
 ## Regras de publicação
 
-`lionchat_lead_forms_publish` devolve **422 com `{errors: [chaves]}`** quando o desenho não passa.
-Cada chave e o que ela quer dizer:
+`lionchat_lead_forms_publish` devolve **422 com `{errors: [chaves]}`**. As 34 chaves atuais:
 
 | Chave | Significado |
 |---|---|
-| `no_start` | Não existe bloco `start` no desenho |
-| `start_without_exit` | O `start` não tem aresta saindo dele |
-| `no_reachable_end` | Nenhum bloco `end` é alcançável a partir do `start` |
-| `question_without_label` | Uma pergunta está sem o texto da pergunta |
-| `question_without_exit` | Uma pergunta não tem para onde ir depois |
-| `choice_without_options` | Um bloco de escolha está sem nenhuma opção |
-| `choice_without_exit` | Um bloco de escolha não tem nenhuma saída ligada |
-| `choice_option_without_edge` | Uma opção específica da escolha não leva a lugar nenhum |
-| `condition_without_branches` | Uma condição está sem nenhum ramo configurado |
-| `condition_without_else` | Uma condição não tem a saída "senão" ligada |
-| `action_without_config` | Um bloco de ação está sem a configuração que o tipo dele exige |
-| `send_message_without_inbox` | Um bloco de mensagem está sem caixa de entrada escolhida |
-| `send_message_requires_phone_question` | Há mensagem no formulário mas nenhuma pergunta guarda o telefone |
-| `api_without_url` | Uma consulta está sem endereço |
-| `api_without_error_exit` | Uma consulta está sem a saída de erro ligada |
-| `api_url_host_not_literal` | O domínio da consulta tem variável (só caminho e valores aceitam) |
-| `unknown_variable_in_url` | A URL usa uma variável de família desconhecida |
-| `account_variable_in_url` | A URL usa `{{conta.*}}` (variável da conta só vale em cabeçalho) |
-| `lead_variable_in_header` | Um cabeçalho usa variável vinda do lead (`answer`, `contact`, `api`, `ia`) |
-| `ai_without_prompt` | Um bloco de IA está sem instrução |
-| `ai_without_categories` | Um bloco de IA em modo classificar está sem categorias |
-| `ai_without_error_exit` | Um bloco de IA (modo gerar) está sem a saída de erro ligada |
-| `ai_without_other_exit` | Um bloco de IA (modo classificar) está sem a saída "outros" ligada |
+| `no_start` | Não existe bloco `start` |
+| `start_without_exit` | O `start` não tem aresta saindo |
+| `no_reachable_end` | Nenhum `end` alcançável a partir do `start` |
+| `form_without_inbox` | O formulário não tem caixa de WhatsApp válida vinculada |
+| `form_requires_phone_question` | Nenhuma pergunta guarda o telefone (`map_to: contact.phone`) — obrigatória em TODO formulário |
+| `question_without_label` | Pergunta sem o texto |
+| `question_without_exit` | Pergunta sem saída |
+| `choice_without_options` | Escolha sem opções |
+| `choice_without_exit` | Escolha sem nenhuma saída ligada |
+| `choice_option_without_edge` | Uma opção específica não leva a lugar nenhum |
+| `condition_without_branches` | Condição sem ramos |
+| `condition_without_else` | Condição sem o "senão" ligado |
+| `action_without_config` | Bloco de ação sem nenhum item completo |
+| `send_message_official_without_template` | Caixa OFICIAL vinculada e o bloco de mensagem sem nenhum modelo |
+| `send_message_qr_without_content` | Caixa QR vinculada e o bloco de mensagem sem nenhum item que entregue algo |
+| `api_without_url` | Consulta sem endereço |
+| `api_without_error_exit` | Consulta sem a saída de erro ligada |
+| `api_url_host_not_literal` | O domínio da consulta tem variável |
+| `api_method_invalid` | `method` fora de GET/POST/PUT/PATCH/DELETE |
+| `unknown_variable_in_url` | A URL usa variável de família desconhecida |
+| `unknown_variable_in_body` | O corpo usa variável de família desconhecida (ou `{{` malformado) |
+| `account_variable_in_url` | A URL usa `{{conta.*}}` (só cabeçalho e corpo aceitam) |
+| `lead_variable_in_header` | Cabeçalho usa variável vinda do lead |
+| `ai_without_prompt` | IA sem instrução |
+| `ai_without_categories` | IA em modo classificar sem categorias |
+| `ai_without_error_exit` | IA (gerar) sem a saída de erro |
+| `ai_without_other_exit` | IA (classificar) sem a saída "outros" |
+| `booking_without_event_type` | Agendamento sem tipo de evento escolhido |
+| `booking_event_type_invalid` | O tipo não é da conta ou está desativado |
+| `booking_without_exit` | Agendamento sem a saída "agendou" ligada |
+| `set_variable_without_assignments` | Definir variável sem nenhuma linha com nome |
+| `set_variable_without_exit` | Definir variável sem saída |
+| `embed_without_url` | Página externa sem endereço |
+| `embed_url_not_https` | O endereço da Página externa não começa com `https://` literal |
+
+**Não existem mais** (renomeadas em 16/08): `send_message_without_inbox` →
+`form_without_inbox`; `send_message_requires_phone_question` → `form_requires_phone_question`.
 
 ## Tetos e limites
 
@@ -233,48 +349,76 @@ Cada chave e o que ela quer dizer:
 | `days` em `stats` e `responses` | máximo 90 (valor ≤ 0 vira 30) |
 | Página de `responses` | 25 por página, fixo; `page` até 10.000 |
 | Chamadas de IA | 300 por formulário/dia, 1.000 por conta/dia, 10 por resposta |
-| Consultas (`api_request`) | 2.000 por formulário/dia, 10.000 por conta/dia |
+| Consultas (`api_request`) | 2.000 por formulário/dia, 10.000 por conta/dia; corpo até 64 KB |
 | Arquivo enviado pelo lead | 10 MB por arquivo, 10 arquivos por resposta |
 | Imagem de bloco (só pelo painel) | 5 MB, apenas `image/*` |
 | Funil em `stats` | 50.000 respostas (acima disso o funil sai parcial) |
+| Itens do bloco de Ações / linhas do Definir variável | 20 cada; 1000 caracteres por valor |
+| Respostas por chamada do simulador | 60 |
+| Altura da Página externa | 240..1200 px |
+| Conferência de embed | 5 s por salto, até 3 redirecionamentos |
+
+## Simulador (`lionchat_lead_forms_test_run`)
+
+Roda o **rascunho** (`form_data`, não a foto) no motor de verdade e desfaz tudo no fim — nada fica
+no banco: sem contato, sem conversa, sem WhatsApp, sem pixel, sem resposta nos relatórios. Não
+exige admin. O estado do teste vive em quem chama: cada chamada reproduz o teste inteiro a partir
+da lista de respostas.
+
+- Body: `{answers: [{node_id, value}]}` — até 60 itens; vazio = começa do início. Item cujo
+  `node_id` não é o bloco atual PARA a reprodução ali (devolve o bloco onde parou).
+- Resposta 200: `{block, log, answers, variables, form}` — `block` é o mesmo envelope da página
+  pública; `log` é o caminho percorrido (`[{node_id, type, label, answer, detail}]` — o `detail`
+  mostra variável criada, ações executadas, resultado de consulta/IA e o rumo das condições).
+- 422: `{error: "invalid_value", reason}` (uma resposta reprovada na validação) ou
+  `{error: "test_run_failed", reason}`.
 
 ## Respostas e funil
 
-**`lionchat_lead_forms_stats`** (`days` opcional) devolve:
+**`lionchat_lead_forms_stats`** (`days` opcional) devolve views/starts/completed/abandoned/
+completion_rate + `funnel` por bloco + `milestones`. O funil lista os blocos que a pessoa vê
+(`start`, `question`, `choice`, `message`, `booking`, `embed`, `end`), na ordem do desenho
+**publicado**.
 
-```json
-{ "views": 320, "starts": 180, "completed": 96, "abandoned": 40, "completion_rate": 53,
-  "funnel": [{ "node_id": "q_nome", "type": "question", "label": "Qual é o seu nome?",
-               "reached": 175, "percent": 97 }],
-  "milestones": [{ "node_id": "n7", "name": "Qualificado", "reached": 62 }] }
-```
-
-O funil só lista os blocos que a pessoa vê (`start`, `question`, `choice`, `message`, `end`), na
-ordem do desenho **publicado**.
-
-**`lionchat_lead_forms_responses_list`** aceita `status` (`in_progress`, `completed` ou `abandoned`;
-valor fora da lista é ignorado), `days` e `page`. A lista **nunca** traz as respostas em si — só
-`{id, status, contact, current_node_label, answered_count, created_at, completed_at}`.
+**`lionchat_lead_forms_responses_list`** aceita `status` (`in_progress`, `completed`,
+`abandoned`), `days` e `page`. A lista nunca traz as respostas em si — só `{id, status, contact,
+current_node_label, answered_count, created_at, completed_at}`. **`contact` pode vir
+`{id: null, name, phone, pending: true}`** — é quem ainda está preenchendo (o contato só nasce nos
+três momentos); nome e telefone saem do que a pessoa já digitou.
 
 **`lionchat_lead_forms_responses_show`** traz o conteúdo:
 
-- `answers`: `[{label, value_label, at, download_url?}]` — o `download_url` só existe em resposta de
-  envio de arquivo (e vem nulo se o arquivo já foi apagado).
-- `milestones`: os marcos que a pessoa atingiu.
-- `effects`: o resultado dos blocos de consulta e de IA — `{node_id, label, state, error, status,
-  url_short, at}`. `state` é `pending`, `done` ou `error`. **`url_short` é esquema + host + caminho,
-  sem a query**; o valor enviado, os cabeçalhos e o prompt **nunca** saem pela API.
+- `answers`: `[{label, value_label, at, download_url?}]`. **Atenção:** o bloco de Ações grava
+  entradas SINTÉTICAS com chave `"<node_id>::<n>"` — nem toda chave de `answers` é id de bloco.
+- `conversation`: `{id, display_id}` ou `null` — a conversa aberta na caixa vinculada.
+- `milestones`: os marcos atingidos.
+- `effects`: resultado de consulta/IA — `{node_id, label, state, error, status, url_short, at}`.
+  `url_short` é esquema + host + caminho, sem a query; corpo, cabeçalhos e prompt nunca saem.
 - `utm_params`: de onde o lead veio.
 
-Motivos de erro que aparecem em `effects`: `http_<código>`, `timeout`, `ssrf_blocked`,
-`invalid_url`, `result_too_large`, `stale`, `busy`, `budget_exceeded`, `no_ai_key`, `ai_error`,
+Motivos de erro em `effects`: `http_<código>`, `timeout`, `ssrf_blocked`, `invalid_url`,
+`result_too_large`, `stale`, `busy`, `budget_exceeded`, `no_ai_key`, `ai_error`,
 `unresolved_variable`.
+
+## Conferência de iframe (`lionchat_lead_forms_check_embed`)
+
+Body `{url}`. Resposta `{status, reason}`:
+
+| `status` | `reason` | Significado |
+|---|---|---|
+| `allowed` | — | O site aceita ser exibido dentro do formulário |
+| `blocked` | `not_https` | URL não começa com https:// |
+| `blocked` | `x_frame_options` / `frame_ancestors` | O site declara que recusa iframe |
+| `blocked` | `url_blocked` | Endereço bloqueado por segurança (rede interna etc.) |
+| `unknown` | `unreachable` / `http_<código>` | Não deu pra conferir — a página tenta o iframe e o botão de abrir fora cobre |
+
+O veredito deve ser gravado em `embed_allowed` do bloco. Sites de checkout são os que mais recusam.
 
 ## Receitas
 
 ### 1. Formulário simples que já publica
 
-Desenho mínimo que passa na publicação: início, nome, telefone, fim.
+Início, nome, telefone, fim — E a caixa vinculada:
 
 ```json
 {
@@ -299,112 +443,57 @@ Desenho mínimo que passa na publicação: início, nome, telefone, fim.
 }
 ```
 
-Mande isso em `lionchat_lead_forms_create` junto com `name`, depois
-`lionchat_lead_forms_publish` e `lionchat_lead_forms_update` com `active: true`.
+Mande isso em `lionchat_lead_forms_create` junto com `name` e um `inbox_id` de caixa WhatsApp,
+depois `lionchat_lead_forms_publish` e `lionchat_lead_forms_update` com `active: true`.
 
 ### 2. Consultar o CEP e ramificar pela cidade
 
-Pergunta o CEP, consulta o ViaCEP e manda quem é de São Paulo para um caminho diferente.
-Fragmento — os blocos `start`, `msg_sp`, `msg_outros`, `fim_erro` e os fins ficam de fora por
-brevidade; no envio real todos precisam existir e alcançar um bloco de fim.
-
-```json
-{
-  "nodes": [
-    { "id": "q_cep", "type": "question", "position": { "x": 0, "y": 200 },
-      "data": { "label": "Qual é o seu CEP?", "field_type": "short_text", "required": true } },
-    { "id": "api_cep", "type": "api_request", "position": { "x": 0, "y": 400 },
-      "data": { "label": "Consulta de CEP",
-                "url": "https://viacep.com.br/ws/{{answer.q_cep}}/json/",
-                "headers": [], "timeout": 8 } },
-    { "id": "cond_sp", "type": "condition", "position": { "x": 0, "y": 600 },
-      "data": { "branches": [ { "id": "b1", "source_node_id": "api_cep",
-                                "path": "localidade", "operator": "equals",
-                                "value": "São Paulo" } ] } }
-  ],
-  "edges": [
-    { "id": "e1", "source": "q_cep", "target": "api_cep", "sourceHandle": "success" },
-    { "id": "e2", "source": "api_cep", "target": "cond_sp", "sourceHandle": "success" },
-    { "id": "e3", "source": "api_cep", "target": "fim_erro", "sourceHandle": "error" },
-    { "id": "e4", "source": "cond_sp", "target": "msg_sp", "sourceHandle": "cond_b1" },
-    { "id": "e5", "source": "cond_sp", "target": "msg_outros", "sourceHandle": "else" }
-  ]
-}
-```
-
-Três coisas obrigatórias aqui: a saída `error` ligada, o `else` ligado, e o `path` no ramo (porque a
-fonte é uma consulta). Faltando qualquer uma, a publicação recusa.
+Igual à receita clássica: pergunta o CEP, consulta o ViaCEP (`method` pode ficar de fora — GET é o
+padrão) e ramifica com `path` no ramo cuja fonte é a consulta. Obrigatórios: saída `error` ligada,
+`else` ligado e o `path`.
 
 ### 3. Triagem por IA
 
-Classifica o que a pessoa escreveu e manda cada caso para um lugar.
-
-```json
-{
-  "nodes": [
-    { "id": "q_motivo", "type": "question", "position": { "x": 0, "y": 200 },
-      "data": { "label": "Conte rapidinho o que você precisa",
-                "field_type": "long_text", "required": true } },
-    { "id": "ia_triagem", "type": "ai", "position": { "x": 0, "y": 400 },
-      "data": { "label": "Triagem", "mode": "classify",
-                "prompt": "Classifique o pedido do cliente em uma das categorias.",
-                "categories": [ { "id": "c1", "label": "Orçamento" },
-                                { "id": "c2", "label": "Suporte" } ],
-                "include_answers": true, "model": "" } }
-  ],
-  "edges": [
-    { "id": "e1", "source": "q_motivo", "target": "ia_triagem", "sourceHandle": "success" },
-    { "id": "e2", "source": "ia_triagem", "target": "fim_orcamento", "sourceHandle": "cat_c1" },
-    { "id": "e3", "source": "ia_triagem", "target": "fim_suporte", "sourceHandle": "cat_c2" },
-    { "id": "e4", "source": "ia_triagem", "target": "fim_geral", "sourceHandle": "other" }
-  ]
-}
-```
-
-Enquanto a consulta ou a IA roda, o lead vê um bloco de espera — o formulário não trava nem perde a
-sessão.
+`mode: "classify"` + `categories` + arestas `cat_<id>` e `other`. Inalterado.
 
 ### 4. Disparar um fluxo quando o formulário for concluído
 
-O gatilho mora no **fluxo**, não no formulário. Use `lionchat_flows_create` ou
-`lionchat_flows_update` e coloque o item no bloco de início:
+O gatilho mora no **fluxo**: `{ "key": "lead_form_completed", "lead_form_id": 12 }` no bloco de
+início do flow. Três gatilhos: `lead_form_completed`, `lead_form_milestone` (aceita
+`milestone_node_id`), `lead_form_abandoned`. O `lead_form_id` pode ir no topo do item ou em
+`config`. **O gatilho só dispara depois que o contato nasce** — antes fica guardado. O fluxo
+recebe `form_name`, `form_kind`, `form_milestone` e uma variável `form_<pergunta>` por resposta.
+
+### 5. Agendamento dentro do formulário
 
 ```json
-{ "key": "lead_form_completed", "lead_form_id": 12 }
+{ "id": "agenda", "type": "booking", "position": { "x": 0, "y": 500 },
+  "data": { "label": "Escolha um horário", "event_type_id": "34", "required": false } }
 ```
 
-Três gatilhos existem:
-
-| `key` | Quando dispara |
-|---|---|
-| `lead_form_completed` | A pessoa chegou ao bloco de fim |
-| `lead_form_milestone` | A pessoa passou por um bloco de ação do tipo `milestone` |
-| `lead_form_abandoned` | A pessoa parou de responder e passou o tempo de `abandon_minutes` |
-
-No `lead_form_milestone` dá pra acrescentar `milestone_node_id` para mirar um marco específico; sem
-ele, qualquer marco daquele formulário dispara. O `lead_form_id` (e o `milestone_node_id`) podem ir
-no topo do item ou dentro de `config` — o motor lê os dois.
-
-**O gatilho só dispara se a resposta já tiver contato**, ou seja, se nome e telefone foram
-respondidos. E dispara uma vez só por resposta e por tipo. O fluxo recebe as respostas como
-variáveis: `form_name`, `form_kind`, `form_milestone` e uma variável `form_<pergunta>` por resposta
-dada.
+Ligue `success` (obrigatória) pro caminho de quem agendou e `no_booking` pro de quem seguiu sem
+agendar (com `required: true` essa saída deixa de existir). O tipo de evento vem de
+`lionchat_booking_event_types_list`.
 
 ## Armadilhas
 
-- **O `slug` é gerado e imutável.** Mandar `slug` no create ou no update não faz nada. Link
-  publicado nunca muda de endereço.
+- **O `slug` é EDITÁVEL** (mudou em 16/08). Trocar o slug derruba os links já divulgados —
+  inclusive os já enviados em mensagens. Vazio mantém o atual; duplicado dá 422.
+- **`inbox_id` só troca por caixa do MESMO tipo de canal** (`channel type cannot change`), e a
+  troca só vale ao republicar.
 - **`published_data` nunca sai pela API.** Para saber o que está no ar, olhe `published_at` e
-  compare mentalmente com o `form_data` — não existe endpoint que devolva a foto.
-- **`form_data` no update SUBSTITUI o desenho inteiro.** Não há merge. Leia com
-  `lionchat_lead_forms_show`, altere o que precisa e mande o desenho completo de volta. Mandar só os
-  nós novos apaga todo o resto.
-- **A cópia nasce desligada e não publicada.** `duplicate` cria com `active: false`, sem
-  `published_at`, com `" (cópia)"` no nome e slug novo. As imagens são duplicadas de verdade (blobs
-  novos), então mexer nelas na cópia não afeta o original.
-- **Publicar não ativa.** São dois passos: `publish` (tira a foto) e `update` com `active: true`.
-- **Flag desligada = página 404.** Se o cliente diz que o link não abre e as tools funcionam
-  normalmente, o suspeito número um é a feature `lead_forms` da conta.
-- **`media_urls` só existe no `show`.** A listagem não traz, de propósito (payload).
-- **Nunca escreva segredo em cabeçalho literal** de `api_request` — use `{{conta.<variável>}}`, que
-  resolve só no servidor e nunca aparece na tela nem no log.
+  `published_inbox_id`.
+- **`form_data` no update SUBSTITUI o desenho inteiro.** Não há merge. Leia com `show`, altere e
+  mande o desenho completo de volta.
+- **A cópia nasce desligada e não publicada** — e copia o `inbox_id`. Imagens viram blobs novos.
+- **Publicar não ativa.** `publish` (foto) e `update` com `active: true` são dois passos.
+- **Flag desligada = página 404.** Tools funcionando + link 404 = feature `lead_forms` desligada.
+- **`media_urls` só existe no `show`.**
+- **`answers` tem chaves sintéticas** `"<node_id>::<n>"` (bloco de Ações) — não são ids de bloco.
+- **`embed_allowed` é veredito do servidor** (`check_embed`) — escrever `true` na mão faz a página
+  tentar um iframe que pode estar bloqueado.
+- **Nunca escreva segredo em cabeçalho/corpo literal** de `api_request` — use
+  `{{conta.<variável>}}`, que resolve só no servidor.
+- **Não há tool de rewind**: o "Voltar e corrigir" é da página pública (o lead corrige a própria
+  resposta; telefone corrigido reencaminha a mensagem pro número certo). Pela API de dashboard,
+  respostas são somente leitura.

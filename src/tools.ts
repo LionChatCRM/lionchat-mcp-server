@@ -427,7 +427,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-08-15)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-08-18)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -620,7 +620,13 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     conversation_no_team (NOVO 2026-08-15: conversa SEM equipe atribuida — e o preset "Sem equipe"
       da tela; operador dedicado, sem value), conversation_has_ai_agent/conversation_no_ai_agent
       (IA ativa/inativa na conversa; not_ai_agent = sinonimo de no_ai_agent),
-    contact_has_label/conversation_has_label,
+    contact_has_label/contact_no_label/conversation_has_label/conversation_no_label
+      (values = array de titulos ou string com virgula. ATENCAO 2026-08-18: escreva operator E
+      field JUNTOS — conversa usa field '{{conversation.label}}', contato usa '{{contact.label}}';
+      a tela reabre a regra casando o par, e condicao escrita so com operator roda certa mas
+      APARECE errada pro cliente. Mesma regra vale pros pares kanban_exists/kanban_in_stage
+      (fields '_kanban_check'/'_kanban_stage'), kanban_won/kanban_lost (field '_kanban_status') e
+      resposta do cliente/do atendente (fields '{{last_response}}'/'{{last_agent_response}}')),
     kanban_exists/kanban_in_stage/kanban_won/kanban_lost (funnel_id e CHAVE SEPARADA da condicao,
       numero ex funnel_id:37; a etapa vai em value=slug puro ex value:"avaliacao_aceita" ou em stage,
       NAO no formato "37:etapa"), pagetrack_visited/pagetrack_event,
@@ -680,8 +686,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       add_card_offer({offer_id, use_custom_value?, custom_value?, funnel_id?, card_source?}) — adiciona
         oferta (produto/servico) ao card; offer_id de offers_list; use_custom_value:true + custom_value
         grava valor personalizado, senao usa o valor cadastrado; total do card recalcula sozinho
-    Sistema (SO flow conversation): send_webhook({url,headers?,body?}), start_flow({flow_id}),
-      deactivate_flow({})
+    Sistema (SO flow conversation): send_webhook({url,headers?,body?}), start_flow({flow_id}
+      — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save mas IGNORADO
+      EM SILENCIO na execucao, e o fluxo para ali [2026-08-18]), deactivate_flow({})
   card_source (acoes de card): 'funnel' (default, acha o card pelo funnel_id) | 'trigger' (usa o card
     que DISPAROU o flow em card_created/card_moved/card_won/card_lost). Com 'trigger' o funnel_id e
     ignorado — EXCETO create_kanban_item/move_kanban_stage (funil = DESTINO). Vale pra move_kanban_stage,
