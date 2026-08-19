@@ -57,6 +57,14 @@ const SLIM_KEYS = new Set([
 // (segredos continuam redigidos mesmo assim).
 const SLIM_EXEMPT_SUBSTRINGS = ['whatsapp_templates', 'csat_template'];
 
+// AIDEV-NOTE: [auditoria adversus A3] parametro do CONECTOR (nunca chega ao Rails) que carrega o
+// OK do usuario pra ferramenta marcada com `confirm_required` no catalogo. Stripado antes do
+// bucketing, igual full_response.
+export const CONFIRM_PARAM = 'confirm';
+export const CONFIRM_DESCRIPTION =
+  'OBRIGATORIO nesta ferramenta: ela ALTERA algo que o usuario ve na tela. Confirme com ele o que ' +
+  'vai ser criado/alterado/apagado e so entao reenvie com confirm:true. Sem isso a chamada e recusada.';
+
 export const FULL_RESPONSE_PARAM = 'full_response';
 export const FULL_RESPONSE_DESCRIPTION =
   'true = resposta COMPLETA, sem a poda de campos pesados (message_templates, working_hours, ' +

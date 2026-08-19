@@ -25457,6 +25457,308 @@
   ]
  },
  {
+  "id": "lionchat_custom_dashboards_list",
+  "method": "GET",
+  "path": "/api/v2/accounts/{account_id}/custom_dashboards",
+  "title": "Relatorios Personalizados (listar)",
+  "description": "[GET] Lista TODOS os relatorios personalizados da conta (a aba 'Personalizados' em Relatorios), cada um JA com o array `widgets` completo — id e desenho de cada bloco. E daqui que sai o `widget_id` pra calcular um bloco. So administrador (401 caso contrario). ATENCAO: NAO tem paginacao nem filtro. Com muitos relatorios cheios a resposta pode vir CORTADA no limite do conector — se vier o aviso de corte, NUNCA use essa lista pra montar um `custom_dashboards_update`: voce apagaria os blocos que nao chegaram.",
+  "category": "Relatorios",
+  "params": [],
+  "returns": "Array de { id, name, position, widgets: [...], created_at }",
+  "common_use_cases": [
+   "Descobrir quais relatorios personalizados o cliente montou",
+   "Pegar o widget_id de um bloco pra calcular o numero dele",
+   "Ler o desenho de um bloco antes de alterar o relatorio"
+  ],
+  "related_tools": [
+   "lionchat_custom_dashboards_widget_data",
+   "lionchat_custom_dashboards_update"
+  ]
+ },
+ {
+  "id": "lionchat_custom_dashboards_widget_data",
+  "method": "POST",
+  "path": "/api/v2/accounts/{account_id}/custom_dashboards/{id}/widget_data",
+  "title": "Calcular Bloco Salvo",
+  "description": "[POST] Calcula UM bloco que JA esta salvo num relatorio personalizado e devolve os numeros. O desenho e lido de dentro do relatorio salvo — o corpo so diz QUAL bloco (widget_id). Pra calcular um desenho que ainda nao existe, use `custom_dashboards_preview_widget`. So administrador (401 caso contrario). Formato da resposta pelo campo `shape`: series {series:[{timestamp,value}]} (timestamp unix em segundos; metricas de tempo trazem tambem `count` por ponto) · categories {categories:[{label,value}]} (funnel_stages vem na ORDEM DAS ETAPAS, nunca por valor) · scalar {value,total,secondary} (use `total` pra separar 'ninguem respondeu' de 'zero legitimo'; SLA sem nenhum prazo aplicado devolve 100.0) · table {dimension,columns,rows,total} (o `total` NAO e a soma das linhas, e contagem propria por metrica). Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio).",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "Id do relatorio personalizado (vem do custom_dashboards_list)"
+   },
+   {
+    "name": "widget_id",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Id do bloco DENTRO daquele relatorio (campo `id` de um item de `widgets`)"
+   },
+   {
+    "name": "timezone_offset",
+    "type": "number",
+    "location": "body",
+    "required": false,
+    "description": "Fuso em HORAS (Brasilia = -3). SEMPRE envie: ausente calcula em UTC e o numero nao bate com o que o cliente ve na tela (baldes de dia deslocados ate 3h)."
+   }
+  ],
+  "returns": "Um dos 4 formatos normalizados (series | categories | scalar | table), com o campo `shape` dizendo qual",
+  "common_use_cases": [
+   "Responder 'o que meu relatorio de vendas mostra hoje?'",
+   "Ler o numero de um grafico que o cliente montou na tela"
+  ],
+  "related_tools": [
+   "lionchat_custom_dashboards_list",
+   "lionchat_custom_dashboards_preview_widget"
+  ]
+ },
+ {
+  "id": "lionchat_custom_dashboards_preview_widget",
+  "method": "POST",
+  "path": "/api/v2/accounts/{account_id}/custom_dashboards/preview_widget",
+  "title": "Calcular Bloco na Hora (sem salvar)",
+  "description": "[POST] Monta um bloco de relatorio NA HORA e devolve os numeros, SEM salvar nada. E a ferramenta pra responder pergunta de relatorio que nao tem grafico pronto — ex.: 'quantos cards foram GANHOS em cada etapa do funil X nos ultimos 30 dias' (funnel_stages + date_basis:closed + status:won). Nao existe consulta livre: escolha um `widget_type` e preencha SO os campos daquele tipo; o servidor revalida tudo antes de calcular. So administrador (401 caso contrario). Campo que nao esta na lista abaixo e DESCARTADO EM SILENCIO. Formato da resposta pelo campo `shape`: series {series:[{timestamp,value}]} (timestamp unix em segundos; metricas de tempo trazem tambem `count` por ponto) · categories {categories:[{label,value}]} (funnel_stages vem na ORDEM DAS ETAPAS, nunca por valor) · scalar {value,total,secondary} (use `total` pra separar 'ninguem respondeu' de 'zero legitimo'; SLA sem nenhum prazo aplicado devolve 100.0) · table {dimension,columns,rows,total} (o `total` NAO e a soma das linhas, e contagem propria por metrica). Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). Tabela completa de tipos, metricas e armadilhas no resource lionchat://docs/reports-guide.",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "widget_type",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "OBRIGATORIO. Um de: conversations_timeseries (evolucao no tempo) | entity_ranking (comparar agente/caixa/equipe/etiqueta) | csat_summary (satisfacao) | sla_summary (cumprimento de prazo, exige o recurso 'sla') | funnel_stages (cards por etapa de UM funil, exige 'kanban_board') | lead_origin (origem do lead, exige 'liontrack') | agent_report (tabela de produtividade por operador)."
+   },
+   {
+    "name": "chart_type",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "line|bar (timeseries) · bar|table (entity_ranking, funnel_stages) · number (csat_summary, sla_summary) · bar|pie (lead_origin) · table (agent_report). Omitir aplica o padrao do tipo."
+   },
+   {
+    "name": "metric",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "timeseries: conversations | incoming_messages | outgoing_messages | resolutions | reopens | avg_first_response_time | avg_resolution_time. entity_ranking: conversations | resolutions | avg_first_response_time | avg_resolution_time. Os dois tempos vem em SEGUNDOS."
+   },
+   {
+    "name": "dimension",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "entity_ranking: agent|inbox|team|label. agent_report: agent|team|inbox (as LINHAS da tabela)."
+   },
+   {
+    "name": "bucket",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "So no timeseries: day | week | month."
+   },
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "So no funnel_stages. Precisa ser funil DESTA conta."
+   },
+   {
+    "name": "date_basis",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "So no funnel_stages: created (entrou no funil) | moved (entrou na etapa, padrao) | closed (foi fechado) | any. Combine com status: closed+won = 'ganhos no periodo'."
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "So no funnel_stages: all | open | won | lost."
+   },
+   {
+    "name": "scope_type",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "ATENCAO — sentido DIFERENTE por tipo. No timeseries: 'o grafico e SO daquela entidade' (agent|inbox|team). No agent_report: 'mostre so as LINHAS de quem e dessa equipe/caixa'. Exige scope_id junto, senao e recusado."
+   },
+   {
+    "name": "scope_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Id da entidade do scope_type. Precisa ser DESTA conta."
+   },
+   {
+    "name": "time_range",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "last_7_days | last_30_days | this_month | last_month | custom. 'custom' SO existe em conversations_timeseries e agent_report, exige from+to, e a janela nao pode passar de 92 DIAS (o teto e da janela, vale pros dois). Pedir 'esse ano' e recusado."
+   },
+   {
+    "name": "from",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "AAAA-MM-DD. Obrigatorio quando time_range=custom."
+   },
+   {
+    "name": "to",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "AAAA-MM-DD. Obrigatorio quando time_range=custom."
+   },
+   {
+    "name": "columns",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "So no agent_report — as COLUNAS da tabela. Cada item: {metric, as?} com metric em leads | atendidos | resolvidas | abertas | pendentes | adiadas | label_count | conversao. label_count exige label_id (id de etiqueta DESTA conta). conversao exige denominator (uma das metricas do nucleo) e numerator = LISTA DE IDS DE ETIQUETA (ex: [5,9]) — NUNCA nome de metrica."
+   },
+   {
+    "name": "timezone_offset",
+    "type": "number",
+    "location": "query",
+    "required": false,
+    "description": "Fuso em HORAS (Brasilia = -3). SEMPRE envie: ausente calcula em UTC e o numero nao bate com o que o cliente ve na tela (baldes de dia deslocados ate 3h)."
+   }
+  ],
+  "returns": "Um dos 4 formatos normalizados (series | categories | scalar | table), com o campo `shape` dizendo qual",
+  "common_use_cases": [
+   "Responder pergunta de relatorio que nenhuma outra ferramenta cobre",
+   "Comparar atendentes/caixas/equipes num periodo",
+   "Cards por etapa de um funil, com recorte por situacao e por data de fechamento",
+   "Tabela de produtividade por operador com colunas escolhidas"
+  ],
+  "related_tools": [
+   "lionchat_custom_dashboards_create",
+   "lionchat_custom_dashboards_widget_data"
+  ],
+  "body_wrapper": "widget"
+ },
+ {
+  "id": "lionchat_custom_dashboards_create",
+  "method": "POST",
+  "path": "/api/v2/accounts/{account_id}/custom_dashboards",
+  "title": "Criar Relatorio Personalizado",
+  "description": "[POST] Cria um relatorio personalizado que passa a APARECER NA TELA do cliente, na aba 'Personalizados' de Relatorios. ALTERA O QUE O CLIENTE VE: exige confirm:true depois de confirmar com ele. So administrador (401 caso contrario). Cada bloco de `widgets` usa os MESMOS campos do preview_widget (teste o desenho la antes de salvar) e PRECISA de um `id` proprio e unico — se faltar, o servidor gera. Um bloco invalido barra a criacao INTEIRA com 422 e o motivo em texto: nunca salva pela metade. Tetos: 50 relatorios por conta, 12 blocos por relatorio. Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio).",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome do relatorio, como aparece na aba do cliente"
+   },
+   {
+    "name": "position",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ordem na lista (padrao 0)"
+   },
+   {
+    "name": "widgets",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Lista de blocos. Cada item: {id, widget_type, chart_type, ...} com os mesmos campos do custom_dashboards_preview_widget. Maximo 12."
+   }
+  ],
+  "returns": "{ id, name, position, widgets, created_at }",
+  "common_use_cases": [
+   "Montar pro cliente um relatorio que ele pediu em palavras",
+   "Deixar salvo na tela um recorte que ele consulta toda semana"
+  ],
+  "related_tools": [
+   "lionchat_custom_dashboards_preview_widget",
+   "lionchat_custom_dashboards_update"
+  ],
+  "body_wrapper": "custom_dashboard",
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_custom_dashboards_update",
+  "method": "PATCH",
+  "path": "/api/v2/accounts/{account_id}/custom_dashboards/{id}",
+  "title": "Alterar Relatorio Personalizado",
+  "description": "[PATCH] Altera um relatorio personalizado. ALTERA O QUE O CLIENTE VE: exige confirm:true depois de confirmar com ele. So administrador (401 caso contrario). ATENCAO — `widgets` SUBSTITUI a lista inteira, nao acrescenta: mandar um bloco APAGA os outros. Leia o relatorio com custom_dashboards_list, altere o array e devolva-o COMPLETO. Se a listagem tiver vindo cortada, NAO use: voce apagaria o que nao chegou. Nao ha historico de alteracao — bloco apagado nao volta. Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio).",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "Id do relatorio personalizado"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Novo nome"
+   },
+   {
+    "name": "position",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Nova ordem na lista"
+   },
+   {
+    "name": "widgets",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Lista COMPLETA de blocos — substitui a atual. Preserve o `id` de cada bloco que ja existia, senao a tela perde o vinculo. Maximo 12."
+   }
+  ],
+  "returns": "{ id, name, position, widgets, created_at }",
+  "common_use_cases": [
+   "Acrescentar um bloco a um relatorio que ja existe",
+   "Trocar o periodo ou o recorte de um bloco"
+  ],
+  "related_tools": [
+   "lionchat_custom_dashboards_list",
+   "lionchat_custom_dashboards_create"
+  ],
+  "body_wrapper": "custom_dashboard",
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_custom_dashboards_destroy",
+  "method": "DELETE",
+  "path": "/api/v2/accounts/{account_id}/custom_dashboards/{id}",
+  "title": "Apagar Relatorio Personalizado",
+  "description": "[DELETE] Apaga um relatorio personalizado da tela do cliente. SEM LIXEIRA E SEM DESFAZER. Exige confirm:true depois de confirmar com o usuario EXATAMENTE qual relatorio sera apagado (confira o nome com custom_dashboards_list antes). So administrador (401 caso contrario).",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "Id do relatorio personalizado a apagar"
+   }
+  ],
+  "returns": "204 sem corpo",
+  "common_use_cases": [
+   "Remover um relatorio que o cliente nao usa mais"
+  ],
+  "related_tools": [
+   "lionchat_custom_dashboards_list"
+  ],
+  "confirm_required": true
+ },
+ {
   "id": "lionchat_inboxes_whatsapp_history_start",
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_history/start",

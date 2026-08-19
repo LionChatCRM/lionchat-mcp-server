@@ -245,7 +245,50 @@ payload=[
 **R6 — Cards parados (sem tarefa) com atributo do contato:**
 `kanban_items_filter funnel_id=37 task_filter=no_task contact_custom_attribute_filters="[{\"attribute_key\":\"ja_investe\",\"filter_operator\":\"equal_to\",\"values\":[\"ja_invisto\"]}]"`
 
+**R7 — Pergunta de relatório que NENHUMA ferramenta responde pronta** (relatório personalizado
+montado na hora, sem salvar nada). Ex.: *"quantos cards foram ganhos em cada etapa do funil 37 nos
+últimos 30 dias?"*
+
+```json
+custom_dashboards_preview_widget
+  widget_type=funnel_stages  chart_type=bar  funnel_id=37
+  date_basis=closed  status=won  time_range=last_30_days  timezone_offset=-3
+```
+Resposta: `{shape:"categories", categories:[{label:"Negociação", value:12}, ...]}` — **na ordem das
+etapas do funil**, não por valor. Trocar `date_basis` muda a pergunta: `created` = "entraram no
+funil", `moved` = "entraram na etapa", `closed` = "foram fechados".
+
+**R8 — Tabela de produtividade por operador, com etiqueta e taxa de conversão:**
+
+```json
+custom_dashboards_preview_widget
+  widget_type=agent_report  chart_type=table  dimension=agent
+  time_range=custom  from=2026-08-01  to=2026-08-15  timezone_offset=-3
+  columns=[
+    {"metric":"leads"},
+    {"metric":"atendidos"},
+    {"metric":"label_count","label_id":5,"as":"Agendados"},
+    {"metric":"conversao","numerator":[5],"denominator":"leads","as":"% agendamento"}
+  ]
+```
+> ⚠️ `numerator` é **lista de IDs de etiqueta** (`[5]`), nunca nome de métrica. Mandar
+> `["label_count"]` faz a coluna de conversão **sumir em silêncio**.
+> ⚠️ `time_range=custom` aceita no máximo **92 dias**, e só existe em `agent_report` e
+> `conversations_timeseries`. Pedir "esse ano" volta 422 com a explicação.
+> ⚠️ O `total` da tabela **não é a soma das linhas** — cada métrica tem contagem própria.
+
+**R9 — Salvar isso como relatório na tela do cliente:** teste com o R8, mostre o número, confirme
+com o usuário e só então:
+```json
+custom_dashboards_create  confirm=true
+  name="Produtividade da equipe"
+  widgets=[{"id":"prod-1", ...mesmo desenho do R8...}]
+```
+Para **alterar** depois: leia com `custom_dashboards_list`, mexa no array e devolva-o **completo** —
+`widgets` substitui a lista inteira, e preservar o `id` de cada bloco é o que mantém o vínculo.
+
 **Erros clássicos a evitar:** `includes` em labels (não existe — use equal_to); operador de
 número/data em texto; array-de-objetos em query (padrão B exige JSON-string); esquecer
 `custom_attribute_type` quando contato e conversa têm atributo de mesmo nome; esperar paginação
-no kanban_items_filter (não tem — estreite o filtro).
+no kanban_items_filter (não tem — estreite o filtro); montar um `custom_dashboards_update` em cima
+de uma listagem que veio cortada (apaga os blocos que não chegaram).

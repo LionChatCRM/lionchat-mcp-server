@@ -526,3 +526,82 @@ Endpoints de relatório podem retornar **MUITOS** dados:
 - `csat_list` sem filtro → milhares
 
 **Sempre limite período** quando o usuário não foi específico. Se pediu "esta semana", use 7d. Se pediu "vamos ver tudo", confirme antes (ano inteiro pode ser muito).
+
+---
+
+## Relatórios personalizados — ler, calcular e montar (2026-08)
+
+É a aba **Personalizados** dentro de Relatórios: o cliente monta blocos (gráficos e tabelas) e salva
+num painel. Tudo aqui é **só administrador** — quem não for recebe **401** (não é problema de
+conexão do conector; não mande reconectar).
+
+| Ferramenta | Para quê |
+|---|---|
+| `lionchat_custom_dashboards_list` | Quais relatórios existem, já com os blocos dentro |
+| `lionchat_custom_dashboards_widget_data` | O número de um bloco **já salvo** |
+| `lionchat_custom_dashboards_preview_widget` | Monta um bloco **na hora** e calcula, sem salvar |
+| `lionchat_custom_dashboards_create` | Cria um relatório que **aparece na tela do cliente** |
+| `lionchat_custom_dashboards_update` | Altera (substitui a lista de blocos) |
+| `lionchat_custom_dashboards_destroy` | Apaga, **sem desfazer** |
+
+As três últimas **alteram o que o cliente vê** e só rodam com `confirm: true` — confirme com ele o
+que exatamente vai mudar antes de reenviar.
+
+### `preview_widget` é a ferramenta mais poderosa deste guia
+
+Ela responde pergunta de relatório que **nenhuma outra ferramenta cobre**, porque monta o recorte na
+hora. Exemplo real: *"quantos cards foram ganhos em cada etapa do funil 12 nos últimos 30 dias"* —
+nenhum `reports_*` responde; aqui é `funnel_stages` + `date_basis: closed` + `status: won`.
+
+Não é consulta livre: escolha um `widget_type` e preencha **só os campos daquele tipo**.
+
+### Os 7 tipos de bloco
+
+| Tipo | Campos | Recurso exigido |
+|---|---|---|
+| `conversations_timeseries` | `metric` (conversations, incoming_messages, outgoing_messages, resolutions, reopens, avg_first_response_time, avg_resolution_time) · `bucket` (day/week/month) · `scope_type`+`scope_id` · `time_range` | — |
+| `entity_ranking` | `dimension` (agent/inbox/team/label) · `metric` (conversations, resolutions, avg_first_response_time, avg_resolution_time) · `time_range` | — |
+| `csat_summary` | `time_range` | — |
+| `sla_summary` | `time_range` | `sla` (Enterprise) |
+| `funnel_stages` | `funnel_id` · `date_basis` (created/moved/closed/any) · `status` (all/open/won/lost) · `time_range` | `kanban_board` |
+| `lead_origin` | `time_range` | `liontrack` |
+| `agent_report` | `dimension` (agent/team/inbox) · `scope_type`+`scope_id` · `columns[]` · `time_range` | — |
+
+**`time_range`:** `last_7_days`, `last_30_days`, `this_month`, `last_month` — e `custom` **só em
+`conversations_timeseries` e `agent_report`**, exigindo `from`/`to`. **A janela não pode passar de 92
+dias**, e esse teto é da janela, não de um tipo: pedir "esse ano" é recusado com a explicação.
+
+**Colunas do `agent_report`:** `leads`, `atendidos`, `resolvidas`, `abertas`, `pendentes`, `adiadas`,
+`label_count` (exige `label_id`) e `conversao` (exige `denominator` e `numerator`, que é **lista de
+IDs de etiqueta**, nunca nome de métrica).
+
+### Como ler a resposta (campo `shape`)
+
+| `shape` | Estrutura | Cuidado |
+|---|---|---|
+| `series` | `{series: [{timestamp, value}]}` | `timestamp` é unix em segundos. As duas métricas de tempo vêm em **segundos** e trazem também `count` por ponto |
+| `categories` | `{categories: [{label, value}]}` | `funnel_stages` vem **na ordem das etapas do funil**, nunca por valor — não reordene |
+| `scalar` | `{value, total, secondary}` | Use o `total` para separar "ninguém respondeu" de "zero legítimo". **SLA sem nenhum prazo aplicado devolve 100.0** — não anuncie "100% de cumprimento" sem olhar o total |
+| `table` | `{dimension, columns, rows, total}` | O `total` **não é a soma das linhas** (contagem própria por métrica). As linhas são os membros **atuais**: quem saiu da equipe some da linha e continua no total |
+
+### Armadilhas que fazem o bloco sair errado
+
+1. **`scope_type`/`scope_id` têm sentido OPOSTO por tipo.** No `conversations_timeseries` = "o
+   gráfico é só daquela entidade". No `agent_report` = "mostre só as linhas de quem é dessa
+   equipe/caixa". Confundir troca a conta inteira.
+2. **Campo fora da lista é descartado em silêncio.** Se um valor "não fez efeito", provavelmente o
+   nome do campo está errado.
+3. **Sempre envie `timezone_offset` em HORAS** (Brasília = `-3`). Sem ele o cálculo é em UTC e o
+   número não bate com o que o cliente vê na tela.
+4. **`update` substitui a lista de blocos inteira.** Leia com `list`, altere o array, devolva
+   completo — e preserve o `id` de cada bloco que já existia.
+5. **`list` não pagina.** Se a resposta vier com aviso de corte, **não** use aquela lista para montar
+   um `update`: você apagaria os blocos que não chegaram.
+6. **Recurso não liberado devolve 422 com `code: "feature_unavailable"`** — a resposta certa é "sua
+   conta não tem esse recurso", nunca "não há dados".
+
+### Fluxo recomendado para "me monta um relatório de X"
+
+1. `preview_widget` para **testar o desenho** e conferir que o número faz sentido.
+2. Mostre o número ao usuário e confirme que é o que ele quer.
+3. `create` com `confirm: true`, usando o mesmo desenho.

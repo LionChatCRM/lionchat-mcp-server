@@ -17,6 +17,8 @@ import { fileURLToPath } from 'url';
 import {
   FULL_RESPONSE_PARAM,
   FULL_RESPONSE_DESCRIPTION,
+  CONFIRM_PARAM,
+  CONFIRM_DESCRIPTION,
   supportsFullResponse,
 } from './sanitize.js';
 
@@ -43,6 +45,10 @@ interface EndpointDef {
   // AIDEV-NOTE: Optional Rails strong_params wrapper (e.g. "variable", "assistant")
   // When set, all body params are wrapped under this key before sending the request.
   body_wrapper?: string;
+  // AIDEV-NOTE: [mcp-relatorios-personalizados, auditoria adversus A3] marca a ferramenta como
+  // "so roda com o OK do usuario". O handler RECUSA a chamada sem `confirm: true`. Espelhado no
+  // conector remoto (src/mcp/types.ts) — os dois leem o MESMO endpoints.json.
+  confirm_required?: boolean;
 }
 
 // AIDEV-NOTE: Tool annotations based on HTTP method — informs MCP client about tool behavior
@@ -199,7 +205,8 @@ function paramTypeToZod(param: EndpointParam): ZodTypeAny {
 // o tools/list em ~20-30k tokens).
 function buildZodSchema(
   params: EndpointParam[],
-  toolId?: string
+  toolId?: string,
+  confirmRequired = false
 ): z.ZodObject<Record<string, ZodTypeAny>> {
   const shape: Record<string, ZodTypeAny> = {};
   let hasAccountIdInPath = false;
@@ -246,6 +253,13 @@ function buildZodSchema(
       .describe(FULL_RESPONSE_DESCRIPTION);
   }
 
+  // AIDEV-NOTE: [auditoria adversus A3] ferramenta marcada no catalogo ganha o campo `confirm` —
+  // OPCIONAL no schema de proposito: quem cobra e o handler, com mensagem que explica o que fazer.
+  // Marcar required aqui devolveria erro seco de validacao, sem ensinar nada ao modelo.
+  if (confirmRequired) {
+    shape[CONFIRM_PARAM] = z.boolean().optional().describe(CONFIRM_DESCRIPTION);
+  }
+
   return z.object(shape);
 }
 
@@ -261,7 +275,7 @@ function registerSingleTool(
   client: LionChatClient,
   endpoint: EndpointDef
 ): void {
-  const schema = buildZodSchema(endpoint.params, endpoint.id);
+  const schema = buildZodSchema(endpoint.params, endpoint.id, endpoint.confirm_required);
   const annotations = getToolAnnotations(endpoint.method);
   const hasFile = hasFileParam(endpoint.params);
 
@@ -300,6 +314,24 @@ function registerSingleTool(
           }
         }
 
+        // AIDEV-NOTE: [auditoria adversus A3] trava de confirmacao, ANTES de qualquer trabalho —
+        // ferramenta que altera o que o cliente ve na tela nao roda sem o OK explicito. Espelha a
+        // trava do conector remoto (runner.ts). A anotacao de destrutivo derivada do metodo HTTP
+        // nunca cobriu criar (POST) nem alterar (PATCH).
+        if (endpoint.confirm_required && params[CONFIRM_PARAM] !== true) {
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text:
+                  `"${endpoint.id}" altera o que o usuario ve na tela (${endpoint.title}). ` +
+                  'Confirme com ele exatamente o que sera criado/alterado/apagado e reenvie com confirm:true.',
+              },
+            ],
+            isError: true,
+          };
+        }
+
         // AIDEV-NOTE: Multi-tenant — input account_id (if provided) overrides env LIONCHAT_ACCOUNT_ID.
         // Resolve and strip account_id BEFORE bucketing so it never lands in body/query for
         // endpoints that don't declare it as an explicit param.
@@ -316,6 +348,10 @@ function registerSingleTool(
         // default->body do separateParams vazaria o campo pro corpo enviado ao Rails.
         const fullResponse = params[FULL_RESPONSE_PARAM] === true;
         delete paramsWithoutAccount[FULL_RESPONSE_PARAM];
+
+        // AIDEV-NOTE: `confirm` tambem e flag do CONECTOR — stripar antes do bucketing, senao o
+        // catch-all default->body do separateParams mandaria o campo pro Rails.
+        delete paramsWithoutAccount[CONFIRM_PARAM];
 
         const { pathParams, queryParams, bodyParams } = separateParams(
           paramsWithoutAccount,
