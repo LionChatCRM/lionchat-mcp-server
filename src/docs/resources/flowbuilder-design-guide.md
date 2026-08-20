@@ -53,14 +53,18 @@ Todo node tem essa estrutura base:
   "position": { "x": 50, "y": 300 },
   "data": {
     "label": "Início",
-    "triggers": [
-      { "type": "message_received", "keywords": ["oi", "ola"], "match_type": "contains" }
+    "items": [
+      { "key": "message_received", "config": { "keywords": ["oi", "ola"], "match_type": "contains" } }
     ]
   }
 }
 ```
 
-**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `label_added`, `label_removed`, `card_created`, `card_moved`, `conversation_attribute_changed`, `card_attribute_changed`, `contact_attribute_changed`, `date_trigger`, `campaign_trigger`, `cron`, `webhook`.
+**ATENÇÃO — chave `items`, não `triggers` (corrigido 19/08/2026).** Os gatilhos vão em **`data.items`**, cada item no formato **`{ "key": "...", "config": { ...filtros... } }`**. O formato antigo (`data.triggers` + `type` + filtros soltos no topo) ainda é aceito pelo motor por compatibilidade, mas **NÃO deve ser usado em fluxo novo**: o editor do FlowBuilder lê apenas `data.items`, então um fluxo gravado no formato antigo **dispara normalmente mas abre com o bloco Início EM BRANCO no painel do cliente** — e um clique em "Concluir" naquele modal apagava o gatilho em silêncio. Foram 53 fluxos de 9 contas nesse estado até o conserto de 19/08. Alguns leitores do backend (`has_webhook_trigger?` do disparo por webhook, o filtro de Campanha de Fluxo, o gatilho LionTrack e o histórico de execução) também só entendem `items`.
+
+**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `team_changed`, `assignee_changed`, `label_added`, `label_removed`, `sla_missed`, `card_created`, `card_moved`, `card_won`, `card_lost`, `conversation_attribute_changed`, `card_attribute_changed`, `contact_attribute_changed`, `date_trigger`, `campaign_trigger`, `manual_trigger`, `webhook_received`, `page_track`, `group_participant_joined`, `group_participant_left`, `lead_form_completed`, `lead_form_milestone`, `lead_form_abandoned`.
+
+**NÃO existem** os gatilhos `webhook` (o correto é **`webhook_received`**) nem `cron` (para disparo por data use `date_trigger`; para disparo em lote use `campaign_trigger` + Campanha de Fluxo). Até 19/08/2026 este guia listava os dois por engano — o fluxo 180 da conta 54 ficou ATIVO com `webhook` e **nunca disparou uma vez em 26 dias**, sem erro nenhum.
 
 **Trigger `message_sent` (novo 2026-06-11):** par do message_received, mas pra mensagens de SAÍDA — dispara quando atendente, celular (eco do WhatsApp) ou a própria IA/flow envia mensagem (nota privada NÃO dispara). Config: `keywords` (opcional) + `match_type` (`contains`|`exact`). Caso de uso clássico: "quando eu responder do celular, desligar a IA". ATENÇÃO: mensagem da IA também dispara — se a ação for desativar a IA, use keywords que só humanos digitam ou aceite que a primeira resposta da IA aciona o flow. Protegido por anti-loop (profundidade 5) e sessão única por conversa+flow; nunca alimenta `waiting_input`.
 
@@ -74,7 +78,7 @@ Todo node tem essa estrutura base:
 
 - `date_trigger` — **Gatilho de Data (novo 2026-07-10):** dispara quando uma DATA guardada na ficha do CONTATO chega (aniversário, data de exame, vencimento de plano). Modelo "agendamento de mensagem": a escrita da data já marca o disparo — NÃO existe varredura periódica. Só em flow `conversation` **individual** (a data é de um contato; grupo não tem). Config (item usa `config` ANINHADO, igual `webhook_received`/`attribute_changed`):
   ```json
-  { "type": "date_trigger", "config": {
+  { "key": "date_trigger", "config": {
     "attr_key": "_date_of_birth",          // "_date_of_birth" = Aniversário nativo; OU a chave de um atributo do contato do tipo Data (ex.: "data_exame")
     "offset_direction": "on",              // "before" | "on" | "after"
     "offset_days": 0,                      // 0-365 (relevante só p/ before/after)
@@ -127,7 +131,7 @@ Receita completa: `flows_create`/`flows_update` com o item no start → `flows_l
 **Trigger `webhook` — Webhook Universal EMBUTIDO (novo 2026-06):** o flow pode ser disparado por um webhook próprio, criado automaticamente. Receita via API:
 1. Criar o flow normalmente (`flows_create`).
 2. `POST /custom_webhook_integrations` com `{ "custom_webhook_integration": { "flow_id": <id do flow> } }` — o sistema cria a integração embutida (idempotente: repetir retorna a mesma; nome automático "Flow: <nome>"; auto-mapeia todos os eventos → este flow) e retorna a URL única do webhook.
-3. No node `start`, adicionar item `{ "type": "webhook_received", "config": { "integration_id": <id da integração> } }`.
+3. No node `start`, adicionar em `data.items` o item `{ "key": "webhook_received", "config": { "integration_id": <id da integração> } }`.
 4. Salvar o flow (`flows_update`) — o save sincroniza a ativação do webhook embutido (remover o item desativa a integração automaticamente).
 Webhooks embutidos NÃO aparecem na listagem de integrações standalone; excluir o flow destrói o webhook; duplicar o flow NÃO copia o gatilho embutido. Rate limit do endpoint público: 60/min por token.
 

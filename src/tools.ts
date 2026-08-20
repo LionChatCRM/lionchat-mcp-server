@@ -463,7 +463,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-08-18)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-08-19)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -488,7 +488,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 ═══ NODE TYPES + source handles ═══
 
 ▸ start
-  data: { label, triggers: [...] }
+  data: { label, items: [ {key:'<gatilho>', config:{...filtros...}} ] }
+  ATENCAO — a chave e "items" e o item usa "key"+"config" (corrigido 19/08/2026). NAO use
+    "triggers" com "type" e filtros soltos no topo: o motor ainda aceita esse formato antigo, mas o
+    EDITOR do FlowBuilder le SO "items" — fluxo salvo assim dispara normalmente e abre com o bloco
+    Inicio EM BRANCO no painel do cliente (53 fluxos de 9 contas ficaram assim ate 19/08), e um
+    clique em "Concluir" naquele modal apagava o gatilho em silencio. Alem do editor, o disparo por
+    webhook, o filtro de Campanha de Fluxo, o gatilho LionTrack e o historico de execucao tambem so
+    entendem "items". O app normaliza o formato antigo na gravacao, mas nao conte com isso.
   Triggers: message_received (keywords[] min 3 chars + match_type 'contains'|'exact' — dispara em
     QUALQUER msg do cliente que case), conversation_created/conversation_reopened (match_mode +
     keywords opcionais), conversation_resolved, label_added/label_removed (label_names[] — NAO
@@ -517,7 +524,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     ativa na conversa; flow antigo sem config = todos os SLAs/qualquer prazo),
     date_trigger (NOVO 2026-07-10 — Gatilho de Data: dispara quando uma DATA do CONTATO chega,
     aniversario/exame; modelo agenda, sem varredura; SO flow individual). Item usa config ANINHADO:
-    {type:'date_trigger', config:{ attr_key ('_date_of_birth'=aniversario nativo, OU chave de
+    {key:'date_trigger', config:{ attr_key ('_date_of_birth'=aniversario nativo, OU chave de
     atributo do contato tipo Data ex 'data_exame' — OBRIGATORIO), offset_direction 'before'|'on'|
     'after', offset_days 0-365, repeat_yearly bool (true=ignora ano/aniversario), send_time_source
     'fixed'|'attribute'|'variable' (+ send_time 'HH:MM' | send_time_attr_key | send_time_template
@@ -537,13 +544,19 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     inbox_id pra confirmar -> campaigns_create com flow_id.
     lead_form_completed / lead_form_milestone / lead_form_abandoned (NOVOS 2026-08-15 — gatilhos
     de FORMULARIO PUBLICO, feature Formularios): disparados pelo formulario de captacao, NAO por
-    evento de conversa (inertes no matcher). Item: {key:'lead_form_completed', lead_form_id:<id>}
-    — lead_form_id pode ir no topo do item (caminho API/MCP) ou dentro de config (tela);
+    evento de conversa (inertes no matcher). Item: {key:'lead_form_completed', config:{lead_form_id:<id>}}
+    — desde 19/08 o app move pra dentro de "config" qualquer filtro que venha solto no topo do item,
+    entao mande sempre em config;
     lead_form_milestone aceita milestone_node_id (vazio = qualquer marco); lead_form_abandoned
     dispara pelo tempo de abandono configurado no formulario. SO flow individual (nunca grupo).
     O flow nasce com variaveis form_* + respostas planas (form_<slug_da_pergunta>). Ver tools
     lionchat_lead_forms_* e o resource formularios-publicos.
-    cron, webhook. NOVO message_sent (2026-06-11): par do message_received pra mensagens de
+    manual_trigger (ativacao manual pelo atendente na sidebar), webhook_received (ver WEBHOOK
+    EMBUTIDO abaixo), page_track (LionTrack). NAO EXISTEM os gatilhos "cron" nem "webhook" — esta
+    referencia listava os dois por engano ate 19/08/2026 e um flow com "webhook" ficou ATIVO 26 dias
+    sem disparar UMA vez, em silencio; o nome certo e "webhook_received". Para disparo por data use
+    date_trigger; para disparo em lote, campaign_trigger + Campanha de Fluxo.
+    NOVO message_sent (2026-06-11): par do message_received pra mensagens de
     SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
     'desativar IA' com esse trigger sem keywords = a propria resposta da IA dispara o flow.
     group_participant_joined / group_participant_left (NOVO 07/08 — 'Entrou no grupo' / 'Saiu do
@@ -556,7 +569,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     PESSOA que entrou/saiu ('entrou no grupo -> manda no privado').
   WEBHOOK EMBUTIDO (Webhook Universal): 1) criar flow; 2) POST /custom_webhook_integrations com
     {custom_webhook_integration:{flow_id}} (idempotente, retorna URL unica); 3) flows_update com
-    item {type:'webhook_received', config:{integration_id}} no data.items do start. Remover o item
+    item {key:'webhook_received', config:{integration_id}} no data.items do start. Remover o item
     desativa o webhook. Excluir flow destroi o webhook. Duplicar flow NAO copia o gatilho.
   VALIDACAO flow_trigger_conflict: criar/atualizar/ativar retorna HTTP 422
     {error_code:'flow_trigger_conflict', conflicts:[{flow_id, flow_name, trigger_type, inbox_id,
