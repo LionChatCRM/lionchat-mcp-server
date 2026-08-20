@@ -9540,7 +9540,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/flows",
   "title": "Listar Flows",
-  "description": "Lista todos os flows da conta com estatísticas de execução. Lista flows paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de flow). Cada flow retorna também o campo tags (array de strings, novo 22/07) — use para organizar/agrupar flows.",
+  "description": "Lista os fluxos da conta. SEM paginacao e SEM meta: devolve todos de uma vez, com os filtros opcionais inbox_id, with_webhook_trigger e with_campaign_trigger. Use a lista pra ESCOLHER e FILTRAR fluxos (id, name, description, flow_type, conversation_mode, active, inbox_ids/inboxes, tags, session_stats = totais de execucao). Pra ler o DESENHO de um fluxo (blocos, conexoes, variaveis) use flows_show — a lista nao e o lugar de inspecionar blocos. Cada flow traz o campo tags (array de strings, 22/07) — use pra organizar/agrupar.",
   "category": "Flows",
   "params": [
    {
@@ -9558,13 +9558,17 @@
     "description": "Filtra os flows vinculados a essa caixa de entrada."
    }
   ],
-  "returns": "Objeto { data: [flows] } — a lista fica em data, sem meta e sem payload. Sem paginacao nenhuma (o controller so filtra por inbox_id / with_webhook_trigger / with_campaign_trigger). Cada flow traz o flow_data inteiro, entao a resposta pode ser MUITO grande em conta com muitos fluxos.",
+  "returns": "Objeto { data: [flows] } — a lista fica em data, sem meta e sem paginacao. Campos de cada item: id, name, description, tool_name, tool_description, flow_type, conversation_mode, active, inbox_ids, inboxes[{id,name,channel_type}], tags, session_stats{total,active,waiting,completed,exited,error}, created_at, updated_at. ATENCAO (ago/2026): hoje cada item ainda carrega flow_data inteiro e metricas por bloco, o que deixa a resposta MUITO pesada em conta com muitos fluxos/execucoes (ate 19 MB medidos) — NAO dependa disso: esta em andamento a lista leve, que tira flow_data/node_metrics/waiting_counts/variables e passa a trazer `triggers` (gatilhos do bloco Inicio). Pra flow_data use flows_show; pra conferir gatilho duplicado use flows_check_conflicts.",
   "common_use_cases": [
    "Dashboard: contar/exibir flows",
    "Buscar com filtros antes de outra operação",
    "Auditoria/relatório de flows ativas"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_flows_show",
+   "lionchat_flows_check_conflicts",
+   "lionchat_flows_toggle"
+  ]
  },
  {
   "id": "lionchat_flows_create",

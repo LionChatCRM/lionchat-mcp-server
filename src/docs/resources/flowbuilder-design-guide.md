@@ -141,7 +141,7 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 - A API responde **422** com `{ "error_code": "flow_trigger_conflict", "conflicts": [{ flow_id, flow_name, trigger_type, inbox_id, inbox_name }] }`.
 - Existe `POST /flows/check_conflicts` (mesma assinatura, NÃO salva) pra checar antes.
 
-**Como a IA deve agir:** antes de ativar um flow, confira via `flows_list` se já não há outro flow ativo no mesmo gatilho+inbox. Se receber 422 `flow_trigger_conflict`, NÃO fique reativando — EXPLIQUE o conflito ao usuário (nome do flow conflitante + caixa) e ofereça desativar o outro flow ou ajustar o gatilho/keywords.
+**Como a IA deve agir:** antes de ativar um flow, confira via `flows_check_conflicts` (mesma assinatura do toggle/update, NÃO salva nada e devolve exatamente quem colide) se já não há outro flow ativo no mesmo gatilho+inbox — NÃO tente deduzir isso lendo o `flow_data` de cada item da `flows_list` (a lista é pra escolher/filtrar fluxos, não pra inspecionar blocos). Se receber 422 `flow_trigger_conflict`, NÃO fique reativando — EXPLIQUE o conflito ao usuário (nome do flow conflitante + caixa) e ofereça desativar o outro flow ou ajustar o gatilho/keywords.
 
 **Handles que SAEM:** `success`.
 
