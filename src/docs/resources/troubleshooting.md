@@ -533,3 +533,13 @@ NÃO precisa reportar:
 - 4xx (você fez algo errado)
 - Rate limit (esperado)
 - 404 de recurso deletado
+
+## Conector REMOTO "conecta e desconecta" a cada ~6 minutos (Claude Code / VS Code / Codex ligados direto)
+
+Vale SÓ para o conector remoto (`mcp.lionchat.com.br`). O conector local (npm, stdio) não tem canal de rede.
+Sintoma: `/mcp` alterna connected/disconnected a cada ~6 min; nenhuma chamada falha.
+Causa (21/08/2026): o cliente segura um canal GET esperando avisos do servidor; o Cloudflare derruba
+qualquer resposta que fique 125 s sem um byte (Proxy Read Timeout). Quem usa pela claude.ai/ChatGPT não
+abre esse canal e nunca vê isso.
+Correção (v1.15.1): o servidor manda um `ping` a cada 30 s enquanto o canal está aberto.
+Interruptor: `MCP_KEEPALIVE_INTERVAL_MS` (0 = desligado). Detalhe: `docs/plans/mcp-keepalive-cloudflare/`.
