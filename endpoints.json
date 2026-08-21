@@ -25484,7 +25484,7 @@
   "method": "POST",
   "path": "/api/v2/accounts/{account_id}/custom_dashboards/{id}/widget_data",
   "title": "Calcular Bloco Salvo",
-  "description": "[POST] Calcula UM bloco que JA esta salvo num relatorio personalizado e devolve os numeros. O desenho e lido de dentro do relatorio salvo — o corpo so diz QUAL bloco (widget_id). Pra calcular um desenho que ainda nao existe, use `custom_dashboards_preview_widget`. So administrador (401 caso contrario). Formato da resposta pelo campo `shape`: series {series:[{timestamp,value}]} (timestamp unix em segundos; metricas de tempo trazem tambem `count` por ponto) · categories {categories:[{label,value}]} (funnel_stages vem na ORDEM DAS ETAPAS, nunca por valor) · scalar {value,total,secondary} (use `total` pra separar 'ninguem respondeu' de 'zero legitimo'; SLA sem nenhum prazo aplicado devolve 100.0) · table {dimension,columns,rows,total} (o `total` NAO e a soma das linhas, e contagem propria por metrica). Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio).",
+  "description": "[POST] Calcula UM bloco que JA esta salvo num relatorio personalizado e devolve os numeros. O desenho e lido de dentro do relatorio salvo — o corpo so diz QUAL bloco (widget_id). Pra calcular um desenho que ainda nao existe, use `custom_dashboards_preview_widget`. So administrador (401 caso contrario). Formato da resposta pelo campo `shape`: series {series:[{timestamp,value}]} (timestamp unix em segundos; metricas de tempo trazem tambem `count` por ponto) · categories {categories:[{label,value}]} (funnel_stages vem na ORDEM DAS ETAPAS, nunca por valor) · scalar {value,total,secondary} (use `total` pra separar 'ninguem respondeu' de 'zero legitimo'; SLA sem nenhum prazo aplicado devolve 100.0) · table {dimension,columns,rows,total} (o `total` NAO e a soma das linhas, e contagem propria por metrica). Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). PERIODO SOB DEMANDA: `time_range`/`from`/`to`/`bucket` recalculam o bloco em outra janela SEM alterar o relatorio salvo — e assim que se monta um resumo DIARIO a partir de um relatorio que o cliente deixou salvo em 30 dias (peca `time_range:'yesterday'` e escreva o texto). Recorte (scope/dimension/funnel) e metrica NAO sao aceitos aqui de proposito: janela nao amplia permissao, recorte ampliaria.",
   "category": "Relatorios",
   "params": [
    {
@@ -25507,6 +25507,34 @@
     "location": "body",
     "required": false,
     "description": "Fuso em HORAS (Brasilia = -3). SEMPRE envie: ausente calcula em UTC e o numero nao bate com o que o cliente ve na tela (baldes de dia deslocados ate 3h)."
+   },
+   {
+    "name": "time_range",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "RECALCULA o bloco salvo em OUTRO periodo, sem alterar o que esta gravado (a tela do cliente nao muda). E o que permite pedir 'o relatorio de ontem' a partir de um relatorio salvo em 'ultimos 30 dias'. Valores: today, yesterday, last_7_days, last_30_days, this_month, last_month, custom. Ausente = usa o periodo salvo no bloco."
+   },
+   {
+    "name": "from",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Inicio do periodo (AAAA-MM-DD). SO com time_range=custom; sozinho e ignorado. Janela maxima de 92 dias — acima disso volta 422 com o motivo."
+   },
+   {
+    "name": "to",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Fim do periodo (AAAA-MM-DD). SO com time_range=custom."
+   },
+   {
+    "name": "bucket",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Agrupamento no tempo (day, week, month) para blocos de serie. Ausente = usa o agrupamento salvo."
    }
   ],
   "returns": "Um dos 4 formatos normalizados (series | categories | scalar | table), com o campo `shape` dizendo qual",
@@ -25524,7 +25552,7 @@
   "method": "POST",
   "path": "/api/v2/accounts/{account_id}/custom_dashboards/preview_widget",
   "title": "Calcular Bloco na Hora (sem salvar)",
-  "description": "[POST] Monta um bloco de relatorio NA HORA e devolve os numeros, SEM salvar nada. E a ferramenta pra responder pergunta de relatorio que nao tem grafico pronto — ex.: 'quantos cards foram GANHOS em cada etapa do funil X nos ultimos 30 dias' (funnel_stages + date_basis:closed + status:won). Nao existe consulta livre: escolha um `widget_type` e preencha SO os campos daquele tipo; o servidor revalida tudo antes de calcular. So administrador (401 caso contrario). Campo que nao esta na lista abaixo e DESCARTADO EM SILENCIO. Formato da resposta pelo campo `shape`: series {series:[{timestamp,value}]} (timestamp unix em segundos; metricas de tempo trazem tambem `count` por ponto) · categories {categories:[{label,value}]} (funnel_stages vem na ORDEM DAS ETAPAS, nunca por valor) · scalar {value,total,secondary} (use `total` pra separar 'ninguem respondeu' de 'zero legitimo'; SLA sem nenhum prazo aplicado devolve 100.0) · table {dimension,columns,rows,total} (o `total` NAO e a soma das linhas, e contagem propria por metrica). Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). Tabela completa de tipos, metricas e armadilhas no resource lionchat://docs/reports-guide.",
+  "description": "[POST] Monta um bloco de relatorio NA HORA e devolve os numeros, SEM salvar nada. E a ferramenta pra responder pergunta de relatorio que nao tem grafico pronto — ex.: 'quantos cards foram GANHOS em cada etapa do funil X nos ultimos 30 dias' (funnel_stages + date_basis:closed + status:won). Nao existe consulta livre: escolha um `widget_type` e preencha SO os campos daquele tipo; o servidor revalida tudo antes de calcular. So administrador (401 caso contrario). Campo que nao esta na lista abaixo e DESCARTADO EM SILENCIO. Formato da resposta pelo campo `shape`: series {series:[{timestamp,value}]} (timestamp unix em segundos; metricas de tempo trazem tambem `count` por ponto) · categories {categories:[{label,value}]} (funnel_stages vem na ORDEM DAS ETAPAS, nunca por valor) · scalar {value,total,secondary} (use `total` pra separar 'ninguem respondeu' de 'zero legitimo'; SLA sem nenhum prazo aplicado devolve 100.0) · table {dimension,columns,rows,total} (o `total` NAO e a soma das linhas, e contagem propria por metrica). Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). Tabela completa de tipos, metricas e armadilhas no resource lionchat://docs/reports-guide. TIPOS NOVOS (21/08): `calls_report` = tabela de LIGACOES (feitas, atendidas, nao atendidas, nao concluidas, tempo total e medio) por atendente (`dimension:'agent'`) ou por caixa (`dimension:'inbox'`); ligacao sem atendente ganha linha propria. `stage_entries` = quantos cards ENTRARAM em cada etapa de um funil no periodo, lido do historico de movimentacao — DIFERENTE de `funnel_stages`, que conta quem ESTA na etapa agora: card que entrou e depois saiu aparece no stage_entries e SOME do funnel_stages (medido: 25% de diferenca). Use stage_entries pra 'quantos agendamentos/negocios aconteceram' e funnel_stages pra 'como esta o funil hoje'. stage_entries conta CARD DISTINTO (card que reentra na etapa conta uma vez) e o historico so existe a partir de 12/07/2026, com retencao de 365 dias — periodo anterior devolve menos do que aconteceu. PARAM NOVO `measure` em funnel_stages e stage_entries: 'count' (padrao, conta cards) ou 'value' (soma o VALOR dos cards = faturamento). Com status:'won' + date_basis:'closed' + measure:'value' sai o faturamento ganho da etapa no periodo. PERIODOS NOVOS: 'today' e 'yesterday'. CAMPO NOVO `title` em cada bloco: o nome que aparece no cabecalho. Sem ele varios blocos do mesmo tipo saem com rotulos identicos e nem a pessoa nem o agente sabem qual e qual — SEMPRE nomeie.",
   "category": "Relatorios",
   "params": [
    {
@@ -25631,6 +25659,20 @@
     "location": "query",
     "required": false,
     "description": "Fuso em HORAS (Brasilia = -3). SEMPRE envie: ausente calcula em UTC e o numero nao bate com o que o cliente ve na tela (baldes de dia deslocados ate 3h)."
+   },
+   {
+    "name": "measure",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Contar cards ('count', padrao) ou somar o VALOR deles ('value'). So em funnel_stages e stage_entries."
+   },
+   {
+    "name": "title",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome do bloco, exibido no cabecalho (ate 80 caracteres). Vazio = mostra o rotulo do tipo."
    }
   ],
   "returns": "Um dos 4 formatos normalizados (series | categories | scalar | table), com o campo `shape` dizendo qual",
@@ -25651,7 +25693,7 @@
   "method": "POST",
   "path": "/api/v2/accounts/{account_id}/custom_dashboards",
   "title": "Criar Relatorio Personalizado",
-  "description": "[POST] Cria um relatorio personalizado que passa a APARECER NA TELA do cliente, na aba 'Personalizados' de Relatorios. ALTERA O QUE O CLIENTE VE: exige confirm:true depois de confirmar com ele. So administrador (401 caso contrario). Cada bloco de `widgets` usa os MESMOS campos do preview_widget (teste o desenho la antes de salvar) e PRECISA de um `id` proprio e unico — se faltar, o servidor gera. Um bloco invalido barra a criacao INTEIRA com 422 e o motivo em texto: nunca salva pela metade. Tetos: 50 relatorios por conta, 12 blocos por relatorio. Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio).",
+  "description": "[POST] Cria um relatorio personalizado que passa a APARECER NA TELA do cliente, na aba 'Personalizados' de Relatorios. ALTERA O QUE O CLIENTE VE: exige confirm:true depois de confirmar com ele. So administrador (401 caso contrario). Cada bloco de `widgets` usa os MESMOS campos do preview_widget (teste o desenho la antes de salvar) e PRECISA de um `id` proprio e unico — se faltar, o servidor gera. Um bloco invalido barra a criacao INTEIRA com 422 e o motivo em texto: nunca salva pela metade. Tetos: 50 relatorios por conta, 12 blocos por relatorio. Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). TIPOS NOVOS (21/08): `calls_report` = tabela de LIGACOES (feitas, atendidas, nao atendidas, nao concluidas, tempo total e medio) por atendente (`dimension:'agent'`) ou por caixa (`dimension:'inbox'`); ligacao sem atendente ganha linha propria. `stage_entries` = quantos cards ENTRARAM em cada etapa de um funil no periodo, lido do historico de movimentacao — DIFERENTE de `funnel_stages`, que conta quem ESTA na etapa agora: card que entrou e depois saiu aparece no stage_entries e SOME do funnel_stages (medido: 25% de diferenca). Use stage_entries pra 'quantos agendamentos/negocios aconteceram' e funnel_stages pra 'como esta o funil hoje'. stage_entries conta CARD DISTINTO (card que reentra na etapa conta uma vez) e o historico so existe a partir de 12/07/2026, com retencao de 365 dias — periodo anterior devolve menos do que aconteceu. PARAM NOVO `measure` em funnel_stages e stage_entries: 'count' (padrao, conta cards) ou 'value' (soma o VALOR dos cards = faturamento). Com status:'won' + date_basis:'closed' + measure:'value' sai o faturamento ganho da etapa no periodo. PERIODOS NOVOS: 'today' e 'yesterday'. CAMPO NOVO `title` em cada bloco: o nome que aparece no cabecalho. Sem ele varios blocos do mesmo tipo saem com rotulos identicos e nem a pessoa nem o agente sabem qual e qual — SEMPRE nomeie.",
   "category": "Relatorios",
   "params": [
    {
@@ -25693,7 +25735,7 @@
   "method": "PATCH",
   "path": "/api/v2/accounts/{account_id}/custom_dashboards/{id}",
   "title": "Alterar Relatorio Personalizado",
-  "description": "[PATCH] Altera um relatorio personalizado. ALTERA O QUE O CLIENTE VE: exige confirm:true depois de confirmar com ele. So administrador (401 caso contrario). ATENCAO — `widgets` SUBSTITUI a lista inteira, nao acrescenta: mandar um bloco APAGA os outros. Leia o relatorio com custom_dashboards_list, altere o array e devolva-o COMPLETO. Se a listagem tiver vindo cortada, NAO use: voce apagaria o que nao chegou. Nao ha historico de alteracao — bloco apagado nao volta. Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio).",
+  "description": "[PATCH] Altera um relatorio personalizado. ALTERA O QUE O CLIENTE VE: exige confirm:true depois de confirmar com ele. So administrador (401 caso contrario). ATENCAO — `widgets` SUBSTITUI a lista inteira, nao acrescenta: mandar um bloco APAGA os outros. Leia o relatorio com custom_dashboards_list, altere o array e devolva-o COMPLETO. Se a listagem tiver vindo cortada, NAO use: voce apagaria o que nao chegou. Nao ha historico de alteracao — bloco apagado nao volta. Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). TIPOS NOVOS (21/08): `calls_report` = tabela de LIGACOES (feitas, atendidas, nao atendidas, nao concluidas, tempo total e medio) por atendente (`dimension:'agent'`) ou por caixa (`dimension:'inbox'`); ligacao sem atendente ganha linha propria. `stage_entries` = quantos cards ENTRARAM em cada etapa de um funil no periodo, lido do historico de movimentacao — DIFERENTE de `funnel_stages`, que conta quem ESTA na etapa agora: card que entrou e depois saiu aparece no stage_entries e SOME do funnel_stages (medido: 25% de diferenca). Use stage_entries pra 'quantos agendamentos/negocios aconteceram' e funnel_stages pra 'como esta o funil hoje'. stage_entries conta CARD DISTINTO (card que reentra na etapa conta uma vez) e o historico so existe a partir de 12/07/2026, com retencao de 365 dias — periodo anterior devolve menos do que aconteceu. PARAM NOVO `measure` em funnel_stages e stage_entries: 'count' (padrao, conta cards) ou 'value' (soma o VALOR dos cards = faturamento). Com status:'won' + date_basis:'closed' + measure:'value' sai o faturamento ganho da etapa no periodo. PERIODOS NOVOS: 'today' e 'yesterday'. CAMPO NOVO `title` em cada bloco: o nome que aparece no cabecalho. Sem ele varios blocos do mesmo tipo saem com rotulos identicos e nem a pessoa nem o agente sabem qual e qual — SEMPRE nomeie.",
   "category": "Relatorios",
   "params": [
    {

@@ -605,3 +605,70 @@ IDs de etiqueta**, nunca nome de métrica).
 1. `preview_widget` para **testar o desenho** e conferir que o número faz sentido.
 2. Mostre o número ao usuário e confirme que é o que ele quer.
 3. `create` com `confirm: true`, usando o mesmo desenho.
+
+---
+
+## Relatório personalizado como FONTE de um resumo escrito (2026-08-21)
+
+O caso de uso: o cliente deixa um relatório montado na tela e pede *"me traz o relatório XPTO todo
+dia"*. Em vez de garimpar dado em dez ferramentas, **leia o relatório salvo e escreva o texto**.
+
+### O passo a passo
+
+1. `lionchat_custom_dashboards_list` — ache o relatório pelo nome.
+2. `lionchat_custom_dashboards_list` (ou `_show`) devolve `widgets[]`, cada um com `id`, `title`,
+   `widget_type` e os params. **É o `title` que diz o que aquele bloco é** — sem ele, quatro blocos
+   do mesmo tipo chegam indistinguíveis.
+3. Para cada bloco: `lionchat_custom_dashboards_widget_data` com o `widget_id`.
+   **Mande sempre `timezone_offset`** (Brasília = -3), senão o número não bate com a tela.
+4. Para um resumo DIÁRIO, mande também **`time_range: 'yesterday'`**. Isso recalcula o bloco naquela
+   janela **sem alterar o relatório salvo** — o cliente continua vendo os 30 dias dele na tela.
+5. Escreva o texto a partir dos números. Não invente linha que o relatório não tem.
+
+### Regras que evitam relatório mentiroso
+
+- **Bloco sem `title`**: diga o tipo e o período em vez de adivinhar ("Etapas do funil, últimos 30
+  dias"). Nunca chute de qual médico/equipe é.
+- **Zero é resposta, não erro.** Etapa sem card, atendente sem ligação: escreva zero. Só diga "sem
+  dado" quando a chamada falhar de verdade.
+- **Não some blocos de janelas diferentes.** Um bloco em 7 dias e outro em 30 no mesmo relatório é
+  comum; somar os dois inventa número.
+- **`total` do shape `table` NÃO é a soma das linhas** em toda métrica — é contagem própria. Leia o
+  que vem, não recalcule.
+- **Recorte e métrica não são negociáveis pelo agente**: `widget_data` só aceita mudar a JANELA
+  (`time_range`/`from`/`to`/`bucket`). Se o cliente pedir "o mesmo relatório só que por caixa", isso
+  é editar o relatório (com confirmação), não um override.
+
+### Escolher entre os dois blocos de funil (erro fácil)
+
+| Pergunta | Bloco |
+|---|---|
+| "Quantos agendamentos aconteceram no período?" | `stage_entries` |
+| "Como está o funil hoje / quantos estão em cada etapa?" | `funnel_stages` |
+
+`funnel_stages` conta quem **está** na etapa; card que entrou e depois saiu some dele. Medido em
+produção: **25% de diferença**. `stage_entries` lê o histórico de movimentação e conta **card
+distinto** (quem volta pra etapa conta uma vez só).
+
+**Limite do `stage_entries`**: o histórico só existe a partir de **12/07/2026** e tem retenção de
+365 dias. Período que alcance antes disso devolve MENOS do que aconteceu — avise em vez de
+apresentar o número como completo.
+
+### Ligações (`calls_report`)
+
+Colunas: Ligações · Atendidas · Não atendidas · **Não concluídas** · Tempo total · Tempo médio.
+
+- "Não concluídas" são as que ficaram presas (tocando, em andamento, falhou, cancelada). **Não as
+  chame de "não atendidas"** — são coisas diferentes e a soma das três tem que fechar com o total.
+- Tempo médio já vem calculado sobre as ATENDIDAS. Não recalcule dividindo pelo total.
+- **Ligação sem atendente tem linha própria** e pode ser boa parte do volume (23% numa conta real).
+  Não a esconda ao resumir por pessoa.
+- A tabela lista só quem teve ligação no período — atendente ausente da tabela fez zero.
+
+### Faturamento (`measure`)
+
+`measure: 'value'` faz `funnel_stages`/`stage_entries` somarem o VALOR dos cards em vez de contar.
+Combinado com `status: 'won'` + `date_basis: 'closed'`, dá o faturamento ganho da etapa no período.
+
+**Cuidado ao escrever**: se os cards do cliente têm valor padrão (todos com o mesmo número), a soma
+não é faturamento — é o padrão multiplicado. Se todos os valores forem idênticos, desconfie e diga.
