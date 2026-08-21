@@ -11,7 +11,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "conversation_created" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "conversation_created", "config": {} }] } },
     { "id": "n2", "type": "send_message", "position": { "x": 370, "y": 300 }, "data": { "label": "Saudação", "messageItems": [
       { "id": "m1", "type": "text", "content": "Oi {{contact.name|default:'tudo bem?'}} 👋 Como posso ajudar hoje?\n\n1️⃣ Vendas\n2️⃣ Suporte\n3️⃣ Financeiro" }
     ] } },
@@ -55,7 +55,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "conversation_created" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "conversation_created", "config": {} }] } },
     { "id": "n2", "type": "send_message", "position": { "x": 370, "y": 300 }, "data": { "label": "Pede nome", "messageItems": [
       { "id": "m1", "type": "text", "content": "Olá! Antes de continuar, qual seu nome completo?" }
     ] } },
@@ -99,7 +99,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received", "keywords": ["proposta","orçamento"], "match_type": "contains" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "message_received", "config": { "keywords": ["proposta","orçamento"], "match_type": "contains" } }] } },
     { "id": "n2", "type": "send_message", "position": { "x": 370, "y": 300 }, "data": { "label": "B - Budget", "messageItems": [{ "id": "m1", "type": "text", "content": "Pra te ajudar melhor, qual a faixa de investimento que vocês têm em mente?\n\n1️⃣ Até R$ 5k\n2️⃣ R$ 5k a R$ 20k\n3️⃣ Acima de R$ 20k" }] } },
     { "id": "n3", "type": "wait_response", "position": { "x": 690, "y": 300 }, "data": { "label": "Budget", "waitTime": 60, "waitUnit": "minutes", "validation": "options", "acceptedOptions": ["1","2","3"], "saveTo": "contact_attr", "saveAttrKey": "budget_tier" } },
     { "id": "n4", "type": "send_message", "position": { "x": 1010, "y": 300 }, "data": { "label": "A - Authority", "messageItems": [{ "id": "m2", "type": "text", "content": "Você é o decisor ou tem outras pessoas envolvidas?" }] } },
@@ -150,7 +150,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "conversation_resolved" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "conversation_resolved", "config": {} }] } },
     { "id": "n2", "type": "wait", "position": { "x": 370, "y": 300 }, "data": { "label": "Aguarda 5 min", "waitTime": 5, "waitUnit": "minutes" } },
     { "id": "n3", "type": "send_message", "position": { "x": 690, "y": 300 }, "data": { "label": "Pede nota", "messageItems": [{ "id": "m1", "type": "text", "content": "Antes de fechar: de 1 a 5, como foi seu atendimento?\n\n5 = excelente\n1 = ruim" }] } },
     { "id": "n4", "type": "wait_response", "position": { "x": 1010, "y": 300 }, "data": { "label": "Nota", "waitTime": 60, "waitUnit": "minutes", "validation": "options", "acceptedOptions": ["1","2","3","4","5"], "saveTo": "conversation_attr", "saveAttrKey": "csat_score" } },
@@ -182,7 +182,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "conversation_created" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "conversation_created", "config": {} }] } },
     { "id": "n2", "type": "condition", "position": { "x": 370, "y": 300 }, "data": { "label": "Horário comercial?", "conditions": [
       { "id": "c1", "label": "Dentro do horário", "field": "{{now.hour}}", "operator": "greater_than", "value": "8", "valueType": "variable" }
     ] } },
@@ -210,7 +210,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "message_received", "config": {} }] } },
     { "id": "n2", "type": "ai", "position": { "x": 370, "y": 300 }, "data": {
       "label": "Classifica", "aiMode": "intent",
       "aiPrompt": "Classifique a intenção da última mensagem do cliente",
@@ -242,7 +242,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "label_added", "label_names": ["follow-up"] }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "label_added", "config": { "label_names": ["follow-up"] } }] } },
     { "id": "n2", "type": "wait", "position": { "x": 370, "y": 300 }, "data": { "label": "Espera 7 dias", "waitTime": 7, "waitUnit": "days" } },
     { "id": "n3", "type": "send_message", "position": { "x": 690, "y": 300 }, "data": { "label": "Template re-engajamento", "messageItems": [
       { "id": "m1", "type": "whatsapp_template", "templateId": 42, "params": ["{{contact.name}}"] }
@@ -269,7 +269,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "message_received", "config": {} }] } },
     { "id": "n2", "type": "condition", "position": { "x": 370, "y": 300 }, "data": { "label": "Pede humano?", "conditions": [
       { "id": "c1", "label": "Sim", "field": "{{last_response}}", "operator": "contains", "value": "humano", "valueType": "variable" }
     ] } },
@@ -299,7 +299,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received", "keywords": ["agendar","reunião"], "match_type": "contains" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "message_received", "config": { "keywords": ["agendar","reunião"], "match_type": "contains" } }] } },
     { "id": "n2", "type": "send_message", "position": { "x": 370, "y": 300 }, "data": { "label": "Pede data", "messageItems": [{ "id": "m1", "type": "text", "content": "Em que data você prefere? (formato DD/MM)" }] } },
     { "id": "n3", "type": "wait_response", "position": { "x": 690, "y": 300 }, "data": { "label": "Data", "waitTime": 30, "waitUnit": "minutes", "validation": "regex", "regexPattern": "^\\d{2}/\\d{2}$", "invalidMessage": "Formato inválido. Use DD/MM (ex: 25/05)", "maxRetries": 2, "saveTo": "variable", "saveVariable": "data_pref" } },
     { "id": "n4", "type": "api", "position": { "x": 1010, "y": 300 }, "data": {
@@ -333,7 +333,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "label_added", "label_names": ["urgente"] }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "label_added", "config": { "label_names": ["urgente"] } }] } },
     { "id": "n2", "type": "action", "position": { "x": 370, "y": 300 }, "data": { "label": "Dispara webhook", "items": [
       { "key": "send_webhook", "config": {
         "url": "https://hooks.slack.com/services/XXX/YYY/ZZZ",
@@ -364,7 +364,7 @@
 {
   "nodes": [
     { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [
-      { "type": "webhook_received", "config": { "integration_id": 123 } }
+      { "key": "webhook_received", "config": { "integration_id": 123 } }
     ] } },
     { "id": "n2", "type": "action", "position": { "x": 370, "y": 300 }, "data": { "label": "Marca origem", "items": [
       { "key": "add_conversation_label", "config": { "labels": ["compra-confirmada"] } }
@@ -417,7 +417,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "message_received", "keywords": ["orçamento"], "match_type": "contains" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "message_received", "config": { "keywords": ["orçamento"], "match_type": "contains" } }] } },
     { "id": "n2", "type": "action", "position": { "x": 370, "y": 300 }, "data": { "label": "Marca", "items": [
       { "key": "add_conversation_label", "config": { "labels": ["pediu-orcamento"] } },
       { "key": "add_label", "config": { "labels": ["interessado-em-comprar"] } }
@@ -440,7 +440,7 @@
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "conversation_created" }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "conversation_created", "config": {} }] } },
     { "id": "n2", "type": "send_message", "position": { "x": 370, "y": 300 }, "data": { "label": "Oferece", "messageItems": [
       { "id": "m1", "type": "text", "content": "Quer receber nossas novidades por e-mail?" }
     ] } },
@@ -520,7 +520,7 @@
 {
   "nodes": [
     { "id": "start", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [
-      { "type": "date_trigger", "config": {
+      { "key": "date_trigger", "config": {
         "attr_key": "_date_of_birth",
         "offset_direction": "on",
         "offset_days": 0,
@@ -561,7 +561,7 @@ funciona em conta com caixa **WhatsApp QR Code (`Channel::Waha`)** — a caixa v
 ```json
 {
   "nodes": [
-    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "triggers": [{ "type": "card_won", "funnel_ids": ["1"] }] } },
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "card_won", "config": { "funnel_ids": ["1"] } }] } },
     { "id": "n2", "type": "update_group", "position": { "x": 370, "y": 300 }, "data": {
       "label": "Cria grupo de onboarding",
       "groupOperation": "create",

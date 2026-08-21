@@ -526,3 +526,153 @@ Endpoints de relatório podem retornar **MUITOS** dados:
 - `csat_list` sem filtro → milhares
 
 **Sempre limite período** quando o usuário não foi específico. Se pediu "esta semana", use 7d. Se pediu "vamos ver tudo", confirme antes (ano inteiro pode ser muito).
+
+---
+
+## Relatórios personalizados — ler, calcular e montar (2026-08)
+
+É a aba **Personalizados** dentro de Relatórios: o cliente monta blocos (gráficos e tabelas) e salva
+num painel. Tudo aqui é **só administrador** — quem não for recebe **401** (não é problema de
+conexão do conector; não mande reconectar).
+
+| Ferramenta | Para quê |
+|---|---|
+| `lionchat_custom_dashboards_list` | Quais relatórios existem, já com os blocos dentro |
+| `lionchat_custom_dashboards_widget_data` | O número de um bloco **já salvo** |
+| `lionchat_custom_dashboards_preview_widget` | Monta um bloco **na hora** e calcula, sem salvar |
+| `lionchat_custom_dashboards_create` | Cria um relatório que **aparece na tela do cliente** |
+| `lionchat_custom_dashboards_update` | Altera (substitui a lista de blocos) |
+| `lionchat_custom_dashboards_destroy` | Apaga, **sem desfazer** |
+
+As três últimas **alteram o que o cliente vê** e só rodam com `confirm: true` — confirme com ele o
+que exatamente vai mudar antes de reenviar.
+
+### `preview_widget` é a ferramenta mais poderosa deste guia
+
+Ela responde pergunta de relatório que **nenhuma outra ferramenta cobre**, porque monta o recorte na
+hora. Exemplo real: *"quantos cards foram ganhos em cada etapa do funil 12 nos últimos 30 dias"* —
+nenhum `reports_*` responde; aqui é `funnel_stages` + `date_basis: closed` + `status: won`.
+
+Não é consulta livre: escolha um `widget_type` e preencha **só os campos daquele tipo**.
+
+### Os 7 tipos de bloco
+
+| Tipo | Campos | Recurso exigido |
+|---|---|---|
+| `conversations_timeseries` | `metric` (conversations, incoming_messages, outgoing_messages, resolutions, reopens, avg_first_response_time, avg_resolution_time) · `bucket` (day/week/month) · `scope_type`+`scope_id` · `time_range` | — |
+| `entity_ranking` | `dimension` (agent/inbox/team/label) · `metric` (conversations, resolutions, avg_first_response_time, avg_resolution_time) · `time_range` | — |
+| `csat_summary` | `time_range` | — |
+| `sla_summary` | `time_range` | `sla` (Enterprise) |
+| `funnel_stages` | `funnel_id` · `date_basis` (created/moved/closed/any) · `status` (all/open/won/lost) · `time_range` | `kanban_board` |
+| `lead_origin` | `time_range` | `liontrack` |
+| `agent_report` | `dimension` (agent/team/inbox) · `scope_type`+`scope_id` · `columns[]` · `time_range` | — |
+
+**`time_range`:** `last_7_days`, `last_30_days`, `this_month`, `last_month` — e `custom` **só em
+`conversations_timeseries` e `agent_report`**, exigindo `from`/`to`. **A janela não pode passar de 92
+dias**, e esse teto é da janela, não de um tipo: pedir "esse ano" é recusado com a explicação.
+
+**Colunas do `agent_report`:** `leads`, `atendidos`, `resolvidas`, `abertas`, `pendentes`, `adiadas`,
+`label_count` (exige `label_id`) e `conversao` (exige `denominator` e `numerator`, que é **lista de
+IDs de etiqueta**, nunca nome de métrica).
+
+### Como ler a resposta (campo `shape`)
+
+| `shape` | Estrutura | Cuidado |
+|---|---|---|
+| `series` | `{series: [{timestamp, value}]}` | `timestamp` é unix em segundos. As duas métricas de tempo vêm em **segundos** e trazem também `count` por ponto |
+| `categories` | `{categories: [{label, value}]}` | `funnel_stages` vem **na ordem das etapas do funil**, nunca por valor — não reordene |
+| `scalar` | `{value, total, secondary}` | Use o `total` para separar "ninguém respondeu" de "zero legítimo". **SLA sem nenhum prazo aplicado devolve 100.0** — não anuncie "100% de cumprimento" sem olhar o total |
+| `table` | `{dimension, columns, rows, total}` | O `total` **não é a soma das linhas** (contagem própria por métrica). As linhas são os membros **atuais**: quem saiu da equipe some da linha e continua no total |
+
+### Armadilhas que fazem o bloco sair errado
+
+1. **`scope_type`/`scope_id` têm sentido OPOSTO por tipo.** No `conversations_timeseries` = "o
+   gráfico é só daquela entidade". No `agent_report` = "mostre só as linhas de quem é dessa
+   equipe/caixa". Confundir troca a conta inteira.
+2. **Campo fora da lista é descartado em silêncio.** Se um valor "não fez efeito", provavelmente o
+   nome do campo está errado.
+3. **Sempre envie `timezone_offset` em HORAS** (Brasília = `-3`). Sem ele o cálculo é em UTC e o
+   número não bate com o que o cliente vê na tela.
+4. **`update` substitui a lista de blocos inteira.** Leia com `list`, altere o array, devolva
+   completo — e preserve o `id` de cada bloco que já existia.
+5. **`list` não pagina.** Se a resposta vier com aviso de corte, **não** use aquela lista para montar
+   um `update`: você apagaria os blocos que não chegaram.
+6. **Recurso não liberado devolve 422 com `code: "feature_unavailable"`** — a resposta certa é "sua
+   conta não tem esse recurso", nunca "não há dados".
+
+### Fluxo recomendado para "me monta um relatório de X"
+
+1. `preview_widget` para **testar o desenho** e conferir que o número faz sentido.
+2. Mostre o número ao usuário e confirme que é o que ele quer.
+3. `create` com `confirm: true`, usando o mesmo desenho.
+
+---
+
+## Relatório personalizado como FONTE de um resumo escrito (2026-08-21)
+
+O caso de uso: o cliente deixa um relatório montado na tela e pede *"me traz o relatório XPTO todo
+dia"*. Em vez de garimpar dado em dez ferramentas, **leia o relatório salvo e escreva o texto**.
+
+### O passo a passo
+
+1. `lionchat_custom_dashboards_list` — ache o relatório pelo nome.
+2. `lionchat_custom_dashboards_list` (ou `_show`) devolve `widgets[]`, cada um com `id`, `title`,
+   `widget_type` e os params. **É o `title` que diz o que aquele bloco é** — sem ele, quatro blocos
+   do mesmo tipo chegam indistinguíveis.
+3. Para cada bloco: `lionchat_custom_dashboards_widget_data` com o `widget_id`.
+   **Mande sempre `timezone_offset`, lido do fuso DA CONTA** — `lionchat_account_show` devolve o
+   campo `timezone` (ex.: `America/Sao_Paulo`); converta para horas. **Não assuma -3.** O padrão da
+   plataforma é São Paulo, mas a conta pode ter outro: Mato Grosso do Sul é -4, e há cliente fora do
+   Brasil. Sem o fuso certo, o número não bate com a tela — e numa janela de UM DIA uma hora de
+   diferença joga o que aconteceu de madrugada para o dia errado.
+4. Para um resumo DIÁRIO, mande também **`time_range: 'yesterday'`**. Isso recalcula o bloco naquela
+   janela **sem alterar o relatório salvo** — o cliente continua vendo os 30 dias dele na tela.
+5. Escreva o texto a partir dos números. Não invente linha que o relatório não tem.
+
+### Regras que evitam relatório mentiroso
+
+- **Bloco sem `title`**: diga o tipo e o período em vez de adivinhar ("Etapas do funil, últimos 30
+  dias"). Nunca chute de qual médico/equipe é.
+- **Zero é resposta, não erro.** Etapa sem card, atendente sem ligação: escreva zero. Só diga "sem
+  dado" quando a chamada falhar de verdade.
+- **Não some blocos de janelas diferentes.** Um bloco em 7 dias e outro em 30 no mesmo relatório é
+  comum; somar os dois inventa número.
+- **`total` do shape `table` NÃO é a soma das linhas** em toda métrica — é contagem própria. Leia o
+  que vem, não recalcule.
+- **Recorte e métrica não são negociáveis pelo agente**: `widget_data` só aceita mudar a JANELA
+  (`time_range`/`from`/`to`/`bucket`). Se o cliente pedir "o mesmo relatório só que por caixa", isso
+  é editar o relatório (com confirmação), não um override.
+
+### Escolher entre os dois blocos de funil (erro fácil)
+
+| Pergunta | Bloco |
+|---|---|
+| "Quantos agendamentos aconteceram no período?" | `stage_entries` |
+| "Como está o funil hoje / quantos estão em cada etapa?" | `funnel_stages` |
+
+`funnel_stages` conta quem **está** na etapa; card que entrou e depois saiu some dele. Medido em
+produção: **25% de diferença**. `stage_entries` lê o histórico de movimentação e conta **card
+distinto** (quem volta pra etapa conta uma vez só).
+
+**Limite do `stage_entries`**: o histórico só existe a partir de **12/07/2026** e tem retenção de
+365 dias. Período que alcance antes disso devolve MENOS do que aconteceu — avise em vez de
+apresentar o número como completo.
+
+### Ligações (`calls_report`)
+
+Colunas: Ligações · Atendidas · Não atendidas · **Não concluídas** · Tempo total · Tempo médio.
+
+- "Não concluídas" são as que ficaram presas (tocando, em andamento, falhou, cancelada). **Não as
+  chame de "não atendidas"** — são coisas diferentes e a soma das três tem que fechar com o total.
+- Tempo médio já vem calculado sobre as ATENDIDAS. Não recalcule dividindo pelo total.
+- **Ligação sem atendente tem linha própria** e pode ser boa parte do volume (23% numa conta real).
+  Não a esconda ao resumir por pessoa.
+- A tabela lista só quem teve ligação no período — atendente ausente da tabela fez zero.
+
+### Faturamento (`measure`)
+
+`measure: 'value'` faz `funnel_stages`/`stage_entries` somarem o VALOR dos cards em vez de contar.
+Combinado com `status: 'won'` + `date_basis: 'closed'`, dá o faturamento ganho da etapa no período.
+
+**Cuidado ao escrever**: se os cards do cliente têm valor padrão (todos com o mesmo número), a soma
+não é faturamento — é o padrão multiplicado. Se todos os valores forem idênticos, desconfie e diga.
