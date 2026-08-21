@@ -400,12 +400,18 @@ Booking (agendamento confirmado)
 
 ## e-Clínicas (Efficient) — integração de clínicas
 
-13 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica:
+15 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica
+(o mapeamento é SÓ pela tela — não há ferramenta MCP que escreva `event_mapping`):
 `cliente_novo`, `agendamento_novo`, `falta`, `pagamento` (os 4 da doc oficial) +
 `agendamento_atendido`, `agendamento_alterado`, `agendamento_desmarcado`,
 `agendamento_transferido`, `cliente_baixa_pagamento`, `cliente_alteracao`,
-`cliente_inclusao_pagamento`, `controle_laboratorio_novo`, `controle_laboratorio_alterado`
+`cliente_inclusao_pagamento`, `controle_laboratorio_novo`, `controle_laboratorio_alterado`,
+`agendamento_aguardando`, `odontograma_aprovado`
 (capturados ao vivo, não documentados pelo e-Clínica).
+
+Os 2 últimos são do perfil ODONTOLÓGICO (2026-08-20): `agendamento_aguardando` = a recepção marcou a
+chegada do paciente na clínica (grava a hora da chegada e `eclinica_status_agendamento = aguardando`);
+`odontograma_aprovado` = plano de tratamento aprovado (grava o cabeçalho do odontograma).
 
 Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como variável):
 
@@ -417,8 +423,8 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_data_consulta` | date | Data da consulta, ISO |
 | `eclinica_hora_consulta` | **time** | Hora da consulta 24h `"HH:MM"` (novo 2026-07-06) |
 | `eclinica_hora_final` | **time** | Hora final da consulta (novo 2026-07-27) |
-| `eclinica_status_agendamento` | text | agendado / no_show / atendido / desmarcado |
-| `eclinica_situacao` | text | Situação crua da agenda (age_situacao do webhook) |
+| `eclinica_status_agendamento` | text | agendado / aguardando (paciente chegou) / no_show / atendido / desmarcado. **`aguardando` é transitório**: o próximo evento de agenda daquele paciente grava por cima (o último evento recebido é sempre o que vale) |
+| `eclinica_situacao` | text | Situação do agendamento no painel, **POR EXTENSO** (2026-08-21, legenda oficial da e-Clínica): AGUARDANDO, NA CADEIRA, PASSAR FINANCEIRO, AGENDAR RETORNO, ATENDIDO, CONFIRMADO, CONFIRMADO PELO LINK, CONFIRMADO PELA API, FALTA, DESMARCADO, CANCELADO PELO LINK, CANCELADO PELA API. Antes guardava a letra crua (`A`, `C`…). Código nunca visto aparece como veio |
 | `eclinica_compromisso` | text | Tipo da consulta — TEXTO LIVRE da recepção (ex: Consulta, Retorno) |
 | `eclinica_agendatipo` | text | Tipo de Agendamento — NOME da lista fixa do painel, resolvido por unidade (novo 2026-07-28). **Filtrar sempre pelo NOME, nunca pelo número: os números colidem entre filiais** |
 | `eclinica_agendatipo_id` | text | Tipo de Agendamento — número cru (não comparável entre filiais) |
@@ -430,6 +436,17 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_ultimo_pagamento` | text | Valor do último pagamento |
 | `eclinica_ultimo_pagamento_data` | date | Data do último pagamento/baixa (novo 2026-07-06) |
 | `eclinica_ultimo_pagamento_descricao` | text | Descrição da baixa (ex: CONSULTA INICIAL) |
+| `eclinica_ultima_chegada_idagenda` | text | Agendamento em que o paciente chegou pela última vez (2026-08-20) |
+| `eclinica_ultima_chegada_data` | date | Data da última chegada do paciente na clínica |
+| `eclinica_ultima_chegada_hora` | **time** | Hora em que a recepção marcou a chegada (`age_horaguardando`, ex `15:06`) |
+| `eclinica_odontograma_id` | text | ID do último odontograma/plano de tratamento aprovado (2026-08-20) |
+| `eclinica_odontograma_aprovado_em` | date | Dia da aprovação, já no fuso da conta (o webhook manda em UTC) |
+| `eclinica_odontograma_inicio` | date | Data de início do tratamento (`odo_datainicio`) |
+| `eclinica_odontograma_situacao` | text | Código de situação como vem da e-Clínica (ex: `T`) |
+| `eclinica_odontograma_valor` | text | Valor do plano — **pode vir `0.00`** quando a clínica não preenche |
+| `eclinica_odontograma_profissional` | text | NOME do profissional do odontograma |
+| `eclinica_odontograma_convenio_id` | text | Convênio do odontograma (número) |
+| `eclinica_marcador_nome` | text | Marca que a clínica digita no fim do nome do paciente no e-Clínica (ex: `*`, `***`) — retirada do nome e guardada aqui (2026-08-20). Significado é da clínica |
 | `eclinica_laboratorio_data_prevista` | date | Previsão de entrega da medicação (novo 2026-07-23) |
 | `eclinica_laboratorio_data_moldagem` | date | Data do pedido da medicação |
 | `eclinica_laboratorio_data_entrega` | date | Data em que a medicação CHEGOU na unidade — é a data que dispara o aviso de retirada do flow |

@@ -523,6 +523,17 @@ ficar muda (2026-06-05).
 | `message_created` | Nova mensagem (incoming ou outgoing) |
 | `first_reply_created` | Primeira resposta humana |
 
+### Gatilhos de Agendamento (Booking nativo) — 2026-08-20
+
+O Booking do LionChat (Agenda → aba Booking, link público, IA) também dispara flow pelo node
+`start`: `booking_created`, `booking_cancelled`, `booking_rescheduled`, `booking_completed`.
+Config opcional `{ booking_event_type_ids: ["44"], agent_ids: [], create_conversation: false }`
+(vazio = todos; `create_conversation: true` cria a conversa na 1ª caixa do flow para quem nunca
+conversou). Variáveis `{{booking.*}}` (data, hora, tipo, agente, links de remarcar/cancelar,
+horário anterior no remarcado). Detalhe completo e regras no `lionchat://docs/flowbuilder-design-guide`
+(seção "Gatilhos de AGENDAMENTO"). **Não confundir com os lembretes da e-Clínica** (integração
+separada). Também NÃO são eventos de `automation_rule`.
+
 **Os gatilhos de Formulário público (`lead_form_completed`, `lead_form_milestone`,
 `lead_form_abandoned`) NÃO entram nessa tabela** — são gatilhos de **flow**, não eventos de
 automação. Não adianta criar `automation_rule` com esses nomes em `event_name`; o caminho é o node

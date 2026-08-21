@@ -23,7 +23,7 @@ Como criar fluxos do LionChat (FlowBuilder) que abrem certinhos no canvas, sem n
 | Classificar intenção da mensagem | `ai` mode `intent` | - |
 | Analisar sentimento | `ai` mode `sentiment` | - |
 | Encerrar fluxo no meio | `action` com `key: 'deactivate_flow'` OU `exit_conditions` no nível do flow | - |
-| Distribuir aleatório entre branches | `randomizer` | - |
+| Dividir na proporção entre branches (A/B) | `randomizer` | - |
 | Gerir grupo WhatsApp: criar/buscar, nome/foto/descrição, participantes, admins, convite (WAHA) | `update_group` (uma operação por bloco via `groupOperation`) | - |
 | Iniciar outro fluxo | `action` com `key: 'start_flow'` OU node `activate_flow` | - |
 | Encerrar ramo / definir retorno de ai_tool | `end` | - |
@@ -62,7 +62,7 @@ Todo node tem essa estrutura base:
 
 **ATENÇÃO — chave `items`, não `triggers` (corrigido 19/08/2026).** Os gatilhos vão em **`data.items`**, cada item no formato **`{ "key": "...", "config": { ...filtros... } }`**. O formato antigo (`data.triggers` + `type` + filtros soltos no topo) ainda é aceito pelo motor por compatibilidade, mas **NÃO deve ser usado em fluxo novo**: o editor do FlowBuilder lê apenas `data.items`, então um fluxo gravado no formato antigo **dispara normalmente mas abre com o bloco Início EM BRANCO no painel do cliente** — e um clique em "Concluir" naquele modal apagava o gatilho em silêncio. Foram 53 fluxos de 9 contas nesse estado até o conserto de 19/08. Alguns leitores do backend (`has_webhook_trigger?` do disparo por webhook, o filtro de Campanha de Fluxo, o gatilho LionTrack e o histórico de execução) também só entendem `items`.
 
-**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `team_changed`, `assignee_changed`, `label_added`, `label_removed`, `sla_missed`, `card_created`, `card_moved`, `card_won`, `card_lost`, `conversation_attribute_changed`, `card_attribute_changed`, `contact_attribute_changed`, `date_trigger`, `campaign_trigger`, `manual_trigger`, `webhook_received`, `page_track`, `group_participant_joined`, `group_participant_left`, `lead_form_completed`, `lead_form_milestone`, `lead_form_abandoned`.
+**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `team_changed`, `assignee_changed`, `label_added`, `label_removed`, `sla_missed`, `card_created`, `card_moved`, `card_won`, `card_lost`, `conversation_attribute_changed`, `card_attribute_changed`, `contact_attribute_changed`, `date_trigger`, `campaign_trigger`, `manual_trigger`, `webhook_received`, `page_track`, `group_participant_joined`, `group_participant_left`, `lead_form_completed`, `lead_form_milestone`, `lead_form_abandoned`, `booking_created`, `booking_cancelled`, `booking_rescheduled`, `booking_completed`.
 
 **NÃO existem** os gatilhos `webhook` (o correto é **`webhook_received`**) nem `cron` (para disparo por data use `date_trigger`; para disparo em lote use `campaign_trigger` + Campanha de Fluxo). Até 19/08/2026 este guia listava os dois por engano — o fluxo 180 da conta 54 ficou ATIVO com `webhook` e **nunca disparou uma vez em 26 dias**, sem erro nenhum.
 
@@ -134,6 +134,8 @@ Receita completa: `flows_create`/`flows_update` com o item no start → `flows_l
 3. No node `start`, adicionar em `data.items` o item `{ "key": "webhook_received", "config": { "integration_id": <id da integração> } }`.
 4. Salvar o flow (`flows_update`) — o save sincroniza a ativação do webhook embutido (remover o item desativa a integração automaticamente).
 Webhooks embutidos NÃO aparecem na listagem de integrações standalone; excluir o flow destrói o webhook; duplicar o flow NÃO copia o gatilho embutido. Rate limit do endpoint público: 60/min por token.
+
+**Gatilhos de AGENDAMENTO — Booking NATIVO do LionChat (2026-08-20):** `booking_created` (alguém marcou pelo link público, pela IA ou pelo painel), `booking_cancelled` (paciente cancelou pelo link, IA cancelou ou a equipe cancelou na Agenda), `booking_rescheduled` (a data/hora mudou — link do paciente, IA, editar/adiar na Agenda), `booking_completed` (equipe concluiu na Agenda; exige a Agenda unificada ligada na conta). **Não é e-Clínica.** Config (tudo opcional, vazio = todos): `booking_event_type_ids` (array de ids de tipo de agendamento, **STRING**), `agent_ids` (array de ids de usuário — o RESPONSÁVEL da tarefa), `create_conversation` (boolean, padrão `false`: só dispara para quem já tem conversa numa caixa do flow; `true` = cria a conversa na 1ª caixa do flow). Exemplo: `{ "key": "booking_created", "config": { "booking_event_type_ids": ["44"], "agent_ids": [], "create_conversation": true } }`. São INERTES a evento de conversa (quem dispara é o `Booking::FlowTriggerDispatcher`, por CONTA — caixa do flow só define onde a conversa é criada/reusada). Variáveis no flow: `{{booking.date}}` (DD/MM/AAAA), `{{booking.time}}`, `{{booking.weekday}}`, `{{booking.datetime}}` (ISO), `{{booking.type}}`, `{{booking.type_format}}` (presencial/videochamada), `{{booking.duration}}`, `{{booking.agent}}`, `{{booking.status}}` (confirmado/cancelado/remarcado/concluído), `{{booking.description}}`, `{{booking.cancel_url}}`, `{{booking.reschedule_url}}`, `{{booking.color}}`, `{{booking.id}}`; só no remarcado: `{{booking.previous_date}}`, `{{booking.previous_time}}`, `{{booking.previous_datetime}}`; `{{booking.meeting_url}}` NÃO vem no criado (nasce vazio). Data/hora vêm da TAREFA da Agenda (sempre atuais). Regras: o evento mais novo SUBSTITUI a rodada ativa do mesmo flow na mesma conversa (2ª consulta do mesmo paciente, ou cancelado chegando com o criado ainda esperando resposta); excluir a tarefa, reabrir cancelada ou desfazer conclusão NÃO disparam; adiar (snooze) conta como remarcado; tipo com confirmação/lembrete próprios ligados + `booking_created` = o paciente pode receber duas mensagens (a tela avisa). Colisão entre flows é por CONTA: mesmo kind + tipos se cruzando + agentes se cruzando (vazio = todos).
 
 **TRAVA DE GATILHO DUPLICADO (2026-06-16) — leia ANTES de ativar/criar flow ativo:** o sistema BLOQUEIA ter dois flows ATIVOS com o MESMO gatilho na MESMA inbox e mesmo `conversation_mode` (evita o evento disparar dois flows). Colisão = mesmo tipo de gatilho + config cruzando (mesmas keywords/funil/labels/url/etc) + inbox compartilhada + mesmo modo. EXCEÇÕES que podem coexistir: `webhook_received`, `manual_trigger` e `campaign_trigger` (este último porque não dispara por evento — é só uma autorização para a campanha).
 - Ao **ativar** (`flows_toggle` inativo→ativo) ou **criar já ativo**: qualquer conflito é barrado.
@@ -704,7 +706,9 @@ Corrigido em 30/07: o motor lê `percent` e aceita `weight` só como dado antigo
 `percent`** — randomizador criado com `weight` até roda, mas abre com as porcentagens EM BRANCO na
 tela do cliente (a tela lê só `percent`).
 
-**Modo `distribute_agents` (sorteio PONDERADO):** `data.mode: 'distribute_agents'` + `data.agents: [{ agent_id, percent }]` — sorteia UM agente por probabilidade (percentuais somando 100) e atribui automaticamente. Isso é SORTEIO, não rodízio: no curto prazo pode cair no mesmo agente várias vezes seguidas. Pra RODÍZIO EXATO (cada um na vez), use a AÇÃO `distribute_agents` no node `action` (ver seção 2.5) — não este modo.
+**Divisão EXATA, não sorteio (desde 20/08/2026):** nos DOIS modos o bloco divide o que passa por ele na proporção configurada — 50/50 alterna A,B,A,B; 70/30 dá 7 de cada 10 intercalados. Contador por fluxo+bloco; mexer em agente/porcentagem zera a contagem. (Até 20/08 era cara-ou-coroa — 5 leads seguidos pra mesma pessoa num "50/50" era normal.)
+
+**Modo `distribute_agents` (divisão PONDERADA):** `data.mode: 'distribute_agents'` + `data.agents: [{ agent_id, percent }]` — escolhe o agente da vez (percentuais somando 100) e atribui automaticamente. Diferença pra AÇÃO `distribute_agents` do node `action` (seção 2.5): a ação é rodízio SIMPLES (1,2,3 sem porcentagem); este modo aceita pesos diferentes (70/30). Com pesos iguais os dois dão o mesmo resultado.
 
 **Handles que SAEM:** o `id` de cada branch (`A`, `B`, ...). Em `mode: 'distribute_agents'` é `success`.
 
@@ -885,7 +889,7 @@ Sempre presente:
 
 | Variável | Conteúdo |
 |---|---|
-| `{{trigger.type}}` | chave do evento (`message_created`, `conversation_created`, `label_added`, `kanban_item_stage_changed`, `webhook_received`, `date_trigger`, `flow_campaign`, `manual`, `pagetrack_visited`…) |
+| `{{trigger.type}}` | chave do evento (`message_created`, `conversation_created`, `label_added`, `kanban_item_stage_changed`, `webhook_received`, `date_trigger`, `flow_campaign`, `manual`, `pagetrack_visited`, `booking_created`, `booking_cancelled`, `booking_rescheduled`, `booking_completed`…) |
 | `{{trigger.name}}` | rótulo legível do MESMO evento ("Mensagem recebida", "Card mudou de etapa") — use este pra ESCREVER pro cliente, e o `type` pra COMPARAR em condição |
 | `{{trigger.activated_at}}` | quando disparou (ISO 8601) |
 | `{{trigger.kanban_item_id}}` / `{{trigger.funnel_id}}` | só quando veio do Kanban |
