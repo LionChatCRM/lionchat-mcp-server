@@ -620,7 +620,11 @@ dia"*. Em vez de garimpar dado em dez ferramentas, **leia o relatório salvo e e
    `widget_type` e os params. **É o `title` que diz o que aquele bloco é** — sem ele, quatro blocos
    do mesmo tipo chegam indistinguíveis.
 3. Para cada bloco: `lionchat_custom_dashboards_widget_data` com o `widget_id`.
-   **Mande sempre `timezone_offset`** (Brasília = -3), senão o número não bate com a tela.
+   **Mande sempre `timezone_offset`, lido do fuso DA CONTA** — `lionchat_account_show` devolve o
+   campo `timezone` (ex.: `America/Sao_Paulo`); converta para horas. **Não assuma -3.** O padrão da
+   plataforma é São Paulo, mas a conta pode ter outro: Mato Grosso do Sul é -4, e há cliente fora do
+   Brasil. Sem o fuso certo, o número não bate com a tela — e numa janela de UM DIA uma hora de
+   diferença joga o que aconteceu de madrugada para o dia errado.
 4. Para um resumo DIÁRIO, mande também **`time_range: 'yesterday'`**. Isso recalcula o bloco naquela
    janela **sem alterar o relatório salvo** — o cliente continua vendo os 30 dias dele na tela.
 5. Escreva o texto a partir dos números. Não invente linha que o relatório não tem.

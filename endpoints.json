@@ -25506,7 +25506,7 @@
     "type": "number",
     "location": "body",
     "required": false,
-    "description": "Fuso em HORAS (Brasilia = -3). SEMPRE envie: ausente calcula em UTC e o numero nao bate com o que o cliente ve na tela (baldes de dia deslocados ate 3h)."
+    "description": "Fuso em HORAS. NAO chute nem assuma -3: LEIA o fuso DA CONTA com `lionchat_account_show` (campo `timezone`, ex.: 'America/Sao_Paulo') e converta pra horas. O padrao da plataforma e America/Sao_Paulo (-3), mas a conta pode ter outro — Mato Grosso do Sul e -4, e cliente fora do Brasil existe. SEMPRE envie: ausente calcula em UTC e o numero nao bate com o que o cliente ve na tela. Em janela de UM DIA (time_range 'today'/'yesterday') isso e decisivo: uma hora de diferenca joga o que aconteceu de madrugada pro dia errado."
    },
    {
     "name": "time_range",
@@ -25658,7 +25658,7 @@
     "type": "number",
     "location": "query",
     "required": false,
-    "description": "Fuso em HORAS (Brasilia = -3). SEMPRE envie: ausente calcula em UTC e o numero nao bate com o que o cliente ve na tela (baldes de dia deslocados ate 3h)."
+    "description": "Fuso em HORAS. NAO chute nem assuma -3: LEIA o fuso DA CONTA com `lionchat_account_show` (campo `timezone`, ex.: 'America/Sao_Paulo') e converta pra horas. O padrao da plataforma e America/Sao_Paulo (-3), mas a conta pode ter outro — Mato Grosso do Sul e -4, e cliente fora do Brasil existe. SEMPRE envie: ausente calcula em UTC e o numero nao bate com o que o cliente ve na tela. Em janela de UM DIA (time_range 'today'/'yesterday') isso e decisivo: uma hora de diferenca joga o que aconteceu de madrugada pro dia errado."
    },
    {
     "name": "measure",
