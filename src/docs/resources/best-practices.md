@@ -559,12 +559,18 @@ opcional `variable_mapping` junto.
 
 1. **Tira o modelo do alcance do AI Agente.** Basta UMA variável sem mapping para o modelo inteiro
    deixar de ser oferecido no follow-up automático fora da janela de 24h.
-2. **Faz o envio manual falhar** com o erro `#132000` da Meta (número de parâmetros não bate).
+2. **Faz a mensagem sair com um PONTO no lugar da variável.** Desde 04/08/2026 posição sem valor
+   não derruba mais o envio (antes era `#132000`): o sistema preenche `.` e entrega — "Olá ., sua
+   consulta é dia ." chega assim pro cliente, marcado como sucesso. Rastro:
+   `additional_attributes.template_param_fallback` na mensagem (lista das posições preenchidas com
+   o piso). Numa campanha isso vira dezenas de clientes recebendo ponto (caso real 21/08: 65
+   pessoas).
 
 Vale para os dois formatos de marcador: posicional (`{{1}}`) e nomeado (`{{nome_cliente}}`).
 
-> Ao registrar modelo por API, **mapeie todas as variáveis do corpo** — ou preencha na hora do envio
-> via `processed_params`. Modelo com variável órfã é modelo que a IA não usa e que o disparo derruba.
+> Ao registrar modelo por API, **mapeie todas as variáveis do corpo** — ou preencha TODAS as
+> posições em `processed_params` na hora do envio/campanha, e confira antes de criar a campanha que
+> nenhuma está vazia. Modelo com variável órfã é modelo que a IA não usa e que entrega ponto.
 
 Confira o que ficou de fora lendo o modelo com `lionchat_inboxes_whatsapp_templates_list` e
 comparando os `{{...}}` do texto do BODY com as chaves do `variable_mapping`.

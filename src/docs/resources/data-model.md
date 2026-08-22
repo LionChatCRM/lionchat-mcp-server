@@ -364,24 +364,44 @@ AccountTask (agenda interna)
 ├── conversation_id / contact_id / linked_kanban_item_id (FK opcionais)
 └── assignees (has_many → User, via account_task_assignments)
 
-BookingEventType (template de agendamento)
-├── id (PK)
-├── account_id (FK)
-├── name (ex: "Demo 30min")
-├── duration_minutes
-├── availability_rules (jsonb)
-└── description
+BookingEventType (template de agendamento — tools `booking_event_types_*`; colunas de
+db/schema.rb, tabela booking_event_types)
+├── id (PK) / account_id (FK) / user_id (FK → agente padrão)
+├── title (ex: "Demo 30min") / description / slug (endereço público próprio)
+├── duration_minutes / slot_granularity_minutes / buffer_minutes
+├── min_notice_hours / max_advance_days / max_per_day / available_from / available_until
+├── task_type (meeting/video_call — `video_call` gera Meet)
+├── timezone (IANA — o fuso dos horários é SEMPRE o do tipo, nunca o do navegador)
+├── color (hex `#RRGGBB`, opcional — cor dos compromissos desse tipo no calendário; vazio = cor do
+│   agente; 2026-08-19)
+├── active / ask_email / ask_description
+├── confirmation_* (mensagem de confirmação própria: enabled, inbox_id, channel_type,
+│   template_name, blocks)
+└── booking_availabilities (has_many — dias/horários; `booking_availabilities_attributes` no create)
 
-Booking (agendamento confirmado)
+Booking (agendamento confirmado — tabela bookings)
 ├── id (PK)
-├── account_id (FK)
-├── booking_event_type_id (FK)
-├── user_id (FK, agente que vai atender)
-├── attendee_name / attendee_email / attendee_phone
-├── start_time / end_time (ISO 8601)
-├── status (scheduled/cancelled/completed)
-└── meeting_url (Google Calendar / Zoom / etc)
+├── account_id (FK) / booking_event_type_id (FK) / account_task_id (FK 1:1 → AccountTask)
+├── contact_id (FK) / guest_name / guest_email / guest_phone / guest_description
+├── scheduled_at / duration_minutes
+├── status (confirmed/cancelled/completed) — **NÃO acompanha a Agenda**: concluir ou cancelar pela
+│   tela da Agenda (o caminho normal da equipe) deixa o booking em `confirmed`. A situação real é
+│   `account_tasks.status` (pending/completed/cancelled/snoozed) da tarefa vinculada — é ela que o
+│   relatório de Agendamentos e os gatilhos `booking_*` do FlowBuilder leem
+├── cancelled_at / cancellation_reason / confirmation_sent_at / utm_params
+└── (o agente responsável e o `meeting_url` moram na TAREFA: `account_tasks.user_id` e
+    `account_tasks.meeting_url`)
 ```
+
+**Duração sob medida (2026-08-19):** ao marcar pelo painel/API (`lionchat_tasks_create` com
+`booking_event_type_id`) pode-se mandar `duration_minutes` diferente do tipo (5 a 1440; fora da
+faixa o sistema usa a do tipo). A lista de horários livres aceita o mesmo parâmetro
+(`lionchat_booking_event_types_slots?date=AAAA-MM-DD&duration_minutes=60`) e **os horários mudam**
+— 60 min num tipo de 30 some com os encaixes que não cabem. Sempre peça os slots com a MESMA duração
+que vai gravar. A página pública e a IA não têm essa opção (duração do tipo, sempre).
+
+**Cor por tipo (2026-08-19):** `booking_event_types.color` (hex `#RRGGBB`) pinta os compromissos
+daquele tipo no calendário; vazio = cor do agente. A tarefa devolve `booking_color` já resolvido.
 
 **Atributos de sistema do Booking no CONTATO (novo 2026-07-06):** ao confirmar um agendamento,
 8 custom attributes protegidos são gravados no contato — usáveis como variável
@@ -423,7 +443,7 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_data_consulta` | date | Data da consulta, ISO |
 | `eclinica_hora_consulta` | **time** | Hora da consulta 24h `"HH:MM"` (novo 2026-07-06) |
 | `eclinica_hora_final` | **time** | Hora final da consulta (novo 2026-07-27) |
-| `eclinica_status_agendamento` | text | agendado / aguardando (paciente chegou) / no_show / atendido / desmarcado. **`aguardando` é transitório**: o próximo evento de agenda daquele paciente grava por cima (o último evento recebido é sempre o que vale) |
+| `eclinica_status_agendamento` | text | `agendado` / `aguardando` (paciente chegou) / `no_show` / `atendido` / `desmarcado`. Vem do TIPO do evento, nunca da letra da situação. **Estado terminal do MESMO agendamento não volta pra `agendado`** (2026-08-20): a e-Clínica manda `agendamento_alterado` a cada edição da consulta, inclusive depois da chegada/atendimento, e isso NÃO reabre o status. Consulta com `eclinica_idagenda` DIFERENTE nasce `agendado` |
 | `eclinica_situacao` | text | Situação do agendamento no painel, **POR EXTENSO** (2026-08-21, legenda oficial da e-Clínica): AGUARDANDO, NA CADEIRA, PASSAR FINANCEIRO, AGENDAR RETORNO, ATENDIDO, CONFIRMADO, CONFIRMADO PELO LINK, CONFIRMADO PELA API, FALTA, DESMARCADO, CANCELADO PELO LINK, CANCELADO PELA API. Antes guardava a letra crua (`A`, `C`…). Código nunca visto aparece como veio |
 | `eclinica_compromisso` | text | Tipo da consulta — TEXTO LIVRE da recepção (ex: Consulta, Retorno) |
 | `eclinica_agendatipo` | text | Tipo de Agendamento — NOME da lista fixa do painel, resolvido por unidade (novo 2026-07-28). **Filtrar sempre pelo NOME, nunca pelo número: os números colidem entre filiais** |
@@ -457,6 +477,23 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_ultima_cobranca_valor` | text | Valor da última cobrança/carnê gerado |
 | `eclinica_ultima_cobranca_vencimento` | date | Vencimento da última cobrança |
 | `eclinica_ultima_cobranca_descricao` | text | Descrição da última cobrança |
+
+**Regras de atualização que enganam na leitura (2026-08-20/21):**
+
+- `eclinica_situacao` e `eclinica_cor` são **esparsas**: evento de agenda que vem SEM o campo
+  **apaga a chave** (vazio = "a recepção ainda não marcou", não "sem dado"). `agendamento_novo`
+  nunca traz situação — logo depois de marcar, a situação fica vazia de propósito.
+  `agendamento_atendido` e `agendamento_desmarcado` **atualizam** a situação (ATENDIDO, DESMARCADO);
+  antes de 21/08 a ficha ficava "NA CADEIRA" depois do atendimento (conserto de 21/08/2026 — entra
+  com o próximo deploy do app depois de 21/08/2026).
+- Códigos com mais de uma letra pro mesmo estado: `O`/`OK` = CONFIRMADO, `D`/`W` = DESMARCADO.
+  Código fora da legenda fica gravado como veio (nunca vazio, nunca palpite).
+- `agendamento_aguardando` (paciente chegou) grava a chegada por cima do agendamento, mas **não
+  agenda nem cancela lembrete** (chegada não é consulta nova) e **não apaga** cor/situação quando
+  vem sem elas.
+- `eclinica_ultima_chegada_*`, `eclinica_ultimo_pagamento*` e `eclinica_odontograma_*` guardam o
+  ÚLTIMO evento; paciente com 3 consultas tem sempre a última na ficha (não há histórico no contato —
+  use `lionchat_eclinica_reminder_history_list` e o log de eventos da tela).
 
 **Lembretes automáticos (Integrações > e-Clínica > Lembretes).** Cada linha tem um **tipo de
 evento** que decide de qual data a contagem parte: `agendamento` (data da consulta, padrão),
@@ -524,7 +561,8 @@ LeadForm (Formulário público de captação — feature flag lead_forms, por co
 ├── account_id (FK)
 ├── name / slug (8 chars, gerado na criação e imutável) / display_mode (cards|chat) / active
 ├── form_data (jsonb: o desenho do construtor) — published_data (a FOTO publicada, que a página usa)
-├── settings (jsonb: primary_color, theme, abandon_minutes, button_label) / published_at
+├── settings (jsonb: primary_color, theme, abandon_minutes, button_label, resume, chat_avatar,
+│   public_title — título que o LEAD vê, 2026-08-21) / published_at
 └── counts: views / responses / completed (contadores) + lead_form_responses (has_many)
 
 LeadFormResponse (um preenchimento do formulário)
@@ -537,9 +575,27 @@ LeadFormResponse (um preenchimento do formulário)
 CustomWebhookIntegration (Webhook Universal — entrada)
 ├── account_id (FK)
 ├── name / token (URL única) / active
-├── field_mapping (jsonb — suporta caminhos com índice de array: messages.0.content)
+├── field_mapping (jsonb — caminho do payload → destino: campo nativo, `contact_attr_<k>`,
+│   `conversation_attr_<k>` (2026-08-21 — entra com o próximo deploy do app depois de 21/08/2026),
+│   `cadastral_<k>`, `social_<k>`; aceita índice de array: messages.0.content)
 ├── event_automation_mapping (jsonb)
 └── flow_id (FK opcional → Flow; presente = webhook EMBUTIDO de flow, oculto da listagem standalone)
+
+Gateways de pagamento (GuruWebhook, HotmartWebhook, KiwifyWebhook, EduzzWebhook, TictoWebhook,
+MonetizzeWebhook, GreennWebhook, ContaAzulIntegration, OmieIntegration — tools
+`lionchat_ecommerce_webhooks_*`, `conta_azul_integrations_*`, `omie_integrations_*`)
+├── event_automation_mapping (jsonb) — uma entrada por evento do gateway:
+│   { "<evento>": { automation_id, flow_id, first_purchase_only,
+│                   conversation_attribute_keys: ["purchase_price", "product_name", ...] } }
+│   (Conta Azul/Omie usam `event_mapping`, por categoria). `conversation_attribute_keys`
+│   (2026-08-21 — entra com o próximo deploy do app depois de 21/08/2026) = quais campos da compra
+│   gravar TAMBÉM na conversa que a automação/fluxo abrir; chaves válidas = catálogo dos atributos
+│   de pagamento: product_name, offer_name, invoice_url, purchase_price, payment_method,
+│   purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name,
+│   event_date, charged_times, subscription_cycle, subscription_status, customer_document,
+│   transaction_id, payment_installments, payment_source. Chave fora do catálogo é ignorada.
+└── Leia o mapeamento atual antes de gravar: o `update` SUBSTITUI o jsonb INTEIRO (não mescla) —
+    mande todos os eventos de volta, senão os outros somem.
 
 LiontrackJourneyStage (regras de fase da Jornada do Lead — feature flag liontrack)
 ├── account_id (FK)
@@ -564,6 +620,17 @@ ContactDocument (aba Documentos do contato, 2026-06-11)
 ├── dedup por checksum (arquivo repetido conta 1x no storage)
 └── ações: preview, download, renomear, favoritar, excluir (conversas são só-leitura)
 ```
+
+**Histórico de preenchimentos por CONTATO (2026-08-21 — entra com o próximo deploy do app depois
+de 21/08/2026):** `GET /contacts/{id}/form_entries` (aba "Preenchimentos" da ficha; tools
+`lionchat_contacts_form_entries_list` / `_show`) junta, em ordem de data, o que a pessoa preencheu
+em nosso formulário, no formulário nativo do Meta, no Webhook Universal e no webhook de flow (origem
+`flow`, com o nome do fluxo) — cada item `{source, id, title, status, at, count, conversation}` e
+`/form_entries/{source}/{id}` abre o detalhe. Como cada preenchimento SOBRESCREVE os atributos do
+contato, a ficha só mostra o último — esta lista guarda todos. Origens de fora exibem SÓ os campos
+vinculados a atributos daqui e realmente gravados (nada do payload cru). Ao mesclar contatos, as
+origens vão pro contato vencedor. Os eventos do Meta Lead **não são mais expurgados após 90 dias**
+(decisão do dono, 21/08).
 
 ### Google Contatos (integração nativa)
 

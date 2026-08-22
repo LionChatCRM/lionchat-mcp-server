@@ -2,7 +2,8 @@
 
 Tudo sobre os Formulários Públicos do LionChat (captação estilo Typeform/Typebot): link público,
 caixa de WhatsApp vinculada, desenho dos blocos, publicação, respostas, funil, simulador e
-integração com fluxos. Atualizado em 18/08/2026 (v4.10.226).
+integração com fluxos. Atualizado em 21/08/2026 (v4.10.228 + commits de 21/08 na elvislion: título
+público, aba Preenchimentos — entram com o próximo deploy do app depois de 21/08/2026).
 
 ## O que é
 
@@ -51,16 +52,21 @@ caixa de WhatsApp vinculada e (opcionalmente) dispara um fluxo do FlowBuilder no
 | `lionchat_lead_forms_responses_show` | `GET /lead_forms/:id/responses/:rid` | Detalhe de uma resposta, com o que a pessoa respondeu |
 | `lionchat_lead_forms_test_run` | `POST /lead_forms/:lead_form_id/test_runs` | Simulador: roda o RASCUNHO no motor real, sem deixar rastro. Qualquer agente da conta |
 | `lionchat_lead_forms_check_embed` | `POST /lead_forms/check_embed` | Confere se um site aceita ser exibido em iframe (bloco Página externa). Admin-only |
+| `lionchat_contacts_form_entries_list` | `GET /contacts/:contact_id/form_entries` | Tudo que UMA PESSOA preencheu, das 4 origens (nosso formulário, Meta, Webhook Universal, Fluxo). Qualquer agente |
+| `lionchat_contacts_form_entries_show` | `GET /contacts/:contact_id/form_entries/:source/:id` | Detalhe de um preenchimento a partir do contato. Qualquer agente |
 
-**Imagens não têm ferramenta MCP.** O upload de imagem de bloco (`POST /lead_forms/:id/media`,
-máximo 5 MB, só `image/*`) existe no painel. Pela API dá pra referenciar um `image` que já foi
-subido, nunca subir um novo.
+**Imagens não sobem pelo conector.** A rota `POST /lead_forms/:id/media` (admin, multipart `file`,
+só `image/*`, máximo 5 MB, devolve `{blob_id, url}`) existe, mas upload de arquivo não passa pelo MCP
+— chamada pelo conector ela volta 422 `invalid_file_type`. Suba a imagem no editor do painel e
+referencie o `blob_id` (o `show` traz `media_urls` com todos os ids do acervo: imagem de bloco,
+imagem de opção e a foto do chat). **Imagem subida e não referenciada em até 1 hora é apagada** na
+próxima varredura (todo `update`/`publish` roda a varredura).
 
 ## Campos do formulário
 
 | Campo | Tipo | Observação |
 |---|---|---|
-| `name` | string | **Obrigatório** |
+| `name` | string | **Obrigatório.** Nome INTERNO (lista do painel). O que o lead vê na aba do navegador e no link compartilhado é `settings.public_title`; vazio, cai no `name` |
 | `display_mode` | string | `cards` (padrão) ou `chat` |
 | `active` | boolean | Formulário inativo devolve 404 na página pública |
 | `inbox_id` | integer | Caixa de WhatsApp vinculada. Obrigatória para publicar. Ver regras abaixo |
@@ -94,6 +100,14 @@ ou `null` — a caixa resolvida), e `published_inbox_id` (a caixa que está NA F
 | `button_label` | string — rótulo do botão da página pública | — |
 | `resume` | booleano — continuar de onde parou entre visitas | `true` |
 | `chat_avatar` | id numérico de blob já subido (`media`) — foto redonda ao lado dos balões, só no formato `chat`. O público recebe `chat_avatar_url` resolvida (nunca o id) | — |
+| `public_title` | string, até 100 caracteres — título que o LEAD vê (aba do navegador, link compartilhado). Vazio = usa o `name`. O endpoint público devolve `display_title` (nunca o `name` cru) | — (21/08 — entra com o próximo deploy do app depois de 21/08/2026) |
+
+**No `update`, `settings` SUBSTITUI o objeto inteiro** (assim como `form_data`): não há merge. Mande
+todas as chaves que quer manter — um `settings: {theme: "dark"}` apaga cor, avatar, título público,
+`resume` e `abandon_minutes`. E apagar `chat_avatar` custa o arquivo: a varredura de imagens roda
+logo após o salvamento e purga o que não está mais referenciado em `form_data`, na foto publicada ou
+em `settings.chat_avatar` (só upload com menos de 1 hora escapa). O mesmo vale pra `image` de bloco
+ou de opção que sair do `form_data`.
 
 ## Ciclo de vida
 
@@ -208,8 +222,16 @@ renderiza e não dá erro.
 **`options`** (do `choice`): `[{ "id": "abc123", "label": "Sim", "image": "" }]`.
 
 **`branches`** (do `condition`): lista avaliada em ordem; nenhum ramo casando cai no handle `else`.
-Operadores: `equals`, `not_equals`, `contains`, `filled`, `not_filled`, `greater_than`,
-`less_than`. Fonte `api_request` exige `path` (caminho dentro da resposta).
+Cada ramo: `{ "id": "b1", "label": "Sim", "source_node_id": "<id da pergunta/escolha/consulta/IA>",
+"operator": "equals", "value": "...", "path": "" }`. `id` é estável (a aresta `cond_<id>` aponta
+pra ele); `label` é o rótulo do fio no desenho (vazio = número). Operadores: `equals`, `not_equals`,
+`contains`, `filled`, `not_filled`, `greater_than`, `less_than` (os dois últimos só numéricos;
+`filled`/`not_filled` ignoram `value`). Fonte Escolha compara pelo **id da opção**, não pelo texto;
+resposta múltipla: `equals` exige exatamente aquela opção, `contains` = inclui. Fonte `api_request`
+exige `path` (caminho dentro da resposta, ex.: `localidade`); fonte `ai` compara o texto/categoria
+direto. **Ramificar por variável** (`{{var.*}}`): o motor aceita `source_variable: "<nome>"` no
+ramo (tem precedência sobre `source_node_id`), mas o dialog de Condição do editor **não conhece a
+chave e a descarta ao salvar o bloco pela tela** — use só em formulário mantido pela API.
 
 **`items`** (do `action`) — o formato novo, uma LISTA de ações `[{key, config}]`:
 
@@ -357,6 +379,7 @@ mesmo que exista — é proteção, não defeito.
 | Respostas por chamada do simulador | 60 |
 | Altura da Página externa | 240..1200 px |
 | Conferência de embed | 5 s por salto, até 3 redirecionamentos |
+| Lista de preenchimentos do contato | 250 por origem (lead_form / meta_lead / webhook), sem paginação; `meta.truncated` avisa |
 
 ## Simulador (`lionchat_lead_forms_test_run`)
 
@@ -366,39 +389,90 @@ exige admin. O estado do teste vive em quem chama: cada chamada reproduz o teste
 da lista de respostas.
 
 - Body: `{answers: [{node_id, value}]}` — até 60 itens; vazio = começa do início. Item cujo
-  `node_id` não é o bloco atual PARA a reprodução ali (devolve o bloco onde parou).
+  `node_id` não é o bloco atual PARA a reprodução ali (devolve o bloco onde parou). `value: null`
+  avança bloco sem resposta (`start`, `message`, `embed`).
 - Resposta 200: `{block, log, answers, variables, form}` — `block` é o mesmo envelope da página
-  pública; `log` é o caminho percorrido (`[{node_id, type, label, answer, detail}]` — o `detail`
-  mostra variável criada, ações executadas, resultado de consulta/IA e o rumo das condições).
-- 422: `{error: "invalid_value", reason}` (uma resposta reprovada na validação) ou
-  `{error: "test_run_failed", reason}`.
+  pública; `log` é o caminho percorrido (`[{node_id, type, label, answer?, detail?}]` — `detail`
+  mostra variável criada, ações executadas e o rumo das condições; `answer`/`detail` só aparecem
+  quando existem); `form.name` é o nome interno.
+- 422: `{error: "invalid_value", reason}` (uma resposta reprovada — `reason` é o código:
+  `required`, `invalid_email`, `invalid_phone`, `invalid_cpf`, `invalid_option`, `value_too_long`…)
+  ou `{error: "test_run_failed", reason}`.
+
+**O que o simulador NÃO faz (e como isso aparece):**
+
+| Bloco | No simulador |
+|---|---|
+| Consulta externa (`api_request`) e IA (`ai`) | **Não executam** (o job de efeito é desligado no modo de teste). Ao chegar neles a resposta volta `block: {node_id, type: "wait"}` e a reprodução para ali — itens seguintes são ignorados e `detail` desses blocos fica vazio. Pra testar o que vem depois, use a página pública (link identificado/aba anônima). |
+| Agendamento (`booking`) | `value: ""` segue por `no_booking` (só se o bloco não for obrigatório). Pra simular "agendou", mande o id de um agendamento **já existente** da conta — o simulador pela API não cria reserva. (No painel, o simulador embute a página real: uma reserva feita ali é de verdade e fica no banco.) |
+| Envio de arquivo (`file_upload`) obrigatório | Não tem como passar (o valor precisa ser um arquivo anexado à resposta de teste, que não existe): 422 `invalid_value`. Só com `required: false` e `value: ""`. |
+| Envio de WhatsApp, etiqueta, pixel, marco | Aparecem no `log` como reservados (`detail` lista as ações), mas nada é enviado/gravado. |
 
 ## Respostas e funil
 
-**`lionchat_lead_forms_stats`** (`days` opcional) devolve views/starts/completed/abandoned/
-completion_rate + `funnel` por bloco + `milestones`. O funil lista os blocos que a pessoa vê
-(`start`, `question`, `choice`, `message`, `booking`, `embed`, `end`), na ordem do desenho
-**publicado**.
+**`lionchat_lead_forms_stats`** (`days` opcional, default 30, máximo 90) devolve
+`views` (contador de VIDA INTEIRA do formulário — não obedece `days`), `starts`/`completed`/
+`abandoned` da janela, `completion_rate` (% inteiro = completed/starts), `funnel` por bloco e
+`milestones`. O funil lista os blocos que a pessoa vê (`start`, `question`, `choice`, `message`,
+`booking`, `embed`, `end`), na ordem do desenho **publicado**; acima de 50.000 respostas na janela
+sai parcial. **`milestones` hoje só enxerga bloco de Ações no formato antigo (`action_type:
+"milestone"`)** — marco configurado em `items` (formato atual do editor) não aparece aqui; aparece
+em `responses_show.milestones`.
 
 **`lionchat_lead_forms_responses_list`** aceita `status` (`in_progress`, `completed`,
-`abandoned`), `days` e `page`. A lista nunca traz as respostas em si — só `{id, status, contact,
-current_node_label, answered_count, created_at, completed_at}`. **`contact` pode vir
-`{id: null, name, phone, pending: true}`** — é quem ainda está preenchendo (o contato só nasce nos
-três momentos); nome e telefone saem do que a pessoa já digitou.
+`abandoned`), `days` e `page` (até 10.000). A lista nunca traz as respostas em si — só `{id, status,
+contact, current_node_label, answered_count, created_at, completed_at}` e `meta: {current_page,
+per_page: 25, total_count}`. **`contact` pode vir `{id: null, name, phone, pending: true}`** — é
+quem ainda está preenchendo (o contato só nasce nos três momentos); nome e telefone saem do que a
+pessoa já digitou. `answered_count` conta todas as chaves de `answers`, inclusive as sintéticas.
 
 **`lionchat_lead_forms_responses_show`** traz o conteúdo:
 
-- `answers`: `[{label, value_label, at, download_url?}]`. **Atenção:** o bloco de Ações grava
-  entradas SINTÉTICAS com chave `"<node_id>::<n>"` — nem toda chave de `answers` é id de bloco.
+- `status`, `contact` (mesmo shape da lista), `current_node_label`, `started_at`, `completed_at`,
+  `abandoned_at`, `created_at`.
+- `answers`: `[{label, value_label, at, download_url?}]`, ordenado por `at`. **Atenção:**
+  (1) o bloco de Ações grava entradas SINTÉTICAS com chave `"<node_id>::<n>"` e o fim degradado
+  (beco sem saída/teto de passos) grava `"_walk_ended"` — nem toda chave é id de bloco;
+  (2) no bloco de **Agendamento `value_label` é o id da reserva, não a data** (a aba Preenchimentos
+  do contato mostra a data); (3) envio de WhatsApp pulado por falta de telefone aparece como
+  entrada vazia do bloco de mensagem.
 - `conversation`: `{id, display_id}` ou `null` — a conversa aberta na caixa vinculada.
-- `milestones`: os marcos atingidos.
-- `effects`: resultado de consulta/IA — `{node_id, label, state, error, status, url_short, at}`.
-  `url_short` é esquema + host + caminho, sem a query; corpo, cabeçalhos e prompt nunca saem.
+- `milestones`: os marcos atingidos (`[{node_id, name, at}]`).
+- `effects`: resultado de consulta/IA — `{node_id, label, state: pending|done|error, error, status,
+  url_short, at}`. `url_short` é esquema + host + caminho, sem a query; corpo, cabeçalhos e prompt
+  nunca saem.
 - `utm_params`: de onde o lead veio.
 
-Motivos de erro em `effects`: `http_<código>`, `timeout`, `ssrf_blocked`, `invalid_url`,
-`result_too_large`, `stale`, `busy`, `budget_exceeded`, `no_ai_key`, `ai_error`,
-`unresolved_variable`.
+Motivos de erro em `effects.error`: `invalid_method`, `invalid_url`, `http_<código>` (`http_0` =
+falha de transporte sem código), `timeout`, `ssrf_blocked`, `result_too_large`, `stale`,
+`effect_failed` (exceção no job), `effect_runs_exceeded` (laço: 20 execuções), `budget_exceeded`,
+`no_ai_key`, `ai_error`. (Os motivos `busy` e `unresolved_variable`, citados antes, não existem no
+código.)
+
+## Preenchimentos do contato (`lionchat_contacts_form_entries_list` / `_show`) — 21/08 (entra com o próximo deploy do app depois de 21/08/2026)
+
+A aba "Preenchimentos" da ficha junta, numa lista só ordenada por data, tudo que a pessoa preencheu
+ou que entrou por ela, de QUATRO origens: nosso formulário público (`source: lead_form`),
+formulário de anúncio do Meta (`meta_lead`), Webhook Universal (`custom_webhook`) e o webhook que o
+FlowBuilder cria pro gatilho de um fluxo (`flow`, com o nome do fluxo). É a única rota que responde
+"o que esta PESSOA preencheu" — as outras são por formulário/integração, e duas delas são só de
+administrador; esta é liberada a qualquer agente.
+
+- **Lista**: `{payload: [{source, id, title, status, at, count, conversation}], meta: {total,
+  truncated}}`. `id` é o id do registro NA ORIGEM — só identifica junto com `source`. `status` é
+  `in_progress|completed|abandoned` no nosso formulário e `received` nas demais. `count` = respostas
+  (nosso) ou campos vinculados e gravados (de fora). `conversation` só existe em `lead_form`. Sem
+  paginação de propósito; teto de 250 por origem — estourou, `truncated: true`. Só entram eventos
+  do Meta/webhook com status processado.
+- **Detalhe** (`source` + `id` da mesma linha): nosso formulário devolve `answers` (`[{label,
+  value, at, download_url?, images?}]` — pergunta/resposta legíveis, na ordem; Escolha com opção
+  ilustrada traz `images`, e opção sem texto vem com `value` vazio; Agendamento mostra a DATA),
+  `written` (`[{scope: contact|conversation, label, value}]` — o que AQUELE preenchimento gravou) e
+  `utm`. Meta/webhook/fluxo devolvem SÓ `fields: [{label, value}]` — os campos que foram vinculados a
+  atributos daqui e realmente gravados, com o rótulo daqui; nunca o payload cru. `fields: []` = o
+  evento não gravou nada. Origem fora da lista ou registro de outro contato = 404.
+- A lista **não traz o `lead_form_id`** da resposta: pra chegar em `lionchat_lead_forms_responses_show`
+  a partir dela, ache o formulário pelo `title` em `lionchat_lead_forms_list`.
 
 ## Conferência de iframe (`lionchat_lead_forms_check_embed`)
 
@@ -497,3 +571,11 @@ agendar (com `required: true` essa saída deixa de existir). O tipo de evento ve
 - **Não há tool de rewind**: o "Voltar e corrigir" é da página pública (o lead corrige a própria
   resposta; telefone corrigido reencaminha a mensagem pro número certo). Pela API de dashboard,
   respostas são somente leitura.
+- **`settings` no `update` também SUBSTITUI o objeto inteiro** — e sem `chat_avatar` o arquivo da
+  foto é apagado pela varredura. Leia com `show`, altere e mande completo.
+- **Imagem que some do `form_data` é apagada de verdade** logo após o salvamento (só sobrevive se
+  ainda estiver na foto publicada ou tiver menos de 1 hora).
+- **O simulador não roda consulta nem IA**: parou em `block.type: "wait"` = chegou num desses
+  blocos. Teste o trecho seguinte pela página pública.
+- **`stats.views` é de vida inteira** (ignora `days`); `stats.milestones` não vê marco em `items`.
+- **`name` é interno; `settings.public_title` é o que o lead vê** (vazio = cai no `name`).

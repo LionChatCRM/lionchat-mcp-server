@@ -282,6 +282,18 @@ valor**. A conversa mantém a origem com que nasceu e só ganha o que ainda não
 notificação e a Agenda não rodam. Se o seu fluxo depende de um desses, ele não vai acontecer
 quando houver reuso.
 
+**Caixa de rede social só é "contactável" se a pessoa já falou por ela (desde 19/08/2026).**
+`lionchat_contacts_list_3` (`/contacts/{id}/contactable_inboxes`) lista Facebook, Instagram,
+Telegram, Line, TikTok e X **apenas quando o contato já tem crachá naquela caixa** — nesses canais
+não existe "começar conversa pelo telefone" (a Meta recusa). Se a caixa social não aparece na lista,
+não tente `conversations_create` nela: a conversa nasceria e nunca entregaria. WhatsApp (oficial e
+QR Code), SMS e e-mail continuam contactáveis pelo telefone/e-mail da ficha.
+
+**Telefone com ou sem o 9º dígito na caixa OFICIAL (desde 19/08/2026):** criar conversa pra um
+contato cuja ficha está sem o 9 (ou com) REUSA o endereço que a caixa já tem pra essa pessoa, em vez
+de abrir um segundo — era isso que partia a conversa em duas (lembrete numa, resposta do paciente
+em outra). O `source_id` devolvido pode vir no outro formato do que você mandou; é o mesmo cliente.
+
 ## Estado relacional
 
 ```

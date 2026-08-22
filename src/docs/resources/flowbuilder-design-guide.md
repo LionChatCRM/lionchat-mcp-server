@@ -73,6 +73,8 @@ Todo node tem essa estrutura base:
 - `conversation_created` / `conversation_reopened`: filtro opcional de keywords via `match_mode` (`'any'`, `'contains'`, `'exact'`, `'customer_initiated'`, `'agent_initiated'`) + `keywords`. Só ESTES dois triggers usam `match_mode`.
 - `label_added` / `label_removed`: `label_names` (array de slugs). NÃO use `label` (singular) — é ignorado.
 - `card_created` / `card_moved`: `funnel_ids` (array de STRINGS, ex.: `["37"]` — número puro `[37]` NÃO casa) + `funnel_stages` (array de `"funnel_id:chave_da_etapa"`, ex.: `"37:agendamento_pendente"`). A `chave_da_etapa` é a CHAVE INTERNA da etapa no funil (slug legível em funis de template; pode ser um UUID/`stage_<n>` em etapa criada à mão ou funil duplicado) — NÃO o nome exibido na tela. Sem `funnel_ids` → dispara em qualquer funil; com `funnel_ids` mas sem `funnel_stages` → qualquer etapa daquele(s) funil(is). O card precisa estar num funil listado em `funnel_ids` pra o filtro de etapa valer. ATENÇÃO: dois flows ATIVOS na mesma inbox com `card_created`/`card_moved` de funil/etapa sobrepostos são bloqueados na criação/ativação (ver `flow_trigger_conflict` no fim deste guia).
+- `team_changed`: `team_ids` (array de STRINGS; vazio = qualquer equipe). `assignee_changed`: `agent_ids` (array de STRINGS; vazio = qualquer atendente). `card_won` / `card_lost`: `funnel_ids` (array de STRINGS) — disparam SÓ quando o STATUS do card vira ganho/perdido, nunca por etapa com esse nome.
+- `page_track` (LionTrack, só flow individual): `{ "track_type": "visited_page"|"event_fired", "urls": [...], "operator": "contains"|"exact"|"starts_with", "event_names": [...], "event_operator": "equals"|"contains", "cooldown_hours": 24 }` — `cooldown_hours` (padrão 24, mínimo 1) não re-dispara pro mesmo contato dentro da janela.
 - `conversation_attribute_changed` / `card_attribute_changed` (novo 2026-07-08): disparam na VIRADA de um atributo (da CONVERSA ou do CARD do kanban) pro valor que casa — RE-ENTRAM toda vez que o atributo muda pro valor alvo. Config: `{ "logic": "and"|"or", "rules": [ { "attr_key": "...", "operator": "...", "value": "..." } ] }` (uma rule pode usar `values: [...]` no lugar de `value` pra multi-valor). O `attrSource` é IMPLÍCITO pela chave do gatilho (conversa vs card) — NÃO informe. Operadores (contexto REATIVO — desde 09/07 `is_empty`/`is_not_empty` NÃO valem aqui, pois "está vazio AGORA" dispararia a cada evento; use-os só no nó Condição): `equal`/`not_equal`/`contains`/`not_contains`/`starts_with`/`ends_with`/`greater_than`/`less_than`/`number_range`. Só `card_attribute_changed` aceita `funnel_id`/`card_source` opcionais dentro da rule (pra achar o card). Rule sem `attr_key` é ignorada.
 - `contact_attribute_changed` (novo 2026-07-22 — "Atributo do contato muda"): dispara quando um atributo personalizado do **CONTATO** muda e a condição casa — mesmo com o contato fora de flow. Item: `{ "key": "contact_attribute_changed", "config": { "logic": "and"|"or", "rules": [ { "attrSource": "contact", "attr_key": "...", "operator": "...", "value": "..." } ] } }` (1 a 10 rules; `values: [...]` pra multi-valor). **DIFERENTE dos irmãos de 08/07: aqui o `attrSource` VAI na rule e é SEMPRE `"contact"`.** Operadores iguais aos do nó Condição. **VERSÃO SEGURA por decisão de produto:** dispara SÓ na conversa mais recente que JÁ EXISTE numa caixa do flow (reabre se resolvida); contato sem conversa NÃO dispara e NUNCA cria conversa. Dedup de 30s por contato + anti-loop por profundidade de cadeia (flow que muda atributo que dispara flow…). Só flows de conversa.
 
@@ -135,7 +137,7 @@ Receita completa: `flows_create`/`flows_update` com o item no start → `flows_l
 4. Salvar o flow (`flows_update`) — o save sincroniza a ativação do webhook embutido (remover o item desativa a integração automaticamente).
 Webhooks embutidos NÃO aparecem na listagem de integrações standalone; excluir o flow destrói o webhook; duplicar o flow NÃO copia o gatilho embutido. Rate limit do endpoint público: 60/min por token.
 
-**Gatilhos de AGENDAMENTO — Booking NATIVO do LionChat (2026-08-20):** `booking_created` (alguém marcou pelo link público, pela IA ou pelo painel), `booking_cancelled` (paciente cancelou pelo link, IA cancelou ou a equipe cancelou na Agenda), `booking_rescheduled` (a data/hora mudou — link do paciente, IA, editar/adiar na Agenda), `booking_completed` (equipe concluiu na Agenda; exige a Agenda unificada ligada na conta). **Não é e-Clínica.** Config (tudo opcional, vazio = todos): `booking_event_type_ids` (array de ids de tipo de agendamento, **STRING**), `agent_ids` (array de ids de usuário — o RESPONSÁVEL da tarefa), `create_conversation` (boolean, padrão `false`: só dispara para quem já tem conversa numa caixa do flow; `true` = cria a conversa na 1ª caixa do flow). Exemplo: `{ "key": "booking_created", "config": { "booking_event_type_ids": ["44"], "agent_ids": [], "create_conversation": true } }`. São INERTES a evento de conversa (quem dispara é o `Booking::FlowTriggerDispatcher`, por CONTA — caixa do flow só define onde a conversa é criada/reusada). Variáveis no flow: `{{booking.date}}` (DD/MM/AAAA), `{{booking.time}}`, `{{booking.weekday}}`, `{{booking.datetime}}` (ISO), `{{booking.type}}`, `{{booking.type_format}}` (presencial/videochamada), `{{booking.duration}}`, `{{booking.agent}}`, `{{booking.status}}` (confirmado/cancelado/remarcado/concluído), `{{booking.description}}`, `{{booking.cancel_url}}`, `{{booking.reschedule_url}}`, `{{booking.color}}`, `{{booking.id}}`; só no remarcado: `{{booking.previous_date}}`, `{{booking.previous_time}}`, `{{booking.previous_datetime}}`; `{{booking.meeting_url}}` NÃO vem no criado (nasce vazio). Data/hora vêm da TAREFA da Agenda (sempre atuais). Regras: o evento mais novo SUBSTITUI a rodada ativa do mesmo flow na mesma conversa (2ª consulta do mesmo paciente, ou cancelado chegando com o criado ainda esperando resposta); excluir a tarefa, reabrir cancelada ou desfazer conclusão NÃO disparam; adiar (snooze) conta como remarcado; tipo com confirmação/lembrete próprios ligados + `booking_created` = o paciente pode receber duas mensagens (a tela avisa). Colisão entre flows é por CONTA: mesmo kind + tipos se cruzando + agentes se cruzando (vazio = todos).
+**Gatilhos de AGENDAMENTO — Booking NATIVO do LionChat (2026-08-20):** `booking_created` (alguém marcou pelo link público, pela IA ou pelo painel), `booking_cancelled` (paciente cancelou pelo link, IA cancelou ou a equipe cancelou na Agenda), `booking_rescheduled` (a data/hora mudou — link do paciente, IA, editar/adiar na Agenda), `booking_completed` (equipe concluiu na Agenda; exige a Agenda unificada ligada na conta). **Não é e-Clínica.** Config (tudo opcional, vazio = todos): `booking_event_type_ids` (array de ids de tipo de agendamento, **STRING**), `agent_ids` (array de ids de usuário — o RESPONSÁVEL da tarefa), `create_conversation` (boolean, padrão `false`: só dispara para quem já tem conversa numa caixa do flow; `true` = cria a conversa na 1ª caixa do flow). Exemplo: `{ "key": "booking_created", "config": { "booking_event_type_ids": ["44"], "agent_ids": [], "create_conversation": true } }`. São INERTES a evento de conversa (quem dispara é o `Booking::FlowTriggerDispatcher`, por CONTA — caixa do flow só define onde a conversa é criada/reusada). Variáveis no flow: `{{booking.date}}` (DD/MM/AAAA), `{{booking.time}}`, `{{booking.weekday}}`, `{{booking.datetime}}` (ISO), `{{booking.type}}`, `{{booking.type_format}}` (presencial/videochamada), `{{booking.duration}}`, `{{booking.agent}}`, `{{booking.status}}` (confirmado/cancelado/remarcado/concluído), `{{booking.description}}`, `{{booking.cancel_url}}`, `{{booking.reschedule_url}}`, `{{booking.color}}`, `{{booking.id}}`; só no remarcado: `{{booking.previous_date}}`, `{{booking.previous_time}}`, `{{booking.previous_datetime}}`; `{{booking.meeting_url}}` NÃO vem no criado (nasce vazio). Data/hora vêm da TAREFA da Agenda (sempre atuais). Regras: o evento mais novo SUBSTITUI a rodada ativa do mesmo flow na mesma conversa (2ª consulta do mesmo paciente, ou cancelado chegando com o criado ainda esperando resposta); excluir a tarefa, reabrir cancelada ou desfazer conclusão NÃO disparam; adiar (snooze) conta como remarcado; tipo com confirmação/lembrete próprios ligados + `booking_created` = o paciente pode receber duas mensagens (a tela avisa). Colisão entre flows é por CONTA: mesmo kind + tipos se cruzando + agentes se cruzando (vazio = todos). Há também `{{booking.event}}` (`created`|`cancelled`|`rescheduled`|`completed` — bom pra condição; não aparece no seletor da tela, mas resolve); `{{trigger.type}}` = a chave do gatilho (ex.: `booking_created`), `{{trigger.kind}}` = `created`|`cancelled`|`rescheduled`|`completed` e `{{trigger.booking_id}}`. SÓ flow de conversa **individual** (a tela nem oferece em flow de grupo); **nunca dispara flow `ai_tool`**. Em caixa WhatsApp OFICIAL, conversa criada nova (ou parada há mais de 24h) está FORA da janela — texto livre no 1º bloco cai em `window_closed`/erro; comece por template.
 
 **TRAVA DE GATILHO DUPLICADO (2026-06-16) — leia ANTES de ativar/criar flow ativo:** o sistema BLOQUEIA ter dois flows ATIVOS com o MESMO gatilho na MESMA inbox e mesmo `conversation_mode` (evita o evento disparar dois flows). Colisão = mesmo tipo de gatilho + config cruzando (mesmas keywords/funil/labels/url/etc) + inbox compartilhada + mesmo modo. EXCEÇÕES que podem coexistir: `webhook_received`, `manual_trigger` e `campaign_trigger` (este último porque não dispara por evento — é só uma autorização para a campanha).
 - Ao **ativar** (`flows_toggle` inativo→ativo) ou **criar já ativo**: qualquer conflito é barrado.
@@ -144,6 +146,14 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 - Existe `POST /flows/check_conflicts` (mesma assinatura, NÃO salva) pra checar antes.
 
 **Como a IA deve agir:** antes de ativar um flow, confira via `flows_check_conflicts` (mesma assinatura do toggle/update, NÃO salva nada e devolve exatamente quem colide) se já não há outro flow ativo no mesmo gatilho+inbox — NÃO tente deduzir isso lendo o `flow_data` de cada item da `flows_list` (a lista é pra escolher/filtrar fluxos, não pra inspecionar blocos). Se receber 422 `flow_trigger_conflict`, NÃO fique reativando — EXPLIQUE o conflito ao usuário (nome do flow conflitante + caixa) e ofereça desativar o outro flow ou ajustar o gatilho/keywords.
+
+**O que `flows_list` devolve (leve, desde 20/08/2026):** `id`, `name`, `description`, `flow_type`,
+`conversation_mode`, `active`, `inbox_ids`/`inboxes`, `tags`, `tool_name`/`tool_description` e
+**`trigger_types`** (as chaves de gatilho do bloco Início — serve pra filtrar "quais flows disparam
+por `message_received`" sem abrir cada um). **NÃO vem** `flow_data`, `variables` nem métricas por
+bloco — pra isso use `flows_show`. Contadores de sessão (`session_stats`: `total`, `active`,
+`waiting`, `completed`, `exited`, `error`) só com `with_session_stats=true`. Ignore
+`executions_count`/`errors_count` (sempre 0).
 
 **Handles que SAEM:** `success`.
 
@@ -158,14 +168,16 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
     "label": "Boas-vindas",
     "messageItems": [
       { "id": "m1", "type": "text", "content": "Oi {{contact.name}}! Como posso ajudar?" },
-      { "id": "m2", "type": "delay", "seconds": 2 },
+      { "id": "m2", "type": "delay", "duration_seconds": 2 },
       { "id": "m3", "type": "whatsapp_template", "templateId": 123, "params": ["valor1"] }
     ]
   }
 }
 ```
 
-**Tipos de item válidos:** `text`, `whatsapp_template` (ou `template`), `canned_response`, `user_input` (pausa esperando resposta livre), `delay`, `attachment`, `audio`.
+**Tipos de item válidos:** `text`, `whatsapp_template` (ou `template`), `canned_response`, `user_input` (pausa esperando resposta livre), `delay`, `attachment`, `audio`, `url_media` (`{ "type": "url_media", "url", "caption" }` — mídia por URL; a `url` aceita `{{variável}}` e o motor baixa com proteção SSRF e detecta o tipo; `image`/`video`/`file`/`document` também são aceitos como mídia, com `attachment_url`).
+
+**`delay` usa `duration_seconds` (0-30), NÃO `seconds`.** O motor aceita os dois, mas a tela lê/grava só `duration_seconds` — item gravado com `seconds` roda, porém abre como "undefineds" no editor e o cliente não consegue ajustar (mesma família do `percent` x `weight` do randomizador).
 
 **ATENÇÃO:** usa `messageItems` (NÃO `items`).
 
@@ -178,7 +190,7 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 ```
 → edges: `sourceHandle: "button_sim"`, `sourceHandle: "button_nao"`, e opcionalmente `"no_response"`.
 
-**Handles que SAEM:** `success` (sem botões); com botões → `button_<value>` (um por botão) + `no_response` + `error`.
+**Handles que SAEM:** `success` (sem botões) + `error`; com botões → `button_<value>` (um por botão) + `no_response` + `error`. E, SÓ em caixa WhatsApp OFICIAL com item sujeito à janela de 24h (`text`/`canned_response`/`attachment`/`audio`/`url_media`), **`window_closed`**: o motor segue por ele quando a janela está fechada (ligue ali um bloco com template); sem esse fio a janela fechada cai no caminho de erro. Fora de caixa oficial o handle NÃO existe (edge nele = aresta fantasma). Com botões a janela fechada também vale.
 
 **Timeout dos botões (opcional, no MESMO item de botões):**
 - `buttons_timeout` (número) + `buttons_timeout_unit` (`"minutes"` | `"hours"` | `"days"`) → tempo de espera sem resposta. Só com `buttons_timeout > 0` existe o handle `no_reply_timeout`.
@@ -278,7 +290,26 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 
 **`timeout` vs `retries_exhausted` (DISTINTOS):** `timeout` = cliente ficou em silencio (estourou `waitTime`). `retries_exhausted` = cliente respondeu, mas errou a validacao mais que `maxRetries` vezes. Ligue cada um ao caminho desejado. Se `retries_exhausted` nao tiver edge, ha fallback p/ o edge de `timeout`; sem nenhum dos dois, o flow encerra ao esgotar as tentativas.
 
-**Timeout AGORA dispara de verdade (corrigido 2026-06-09):** `waitTime` + `waitUnit` agendam o estouro — se o cliente não responder no prazo, o flow segue pelo handle `timeout`. Antes dessa data o backend ignorava o waitTime (flows antigos que dependiam do timeout passaram a funcionar). Sempre ligue um edge no handle `timeout` quando definir waitTime; sem edge, o flow simplesmente para ali no estouro.
+**Timeout dispara de verdade — e SEM fio ENCERRA (desde 20/08/2026):** `waitTime` + `waitUnit`
+agendam o estouro. Com fio no handle `timeout`, o flow segue por ele. **Sem fio, a sessão é
+ENCERRADA quando o tempo estoura** — a resposta que chegar depois não avança mais aquele fluxo
+(cai na conversa como mensagem comum e pode disparar o gatilho de novo). Até 20/08 a sessão ficava
+esperando pra sempre, fora do alcance de qualquer vigia e travando o re-disparo do próprio flow
+naquela conversa. Decisão do dono: "se não tá ligado a nada, depois encerra". Se o cliente quer
+"esperar até responder", ponha um `waitTime` longo e ligue o `timeout` num caminho explícito.
+`waitTime` AUSENTE = sem timeout (espera indefinida); `waitTime` vazio (`''`) = 60 (o que a tela
+exibe). `maxRetries` vazio/0 = 3. Vale também pro `no_reply_timeout` dos botões.
+
+**Fallback de saída (regra de 20/08/2026, substitui a de 15/08):** fio COM rótulo só é seguido por
+quem CASA o rótulo. O "último recurso" do avanço segue EXCLUSIVAMENTE a ligação SEM `sourceHandle`
+(fluxo legado de bloco simples) — nunca mais "pega o primeiro fio que existir": resposta A num menu
+com só a saída B ligada NÃO entrega no caminho do B, quem não respondeu não cai no botão ligado,
+envio bem-sucedido não desce pelo fio `window_closed`. Sem fio elegível o fluxo TERMINA. Duas pontes
+explícitas que continuam valendo: (a) na RESPOSTA do cliente (`wait_response`/botões),
+`option_X`/`button_X`/`no_response` sem fio próprio cai no fio `success` SE ele existir (o bloco de
+botões não expõe `success` na tela, então na prática isso só vale no `wait_response`); (b) a saída
+`partial` do `update_group` sem fio cai no `success`. Conclusão prática: ligue TODA saída que pode
+acontecer.
 
 **REGRA:** depois de wait_response com `options` OU `varied_options`, NUNCA coloque node `condition` pra ramificar — ligue os edges direto nos handles `option_X` (em `varied_options`, `X` é o `id` do grupo).
 
@@ -516,7 +547,9 @@ headers e sem body (ou erra "URL not configured" se faltar `apiUrl`).
 
 **Nomes de campo (exatos):** `apiMethod` (default `GET`), `apiUrl` (obrigatório), `apiHeaders`
 (array de `{key,value}`), `apiBody` (string; ou `apiBodyMode:"fields"` + `apiBodyFields:[{key,value}]`),
-`apiQueryParams`, `apiAuthType`/`apiAuthToken`, `apiTimeout`, `apiResponseVar` (nome da variável de saída).
+`apiQueryParams`, `apiAuthType`/`apiAuthToken`, `apiTimeout`, `apiResponseVar` (nome da variável de saída;
+desde 20/08/2026 nome iniciado por `_` cai no padrão `api_response` — `_` é o prefixo reservado das
+chaves internas da sessão).
 
 **Variáveis de conta / segredos:** use `{{account.custom_attribute.NOME}}` — NÃO existe `{{env.X}}`
 (resolve vazio → 401). Variáveis do tipo *secret* SÓ resolvem dentro do nó `api` (nos campos de
@@ -571,15 +604,17 @@ pra não ser oferecida numa tela e faltar na outra. Também não existem `o1-min
 `gpt-5.2-pro` nem `gpt-5.5-pro` (a OpenAI recusa).
 
 **OBRIGATÓRIO via API — `aiAssistantId`:** os modos `generate`/`intent`/`sentiment`/`extract`
-EXIGEM um `aiAssistantId` válido (id de um assistente Captain da conta). Sem ele o nó SAI cedo
-(`action: continue`) sem gravar nada — a variável de saída (`aiResponseVar`/`ai_intent`/`ai_sentiment`)
-fica vazia e `{{ai_response}}` resolve vazio no nó seguinte. A tela do Flow Builder preenche esse id
-pelo dropdown; um nó criado via API/MCP SEM `aiAssistantId` "não funciona" por isso. (Exceção: um modo
-`generate` sem assistente cai no LLM cru da conta — mas o caminho recomendado é sempre informar
-`aiAssistantId`.) A saída fica em `aiResponseVar` (default `ai_response`); `intent` também em
-`ai_intent`, `sentiment` em `ai_sentiment`.
+EXIGEM um `aiAssistantId` válido (id de um assistente Captain da conta). **Sem ele o nó sai pela
+saída `error` desde 20/08/2026** (`AI Assistant not configured`), igual a assistente inexistente na
+conta — antes ficava VERDE e seguia como se a IA tivesse respondido, com a variável de saída
+(`aiResponseVar`/`ai_intent`/`ai_sentiment`) vazia. A tela do Flow Builder preenche esse id pelo
+dropdown; um nó criado via API/MCP SEM `aiAssistantId` "não funciona" por isso. Só rodam sem
+assistente: `aiMode: 'custom'` (motor cru com a chave da conta + `aiModel`) e flow `ai_tool` em
+`generate`/`custom`. A saída fica em `aiResponseVar` (default `ai_response`); `intent` também em
+`ai_intent`, `sentiment` em `ai_sentiment`. Nome de variável iniciado por `_` é IGNORADO e cai no
+padrão (prefixo reservado das chaves internas da sessão) — vale pro `apiResponseVar` também.
 
-**Contexto da conversa:** campo `contextMessages` define quantas mensagens recentes a IA enxerga — valores válidos `25`, `50`, `75`, `100` (ampliado em 2026-06; antes o teto era ~20). Os modos `intent`/`sentiment`/`extract` rodam no motor contido (texto puro, sem persona nem ferramentas — mais barato e sem risco de vazamento); `generate` usa o assistente Captain.
+**Contexto da conversa:** a chave é **`aiContextMessages`** — quantas mensagens da conversa a IA enxerga: `0`, `1`, `3`, `5`, `10`, `25`, `50`, `75` ou `100` (default `5`; acima de 100 é cortado; ignorado em `custom`). **`contextMessages` (sem o prefixo) é DESCARTADA em silêncio** (fica 5). Os modos `intent`/`sentiment`/`extract` rodam no motor contido (texto puro, sem persona nem ferramentas — mais barato e sem risco de vazamento); `generate` usa o assistente Captain.
 
 **Intent — campo EXATO:** `aiIntents` é um ARRAY DE OBJETOS `{ "name": "..." }`. NÃO use `aiIntentOptions` (array de strings) — é ignorado. A intenção classificada também fica disponível na variável de sessão **`ai_intent`** (use como `{{ai_intent}}` adiante).
 
@@ -680,6 +715,10 @@ O campo raiz é **`waitMode`**: `"duration"` (default), `"date"` ou `"weekday"`.
 }
 ```
 
+**Nome da variável (desde 20/08/2026):** `name` vazio ou iniciado por `_` é IGNORADO — `_` é o prefixo
+reservado das chaves internas da sessão. A mesma regra vale pro `saveVariable` do `wait_response`
+(não grava) e pro `apiResponseVar`/`aiResponseVar` (caem no padrão). `value` aceita `{{ }}`.
+
 **Handles que SAEM:** `success`.
 
 ### 2.10 `randomizer`
@@ -724,19 +763,85 @@ juntos) — a operação vai em `data.groupOperation`. São **17 operações**, 
 - **Admins:** `promote_admin` (promover a admin), `demote_admin` (rebaixar).
 - **Convite:** `get_invite` (pegar link/código de convite), `revoke_invite` (revogar), `send_invite` (mandar
   o convite por mensagem a um telefone).
+- **Mensagem:** `send_message` (a 17ª, 08/08) — manda `messageItems` (MESMO contrato do bloco de mensagem:
+  text/delay/attachment/audio/url_media; botões/template não fazem sentido em grupo) NA CONVERSA DO GRUPO
+  (`groupTargetId` ou, vazio, o grupo da conversa atual; grupo inexistente = `error`). NÃO grava
+  `{{grupo.*}}` — é a única sem variável de resposta. Serve pra "dei ganho no lead → aviso o grupo da
+  equipe" em fluxo de qualquer canal.
 
 **Disponível em fluxo de QUALQUER canal**, desde que a conta tenha uma caixa **WhatsApp QR Code
 (`Channel::Waha`)** — informe a caixa em `data.groupInboxId`. Esse campo é **OBRIGATÓRIO em fluxo não-grupo**
-(individual/qualquer canal) e **opcional em fluxo de grupo** (ali o padrão é o grupo da própria conversa).
+(individual/qualquer canal; o save recusa caixa de outro tipo) e **opcional em fluxo de grupo** (ali o padrão
+é o grupo da própria conversa). `groupOperation` ausente/vazio = `legacy` (comportamento antigo — NÃO usar em
+node novo). `groupTargetId` aceita `"1203...@g.us"`, só dígitos ou `{{var}}`; é ignorado nas operações sem
+alvo (`create`, `find_by_name`).
 
 Cada operação guarda o resultado na variável `data.groupResponseVar` (padrão `"grupo"`) — leia depois com
-`{{grupo.CAMPO}}` (ex.: `{{grupo.id}}`, `{{grupo.participants_count}}`, `{{grupo.invite_link}}`).
+`{{grupo.CAMPO}}` (ex.: `{{grupo.id}}`, `{{grupo.participants_count}}`, `{{grupo.invite_link}}`). Toda
+operação (menos `send_message`) também devolve `{{grupo.ok}}` (bool) e `{{grupo.error.message}}`.
 
-Teto de **20 participantes por execução** (trava anti-banimento — adicionar em lote é o que mais rápido
-derruba número no WhatsApp não-oficial). Detalhe das chaves de `data` por operação: ver o pattern
-"Gestão de Grupos WhatsApp por fluxo" no `flowbuilder-patterns`.
+**Campos que cada operação devolve em `{{grupo.*}}`:**
+- `create` → `id`, `name`, `description`, `picture`, `participants`, `participants_count`, `conversation_id`
+  (número da conversa do grupo aberta no painel, 08/08), `added`, `added_count`, `not_added`,
+  `not_added_count`, `no_whatsapp`, `invited`, `invite_status`, `extras_failed` (só quando descrição/foto/
+  admin/conversa falharam — o grupo JÁ existe e isso NUNCA vira erro). Aceita `groupAttributes` (08/08:
+  linhas `{attr_source, attr_key, attr_value}` — grava atributos personalizados no contato-grupo
+  recém-criado; `{{grupo.id}}`/`{{grupo.conversation_id}}` já valem em `attr_value`; campos nativos
+  `name`/`email`/`card` são recusados).
+- `find_by_id` → `id`, `name`, `description`, `picture`, `participants`, `participants_count`.
+  `find_by_name` (`groupSearchName` obrig + `groupSearchMode`: `contains` padrão | `does_not_contain` |
+  `equal_to` | `not_equal_to` | `starts_with` | `ends_with`) → `results`, `results_count`.
+- `update_subject` (`updateSubject`) → `id`, `name`; `update_description` (`updateDescription`) → `id`,
+  `description`; `update_picture` (`updatePicture`, url) → `id`; `leave` → `id` (IRREVERSÍVEL).
+- `list_participants` → `id`, `participants` (até 100; `participants_truncated: true` se cortou),
+  `participants_count`.
+- `add_participants` (`groupParticipants` obrig — array de telefones/JIDs ou lista por vírgula; aceita
+  `{{var}}`) → `id`, `added` (quem está no grupo agora, inclui quem já estava), `not_added`, `added_count`,
+  `not_added_count`, `no_whatsapp`, `invited`, `invite_status`. Ninguém entrou = `error` (`nobody_changed`);
+  parte entrou = `partial`.
+- `remove_participants` → `id`, `removed`, `not_removed`, `removed_count`, `not_removed_count` (ninguém saiu
+  = `error`; parte = `partial`). `promote_admin` / `demote_admin` → `id`, `participants`.
+- `get_invite` → `id`, `invite_link`; `revoke_invite` → `id`, `invite_link` (IRREVERSÍVEL — invalida o link
+  antigo); `send_invite` (`groupInviteTo` obrig, `groupInviteMessage` opcional — `{{link}}` marca onde o
+  link entra, sem o marcador vai no fim) → `id`, `invite_link`, `invite_sent_to`.
+- `settings` (pelo menos UMA de `infoAdminOnly`, `messagesAdminOnly`, `membersCanAddNewMember`) → `id`,
+  `settings_updated`, `settings_failed`, `settings_unsupported`. **Desde 20/08 cada permissão é aplicada
+  SOZINHA:** `settings_updated[]` sempre vem; `settings_failed[{setting, reason}]` = falhou de verdade;
+  `settings_unsupported[]` = o servidor WAHA não tem o recurso (ex.: quem-pode-adicionar em servidor
+  antigo). Sucesso SÓ se aplicou ao menos uma E nenhuma falhou; senão sai por `error` (código
+  `settings_failed` ou `settings_unsupported`) com o que aplicou visível na variável. ATENÇÃO:
+  `membersCanAddNewMember` tem semântica INVERTIDA (`true` = TODOS podem adicionar);
+  `infoAdminOnly`/`messagesAdminOnly` seguem o padrão (`true` = SÓ admin).
 
-**Handles que SAEM:** `success`, `error`.
+Teto de **20 participantes por execução** (`create`/`add`/`remove`/`promote`/`demote` — trava anti-banimento:
+adicionar em lote é o que mais rápido derruba número no WhatsApp não-oficial). Detalhe das chaves de `data`
+por operação: ver o pattern "Gestão de Grupos WhatsApp por fluxo" no `flowbuilder-patterns`.
+
+**`create` confere quem foi COLOCADO (2026-08-21 — entra com o próximo deploy do app depois de
+21/08/2026):** o bloco relê o grupo e compara com o pedido (por equivalência brasileira, com e sem o 9;
+duas leituras concordantes). Quem o WhatsApp não colocou (privacidade "quem pode me adicionar" restrita,
+número inexistente) vai pra `{{grupo.not_added}}` / `{{grupo.not_added_count}}` e a saída vira `partial`;
+`{{grupo.no_whatsapp}}` lista os números que o WhatsApp disse não existir (seguem no pedido — é aviso, não
+erro). Número de celular BR escrito sem o 9 é corrigido pelo WhatsApp antes de adicionar (check-exists na
+sessão do canal, orçamento 8 s). Antes de 21/08 o passo dava SUCESSO mesmo com o lead fora do grupo. A
+mesma correção do 9º dígito vale no `add_participants`.
+
+**Convite no privado de quem ficou de fora (opcional, nasce desligado; só `create`/`add_participants`;
+2026-08-21 — entra com o próximo deploy do app depois de 21/08/2026):** `groupInviteOnFailure: true` +
+`groupInviteMessage` (texto OBRIGATÓRIO nesse modo — sem texto = `invite_status: 'sem_mensagem'` e nada
+sai; link nu de número desconhecido é o formato que mais gera denúncia e derruba número; `{{link}}` marca
+onde o link do grupo entra — sem o marcador, o link vai no fim). Tetos anti-bloqueio: 5 convites por
+execução, 1 por telefone por caixa por dia, 50 por dia por caixa, 20 s entre convites; quem está em
+`no_whatsapp` não recebe; antes de mandar o job reconfere se a pessoa já entrou. `{{grupo.invited}}` lista
+quem recebeu e `{{grupo.invite_status}}` diz `convite_enviado` ou `sem_mensagem`. **Cada convite entregue
+cria contato + conversa no painel** (e dispara os ouvintes de `conversation_created`: automação, outros
+flows, webhook do cliente, Kanban) — avise o cliente antes de ligar.
+
+**Handles que SAEM:** `success`, `error` — e **`partial`** nas operações de participante
+(`create`, `add_participants`, `remove_participants`): a operação rodou, mas nem todo mundo
+entrou/saiu (as listas `not_added`/`not_removed` dizem quem). Ligue `partial` num caminho próprio (ex.:
+avisar a equipe) — sem fio, `partial` segue pelo fio `success` (única saída com esse fallback no motor) e
+quem ficou de fora passa em silêncio.
 
 ### 2.12 `activate_flow` (LEGADO — prefira action `start_flow`)
 
@@ -889,9 +994,9 @@ Sempre presente:
 
 | Variável | Conteúdo |
 |---|---|
-| `{{trigger.type}}` | chave do evento (`message_created`, `conversation_created`, `label_added`, `kanban_item_stage_changed`, `webhook_received`, `date_trigger`, `flow_campaign`, `manual`, `pagetrack_visited`, `booking_created`, `booking_cancelled`, `booking_rescheduled`, `booking_completed`…) |
+| `{{trigger.type}}` | código do **EVENTO** que disparou — **NÃO é a chave do item do Início**. Valores reais: `message_created` (gatilho `message_received`), `message_sent`, `conversation_created`, `conversation_opened` (gatilho `conversation_reopened`), `conversation_resolved`, `label_added`, `label_removed`, `team_changed`, `assignee_changed`, `sla_missed`, `kanban_item_created`/`card_created`, `kanban_item_stage_changed`/`card_moved`, `card_status_changed` (`card_won` e `card_lost` — olhe `trigger.kind` ou o status do card), `conversation_attributes_changed`, `card_attributes_changed`, `contact_attribute_changed`, `group_participant_joined`/`_left`, `webhook_received`, `date_trigger`, `manual` (sidebar), `kanban_manual` (botão do card), `campaign` (Campanha de Fluxo), `page_track`, `activated_by_flow` (fluxo chamou fluxo), `lead_form` (os 3 gatilhos de formulário — `trigger.kind` diz `completed`/`milestone`/`abandoned`), `booking_created`/`booking_cancelled`/`booking_rescheduled`/`booking_completed`. Compare SEMPRE com esses códigos numa condição |
 | `{{trigger.name}}` | rótulo legível do MESMO evento ("Mensagem recebida", "Card mudou de etapa") — use este pra ESCREVER pro cliente, e o `type` pra COMPARAR em condição |
-| `{{trigger.activated_at}}` | quando disparou (ISO 8601) |
+| `{{trigger.activated_at}}` | quando disparou (ISO 8601). Desde 20/08/2026 `name` e `activated_at` são preenchidos em TODOS os caminhos de disparo (antes só no de evento de conversa) |
 | `{{trigger.kanban_item_id}}` / `{{trigger.funnel_id}}` | só quando veio do Kanban |
 
 Presentes conforme o evento (ausente = resolve vazio, sem erro):
@@ -903,11 +1008,13 @@ Presentes conforme o evento (ausente = resolve vazio, sem erro):
 | `{{trigger.contact.*}}` | `id`, `name`, `phone` |
 | `{{trigger.ad.*}}` (anúncio/CTWA) | `id`, `name`, `creative_id`, `creative_name`, `adset_id`, `adset_name`, `campaign_id`, `campaign_name`, `source`, `headline`, `description`, `cta`, `url` |
 | `{{trigger.attribute.*}}` | `name`, `previous_value`, `current_value`, `changed_at` — o valor ANTES e DEPOIS do atributo que disparou (só nos gatilhos de mudança de atributo) |
-| `{{trigger.user_name}}` | nome do usuário/atendente que disparou (gatilho manual ou ativação manual) |
-| `{{trigger.campaign_title}}` | título da campanha (quando disparado por Campanha de Fluxo) |
+| `{{trigger.user_name}}` | nome do usuário/atendente que disparou (gatilho manual ou botão do card) |
+| `{{trigger.campaign_id}}` / `{{trigger.campaign_title}}` | id e título da campanha (quando disparado por Campanha de Fluxo) |
 | `{{trigger.event_name}}` | nome do evento do site que disparou (LionTrack / visita de página) |
 | `{{trigger.page_url}}` | URL da página (LionTrack / visita de página) |
-| `{{trigger.source_flow_name}}` | nome do flow de origem (quando outro flow iniciou este, ex.: action `start_flow`) |
+| `{{trigger.source_flow_id}}` / `{{trigger.source_flow_name}}` | id e nome do flow de origem (quando outro flow iniciou este, ex.: action `start_flow`) |
+| `{{trigger.lead_form_id}}` / `{{trigger.response_id}}` / `{{trigger.kind}}` | formulário público: qual formulário, qual preenchimento e o tipo (`completed`/`milestone`/`abandoned`) |
+| `{{trigger.kind}}` / `{{trigger.booking_id}}` / `{{trigger.event_type_id}}` | agendamento (Booking nativo): `created`/`cancelled`/`rescheduled`/`completed`, id da reserva e id do tipo |
 
 Os cinco últimos são **novos 2026-08-07** e passam a aparecer no autocomplete de TODO bloco (ausente para
 o gatilho que não os fornece = resolve vazio, sem erro).
@@ -921,8 +1028,19 @@ sai em JSON; valor simples sai cru.
 serve pra perguntar "o que veio COM o gatilho", não pra ser um segundo nome do mesmo dado.
 
 **Variáveis do agente de IA `{{ai_agent.*}}` (novo 2026-08-01):** `{{ai_agent.name}}` e
-`{{ai_agent.id}}` trazem o AI Agente atribuído à conversa (vazio se não houver). Prefixo `ai_agent` de
+`{{ai_agent.id}}` trazem o AI Agente atribuído à conversa (vazio se não houver) — refletem a
+ATRIBUIÇÃO, não "vai responder agora"; desde 20/08/2026 resolvem também no Liquid. Prefixo `ai_agent` de
 propósito — `agent` sozinho é o atendente HUMANO, e confundir os dois seria pior que não ter.
+
+**Outras variáveis padrão que resolvem no caminho direto:** `{{contact.id}}`, `{{contact.identifier}}`,
+`{{contact.first_name}}`, `{{contact.last_name}}`, `{{contact.label}}` (etiquetas do contato, separadas por
+vírgula), `{{conversation.team.name}}` (nome da equipe; `{{conversation.team}}` é apelido).
+`{{last_response}}` = última resposta do cliente; `{{last_agent_response}}` = última mensagem PÚBLICA nossa
+(nota interna NÃO conta, desde 20/08/2026).
+
+**Filtro Liquid (desde 20/08/2026):** `{{conversation.id}}`, `{{conversation.status}}` e
+`{{conversation.team_id}}` respondem o MESMO com e sem filtro (`|`) — antes um filtro em qualquer variável do
+texto trocava o protocolo pelo id interno do banco.
 
 ---
 
@@ -998,7 +1116,17 @@ tiver um gatilho do MESMO tipo que colide. Resposta: **HTTP 422** `{ "error_code
 - `option_<x>` → um por opção em `acceptedOptions`; idem.
 - `cond_0..N` → um por condição no array; se tirar uma condição, o `cond_N` do fim some.
 - `intent_<name>` → um por intent no `ai` mode intent.
+- `partial` → só em `update_group` com operação `create`/`add_participants`/`remove_participants`.
 Ligar edge num handle condicional inexistente = **aresta fantasma** (sai do nada no canvas, não roteia).
+
+**Fio com rótulo só é seguido por quem casa com o rótulo (desde 20/08/2026).** Não existe mais
+"pega o primeiro fio que existir": `option_A` não entrega quem respondeu B, `window_closed` não
+pega envio bem-sucedido, `timeout` não pega resposta válida. O único último recurso é a ligação
+SEM `sourceHandle` (fluxo legado). Sem fio elegível, o flow TERMINA ali — nunca segue o ramo errado.
+Consequência prática: ligue TODAS as saídas que o cliente espera que aconteçam; saída sem fio é
+fim de fluxo, não "cai no próximo". (Duas pontes explícitas continuam: `option_X`/`button_X`/
+`no_response` sem fio próprio caem no `success` do `wait_response` se ele existir; `partial` do
+`update_group` sem fio cai no `success`.)
 
 ---
 
@@ -1078,7 +1206,13 @@ Nodes nunca devem ficar com a mesma coordenada `(x, y)`. Se dois nodes têm posi
 | `method`/`url`/`headers`/`body` no node api | Runtime NÃO lê → GET vazio (ou erro "URL not configured") | `apiMethod`/`apiUrl`/`apiHeaders`/`apiBody` |
 | `{{env.X}}` no node api | Não existe → resolve vazio → 401 | `{{account.custom_attribute.X}}` (secret resolve só no node api) |
 | `{{api_response.payload.campo}}` | `.payload` não existe → vazio | `{{api_response.campo}}` (o corpo fica direto sob a var); status em `{{api_response_status}}` |
-| node `ai` via API sem `aiAssistantId` | Sai cedo, variável de saída vazia | Informe `aiAssistantId` (obrigatório em generate/intent/sentiment/extract) |
+| node `ai` via API sem `aiAssistantId` | Sai pela saída `error` (desde 20/08; antes ficava verde com a variável vazia) | Informe `aiAssistantId` (obrigatório em generate/intent/sentiment/extract) |
+| `contextMessages` no node `ai` | Chave errada → descartada em silêncio (fica 5) | `aiContextMessages` (0, 1, 3, 5, 10, 25, 50, 75, 100) |
+| Nome de variável começando com `_` (`set_variable`, `saveVariable`, `apiResponseVar`, `aiResponseVar`) | Prefixo reservado → ignorado / cai no padrão | Nome sem `_` na frente |
+| `{ type: "delay", seconds: 2 }` no send_message | A tela não lê `seconds` → abre como "undefineds" | `duration_seconds` (0-30) |
+| Caixa oficial sem fio em `window_closed` | Janela de 24h fechada vira erro | Ligue `window_closed` num bloco com template |
+| Saída com rótulo sem fio (`button_X`, `option_X`, `cond_N`, `timeout`, `partial`) | Desde 20/08 não "cai no próximo": o flow TERMINA ali; espera com timeout sem fio ENCERRA ao estourar | Ligue TODA saída possível |
+| `update_group` `create`/`add_participants` sem fio em `partial` | Quem ficou de fora passa em silêncio (cai no `success`) | Ligue `partial` e leia `{{grupo.not_added}}`; convite automático exige `groupInviteMessage` |
 | `funnel_stages: ["37:Nome Exibido"]` | Usa o NOME da etapa, não a chave interna → gatilho nunca dispara | `"37:chave_interna"` (slug/UUID da etapa) |
 | `funnel_ids: [37]` (número) no gatilho card | String esperada → `[37].include?("37")` falso → não dispara | `funnel_ids: ["37"]` |
 | `kanban_in_stage` com `value: "37:etapa"` | Formato errado → cai no default silenciosamente | `funnel_id` separado + `value: "etapa"` (slug puro) |
@@ -1097,7 +1231,8 @@ Antes de chamar `flows_create` ou `flows_update`, valide mentalmente:
 - [ ] Nenhum par de nodes tem a mesma posição `(x, y)`
 - [ ] Todo node tem `data` com campos do schema do tipo
 - [ ] Todo node não-start tem pelo menos 1 edge chegando (`edge.target = node.id`)
-- [ ] Todo `edge.sourceHandle` é um handle que o node source EXPÕE NAQUELA config (sem handle condicional inexistente: `no_reply_timeout` só com timeout, `window_closed` só API oficial, `button_<value>`/`option_<x>`/`cond_N`/`intent_<name>` só se o botão/opção/condição/intent existir)
+- [ ] Todo `edge.sourceHandle` é um handle que o node source EXPÕE NAQUELA config (sem handle condicional inexistente: `no_reply_timeout` só com timeout, `window_closed` só API oficial, `button_<value>`/`option_<x>`/`cond_N`/`intent_<name>` só se o botão/opção/condição/intent existir, `partial` só em `update_group` de participantes)
+- [ ] TODA saída que pode acontecer tem fio (desde 20/08 saída sem fio é fim de fluxo, não "cai no próximo"): cada `button_X`/`option_X`/`cond_N`, `default`, `timeout` de toda espera com `waitTime` (sem fio, a sessão ENCERRA ao estourar), `window_closed` em caixa oficial, `partial` no `update_group`
 - [ ] Todo edge tem `source`, `target` e `sourceHandle`
 - [ ] Todo `sourceHandle` é um handle real exposto pelo node source (seção 2)
 - [ ] `channel_type` é classe Rails (`Channel::Waha` etc)

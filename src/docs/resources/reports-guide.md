@@ -153,6 +153,7 @@ conversa antiga que NÃO aparece no relatório de hoje (régua antiga por criaç
 | "retrospectiva do ano" | `lionchat_reports_list_15` |
 | "satisfação", "CSAT", "nota dos clientes" | `lionchat_csat_metrics` |
 | "SLA", "cumprimento de prazo" (se a conta tiver Enterprise) | `lionchat_sla_metrics` |
+| "quantos agendamentos", "taxa de comparecimento", "agendamentos por tipo/atendente" | `lionchat_booking_reports` (ver "Agendamentos" no fim deste guia) |
 
 ---
 
@@ -329,6 +330,11 @@ Retorna:
 > Não divida nada — apenas exiba o valor.
 
 **Filtros aceitos (expostos na tool desde 2026-07-24):** `inbox_id`, `team_id`, `sla_policy_id`, `label_list[]`, `assigned_agent_id`, `since`/`until` (unix segundos).
+
+Latência de detecção: o prazo é conferido a cada 5 min, e desde 21/08/2026 (entra com o próximo
+deploy do app depois de 21/08/2026) as conferências saem espalhadas em até 2 min dentro do ciclo —
+um estouro pode aparecer em `sla_list`/`sla_metrics` até ~7 min depois do horário-limite. Não é
+defeito; não conclua "o SLA não está rodando" por isso.
 
 ## Padrões de interpretação
 
@@ -555,7 +561,7 @@ nenhum `reports_*` responde; aqui é `funnel_stages` + `date_basis: closed` + `s
 
 Não é consulta livre: escolha um `widget_type` e preencha **só os campos daquele tipo**.
 
-### Os 7 tipos de bloco
+### Os 9 tipos de bloco
 
 | Tipo | Campos | Recurso exigido |
 |---|---|---|
@@ -563,13 +569,26 @@ Não é consulta livre: escolha um `widget_type` e preencha **só os campos daqu
 | `entity_ranking` | `dimension` (agent/inbox/team/label) · `metric` (conversations, resolutions, avg_first_response_time, avg_resolution_time) · `time_range` | — |
 | `csat_summary` | `time_range` | — |
 | `sla_summary` | `time_range` | `sla` (Enterprise) |
-| `funnel_stages` | `funnel_id` · `date_basis` (created/moved/closed/any) · `status` (all/open/won/lost) · `time_range` | `kanban_board` |
+| `funnel_stages` | `funnel_id` · `date_basis` (created/moved/closed/any) · `status` (all/open/won/lost) · `measure` (count padrão / value = soma do valor dos cards) · `time_range` | `kanban_board` |
+| `stage_entries` | `funnel_id` · `measure` (count/value) · `time_range` — quantos cards DISTINTOS ENTRARAM em cada etapa no período (histórico desde 12/07/2026) | `kanban_board` |
+| `calls_report` | `dimension` (agent/inbox) · `time_range` — ligações / atendidas / não atendidas / não concluídas / tempo total / tempo médio | — |
 | `lead_origin` | `time_range` | `liontrack` |
 | `agent_report` | `dimension` (agent/team/inbox) · `scope_type`+`scope_id` · `columns[]` · `time_range` | — |
 
-**`time_range`:** `last_7_days`, `last_30_days`, `this_month`, `last_month` — e `custom` **só em
-`conversations_timeseries` e `agent_report`**, exigindo `from`/`to`. **A janela não pode passar de 92
-dias**, e esse teto é da janela, não de um tipo: pedir "esse ano" é recusado com a explicação.
+`stage_entries`, `calls_report`, `measure`, `today`/`yesterday` e os metadados `title`/`width`/`height`
+são commits de 21/08/2026 (entram com o próximo deploy do app depois de 21/08/2026); `custom` em
+todos os tipos está no ar desde 19/08/2026.
+
+**`time_range`:** `today`, `yesterday` (desde 21/08 — o menor período era 7 dias), `last_7_days`,
+`last_30_days`, `this_month`, `last_month` e `custom` (com `from`/`to`, **em qualquer tipo** desde
+19/08/2026). **A janela `custom` não pode passar de 92 dias** — o teto é da janela, não do tipo;
+"esse ano" é recusado com a explicação. `today`/`yesterday` resolvem no fuso do `timezone_offset`
+enviado — mande o da conta.
+
+**Metadados do bloco (irmãos de `widget_type`, fora dos params):** `title` (nome que a pessoa dá ao
+bloco, até 80 caracteres; vazio = o painel mostra o rótulo do tipo), `width` (1 a 4 colunas; padrão
+2) e `height` (`normal` | `tall`). Preencha `title` em todo bloco que você criar — quatro blocos de
+funil sem nome chegam indistinguíveis pra quem lê depois.
 
 **Colunas do `agent_report`:** `leads`, `atendidos`, `resolvidas`, `abertas`, `pendentes`, `adiadas`,
 `label_count` (exige `label_id`) e `conversao` (exige `denominator` e `numerator`, que é **lista de
@@ -591,8 +610,9 @@ IDs de etiqueta**, nunca nome de métrica).
    equipe/caixa". Confundir troca a conta inteira.
 2. **Campo fora da lista é descartado em silêncio.** Se um valor "não fez efeito", provavelmente o
    nome do campo está errado.
-3. **Sempre envie `timezone_offset` em HORAS** (Brasília = `-3`). Sem ele o cálculo é em UTC e o
-   número não bate com o que o cliente vê na tela.
+3. **Sempre envie `timezone_offset` em HORAS, derivado do fuso DA CONTA** (`account_show.timezone`;
+   Brasília = `-3`, Cuiabá/Campo Grande/Manaus = `-4`). Sem ele o cálculo é em UTC e o número não
+   bate com o que o cliente vê na tela.
 4. **`update` substitui a lista de blocos inteira.** Leia com `list`, altere o array, devolva
    completo — e preserve o `id` de cada bloco que já existia.
 5. **`list` não pagina.** Se a resposta vier com aviso de corte, **não** use aquela lista para montar
@@ -668,6 +688,22 @@ Colunas: Ligações · Atendidas · Não atendidas · **Não concluídas** · Te
 - **Ligação sem atendente tem linha própria** e pode ser boa parte do volume (23% numa conta real).
   Não a esconda ao resumir por pessoa.
 - A tabela lista só quem teve ligação no período — atendente ausente da tabela fez zero.
+
+### Agendamentos (`lionchat_booking_reports`) — 2026-08-19
+
+`GET /api/v2/accounts/{id}/booking_reports` — a aba Relatórios > Agendamentos. Unidade = o
+AGENDAMENTO (Booking). Params: `since`/`until` (datas; padrão 30 dias pra trás E 30 pra frente,
+porque agenda tem futuro), `event_type_id`, `user_id` (responsável da tarefa), `status`
+(`pending` | `completed` | `cancelled` | `snoozed`), `group_by` (`day` | `week` | `month`).
+Resposta: `totals` (`total`, `pending`, `completed`, `cancelled`, `snoozed`, `attendance_rate`),
+`timeline`, `by_event_type`, `by_agent`, `by_origin`.
+
+- **`attendance_rate` = concluídos / (concluídos + cancelados)**, em %. Pendentes ficam FORA do
+  denominador (ainda não aconteceram). Não recalcule com o total.
+- A SITUAÇÃO vem da tarefa da Agenda (`account_tasks.status`), não de `bookings.status` — quem
+  conclui/cancela pela Agenda deixa o booking parado em "confirmado". Ler `bookings_*` direto pra
+  contar "concluídos" dá zero.
+- `snoozed` (adiado) aparece separado de `pending` de propósito.
 
 ### Faturamento (`measure`)
 

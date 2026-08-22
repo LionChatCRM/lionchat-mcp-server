@@ -462,6 +462,25 @@ O `field_mapping` do webhook personalizado aceita caminhos com índice de array:
 mesmo caminho captura valores diferentes. Campo `flow_id` na criação liga o webhook a um flow
 (webhook embutido — ver resource de fluxos).
 
+**Destino "atributo da CONVERSA" no `field_mapping` (2026-08-21 — entra com o próximo deploy do
+app depois de 21/08/2026):** além de `contact_attr_<chave>`, o valor de um campo pode ser
+`conversation_attr_<chave>` — vale no Webhook Universal, no webhook embutido de flow E no formulário
+do Meta Lead Ads (mesmo mapeador). O atributo é gravado na conversa que a automação/fluxo mapeado
+ABRIR para aquele lead (sem automação/fluxo não nasce conversa e o valor é descartado). Serve pro
+que muda a cada atendimento (produto comprado agora, valor, formulário de hoje); no contato a 2ª
+compra apaga a 1ª.
+
+Regras do gravador (valem pra Webhook Universal, Meta Lead e os 9 gateways de pagamento):
+- **Chave reservada é recusada**: as `captain_*` (caderno da IA) e as de sistema `imported_from`,
+  `import_digits`, `mail_subject`, `type`, `in_reply_to`, `initiated_by`, `auto_reply`,
+  `original_channel_type`, `conversation_language`, `agent_reply_time_window`, `conference_sid`,
+  `call_status`, `tiktok_capabilities`, `captain_media_asset_id`. Nunca mapeie pra elas —
+  `imported_from` sobrescrita fazia a conversa SUMIR das telas.
+- **Converte pelo TIPO do atributo** (data em formato brasileiro, decimal com vírgula ou ponto,
+  sim/não) e **descarta** o que não entende — texto num atributo de Número não é gravado (e não dá
+  erro: aparece só no log do servidor). Confira o tipo em `custom_attributes_list` antes de mapear.
+- **Silencioso**: atributo gravado por integração NÃO dispara automação, flow nem webhook de saída.
+
 ### Import de histórico do WhatsApp Cloud (2026-06)
 
 Caixas WhatsApp Cloud API podem importar o histórico de conversas via QR Code. Tools sob

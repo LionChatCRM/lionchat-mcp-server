@@ -593,14 +593,24 @@ Comuns a (quase) todas:
 
 | Operação | Chaves específicas | Retorno (`{{grupo.*}}`) |
 |---|---|---|
-| `create` | `groupName` (obrig), `groupDescription`, `groupPicture` (url), `groupInitialAdmins`, `groupParticipants` | `id`, `name`, `participants_count` |
-| `add_participants` | `groupParticipants` (obrig — ex.: `["5511999999999@c.us"]` ou lista) | `added`, `not_added`, `added_count` |
+| `create` | `groupName` (obrig), `groupDescription`, `groupPicture` (url), `groupInitialAdmins`, `groupParticipants`, `groupAttributes`; opcional `groupInviteOnFailure` + `groupInviteMessage` (com `{{link}}`) | `id`, `name`, `participants_count`, `conversation_id`, `added`, `added_count`, `not_added`, `not_added_count`, `no_whatsapp`, `invited`, `invite_status` — saída `partial` quando alguém ficou de fora |
+| `add_participants` | `groupParticipants` (obrig — ex.: `["5511999999999@c.us"]` ou lista); opcional `groupInviteOnFailure` + `groupInviteMessage` | `added`, `not_added`, `added_count`, `not_added_count`, `no_whatsapp`, `invited`, `invite_status` |
 | `send_invite` | `groupInviteTo` (obrig — telefone de destino), `groupInviteMessage` (opc) | `invite_link` |
-| `settings` | pelo menos uma de `infoAdminOnly` / `messagesAdminOnly` / `membersCanAddNewMember` (booleans) | — |
+| `settings` | pelo menos uma de `infoAdminOnly` / `messagesAdminOnly` / `membersCanAddNewMember` (booleans) | `settings_updated` (lista do que aplicou), `settings_failed` (`[{setting, reason}]`), `settings_unsupported` |
+| `send_message` | `messageItems` (mesmo contrato do bloco de mensagem: text/delay/attachment/audio/url_media) + `groupTargetId` opcional — manda os balões NA CONVERSA DO GRUPO (vazio = grupo da conversa atual). É a 17ª operação (08/08) | — (única sem variável de resposta) |
+
+Os campos `added`/`not_added`/`no_whatsapp`/`invited`/`invite_status` do `create` e `groupInviteOnFailure` são
+de 21/08/2026 (entram com o próximo deploy do app depois de 21/08/2026).
 
 **ATENÇÃO na `settings` — semântica INVERTIDA de `membersCanAddNewMember`:** `true` = **TODOS** podem adicionar
 membros. Já `infoAdminOnly: true` e `messagesAdminOnly: true` = **SÓ admin** edita infos / manda mensagem.
 Confundir os dois LIBERA o grupo achando que está trancando.
+
+**Cada permissão vale por si (2026-08-20):** o bloco aplica uma a uma; o que aplicou aparece em
+`{{grupo.settings_updated}}` mesmo quando outra falhou, e a saída só é `success` quando algo mudou E
+nada falhou. `membersCanAddNewMember` ("quem pode adicionar") depende do servidor de WhatsApp QR
+Code ser 2026.7+ — no servidor atual ela volta em `settings_unsupported` (não é erro do cliente) e
+as outras duas seguem aplicadas. Não prometa essa permissão ao cliente sem conferir o resultado.
 
 **Gatilho novo `group_participant_joined` (entrou no grupo → manda boas-vindas):** em um flow de grupo
 (`conversation_mode: "group"`), o start pode ter o item `{ "key": "group_participant_joined", "config": {
@@ -618,8 +628,13 @@ grupo** (o grupo é a conversa do flow).
 - No fluxo de card ganho acima, o `send_message` vai para a conversa do CONTATO (o lead), não para o grupo
   criado. Para postar DENTRO do grupo, use um flow de grupo (`conversation_mode: "group"`) — normalmente com o
   gatilho `group_participant_joined`.
-- Em `add_participants`, quem tem privacidade de grupo ligada pode não entrar mesmo com resposta de sucesso do
-  WhatsApp: confira `{{grupo.not_added}}` / `{{grupo.not_added_count}}`.
+- Em `create` e `add_participants`, quem tem privacidade de grupo ligada pode não entrar mesmo com
+  resposta de sucesso do WhatsApp: o bloco relê o grupo e manda quem faltou em `{{grupo.not_added}}`
+  (saída `partial`). Se o cliente quiser, ligue `groupInviteOnFailure` com um texto em
+  `groupInviteMessage` — o convite vai no privado (máx. 5 por execução, 1 por telefone/dia, 50/dia
+  por caixa) e cria contato + conversa pra cada um.
+- Handles do bloco: `success`, `error` e `partial` (em `create`/`add_participants`/`remove_participants` — a
+  operação rodou mas nem todo mundo entrou/saiu). `partial` sem fio segue pelo fio `success`.
 
 ---
 

@@ -120,7 +120,11 @@ marcar supervisor num lugar protege no outro.
 
 ### Datas
 - **Formato:** ISO 8601 com timezone, ex: `"2026-05-18T14:32:00-03:00"`
-- **Timezone padrão:** `America/Sao_Paulo` (BRT, UTC-3)
+- **Timezone:** a CONTA tem fuso próprio — leia `timezone` em `lionchat_account_show` (IANA, ex.
+  `America/Sao_Paulo`, `America/Campo_Grande`) e use ELE em filtros de data, `timezone_offset` de
+  relatórios e ao escrever horários. O padrão da plataforma é `America/Sao_Paulo` (UTC-3), mas
+  Mato Grosso, Mato Grosso do Sul, Amazonas e Acre são outro fuso e há cliente fora do Brasil.
+  Nunca chute -3.
 - **Timestamps Unix** aparecem em alguns campos (ex: `last_activity_at`) — sempre em segundos, não milissegundos
 
 ### Paginação
@@ -269,6 +273,8 @@ teams, conversations_summary) exigem as DUAS pontas; nos demais, `since` ou `unt
 2. lionchat_campaigns_estimate_audience (MESMO audience+mode) → mostrar contagem ao usuário
 3. CONFIRMAR com o usuário (é envio em massa — seção 7b)
 4. lionchat_campaigns_create (inbox_id define o tipo: WhatsApp oficial, QR Code/WAHA, SMS, Website)
+   Modelo oficial com variáveis: `template_params.processed_params.body` precisa ter TODAS as
+   posições (`"1"`, `"2"`...) preenchidas — posição vazia NÃO falha, sai como "." pra todo mundo.
 5. Acompanhar com lionchat_campaigns_statistics (sent/delivered/read/failed)
 ```
 Estrutura do audience: `[{type:'Label', id}, {type:'Funnel', id, stages:[], include_won, include_lost}, {type:'ConversationAttribute', key, value}]`.
@@ -352,6 +358,9 @@ Antes de QUALQUER ação que escreve, modifica, apaga ou envia, pare e avalie se
 **Aja sem perguntar apenas em operações idempotentes:** leitura, busca, resumo, classificação.
 
 **Excluir agente/usuário (`lionchat_agents_destroy`) — SEMPRE pergunte o destino primeiro.** Se o agente tem recursos vinculados (conversas, tarefas — inclusive as que ele **criou** —, cards do Kanban, campanhas, agendamentos), o sistema EXIGE um destino de reatribuição. Antes de excluir: consulte `lionchat_agents_assigned_resources` (o retorno inclui `tasks_created`, tarefas criadas por ele); se houver QUALQUER recurso, **pergunte pra qual agente transferir tudo** e passe `reassign_to_agent_id` no destroy. Nunca tente excluir sem o destino — o sistema recusa e o trabalho do agente ficaria órfão. Ao excluir, tudo passa pro agente escolhido; o excluído fica só no histórico.
+Quando o pedido for "fulano saiu e ciclano entrou no lugar", prefira `lionchat_agents_replace` a
+`destroy` + `create`: a troca é uma só, a carteira vai inteira pro novo e a vaga do plano não
+trava a criação.
 
 **NUNCA sobrescreva por inferência dados já preenchidos.** Em especial, **NUNCA sobrescreva telefone ou e-mail existente de um contato** — se já há valor preenchido, pergunte antes de alterar.
 
@@ -372,6 +381,7 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | Criar/editar **formulário público de captação** (página de captura própria) | `lionchat_lead_forms_create` / `_update` | Leia `lionchat://docs/formularios-publicos` ANTES — o desenho vai em `form_data` e só entra no ar depois do `publish` (que valida o desenho e pode voltar 422 com a lista de pendências). Caixa de WhatsApp vinculada (`inbox_id`) é obrigatória pra publicar. Escrita é só de administrador |
 | **Testar um formulário** antes de publicar | `lionchat_lead_forms_test_run` | Roda o RASCUNHO no motor real e desfaz tudo no fim — zero rastro. Mande `answers: [{node_id, value}]` (até 60) pra reproduzir um caminho; a resposta traz o bloco atual + o log do percurso |
 | Conferir se um site **aceita ser exibido dentro do formulário** (bloco Página externa) | `lionchat_lead_forms_check_embed` | Body `{url}`; devolve `{status: allowed\|blocked\|unknown, reason}`. Grave o veredito em `embed_allowed` do bloco. Admin-only |
+| Ver **tudo que uma pessoa preencheu** (nosso formulário, anúncio do Meta, Webhook Universal, fluxo) | `lionchat_contacts_form_entries_list` / `_show` | Por CONTATO, sem paginação (teto 250 por origem, `meta.truncated`). O detalhe de Meta/webhook mostra SÓ os campos vinculados e gravados — nunca o payload cru. `show` exige `source` + `id` da mesma linha |
 | Anexar arquivo a uma mensagem | `lionchat_upload_create` primeiro, depois usar o retorno em `lionchat_conversations_messages_create` | Confira `lionchat_upload_limits` se o arquivo for grande |
 | Marcar conversa como **lida** | `lionchat_conversations_update_last_seen` | NÃO use `unread` (esse marca como NÃO-lida) |
 | Criar/gerenciar **campanha** (disparo WhatsApp/SMS) | `lionchat_campaigns_*` (criar, estatísticas) | SEMPRE rode `campaigns_estimate_audience` antes de criar e mostre a contagem. Disparo em massa = confirmação obrigatória (seção 7b) |
@@ -392,6 +402,7 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | **Mudar o modo de distribuição do time** (Rodízio × Equilibrado) | `lionchat_teams_update` (`assignment_order`: `round_robin` \| `balanced`) | **`null` é valor válido e significa "o time não escolheu"** — a decisão herda da política da caixa, depois do `auto_assignment_config` da caixa, e por fim rodízio. NUNCA gravar `round_robin` só para "preencher": isso rebaixa em silêncio uma caixa que roda Equilibrado por política. `balanced` exige o recurso `advanced_assignment` na conta |
 | **Mudar o modo de distribuição da caixa** (Rodízio × Equilibrado) | `lionchat_inboxes_update` (`auto_assignment_config.assignment_order`) | Só vale quando a caixa NÃO tem política vinculada (com política, a política manda). O jsonb é SUBSTITUÍDO, não mesclado: releia o `auto_assignment_config` atual e reenvie as outras chaves junto, senão apaga o `assign_offline_agents` e o freio |
 | **Criar/atualizar time** | `lionchat_teams_create` / `_update` | **Preencha `description`**: desde 03/08 é ela que o AI Agente lê pra decidir o roteamento por time. Descreva QUANDO mandar pra lá, não o que o time é |
+| **Trocar um atendente por outro** ("fulano saiu, entrou ciclano") | `lionchat_agents_replace` (`POST /agents/{id}/replace`, body `agent: {email, name, role}`; `inherit_memberships` default `true`) | Faz os dois passos de uma vez: cria o novo (passa pelo limite de vagas do plano por 30 min), manda a carteira inteira (conversas, cards, tarefas, agendamentos) e exclui o antigo em segundo plano. Responde **202** com `new_agent` — o antigo some da lista quando a transferência termina (`replacing: true` em `agents_list` enquanto roda). **Confirme antes** (seção 7a: é exclusão). Recusas 422: substituir a si mesmo, agente de suporte, e-mail já membro, e o **único administrador confirmado só troca por usuário já confirmado** (convide e espere aceitar). `agents_destroy` recusa quem está ENTRANDO numa substituição viva. Admin-only |
 | **Pausar a automação no meio** (esperar atribuição/card antes da próxima ação) | ação `wait` em `lionchat_automation_rules_create` / `_update` | Segundos, teto 300. Acima disso é caso de FlowBuilder. Ver `lionchat://docs/conversation-flows` |
 | **Buscar contato/conversa/card** | `lionchat_search_*`, `lionchat_contacts_search` | **Termo com letra exige 3+ caracteres** (dígito é isento). Menos que isso volta VAZIO sem erro — não conclua que o registro não existe. Ver `lionchat://docs/api-conventions` |
 | **Migrar conversas** de uma caixa WhatsApp pra outra (ex.: QR Code → Oficial) | `lionchat_inboxes_inbox_migration_list` (prévia) → `_execute` → acompanhar status | Admin-only e IRREVERSÍVEL: sempre mostre os números da prévia e confirme (seção 7a). Grupos não vão pro canal oficial — ficam na caixa de origem |

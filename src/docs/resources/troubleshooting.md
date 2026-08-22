@@ -173,7 +173,9 @@ Feature flag específica (ex: `feature_kanban`, `feature_captain`) está OFF.
 - `"private must be boolean"` — true/false, não string
 
 ### KanbanItem
-- `"funnel_stage does not exist in funnel"` — etapa inválida pro funil
+- `"STAGE_HAS_ITEMS"` (no `funnels_update`) — você tentou remover uma etapa que ainda tem card;
+  `stages` na resposta diz quantos. Mova com `migrate_stage` antes. (Card criado em etapa
+  inexistente NÃO dá erro: é redirecionado — confira o `funnel_stage` devolvido.)
 - `"conversation_display_id must exist"` — conversa não existe ou foi deletada
 - `"position must be a positive integer"` — não pode ser negativo
 
@@ -418,6 +420,18 @@ pelo painel de suporte — só volta no botão Retomar), `cancelled` (encerrada 
 Enquanto uma importação está viva, o repescador de mensagens da sessão fica fora do caminho, de
 propósito. Pausar, retomar e cancelar são ações do painel de suporte — não existem no MCP.
 
+**A mídia vem DEPOIS do texto (desde 19-20/08/2026).** O import grava as conversas só com o texto
+(779 conversas em ~3 min num caso real) e busca os arquivos em segundo plano, numa fila por caixa
+com poucas vagas na instalação inteira — pode levar horas (o dono aceitou "até 24 h, contanto que
+não atrapalhe nada"). Enquanto isso a mensagem carrega `content_attributes.media_failed` com
+`retryable: true` (bolha âmbar "mídia chegando"); quando o arquivo chega, o selo some e o anexo
+aparece; se o WhatsApp já apagou o arquivo (tudo com mais de ~2 semanas), o selo vira
+`retryable: false` (vermelho, definitivo — não há repesca). `lionchat_inboxes_waha_import_status`
+responde "ainda está chegando?": `media_pending` (arquivos na fila desta caixa; 0 = tudo pedido),
+`media_swept_at`/`media_swept_count` (varredura final que recolocou órfãos na fila). `status:
+completed` com `media_pending > 0` é normal — texto pronto, fotos a caminho. Conversa de histórico
+NÃO é repescada pelo vigia de mensagens, de propósito.
+
 ### "Editei o evento no Google Calendar e não sincronizou"
 Auto-cura desde 2026-06-09: o vigia horário re-arma o "watch" morto de conexões saudáveis
 sozinho (sem reconectar a conta). Se persistir >1h, aí sim investigar a conexão
@@ -498,6 +512,15 @@ recusado; brasileiro com 55 e 12-13 dígitos é aceito mesmo no formato antigo s
 sem erro de telefone); no import do KANBAN, telefone inválido cria o card SEM contato e SEM
 conversa, em silêncio — comportamento diferente do import de contatos.
 
+**Complementos de 19/08:** telefone PREENCHIDO e inválido **recusa a linha inteira** — o contato não
+nasce (antes ele nascia mudo, sem telefone). Coluna de telefone **vazia** continua criando o contato
+(lista de nome + e-mail é uso legítimo). **Linha totalmente vazia não é erro**: é pulada e contada em
+`blank_rows` no resultado — planilha de 300 linhas com 2 preenchidas deixa de gerar 298 "Nome é
+obrigatório". Telefone em notação científica do Excel (`9,88888E+12`) recebe mensagem própria
+("formate a coluna como texto"), não "confira o DDI". No `contacts_import_validate`, o número da
+linha no relatório é a posição REAL no arquivo (linhas vazias contam na numeração, não no total
+conferido).
+
 ## "A caixa oficial parou de disparar / de receber" — avisos automáticos da Meta (18/08)
 
 Duas famílias de chaves novas em `additional_attributes` da caixa `Channel::Whatsapp`
@@ -512,6 +535,15 @@ Duas famílias de chaves novas em `additional_attributes` da caixa `Channel::Wha
   e `reauthorization_required` vira `true` SOZINHO. Com `reauthorization_required: true` a caixa
   fica MUDA (descarta o que chega) até reconectar. A ausência dessas chaves NÃO prova que a caixa
   está conectada (caixa antiga só ganha o aviso após reinscrição).
+- **Registro do número incompleto** (20/08): `whatsapp_registration_error` (texto, a frase da
+  própria Meta — ex.: verificação em duas etapas ligada num número que veio de outra plataforma).
+  A caixa foi criada e **continua recebendo**; só o registro do número não terminou. É diferente de
+  `reauthorization_required` (esse emudece a caixa). Orientação: resolver do lado da Meta e clicar
+  em "Concluir registro" na caixa; a chave some quando o registro passa. Conectar uma caixa oficial
+  é ação de administrador e respeita o teto de caixas do plano (402 antes de abrir a janela da Meta).
+- Reconectar uma caixa em convivência pelo botão volta a pedir o histórico de 180 dias sozinho
+  (19/08); é um tiro único por onboarding — se a Meta recusar fora da janela de 24 h, não há
+  repetição.
 
 ## "O filtro de etiqueta 'não está presente' mente" — NUNCA mentiu pela API
 
@@ -520,6 +552,17 @@ O defeito corrigido em 17/08 era SÓ do navegador (a tela travava). O SQL de
 Se alguma anotação antiga disser que esse filtro mente por API, está errada. O que MUDOU de
 verdade nos filtros: data FIXA com `is_greater_than`/`is_less_than` passou a cortar o dia no fuso
 da CONTA (ver resource `filtros-e-relatorios`).
+
+## "Mapeei o campo da integração pro atributo da conversa e nada foi gravado" (21/08 — entra com o próximo deploy do app depois de 21/08/2026)
+
+Quatro causas, nesta ordem: (1) o evento não abriu conversa — atributo de conversa só existe na
+conversa que a automação/fluxo mapeado cria (contato sozinho não tem onde gravar); (2) a chave é
+reservada (`imported_from`, `type`, `captain_*`... — lista em `api-conventions`) e foi recusada;
+(3) o valor não é do TIPO do atributo (texto num campo de Número, data em formato estranho) e foi
+descartado — o log do servidor tem `[IntegrationAttributes] ... tipo_invalido=[...]`; (4) nos
+gateways, a chave não está em `conversation_attribute_keys` daquele evento (a granularidade é por
+evento: "compra aprovada" e "carrinho abandonado" gravam listas diferentes). Gravar por integração é
+silencioso: não espere automação nem webhook de saída reagindo ao atributo.
 
 ## Quando reportar pro suporte
 

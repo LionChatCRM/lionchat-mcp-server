@@ -8416,7 +8416,7 @@
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "Duração em minutos. Sem default fixo — varia por task_type: task/follow_up/deadline=15, call=30, meeting/video_call=60"
+    "description": "Duração em minutos. Sem default fixo — varia por task_type: task/follow_up/deadline=15, call=30, meeting/video_call=60. Com booking_event_type_id aceita duracao DIFERENTE da do tipo (5..1440; fora da faixa o sistema usa a do tipo) — confira os horarios livres com booking_event_types_slots usando a mesma duracao (2026-08-19)."
    },
    {
     "name": "conversation_id",
@@ -9556,9 +9556,16 @@
     "location": "query",
     "required": false,
     "description": "Filtra os flows vinculados a essa caixa de entrada."
+   },
+   {
+    "name": "with_session_stats",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = cada flow vem com session_stats{total,active,waiting,completed,exited,error} (conta as sessoes no banco — mais lento em conta grande). Sem o param o campo NAO aparece."
    }
   ],
-  "returns": "Objeto { data: [flows] } — a lista fica em data, sem meta e sem paginacao. Campos de cada item: id, name, description, tool_name, tool_description, flow_type, conversation_mode, active, inbox_ids, inboxes[{id,name,channel_type}], tags, session_stats{total,active,waiting,completed,exited,error}, created_at, updated_at. ATENCAO (ago/2026): hoje cada item ainda carrega flow_data inteiro e metricas por bloco, o que deixa a resposta MUITO pesada em conta com muitos fluxos/execucoes (ate 19 MB medidos) — NAO dependa disso: esta em andamento a lista leve, que tira flow_data/node_metrics/waiting_counts/variables e passa a trazer `triggers` (gatilhos do bloco Inicio). Pra flow_data use flows_show; pra conferir gatilho duplicado use flows_check_conflicts.",
+  "returns": "Objeto { data: [flows] } — a lista fica em data, sem meta e sem paginacao. Campos de cada item: id, name, description, tool_name, tool_description, flow_type, conversation_mode, active, inbox_ids, inboxes[{id,name,channel_type}], tags, session_stats{total,active,waiting,completed,exited,error}, created_at, updated_at. LISTA LEVE (desde 20/08/2026): o index NAO traz flow_data, node_metrics, waiting_counts nem variables — so os campos acima mais trigger_types (array com as chaves dos gatilhos do bloco Inicio, ex. [\"card_created\",\"campaign_trigger\"]; vazio = sem gatilho). session_stats{total,active,waiting,completed,exited,error} so vem quando a chamada manda with_session_stats=true (param opcional desta tool — sem ele o campo NAO vem). executions_count e errors_count sao colunas mortas (sempre 0): ignore. Pra ler o desenho (blocos, conexoes, variaveis) use flows_show; pra conferir gatilho duplicado use flows_check_conflicts.",
   "common_use_cases": [
    "Dashboard: contar/exibir flows",
    "Buscar com filtros antes de outra operação",
@@ -9892,6 +9899,13 @@
     "location": "body",
     "required": false,
     "description": "Endereco do link publico do tipo de evento. EDITAVEL (18/08): normalizado no servidor, 3..60 chars, minusculas+numeros+hifen, unico. Vazio = mantem; duplicado = 422. Trocar derruba link ja enviado, codigo de incorporar e anuncio — NAO quebra agendamentos feitos, IA nem links de cancelar/remarcar (trabalham por id)."
+   },
+   {
+    "name": "booking_event_type.color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor hex (#RRGGBB) dos compromissos deste tipo no calendario (2026-08-19); vazio = cor do agente. A tarefa devolve booking_color ja resolvido."
    }
   ],
   "returns": "tipo de evento criado (com novo ID)",
@@ -9976,6 +9990,13 @@
     "location": "body",
     "required": false,
     "description": "Endereco do link publico do tipo de evento. EDITAVEL (18/08): normalizado no servidor, 3..60 chars, minusculas+numeros+hifen, unico. Vazio = mantem; duplicado = 422. Trocar derruba link ja enviado, codigo de incorporar e anuncio — NAO quebra agendamentos feitos, IA nem links de cancelar/remarcar (trabalham por id)."
+   },
+   {
+    "name": "booking_event_type.color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor hex (#RRGGBB) dos compromissos deste tipo no calendario (2026-08-19); vazio = cor do agente. A tarefa devolve booking_color ja resolvido."
    }
   ],
   "returns": "tipo de evento atualizado",
@@ -16553,7 +16574,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration)"
+    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    },
    {
     "name": "sample_payload",
@@ -16665,7 +16686,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration)"
+    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    },
    {
     "name": "sample_payload",
@@ -16860,7 +16881,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de guru_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de guru_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -16965,7 +16986,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de guru_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de guru_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook atualizado",
@@ -17174,7 +17195,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -17272,7 +17293,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook atualizado",
@@ -17481,7 +17502,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -17579,7 +17600,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook atualizado",
@@ -17788,7 +17809,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -17886,7 +17907,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook atualizado",
@@ -18095,7 +18116,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -18193,7 +18214,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook atualizado",
@@ -18402,7 +18423,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -18500,7 +18521,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook)"
+    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
    }
   ],
   "returns": "webhook atualizado",
@@ -18793,7 +18814,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de campos (singular), dentro de form"
+    "description": "Mapeamento de campos (singular), dentro de form. Destino tambem pode ser conversation_attr_<chave> (2026-08-21): o atributo vai pra CONVERSA que a automacao/fluxo mapeado abrir pro lead (sem automacao/fluxo nao nasce conversa e o valor e descartado). Chaves reservadas (imported_from, type, in_reply_to...) sao recusadas; valor convertido pelo TIPO do atributo."
    },
    {
     "name": "event_automation_mapping",
@@ -22803,7 +22824,7 @@
     "description": "ID da caixa de entrada (WhatsApp por QR)"
    }
   ],
-  "returns": "situacao e progresso da importacao (status, contadores de conversas/mensagens/contatos, erro)",
+  "returns": "situacao e progresso da importacao (status, contadores de conversas/mensagens/contatos, erro) + desde 20/08/2026: media_pending (arquivos ainda na fila desta caixa; 0 = tudo pedido), media_swept_at e media_swept_count (varredura final que recolocou orfas na fila). A midia chega DEPOIS do texto, em fila por caixa — status 'completed' com media_pending > 0 e normal (texto pronto, fotos a caminho); mensagem com content_attributes.media_failed {retryable: true} = arquivo chegando; retryable false = o WhatsApp ja apagou o arquivo (definitivo).",
   "common_use_cases": [
    "Cliente pergunta por que a importacao de historico parou ou sumiu",
    "Acompanhar a migracao de um cliente novo (quantas conversas ja entraram)"
@@ -26602,6 +26623,13 @@
     "location": "query",
     "required": true,
     "description": "Data no formato AAAA-MM-DD"
+   },
+   {
+    "name": "duration_minutes",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Duracao sob medida (5..1440; fora da faixa usa a do tipo). Os horarios MUDAM com a duracao — peca os slots com a MESMA duracao que vai gravar em tasks_create."
    }
   ],
   "returns": "{ date, timezone, slots: [...] }",
@@ -28565,7 +28593,7 @@
   "description": "Lista os formularios publicos de captacao da conta (estilo Typeform/Typebot), mais recentes primeiro. Cada item traz form_data (rascunho), settings, public_url e counts {views, responses, completed}. NAO traz media_urls (so no show). Leitura liberada a qualquer agente.",
   "category": "Formularios",
   "params": [],
-  "returns": "array de formularios (id, name, slug, display_mode, active, form_data, published_at, settings, public_url, counts)",
+  "returns": "array de formulários, mais recentes primeiro, sem paginação nem filtro: [{id, name (nome INTERNO — o que o lead vê é settings.public_title), slug, display_mode, active, inbox_id, inbox: {id, name, channel_type}|null (caixa resolvida do rascunho), published_inbox_id (caixa que está NA FOTO publicada; null = nunca publicou), form_data, published_at, settings, public_url, counts: {views, responses, completed}, created_at, updated_at}]. NÃO traz media_urls (só no show).",
   "common_use_cases": [
    "Ver os formularios da conta e seus numeros",
    "Achar o id antes de editar/publicar",
@@ -28611,14 +28639,14 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Desenho do formulario {nodes:[{id,type,position:{x,y},data}], edges:[{id,source,target,sourceHandle}]}. Tipos: start, question, choice, message, condition, action, send_message, booking, set_variable, embed, end, api_request, ai. Bloco action usa items:[{key,config}]; send_message usa messageItems; api_request aceita method (GET/POST/PUT/PATCH/DELETE) e body. Chave de data fora da lista permitida do tipo e DESCARTADA em silencio. Teto 2MB. Contrato completo, variaveis e exemplos: resource lionchat://docs/formularios-publicos. ATENCAO: substitui o desenho INTEIRO — leia com lead_forms_show antes de editar."
+    "description": "Desenho do formulario {nodes:[{id,type,position:{x,y},data}], edges:[{id,source,target,sourceHandle}]}. Tipos: start, question, choice, message, condition, action, send_message, booking, set_variable, embed, end, api_request, ai. Bloco action usa items:[{key,config}]; send_message usa messageItems; api_request aceita method (GET/POST/PUT/PATCH/DELETE) e body. Chave de data fora da lista permitida do tipo é gravada mas o motor NÃO a lê, e o editor a remove no próximo salvamento pela tela — não dá erro. Teto 2MB. Contrato completo, variaveis e exemplos: resource lionchat://docs/formularios-publicos. ATENCAO: substitui o desenho INTEIRO — leia com lead_forms_show antes de editar."
    },
    {
     "name": "settings",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..15 (default 15), button_label: string|null, resume: bool (continuar de onde parou, default true), chat_avatar: id de blob ja subido (foto dos baloes no formato chat)}."
+    "description": "Configuração visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..15 (default 15), button_label: string|null, resume: bool (continuar de onde parou, default true), chat_avatar: id de blob já subido (foto dos balões no formato chat), public_title: string (título que o LEAD vê na aba do navegador e no link — até 100 caracteres; vazio/ausente = usa o name, que é o nome INTERNO do painel)}. O objeto é gravado como vier (nenhuma chave é obrigatória)."
    },
    {
     "name": "inbox_id",
@@ -28635,7 +28663,7 @@
     "description": "Endereco do link publico. EDITAVEL (mudou 16/08): normalizado no servidor (acento vira letra, resto vira hifen), 3..60 chars, minusculas+numeros+hifen, unico na conta. Vazio = mantem o atual; duplicado = 422. Trocar derruba links ja divulgados."
    }
   ],
-  "returns": "formulario criado (201) com slug, public_url, inbox {id,name,channel_type}|null e published_inbox_id; 422 {errors} em validacao (inclusive errors.inbox_id)",
+  "returns": "formulário criado (201) com id, slug, public_url, inbox_id, inbox {id,name,channel_type}|null, published_inbox_id (null), counts zerados, created_at/updated_at; 422 {errors} em validação (inclusive errors.inbox_id e errors.slug)",
   "common_use_cases": [
    "Criar formulario de captacao do zero via API",
    "Importar um desenho pronto (form_data completo)"
@@ -28664,7 +28692,7 @@
     "description": "ID do formulario"
    }
   ],
-  "returns": "formulario (objeto completo + media_urls + counts)",
+  "returns": "objeto completo do formulário (mesmos campos do list: id, name, slug, display_mode, active, inbox_id, inbox, published_inbox_id, form_data, published_at, settings, public_url, counts, created_at, updated_at) + media_urls: {\"<blob_id>\": url} com TODAS as imagens do acervo do formulário (imagem de bloco, imagem de opção da Escolha e a foto do chat em settings.chat_avatar). published_data NUNCA sai.",
   "common_use_cases": [
    "Ler o form_data atual antes de editar (update substitui o desenho inteiro)",
    "Conferir estado publicado/ativo e o link publico"
@@ -28680,7 +28708,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/lead_forms/{id}",
   "title": "Atualizar Formulario",
-  "description": "Edita um formulario. form_data SUBSTITUI o desenho inteiro (leia antes com lead_forms_show). Aceita trocar inbox_id (so por caixa do MESMO tipo de canal) e slug (editavel, normalizado; trocar derruba links ja divulgados). Mudancas no desenho/caixa so valem pra quem preenche depois de um novo publish. Admin-only.",
+  "description": "Edita um formulário. form_data SUBSTITUI o desenho inteiro e settings SUBSTITUI o objeto inteiro (não há merge em nenhum dos dois): leia com lead_forms_show e mande o objeto completo de volta. ATENÇÃO — apagar referência de imagem custa o ARQUIVO: logo após salvar, toda imagem do acervo que não estiver mais no form_data, na foto publicada ou em settings.chat_avatar é apagada (só upload com menos de 1h escapa). Um settings sem chat_avatar apaga a foto do chat; um form_data sem o image de um bloco apaga a imagem daquele bloco. Aceita trocar inbox_id (só por caixa do MESMO tipo de canal) e slug (editável, normalizado; trocar derruba links já divulgados). Mudanças no desenho/caixa só valem pra quem preenche depois de um novo publish; active vale na hora. Admin-only.",
   "category": "Formularios",
   "params": [
    {
@@ -28716,14 +28744,14 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Desenho do formulario {nodes:[{id,type,position:{x,y},data}], edges:[{id,source,target,sourceHandle}]}. Tipos: start, question, choice, message, condition, action, send_message, booking, set_variable, embed, end, api_request, ai. Bloco action usa items:[{key,config}]; send_message usa messageItems; api_request aceita method (GET/POST/PUT/PATCH/DELETE) e body. Chave de data fora da lista permitida do tipo e DESCARTADA em silencio. Teto 2MB. Contrato completo, variaveis e exemplos: resource lionchat://docs/formularios-publicos. ATENCAO: substitui o desenho INTEIRO — leia com lead_forms_show antes de editar."
+    "description": "Desenho do formulario {nodes:[{id,type,position:{x,y},data}], edges:[{id,source,target,sourceHandle}]}. Tipos: start, question, choice, message, condition, action, send_message, booking, set_variable, embed, end, api_request, ai. Bloco action usa items:[{key,config}]; send_message usa messageItems; api_request aceita method (GET/POST/PUT/PATCH/DELETE) e body. Chave de data fora da lista permitida do tipo é gravada mas o motor NÃO a lê, e o editor a remove no próximo salvamento pela tela — não dá erro. Teto 2MB. Contrato completo, variaveis e exemplos: resource lionchat://docs/formularios-publicos. ATENCAO: substitui o desenho INTEIRO — leia com lead_forms_show antes de editar."
    },
    {
     "name": "settings",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..15 (default 15), button_label: string|null, resume: bool (continuar de onde parou, default true), chat_avatar: id de blob ja subido (foto dos baloes no formato chat)}."
+    "description": "Configuração visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..15 (default 15), button_label: string|null, resume: bool (continuar de onde parou, default true), chat_avatar: id de blob já subido (foto dos balões no formato chat), public_title: string (título que o LEAD vê na aba do navegador e no link — até 100 caracteres; vazio/ausente = usa o name, que é o nome INTERNO do painel)}. O objeto é gravado como vier (nenhuma chave é obrigatória). SUBSTITUI o objeto inteiro — mande todas as chaves que quer manter."
    },
    {
     "name": "inbox_id",
@@ -28806,7 +28834,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/lead_forms/{id}/duplicate",
   "title": "Duplicar Formulario",
-  "description": "Cria uma copia do formulario: nome + ' (copia)', slug novo, INATIVA e NAO publicada; as imagens dos blocos sao duplicadas (arquivos novos). Admin-only. A copia nasce inativa e nao publicada, com slug novo, imagens duplicadas de verdade e o MESMO inbox_id do original.",
+  "description": "Cria uma cópia do formulário: nome + \" (cópia)\", slug novo sorteado, INATIVA e NÃO publicada, mesmo display_mode, mesmo inbox_id, mesmo settings (inclusive public_title; chat_avatar aponta pro arquivo novo) e as imagens dos blocos duplicadas de verdade (arquivos novos, ids reescritos no desenho — referência morta vira sem imagem). Admin-only.",
   "category": "Formularios",
   "params": [
    {
@@ -28831,7 +28859,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/lead_forms/{id}/stats",
   "title": "Funil do Formulario",
-  "description": "Estatisticas agregadas: views, starts, completed, abandoned, completion_rate (%), funil bloco a bloco (reached + percent, so blocos visiveis, ordem do desenho publicado) e marcos (milestones).",
+  "description": "Estatísticas agregadas na janela days: starts (respostas iniciadas), completed, abandoned, completion_rate (% inteiro = completed/starts), funil bloco a bloco (reached + percent, só blocos visíveis, na ordem da foto PUBLICADA) e milestones. ATENÇÃO: views é o contador de VIDA INTEIRA do formulário (não obedece days). Marcos: hoje só blocos de Ações no formato antigo (action_type: milestone) entram em milestones — marco configurado em items (formato atual do editor) não aparece aqui, só em responses_show. Acima de 50.000 respostas na janela o funil sai parcial.",
   "category": "Formularios",
   "params": [
    {
@@ -28849,7 +28877,7 @@
     "description": "Janela em dias (default 30, maximo 90)"
    }
   ],
-  "returns": "{views, starts, completed, abandoned, completion_rate, funnel: [{node_id, type, label, reached, percent}], milestones: [{node_id, name, reached}]}",
+  "returns": "{views (total, sem janela), starts, completed, abandoned, completion_rate, funnel: [{node_id, type, label, reached, percent}], milestones: [{node_id, name, reached}]}",
   "common_use_cases": [
    "Onde os leads abandonam (funil por bloco)",
    "Taxa de conclusao do formulario",
@@ -28894,10 +28922,10 @@
     "type": "integer",
     "location": "query",
     "required": false,
-    "description": "Pagina (default 1)"
+    "description": "Página (default 1, máximo 10.000)"
    }
   ],
-  "returns": "{payload: [{id, status, contact, current_node_label, answered_count, created_at, completed_at}], meta}. contact pode vir {id: null, name, phone, pending: true} = pessoa AINDA preenchendo (o contato so nasce ao concluir, no fechamento do abandono ou antes de um envio de WhatsApp). NUNCA traz as respostas em si.",
+  "returns": "{payload: [{id, status, contact, current_node_label, answered_count, created_at, completed_at}], meta: {current_page, per_page: 25, total_count}}. contact pode vir {id: null, name, phone, pending: true} = pessoa AINDA preenchendo (o contato só nasce ao concluir, no fechamento do abandono ou antes de um envio de WhatsApp) ou null (nada digitado). answered_count conta chaves de answers, inclusive as sintéticas do bloco de Ações. NUNCA traz as respostas em si.",
   "common_use_cases": [
    "Ver quem respondeu/abandonou",
    "Achar o id de uma resposta pro detalhe"
@@ -28930,7 +28958,7 @@
     "description": "ID da resposta"
    }
   ],
-  "returns": "Resposta completa: answers [{label, value_label, at, download_url?}] (ATENCAO: o bloco de Acoes grava entradas sinteticas com chave '<node_id>::<n>' — nem toda chave e id de bloco), conversation {id, display_id}|null (a conversa aberta na caixa vinculada), milestones, effects [{node_id, label, state, error, status, url_short, at}] e utm_params",
+  "returns": "{id, status, contact ({id, name, phone} | {id: null, name, phone, pending: true} | null), current_node_label, started_at, completed_at, abandoned_at, created_at, answers: [{label, value_label, at, download_url?}] ordenado por at, milestones: [{node_id, name, at}], effects: [{node_id, label, state: pending|done|error, error, status (HTTP), url_short, at}], conversation: {id, display_id}|null, utm_params}. ATENÇÃO em answers: (1) o bloco de Ações grava entradas sintéticas com chave \"<node_id>::<n>\" e o fim degradado grava \"_walk_ended\" — nem toda chave é id de bloco; (2) no bloco de Agendamento value_label é o ID da reserva, não a data (use lionchat_contacts_form_entries_show, que mostra a data); (3) envio de WhatsApp pulado por falta de telefone aparece como entrada vazia do bloco de mensagem. Motivos possíveis em effects.error: invalid_method, invalid_url, http_<código> (http_0 = falha de transporte sem código), timeout, ssrf_blocked, result_too_large, stale, effect_failed, effect_runs_exceeded, budget_exceeded, no_ai_key, ai_error.",
   "common_use_cases": [
    "Ler o que o lead respondeu",
    "Investigar por que a consulta externa/IA falhou (effects)",
@@ -28946,7 +28974,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/lead_forms/{lead_form_id}/test_runs",
   "title": "Testar Formulario (simulador)",
-  "description": "Roda o RASCUNHO (form_data, nao a foto publicada) no motor de verdade e desfaz tudo no fim — nada fica no banco: sem contato, sem conversa, sem WhatsApp, sem pixel, sem resposta nos relatorios. NAO exige admin (qualquer agente da conta). O estado do teste vive em quem chama: cada chamada reproduz o caminho inteiro a partir da lista de respostas. Item cujo node_id nao e o bloco atual PARA a reproducao ali.",
+  "description": "Roda o RASCUNHO (form_data, não a foto publicada) no motor de verdade e desfaz tudo no fim — nada fica no banco: sem contato, sem conversa, sem WhatsApp, sem pixel, sem resposta nos relatórios. NÃO exige admin. O estado do teste vive em quem chama: cada chamada reproduz o caminho inteiro a partir da lista de respostas. LIMITES DO SIMULADOR: (1) blocos de Consulta externa (api_request) e IA (ai) NÃO executam — ao chegar neles a resposta volta block {type: 'wait'} e a reprodução para ali (itens seguintes são ignorados); pra testar o que vem depois, teste pela página pública; (2) Agendamento: value '' segue por \"não agendou\" (se o bloco não for obrigatório); pra simular \"agendou\" só com o id de um agendamento JÁ existente da conta (o simulador não cria reserva); (3) Envio de arquivo obrigatório não tem como passar (422 invalid_value) — só com required: false e value ''. Item cujo node_id não é o bloco atual PARA a reprodução ali.",
   "category": "Formularios",
   "params": [
    {
@@ -28964,15 +28992,16 @@
     "description": "Respostas a reproduzir, na ordem: [{node_id, value}]. Ate 60 itens. Vazio/ausente = comeca do inicio (devolve o primeiro bloco). value null avanca bloco sem resposta (start/message/embed)."
    }
   ],
-  "returns": "{block, log, answers, variables, form}. block = envelope do bloco atual (mesmo shape da pagina publica); log = caminho percorrido [{node_id, type, label, answer, detail}] (detail mostra variavel criada, acoes executadas, resultado de consulta/IA e o rumo das condicoes); 422 {error: 'invalid_value'|'test_run_failed', reason}",
+  "returns": "{block, log, answers, variables, form}. block = envelope do bloco atual (mesmo shape da página pública; type 'wait' = parou num bloco de consulta/IA, que o simulador não roda); log = caminho percorrido [{node_id, type, label, answer?, detail?}] (detail mostra variável criada, ações executadas e o rumo das condições; answer/detail só aparecem quando existem); variables = {{var.*}} criadas; form = {name (nome interno), display_mode, settings, account_name}; 422 {error: 'invalid_value'|'test_run_failed', reason} (reason de invalid_value = o código de validação: required, invalid_email, invalid_phone, invalid_cpf, invalid_option, value_too_long...)",
   "common_use_cases": [
    "Validar um formulario recem-montado antes de publicar",
    "Reproduzir o caminho de um lead pra depurar condicao/consulta/IA",
    "Conferir mensagens e variaveis sem enviar WhatsApp de verdade"
   ],
   "related_tools": [
-   "lionchat_lead_forms_show",
-   "lionchat_lead_forms_publish"
+   "lionchat_contacts_form_entries_show",
+   "lionchat_lead_forms_publish",
+   "lionchat_lead_forms_show"
   ]
  },
  {
@@ -28998,6 +29027,2807 @@
   ],
   "related_tools": [
    "lionchat_lead_forms_update"
+  ]
+ },
+ {
+  "id": "lionchat_agents_replace",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/agents/{id}/replace",
+  "title": "Substituir Atendente (troca 1:1)",
+  "description": "AÇÃO DE ESCRITA IRREVERSÍVEL — confirme com o usuário e reenvie com confirm:true. Cria um atendente NOVO (email/name/role), transfere pra ele a carteira inteira do atendente que SAI (conversas, cards do Kanban, times e caixas com o mesmo cargo Agente/Supervisor — inclusive os vínculos PENDENTES de um convite nunca confirmado) e enfileira a EXCLUSÃO do antigo. Funciona mesmo com a conta no limite de vagas: a criação não passa pelo validate_limit e a conta ganha uma concessão temporária de +1 até a troca terminar. A transferência roda em SEGUNDO PLANO (202): o antigo some da lista só quando o job termina; nesse meio tempo a lista de agentes mostra replacing/deleting. O novo nasce offline, com auto_offline ligado, SEM política de capacidade (assumiria a carteira inteira já acima do teto) e com o cargo personalizado copiado só se o papel for o mesmo. Recusas 422 com mensagem em português: substituir a si mesmo; agente de suporte; agente que está ENTRANDO numa substituição viva (A->B seguida de B->C é barrada); sem nome/e-mail; e-mail já é membro da conta; único administrador confirmado (convide o novo admin, espere confirmar e só então substitua); e-mail inválido. 409 agent_already_being_deleted quando já há exclusão/substituição em andamento (NÃO repita — aguarde). Somente administrador.",
+  "category": "Agentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do atendente que SAI"
+   },
+   {
+    "name": "email",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "E-mail do atendente NOVO (não pode ser membro da conta)"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome do atendente novo"
+   },
+   {
+    "name": "role",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "agent ou administrator. Ausente = mesmo papel do atendente que sai"
+   },
+   {
+    "name": "inherit_memberships",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Padrão true: o novo herda times e caixas (com o cargo) do antigo. false = nasce sem vínculos"
+   }
+  ],
+  "returns": "202 {message:'Substituição iniciada', status:'transfer_running' | 'transfer_not_started' (enfileirar falhou — a tela oferece Concluir/Desfazer), new_agent:{id,name,email}} | 409 {error:'agent_already_being_deleted'} | 422 {error: texto da recusa}",
+  "common_use_cases": [
+   "Trocar um atendente que saiu da empresa pelo substituto sem perder a carteira",
+   "Substituir com a conta no limite de vagas, sem comprar licença",
+   "Conferir antes com lionchat_agents_assigned_resources o que será transferido"
+  ],
+  "related_tools": [
+   "lionchat_agents_assigned_resources",
+   "lionchat_agents_destroy",
+   "lionchat_agents_create",
+   "lionchat_agents_list"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_contacts_form_entries_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/form_entries",
+  "title": "Preenchimentos do Contato",
+  "description": "Aba 'Preenchimentos' da ficha: tudo que ESTA pessoa preencheu ou que entrou por ela, das 4 origens numa lista só, mais recente primeiro — source 'lead_form' (formulário público da conta; status da resposta e a conversa aberta), 'meta_lead' (lead de formulário do Meta), 'custom_webhook' (Webhook Universal criado pelo cliente) e 'flow' (webhook que o FlowBuilder criou pro gatilho de um fluxo, mostrado com o NOME do fluxo). Só entram eventos PROCESSADOS (pendente/falhado/ignorado não gravou nada no contato). Sem paginação, de propósito: a lista vem inteira com teto de 250 por origem; truncated=true avisa que passou do teto (nunca corta calado). NÃO traz o conteúdo cru — só contagem de campos (count); use a ferramenta de detalhe. Qualquer agente da conta (é a ficha do contato).",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contato"
+   }
+  ],
+  "returns": "{payload: [{source: 'lead_form'|'meta_lead'|'custom_webhook'|'flow', id, title (nome do formulário/fluxo/integração), status ('received' nas origens de fora; status da resposta no formulário), at (ISO), count (nº de campos gravados), conversation: {id, display_id} | null}], meta: {total, truncated}}",
+  "common_use_cases": [
+   "Responder 'de onde veio este lead e o que ele preencheu?'",
+   "Achar a resposta do formulário pra abrir com lionchat_contacts_form_entries_show",
+   "Auditar se o webhook/fluxo gravou algo na ficha"
+  ],
+  "related_tools": [
+   "lionchat_contacts_form_entries_show",
+   "lionchat_contacts_show",
+   "lionchat_lead_forms_responses_list",
+   "lionchat_meta_lead_list_1"
+  ]
+ },
+ {
+  "id": "lionchat_contacts_form_entries_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/form_entries/{source}/{id}",
+  "title": "Detalhe de um Preenchimento do Contato",
+  "description": "Abre UM preenchimento da aba Preenchimentos. Para source='lead_form' devolve as RESPOSTAS pergunta a pergunta (label = título da pergunta no desenho publicado, value = texto legível, at, arquivo/imagens quando houver), o que aquele preenchimento GRAVOU na ficha (written) e os UTMs. Para 'meta_lead', 'custom_webhook' e 'flow' devolve só os campos que foram vinculados a atributos e realmente gravados (fields [{label, value}]) — por decisão do dono a aba nunca mostra o conteúdo cru da origem. O par source+id tem que bater com o contato da URL (404 se não for dele ou se a origem for desconhecida).",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contato"
+   },
+   {
+    "name": "source",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "Origem: lead_form | meta_lead | custom_webhook | flow (lista fechada)"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do registro naquela origem (vem de lionchat_contacts_form_entries_list)"
+   }
+  ],
+  "returns": "lead_form: {fields: [], answers: [{label, value, at, file?, images?}], written: [...], utm: {}} | outras origens: {fields: [{label, value}], answers: [], written: [], utm: {}} | 404 {error:'not found'}",
+  "common_use_cases": [
+   "Ler o que o lead respondeu no formulário antes de atender",
+   "Conferir quais campos o webhook gravou na ficha"
+  ],
+  "related_tools": [
+   "lionchat_contacts_form_entries_list",
+   "lionchat_lead_forms_responses_show"
+  ]
+ },
+ {
+  "id": "lionchat_captain_assistants_quality",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/assistants/{id}/quality",
+  "title": "Revisar como a IA foi montada (Arquiteto de IA)",
+  "description": "SÓ LEITURA, ZERO chamada de IA (contagem, listas e regex — custo zero). Revisa a CONSTRUÇÃO do AI Agente (instruções, cenários, conhecimento, ferramentas) e devolve achados como SUGESTÃO de boa prática, sem gravidade — cada um com o trecho (excerpt) pra quem julga ser o humano. Códigos: unknown_variable (variável {{...}} que o motor não preenche, com reason), manual_scheduling (texto manda a IA calcular horários por conta própria em vez de consultar a agenda), unknown_tool (ferramenta citada que não existe), long_instructions_no_scenarios (instruções acima de 2.500 caracteres sem cenário), balloon_separator, no_knowledge, no_guardrails. Cada achado traz fix = o que o botão Aplicar faria: kind 'swap_variable' | 'strip_separators' | 'create_custom_attribute' (mecânicos, vão por quality_apply), 'rewrite' (proposta por IA, vai por quality_rewrite) ou 'navigate' (só aponta a tela). Também devolve revisions (últimas 20 correções ainda desfazíveis). Admin ou gestor de IA.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do assistente"
+   }
+  ],
+  "returns": "{summary: {instructions_length, scenarios_count, ...}, findings: [{code, where: 'instructions'|'scenario'|'assistant', label, target ('instructions' | 'scenario:<id>' | 'assistant'), evidence: [], excerpt, reason?, anchor?, fix: {kind, ...}}], revisions: [{id, code, target, created_at}]}",
+  "common_use_cases": [
+   "Diagnosticar por que a IA inventa horários ou ignora uma variável",
+   "Revisar um assistente recém-montado antes de ligar",
+   "Listar o que dá pra consertar com um clique"
+  ],
+  "related_tools": [
+   "lionchat_captain_assistants_quality_apply",
+   "lionchat_captain_assistants_quality_rewrite",
+   "lionchat_captain_assistants_quality_undo",
+   "lionchat_captain_assistants_show"
+  ]
+ },
+ {
+  "id": "lionchat_captain_assistants_quality_apply",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/assistants/{id}/quality_apply",
+  "title": "Aplicar conserto mecânico da revisão da IA",
+  "description": "AÇÃO DE ESCRITA. Aplica UM conserto MECÂNICO apontado por lionchat_captain_assistants_quality — só fix.kind 'swap_variable', 'strip_separators' ou 'create_custom_attribute'; os demais respondem 422 not_applicable. O corpo manda o ENDEREÇO do achado (code + target + evidence), nunca texto: o serviço reexecuta a revisão e aplica o conserto que o próprio sistema calculou — assim só dá pra aplicar o que foi realmente proposto. Grava uma revisão desfazível (quality_undo). 422: finding_gone (o achado não existe mais — texto mudou), not_applicable, unexpected. Devolve a revisão completa já recalculada.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do assistente"
+   },
+   {
+    "name": "code",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Código do achado (ex.: unknown_variable, balloon_separator)"
+   },
+   {
+    "name": "target",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Alvo do achado: 'instructions', 'scenario:<id>' ou 'assistant' (campo target do achado)"
+   },
+   {
+    "name": "evidence",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Evidence do achado (ex.: a variável desconhecida) — obrigatório quando o achado tem evidence, pra localizar o item certo"
+   }
+  ],
+  "returns": "200 = mesma resposta de lionchat_captain_assistants_quality (summary, findings, revisions) já recalculada | 422 {error: 'finding_gone'|'not_applicable'|'unexpected'}",
+  "common_use_cases": [
+   "Trocar uma variável inexistente pela certa nas instruções",
+   "Criar o atributo personalizado que a instrução cita"
+  ],
+  "related_tools": [
+   "lionchat_captain_assistants_quality",
+   "lionchat_captain_assistants_quality_undo"
+  ]
+ },
+ {
+  "id": "lionchat_captain_assistants_quality_rewrite",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/assistants/{id}/quality_rewrite",
+  "title": "Propor reescrita com IA (revisão da IA)",
+  "description": "CHAMA A IA DA CONTA (custo de tokens), mas NÃO GRAVA NADA: devolve o antes/depois pra pessoa aprovar e um token de 1 hora que só lionchat_captain_assistants_quality_apply_proposal aceita. Só pra achados com fix.kind 'rewrite': code 'manual_scheduling' (reescreve a FRASE apontada por anchor pra consultar a agenda em vez de calcular) e 'long_instructions_no_scenarios' (quebra as instruções longas em cenários). 422: empty (a IA não devolveu proposta), llm (falha do provedor), no_key (conta sem chave de IA), unexpected.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do assistente"
+   },
+   {
+    "name": "code",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "manual_scheduling ou long_instructions_no_scenarios"
+   },
+   {
+    "name": "target",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Alvo do achado ('instructions' ou 'scenario:<id>')"
+   },
+   {
+    "name": "anchor",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Trecho âncora da frase (campo anchor do achado) — obrigatório em manual_scheduling"
+   }
+  ],
+  "returns": "200 {token, proposal: {antes/depois da reescrita}} | 422 {error: 'empty'|'llm'|'no_key'|'unexpected'}",
+  "common_use_cases": [
+   "Ver como a IA reescreveria a instrução que manda inventar horário",
+   "Dividir instruções gigantes em cenários, com aprovação humana"
+  ],
+  "related_tools": [
+   "lionchat_captain_assistants_quality",
+   "lionchat_captain_assistants_quality_apply_proposal"
+  ]
+ },
+ {
+  "id": "lionchat_captain_assistants_quality_apply_proposal",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/assistants/{id}/quality_apply_proposal",
+  "title": "Aplicar proposta de reescrita (revisão da IA)",
+  "description": "AÇÃO DE ESCRITA — confirme com o usuário mostrando o antes/depois devolvido por quality_rewrite. Grava a proposta identificada pelo token (válido por 1 hora, de uso único). Recusa 422 changed_since se o texto do assistente mudou desde que a proposta foi gerada (gere de novo) e proposal_gone se o token expirou. Cria revisão desfazível.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do assistente"
+   },
+   {
+    "name": "token",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Token devolvido por lionchat_captain_assistants_quality_rewrite"
+   }
+  ],
+  "returns": "200 = revisão recalculada (summary, findings, revisions) | 422 {error: 'proposal_gone'|'changed_since'|'no_change'|'unexpected'}",
+  "common_use_cases": [
+   "Aprovar a reescrita proposta pela IA"
+  ],
+  "related_tools": [
+   "lionchat_captain_assistants_quality_rewrite",
+   "lionchat_captain_assistants_quality_undo"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_captain_assistants_quality_undo",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/assistants/{id}/quality_undo",
+  "title": "Desfazer correção da revisão da IA",
+  "description": "AÇÃO DE ESCRITA. Desfaz UMA correção aplicada pela revisão (quality_apply ou apply_proposal), devolvendo o texto anterior. Só funciona se o texto ainda for exatamente o que a correção deixou: 422 changed_since se alguém editou depois, already_undone se já foi desfeita, wrong_assistant se a revisão é de outro assistente. 404 se revision_id não existir ou não for mais desfazível. As revisões desfazíveis vêm em revisions[] de lionchat_captain_assistants_quality.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do assistente"
+   },
+   {
+    "name": "revision_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID da revisão (revisions[].id da revisão de qualidade)"
+   }
+  ],
+  "returns": "200 = revisão recalculada | 404 {error:'not_found'} | 422 {error: 'changed_since'|'already_undone'|'wrong_assistant'|'unexpected'}",
+  "common_use_cases": [
+   "Voltar atrás numa correção aplicada por engano"
+  ],
+  "related_tools": [
+   "lionchat_captain_assistants_quality",
+   "lionchat_captain_assistants_quality_apply"
+  ]
+ },
+ {
+  "id": "lionchat_captain_supervisor_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/supervisor",
+  "title": "Supervisor de IA (placar comparativo, teste A/B)",
+  "description": "SÓ LEITURA, zero chamada de IA. Placar que compara TODAS as IAs da conta num período: conversas atendidas, resolvidas/abertas/pendentes, quantas o humano assumiu (human_takeover_rate), engajamento (cliente respondeu), mensagens enviadas, follow-ups, agendamentos feitos, mensagens agendadas, etiquetas aplicadas, distribuição por caixa, CSAT, cards ganhos e a CONVERSÃO pela régua escolhida. A régua é 'de cada X, quantas viraram Y': base conversations|engaged|booked|resolved (unidade conversa) ou cards (unidade card) e resultado compatível — conversations: engaged|booked|won_card|label|flow|resolved; engaged: booked|won_card|label|flow|resolved; booked: won_card|label|flow|resolved; resolved: booked|won_card|label|flow; cards: won|lost. label e flow exigem target (título da etiqueta / id do fluxo). Combinação inválida cai no padrão (conversations -> won_card) SEM erro. Os números de cada IA não dependem da seleção; os AVISOS sim: low_volume (menos de 30 conversas num braço — diferença é sorte) e inbox_imbalance (uma IA tirando 30 pontos a mais de uma caixa que a outra — públicos diferentes). Taxas vêm nulas (não zero) quando não há conversa. Admin ou gestor de IA.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "days",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Janela em dias a partir de hoje: 1 a 180 (padrão 30)"
+   },
+   {
+    "name": "assistant_ids",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "description": "IDs das IAs em comparação (só muda os avisos; os números voltam de todas)",
+    "query_name": "assistant_ids[]"
+   },
+   {
+    "name": "conversion_base",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Base da régua: conversations (padrão) | engaged | booked | resolved | cards",
+    "query_name": "conversion[base]"
+   },
+   {
+    "name": "conversion_result",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Resultado da régua (tem que caber na base; padrão won_card)",
+    "query_name": "conversion[result]"
+   },
+   {
+    "name": "conversion_target",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Obrigatório quando result = label (título da etiqueta) ou flow (id do fluxo)",
+    "query_name": "conversion[target]"
+   }
+  ],
+  "returns": "{period: {days, from, to}, assistants: [{id, name, conversations, resolved, open, pending, handling_now, human_took_over, failed_messages, went_silent, promised_not_done, engaged, messages_sent, follow_ups, bookings_made, scheduled_messages, labels, inboxes, csat..., conversion: {base, result, target, base_total, hits, rate}, conversion_rate, human_takeover_rate, engagement_rate, resolution_rate, messages_per_conversation}], warnings: [{code: 'low_volume'|'inbox_imbalance', ...}]}",
+  "common_use_cases": [
+   "Decidir qual prompt de IA converte mais num teste A/B",
+   "Medir quanto a IA está sendo assumida por humanos",
+   "Responder 'a IA está agendando?' com número"
+  ],
+  "related_tools": [
+   "lionchat_captain_assistants_list",
+   "lionchat_captain_assistants_show",
+   "lionchat_reports_summary"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_whatsapp_templates_media_library",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates/media_library",
+  "title": "Biblioteca de Mídia dos Modelos (caixa oficial)",
+  "description": "SÓ LEITURA. Lista os arquivos de mídia de modelo JÁ anexados nesta caixa WhatsApp Cloud (tudo que já subiu por upload_media/upload_header_media), pra reaproveitar como mídia padrão de cabeçalho sem subir de novo — o MCP não faz upload de arquivo, então esta é a ÚNICA forma de obter uma url NOSSA aceita por lionchat_inboxes_whatsapp_templates_header_media. Até 60 itens, mais novos primeiro, sem repetir o mesmo arquivo (dedup por checksum). kind filtra ANTES do teto.",
+  "category": "Templates WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa WhatsApp Cloud"
+   },
+   {
+    "name": "kind",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "image | video | document — filtra por tipo de cabeçalho"
+   }
+  ],
+  "returns": "{data: [{url (pública, do nosso armazenamento), filename, type: 'image'|'video'|'document', content_type, byte_size, created_at}]}",
+  "common_use_cases": [
+   "Escolher um arquivo já existente como mídia padrão de um modelo",
+   "Conferir quais mídias a caixa já tem antes de pedir upload pelo painel"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_whatsapp_templates_header_media",
+   "lionchat_inboxes_whatsapp_templates_list"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_whatsapp_templates_header_media",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates/{id}/header_media",
+  "title": "Definir Mídia Padrão do Cabeçalho do Modelo",
+  "description": "AÇÃO DE ESCRITA LOCAL — ZERO chamada à Meta (o cabeçalho de mídia é uma VAGA do modelo aprovado; o arquivo vai como parâmetro em cada envio, então o status 'Aprovado' fica intacto). Define, troca ou REMOVE a mídia padrão do cabeçalho: mande header_media com url (obrigatória; http/https até 2000 caracteres); corpo sem header_media = remover. Se a url for do NOSSO armazenamento, o arquivo PRECISA ser desta caixa (lista de lionchat_inboxes_whatsapp_templates_media_library) e o tipo/nome saem do próprio arquivo — declarar type errado não engana; link de FORA vale o type declarado (e pode sair do ar: a resposta marca own=false). SOMENTE caixa WhatsApp Cloud e SOMENTE administrador. 422: modelo sem cabeçalho de mídia; tipo diferente do que o modelo espera ('Este modelo espera foto/vídeo/documento'); endereço inválido/longo; arquivo de outra conta ou fora da biblioteca. 404: modelo não é desta caixa.",
+  "category": "Templates WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa WhatsApp Cloud"
+   },
+   {
+    "name": "id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do modelo (id da Meta, como vem em lionchat_inboxes_whatsapp_templates_list)"
+   },
+   {
+    "name": "header_media",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "{url, type: 'image'|'video'|'document', filename?}. Ausente = remover a mídia padrão"
+   }
+  ],
+  "returns": "200 {success: true, data: modelo atualizado (variable_mapping._header_media = {url, type, filename, own})} | 404 {error} | 422 {error}",
+  "common_use_cases": [
+   "Deixar o folheto/foto fixo no modelo pra campanhas e fluxos não precisarem informar a mídia",
+   "Remover a mídia padrão que saiu do ar"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_whatsapp_templates_media_library",
+   "lionchat_inboxes_whatsapp_templates_update",
+   "lionchat_inboxes_whatsapp_templates_list"
+  ]
+ },
+ {
+  "id": "lionchat_campaigns_dispatch_days",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/campaigns/{id}/dispatch_days",
+  "title": "Agenda de Disparo da Campanha (dia por dia)",
+  "description": "SÓ LEITURA. A agenda de uma campanha de FLUXO ou de WhatsApp QR Code quebrada POR DIA, no fuso da conta: para cada dia, quantas pessoas estavam planejadas, quantas já dispararam (fired), pendentes, puladas (skipped, com os motivos), canceladas, falhadas, a janela de horário (window from/to) e as MENSAGENS que saíram naquele dia (sent/delivered/read/failed). Duas contas diferentes, nunca somadas: disparos = pessoas que o fluxo começou; mensagens = o que saiu (fluxo com espera cria mensagem DIAS depois). Traz também daily_cap (teto por dia), ends_at (previsão de término) e schedule_log (histórico das edições da agenda, inclusive o freio automático da Meta). Campanha terminada devolve a foto congelada. 422 'This campaign has no schedule' para campanha de mensagem comum/site (sem agenda).",
+  "category": "Campanhas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da campanha (de fluxo ou QR Code)"
+   }
+  ],
+  "returns": "{timezone, daily_cap, ends_at, schedule_log: [...], days: [{date 'YYYY-MM-DD', planned, fired, pending, skipped, cancelled, failed, window: {from 'HH:MM', to}, skips: [{reason, count}], messages: {sent, delivered, read, failed}}], totals: {fired, pending, skipped, cancelled, failed, planned, days}} | 422 {error}",
+  "common_use_cases": [
+   "Responder 'quando a campanha termina?' e 'quantos saíram hoje?'",
+   "Ver em que dia houve pulos e por quê",
+   "Escolher a data antes de mover/pular um dia"
+  ],
+  "related_tools": [
+   "lionchat_campaigns_dispatch_day_entries",
+   "lionchat_campaigns_skip_dispatch_day",
+   "lionchat_campaigns_move_dispatch_day",
+   "lionchat_campaigns_reprogram_dispatch",
+   "lionchat_campaigns_flow_report",
+   "lionchat_campaigns_statistics"
+  ]
+ },
+ {
+  "id": "lionchat_campaigns_dispatch_day_entries",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/campaigns/{id}/dispatch_day_entries",
+  "title": "Pessoas de um Dia da Agenda da Campanha",
+  "description": "SÓ LEITURA. QUEM sai num dia da agenda (campanha de fluxo ou QR Code): contato, telefone, minuto (no fuso da conta), status e o motivo quando foi pulado/falhou. Devolve no máximo 100 linhas ordenadas pela hora; total diz quantas existem de verdade ('mostrando 100 de 250'). É aqui que se descobre o firing_id (entries[].id) usado por lionchat_campaigns_remove_dispatch_entry. 422 'data invalida' ou campanha sem agenda.",
+  "category": "Campanhas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da campanha"
+   },
+   {
+    "name": "date",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "Dia no formato YYYY-MM-DD (fuso da conta)"
+   }
+  ],
+  "returns": "{date, total, shown, limit: 100, entries: [{id (firing_id), contact_id, name, phone, at 'HH:MM', status: 'pending'|'fired'|'skipped'|'cancelled'|'failed', reason}]} | 422 {error}",
+  "common_use_cases": [
+   "Ver quem ainda vai receber hoje",
+   "Achar a pessoa certa pra tirar da fila",
+   "Explicar por que alguém foi pulado"
+  ],
+  "related_tools": [
+   "lionchat_campaigns_dispatch_days",
+   "lionchat_campaigns_remove_dispatch_entry"
+  ]
+ },
+ {
+  "id": "lionchat_campaigns_skip_dispatch_day",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/campaigns/{id}/skip_dispatch_day",
+  "title": "Pular um Dia da Agenda da Campanha",
+  "description": "AÇÃO DE ESCRITA. PULAR o dia: as pessoas pendentes daquele dia NÃO ficam de fora — vão pro FIM da fila, preenchendo os dias seguintes até o teto diário e criando dias novos pro que não couber (pular ATRASA a campanha, não reduz o alcance; ninguém é cancelado). Nunca toca em quem já foi disparado e nunca estoura o teto por dia. Registra no schedule_log. 422: 'data invalida', 'esse dia nao tem ninguem na fila', campanha sem agenda.",
+  "category": "Campanhas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da campanha"
+   },
+   {
+    "name": "date",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Dia a pular, YYYY-MM-DD (fuso da conta)"
+   }
+  ],
+  "returns": "200 {moved (pessoas realocadas), ends_at, days_used, days: agenda atualizada (mesmo formato de dispatch_days)} | 422 {error}",
+  "common_use_cases": [
+   "Não disparar no feriado/domingo sem perder ninguém"
+  ],
+  "related_tools": [
+   "lionchat_campaigns_dispatch_days",
+   "lionchat_campaigns_shift_dispatch_from",
+   "lionchat_campaigns_move_dispatch_day"
+  ]
+ },
+ {
+  "id": "lionchat_campaigns_move_dispatch_day",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/campaigns/{id}/move_dispatch_day",
+  "title": "Mover um Dia da Agenda da Campanha",
+  "description": "AÇÃO DE ESCRITA. Move as pessoas PENDENTES de um dia inteiro pra outro dia, mantendo o espaçamento entre elas (mesmo delta). RECUSA 422 quando o dia de destino não cabe no teto diário — a mensagem diz quanto já tem e qual o limite; nesse caso use lionchat_campaigns_shift_dispatch_from (cascata). Também 422 para data inválida, destino no passado, destino igual à origem ou dia sem ninguém na fila. Quem já disparou nunca é tocado.",
+  "category": "Campanhas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da campanha"
+   },
+   {
+    "name": "date",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Dia de origem, YYYY-MM-DD"
+   },
+   {
+    "name": "new_date",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Dia de destino, YYYY-MM-DD (não pode ser no passado)"
+   }
+  ],
+  "returns": "200 {moved, ends_at, days: agenda atualizada} | 422 {error}",
+  "common_use_cases": [
+   "Adiar o disparo de um dia específico pra outra data"
+  ],
+  "related_tools": [
+   "lionchat_campaigns_dispatch_days",
+   "lionchat_campaigns_shift_dispatch_from"
+  ]
+ },
+ {
+  "id": "lionchat_campaigns_shift_dispatch_from",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/campaigns/{id}/shift_dispatch_from",
+  "title": "Empurrar a Agenda da Campanha dali pra frente (cascata)",
+  "description": "AÇÃO DE ESCRITA. Empurra o dia informado E TODOS os seguintes pelo mesmo número de dias — ninguém muda de posição relativa e nenhum dia estoura o teto (todos andam juntos). É a operação certa pra 'pula o domingo' quando mover um dia só não cabe. Só pendentes; quem já disparou fica. 422: data inválida, days <= 0, ninguém na fila daquele dia em diante.",
+  "category": "Campanhas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da campanha"
+   },
+   {
+    "name": "date",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Primeiro dia a empurrar, YYYY-MM-DD"
+   },
+   {
+    "name": "days",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "Quantos dias empurrar (1 ou mais)"
+   }
+  ],
+  "returns": "200 {moved, ends_at, days: agenda atualizada} | 422 {error}",
+  "common_use_cases": [
+   "Atrasar a campanha inteira a partir de uma data sem estourar o limite diário"
+  ],
+  "related_tools": [
+   "lionchat_campaigns_dispatch_days",
+   "lionchat_campaigns_move_dispatch_day",
+   "lionchat_campaigns_reschedule_flow"
+  ]
+ },
+ {
+  "id": "lionchat_campaigns_reprogram_dispatch",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/campaigns/{id}/reprogram_dispatch",
+  "title": "Reprogramar o que falta da Campanha",
+  "description": "AÇÃO DE ESCRITA — confirme com o usuário (refaz a agenda inteira do que ainda não saiu). Remonta a agenda SÓ das pessoas pendentes com teto por dia, data de início e intervalo entre pessoas novos; quem já recebeu nunca é tocado. Parâmetros ausentes mantêm o valor atual (start_at ausente = a partir da próxima pendente ou agora). 422: 'nao ha ninguem na fila', daily_cap < 1, start_at no passado, delay_min > delay_max, campanha sem agenda. Grava daily_cap novo na campanha e registra no schedule_log.",
+  "category": "Campanhas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da campanha"
+   },
+   {
+    "name": "daily_cap",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Máximo de pessoas por dia (1 ou mais)"
+   },
+   {
+    "name": "start_at",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Data/hora de início (ISO 8601), precisa ser futura"
+   },
+   {
+    "name": "delay_min",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Intervalo mínimo entre pessoas, em segundos"
+   },
+   {
+    "name": "delay_max",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Intervalo máximo entre pessoas, em segundos (>= delay_min)"
+   }
+  ],
+  "returns": "200 {moved, daily_cap, ends_at, days: agenda atualizada} | 422 {error}",
+  "common_use_cases": [
+   "Baixar o ritmo diário de uma campanha que está estourando o limite do número",
+   "Reagendar o restante pra começar amanhã às 9h"
+  ],
+  "related_tools": [
+   "lionchat_campaigns_dispatch_days",
+   "lionchat_campaigns_reschedule_flow",
+   "lionchat_campaigns_stop_flow"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_campaigns_remove_dispatch_entry",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/campaigns/{id}/remove_dispatch_entry",
+  "title": "Tirar uma Pessoa da Fila da Campanha",
+  "description": "AÇÃO DE ESCRITA — confirme com o usuário. O ÚNICO caminho que tira alguém da campanha de verdade: a linha vira 'cancelled' (não é apagada — o dono precisa saber que a pessoa ficou de fora). Não redistribui nada (remover é diferente de pular). O firing_id vem de lionchat_campaigns_dispatch_day_entries. 422: 'essa pessoa nao esta mais na fila' (já saiu, já foi cancelada ou o id não é desta campanha) e 'essa pessoa acabou de ser disparada' (corrida com o despertador).",
+  "category": "Campanhas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da campanha"
+   },
+   {
+    "name": "firing_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "ID da pessoa na fila (entries[].id de dispatch_day_entries)"
+   }
+  ],
+  "returns": "200 {removed: 1, ends_at, days: agenda atualizada} | 422 {error}",
+  "common_use_cases": [
+   "Cliente pediu pra não receber — tirar da campanha antes do disparo"
+  ],
+  "related_tools": [
+   "lionchat_campaigns_dispatch_day_entries",
+   "lionchat_campaigns_dispatch_days"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_captain_voices_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/voices",
+  "title": "Vozes disponíveis pra resposta em áudio da IA",
+  "description": "SÓ LEITURA. Catálogo de vozes do provedor pra configurar a resposta em ÁUDIO do AI Agente: provider 'openai' (padrão; vozes fixas, exige chave OpenAI na conta) ou 'elevenlabs' (lista as vozes da conta ElevenLabs, inclusive clonadas). NUNCA levanta: configured=false + error quando a chave do provedor não está configurada; provedor desconhecido devolve lista vazia. O id da voz é o que vai em config do assistente (lionchat_captain_assistants_update). A prévia de áudio (preview) NÃO existe no MCP — é arquivo binário; ouvir pelo painel. Somente administrador.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "provider",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "openai (padrão) | elevenlabs"
+   }
+  ],
+  "returns": "{voices: [{id, name, category, available, ...}], configured: bool, error: null|string, cloning_allowed?}",
+  "common_use_cases": [
+   "Listar as vozes antes de ligar a resposta por áudio",
+   "Descobrir o id da voz ElevenLabs clonada do cliente"
+  ],
+  "related_tools": [
+   "lionchat_captain_assistants_update",
+   "lionchat_captain_assistants_show"
+  ]
+ },
+ {
+  "id": "lionchat_account_variables_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/account_variables/{id}",
+  "title": "Ver uma Variável da Conta",
+  "description": "SÓ LEITURA. Devolve UMA variável da conta pelo id, no MESMO formato da lista ({definitions: [1 definição], values: {chave: valor}}). Use em vez da lista quando a conta tem muitas variáveis (Instituto Homem tem 100+): a lista é cortada pelo teto de resposta e os últimos itens em ordem alfabética SOMEM — já fez parecer que tokens da e-Clínica tinham sido apagados. Variável secreta não devolve o valor: em values vem {has_value: true/false}. **Requer perfil Administrador.**",
+  "category": "Variaveis da Conta",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da definição da variável (definitions[].id da lista)"
+   }
+  ],
+  "returns": "{definitions: [{id, attribute_key, attribute_display_name, attribute_display_type, ...}], values: {<attribute_key>: valor | {has_value: bool} (secreta)}}",
+  "common_use_cases": [
+   "Conferir o valor/estado de UMA variável sem depender da lista truncada",
+   "Verificar se um token secreto está preenchido"
+  ],
+  "related_tools": [
+   "lionchat_account_variables_list",
+   "lionchat_account_variables_update"
+  ]
+ },
+ {
+  "id": "lionchat_agents_assignments",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agents/{id}/assignments",
+  "title": "Times e Caixas de um Atendente",
+  "description": "SÓ LEITURA. Estado atual dos vínculos do atendente: times (com papel: supervisor=true quando NÃO entra na distribuição automática) e caixas (inbox_id + supervisor). Agente CONFIRMADO -> vínculos reais (TeamMember/InboxMember). Agente com convite NÃO confirmado -> as pendências guardadas no convite, que serão aplicadas quando ele confirmar. team_ids é só a lista de ids (compatibilidade). É o que o modal Editar usa pra pré-preencher; e é o que lionchat_agents_replace herda.",
+  "category": "Agentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do atendente"
+   }
+  ],
+  "returns": "{teams: [{team_id, supervisor}], team_ids: [...], inboxes: [{inbox_id, supervisor}]}",
+  "common_use_cases": [
+   "Ver em quais caixas e times o atendente está antes de editar",
+   "Conferir o que um convite pendente vai aplicar"
+  ],
+  "related_tools": [
+   "lionchat_agents_update",
+   "lionchat_agents_assigned_resources",
+   "lionchat_inbox_members_show",
+   "lionchat_teams_show"
+  ]
+ },
+ {
+  "id": "lionchat_announcements_read_all",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/announcements/read_all",
+  "title": "Marcar todos os Avisos como lidos",
+  "description": "AÇÃO DE ESCRITA leve. Marca como lidos, de uma vez, todos os avisos (anúncios) visíveis ainda não lidos pelo usuário logado — par do lionchat_announcements_read (que marca um por vez). Sem corpo. Idempotente (nada pendente = 200 sem efeito).",
+  "category": "Anuncios",
+  "params": [],
+  "returns": "200 sem corpo",
+  "common_use_cases": [
+   "Limpar o contador de avisos pendentes de uma vez"
+  ],
+  "related_tools": [
+   "lionchat_announcements_read",
+   "lionchat_announcements_list_1",
+   "lionchat_announcements_list"
+  ]
+ },
+ {
+  "id": "lionchat_assignable_agents_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/assignable_agents",
+  "title": "Atendentes atribuíveis em VÁRIAS caixas",
+  "description": "SÓ LEITURA. Quem pode receber uma conversa considerando VÁRIAS caixas ao mesmo tempo: devolve os agentes membros de TODAS as caixas informadas (interseção) mais os administradores da conta. Exclui super admins com acesso de suporte ativo. Para UMA caixa use lionchat_inboxes_list_1 (inboxes/{id}/assignable_agents). 404 se alguma caixa não for da conta.",
+  "category": "Agentes",
+  "params": [
+   {
+    "name": "inbox_ids",
+    "type": "array",
+    "location": "query",
+    "required": true,
+    "description": "IDs das caixas (o agente precisa ser membro de todas)",
+    "query_name": "inbox_ids[]"
+   }
+  ],
+  "returns": "{payload: [agente (mesmo formato de lionchat_agents_list)]}",
+  "common_use_cases": [
+   "Montar a lista de destino de uma atribuição em lote que cruza caixas"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_list_1",
+   "lionchat_agents_list",
+   "lionchat_kanban_bulk_bulk_actions"
+  ]
+ },
+ {
+  "id": "lionchat_contact_inboxes_filter",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/contact_inboxes/filter",
+  "title": "Achar o Contato pelo identificador numa Caixa",
+  "description": "SÓ LEITURA (é POST por herança do Chatwoot, mas não grava nada). Responde 'qual contato tem este source_id nesta caixa?': procura o crachá (contact_inbox) pelo par inbox_id + source_id EXATO e devolve o contato com todos os crachás (contact_inboxes). ATENÇÃO nas caixas WhatsApp QR (WAHA): o mesmo contato pode ter o crachá em 3 formatos (5511999999999@lid, 5511999999999@c.us ou só dígitos) — a busca é exata, então tente o formato que a caixa usa; na caixa oficial (Cloud) o source_id são os dígitos do telefone. 404 sem corpo quando não existe.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID da caixa"
+   },
+   {
+    "name": "source_id",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Identificador do contato naquele canal (telefone em dígitos na Cloud; @c.us/@lid no QR; e-mail no canal de e-mail)"
+   }
+  ],
+  "returns": "200 contato (com contact_inboxes) | 404 sem corpo",
+  "common_use_cases": [
+   "Descobrir se um número já é contato numa caixa específica antes de criar",
+   "Mapear telefone -> contato numa integração"
+  ],
+  "related_tools": [
+   "lionchat_contacts_search",
+   "lionchat_contacts_create_2",
+   "lionchat_contacts_show"
+  ]
+ },
+ {
+  "id": "lionchat_contacts_tracking_events_presence",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/tracking_events/presence",
+  "title": "Presença do Lead no site agora (LionTrack)",
+  "description": "SÓ LEITURA. Diz se o contato está ONLINE no site neste instante (heartbeat do rastreador LionTrack, válido por 60 segundos) e, quando está, em que página (page_url) e dispositivo. Fora do site ou sem rastreador instalado = {online: false} e mais nada. Leitura de Redis, custo zero.",
+  "category": "LionTrack",
+  "params": [
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contato"
+   }
+  ],
+  "returns": "{online: bool, page_url?, device_name?, visitor_id?, ...dados do último heartbeat}",
+  "common_use_cases": [
+   "Saber se o lead está navegando agora antes de ligar/chamar",
+   "Mostrar 'online no site' numa automação"
+  ],
+  "related_tools": [
+   "lionchat_contacts_tracking_events_list",
+   "lionchat_contacts_show"
+  ]
+ },
+ {
+  "id": "lionchat_contacts_tracking_events_debug_timeline",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/tracking_events/debug_timeline",
+  "title": "Linha do tempo crua de rastreamento do Contato (admin)",
+  "description": "SÓ LEITURA, SOMENTE ADMINISTRADOR (403 pros demais). Últimos eventos do LionTrack com o event_data INTEIRO — fbp, fbc, landing_url, user_agent, UTMs, fbclid/gclid, cidade/estado, IP, sessão, navegador/dispositivo — pra inspecionar a atribuição quando o relatório de origem ou o pixel parece errado. Não passa pela redação de dados pessoais da lista normal; use só pra depurar.",
+  "category": "LionTrack",
+  "params": [
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contato"
+   },
+   {
+    "name": "limit",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Quantos eventos (1 a 100, padrão 10)"
+   }
+  ],
+  "returns": "{contact_id, contact_name, total_events, events: [{id, event_name, event_data, duration_seconds, page_url, page_title, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, gclid, country, state, city, ip_address, session_id, browser_name, device_name, platform_name, created_at}]}",
+  "common_use_cases": [
+   "Depurar por que o lead ficou sem origem/campanha",
+   "Conferir fbp/fbc antes de um disparo manual de conversão"
+  ],
+  "related_tools": [
+   "lionchat_contacts_tracking_events_list",
+   "lionchat_kanban_items_recapture_attribution",
+   "lionchat_lead_origin_reports"
+  ]
+ },
+ {
+  "id": "lionchat_csat_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/csat_survey_responses/{id}",
+  "title": "Anotar uma Resposta de CSAT (nota de revisão)",
+  "description": "AÇÃO DE ESCRITA. Grava/atualiza a NOTA DE REVISÃO (csat_review_notes) de uma resposta de satisfação — o comentário interno do gestor sobre aquela avaliação; registra quem anotou e quando. Não altera a nota do cliente. Administrador ou cargo com permissão report_manage (403 caso contrário). Recurso Enterprise.",
+  "category": "CSAT",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da resposta de CSAT (de lionchat_csat_list)"
+   },
+   {
+    "name": "csat_review_notes",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Texto da anotação (vazio limpa)"
+   }
+  ],
+  "returns": "200 resposta de CSAT atualizada (mesmo formato da lista, com csat_review_notes, review_notes_updated_by, review_notes_updated_at)",
+  "common_use_cases": [
+   "Registrar o que foi feito sobre uma avaliação negativa"
+  ],
+  "related_tools": [
+   "lionchat_csat_list",
+   "lionchat_csat_metrics"
+  ]
+ },
+ {
+  "id": "lionchat_flow_sessions_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/flow_sessions/{id}",
+  "title": "Detalhe de uma Execução de Flow (passo a passo)",
+  "description": "SÓ LEITURA, ADMIN-ONLY, rate limit 30/min por usuário. O detalhe de UMA execução (sessão) de fluxo de conversa: log passo a passo enriquecido (execution_steps, com status e erro por bloco — inclusive falha de entrega assíncrona registrada no passo do bloco), variáveis no fim (variables_snapshot, filtradas), blocos visitados, setas percorridas (traversed_edges) e a conversa. Resolve a FOTO da versão do fluxo da época (flow_snapshot); flow_snapshot_stale=true avisa que o fluxo foi editado durante a execução. execution_log_truncated=true quando o log passou do teto. Os ids vêm de lionchat_flows_executions_list. 404 {error:'Nao encontrado'}.",
+  "category": "Flows",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da sessão (data[].id de lionchat_flows_executions_list)"
+   }
+  ],
+  "returns": "{id, flow_id, status, started_at, updated_at, duration_ms, trigger_label, trigger_type, conversation: {id, display_id, status, ...}, execution_steps: [...], variables_snapshot, visited_node_ids, traversed_edges, execution_log_truncated, flow_snapshot, flow_snapshot_stale}",
+  "common_use_cases": [
+   "Explicar em que bloco o fluxo parou e por quê",
+   "Ver o valor das variáveis no fim da execução",
+   "Mostrar o motivo de uma entrega recusada pelo canal dentro do fluxo"
+  ],
+  "related_tools": [
+   "lionchat_flows_executions_list",
+   "lionchat_flow_sessions_update",
+   "lionchat_conversations_flow_sessions_list",
+   "lionchat_flow_tool_executions_show"
+  ]
+ },
+ {
+  "id": "lionchat_funnels_meta_events_config",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/funnels/{id}/meta_events_config",
+  "title": "Configurar Eventos de Conversão do Funil (Meta/GA4/Ads)",
+  "description": "AÇÃO DE ESCRITA — confirme com o usuário. Define quais eventos de conversão o funil dispara automaticamente: por ETAPA (stages.<id da etapa>) e nos desfechos won/lost. Cada bloco aceita SÓ: enabled, name (nome do evento, ex. Lead, Purchase), is_standard, value_strategy, value_fixed, currency — qualquer outra chave é descartada em silêncio. O merge é PROFUNDO e atômico: mande só o que muda; etapas não citadas ficam como estão. Administrador ou cargo com marketing_integrations_manage (403). Devolve a configuração inteira depois do merge.",
+  "category": "Funis",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "meta_events_config",
+    "type": "object",
+    "location": "body",
+    "required": true,
+    "description": "{stages: {<stage_id>: {enabled, name, is_standard, value_strategy, value_fixed, currency}}, won: {...}, lost: {...}} — parcial"
+   }
+  ],
+  "returns": "200 meta_events_config completo do funil após o merge | 403",
+  "common_use_cases": [
+   "Disparar 'Purchase' quando o card for ganho",
+   "Ligar o evento 'Lead' na etapa de qualificação"
+  ],
+  "related_tools": [
+   "lionchat_funnels_show",
+   "lionchat_meta_pixel_integrations_list",
+   "lionchat_ga4_integrations_list",
+   "lionchat_google_ads_integrations_list"
+  ]
+ },
+ {
+  "id": "lionchat_funnels_meta_capi_events_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/meta_capi_events",
+  "title": "Histórico de Eventos Meta CAPI do Funil",
+  "description": "SÓ LEITURA. Lista os eventos de conversão Meta CAPI disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed | duplicate), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | manual | automation | auto_create | test | booking_reservation | lead_form), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no Meta CAPI?'. Administrador ou cargo com marketing_integrations_manage (403).",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por status: pending | sent | failed | duplicate"
+   },
+   {
+    "name": "event_name",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo nome do evento (ex.: Lead, Purchase)"
+   },
+   {
+    "name": "trigger_type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pela origem do disparo: stage_move | card_won | card_lost | manual | automation | auto_create | test | booking_reservation | lead_form"
+   },
+   {
+    "name": "kanban_item_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Só eventos deste card"
+   },
+   {
+    "name": "since",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Início (ISO 8601) — created_at >= since"
+   },
+   {
+    "name": "until",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim (ISO 8601) — created_at <= until"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (50 por página)"
+   }
+  ],
+  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title, fbtrace_id}], meta: {total, page}}",
+  "common_use_cases": [
+   "Ver se o evento de conversão chegou no Meta CAPI",
+   "Listar os disparos falhados pra reenviar"
+  ],
+  "related_tools": [
+   "lionchat_funnels_meta_capi_events_show",
+   "lionchat_funnels_meta_capi_events_retry",
+   "lionchat_meta_pixel_integrations_list",
+   "lionchat_funnels_meta_events_config"
+  ]
+ },
+ {
+  "id": "lionchat_funnels_meta_capi_events_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/meta_capi_events/{id}",
+  "title": "Detalhe de um Evento Meta CAPI",
+  "description": "SÓ LEITURA. Um evento Meta CAPI com os DADOS BRUTOS: payload_sent (o que foi mandado) e response_body (o que o provedor respondeu), ambos com dados sensíveis redigidos, mais response_status. É o bloco 'Ver detalhes' do histórico. 404 se o evento não for deste funil/conta.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do evento"
+   }
+  ],
+  "returns": "{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, response_status, kanban_item_id, kanban_item_title, fbtrace_id, payload_sent, response_body} | 404",
+  "common_use_cases": [
+   "Ler a mensagem de erro exata do provedor",
+   "Conferir que dados de usuário foram enviados"
+  ],
+  "related_tools": [
+   "lionchat_funnels_meta_capi_events_list",
+   "lionchat_funnels_meta_capi_events_retry"
+  ]
+ },
+ {
+  "id": "lionchat_funnels_meta_capi_events_retry",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/meta_capi_events/{id}/retry",
+  "title": "Reenviar Evento Meta CAPI falhado",
+  "description": "AÇÃO DE ESCRITA. Reenfileira UM evento Meta CAPI com status 'failed' (volta pra pending e o job envia de novo). Só failed: qualquer outro status responde 422 {error:'not failed'}. 404 se não for deste funil.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do evento falhado"
+   }
+  ],
+  "returns": "200 {ok: true} | 422 {error:'not failed'} | 404 {error:'not found'}",
+  "common_use_cases": [
+   "Reenviar a conversão depois de corrigir o token/pixel"
+  ],
+  "related_tools": [
+   "lionchat_funnels_meta_capi_events_list",
+   "lionchat_meta_pixel_integrations_list"
+  ]
+ },
+ {
+  "id": "lionchat_funnels_ga4_events_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/ga4_events",
+  "title": "Histórico de Eventos GA4 do Funil",
+  "description": "SÓ LEITURA. Lista os eventos de conversão GA4 disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test | lead_form), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no GA4?'. Administrador ou cargo com marketing_integrations_manage (403).",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por status: pending | sent | failed"
+   },
+   {
+    "name": "event_name",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo nome do evento (ex.: Lead, Purchase)"
+   },
+   {
+    "name": "trigger_type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pela origem do disparo: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test | lead_form"
+   },
+   {
+    "name": "kanban_item_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Só eventos deste card"
+   },
+   {
+    "name": "since",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Início (ISO 8601) — created_at >= since"
+   },
+   {
+    "name": "until",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim (ISO 8601) — created_at <= until"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (50 por página)"
+   }
+  ],
+  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title}], meta: {total, page}}",
+  "common_use_cases": [
+   "Ver se o evento de conversão chegou no GA4",
+   "Listar os disparos falhados pra reenviar"
+  ],
+  "related_tools": [
+   "lionchat_funnels_ga4_events_show",
+   "lionchat_funnels_ga4_events_retry",
+   "lionchat_ga4_integrations_list",
+   "lionchat_funnels_meta_events_config"
+  ]
+ },
+ {
+  "id": "lionchat_funnels_ga4_events_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/ga4_events/{id}",
+  "title": "Detalhe de um Evento GA4",
+  "description": "SÓ LEITURA. Um evento GA4 com os DADOS BRUTOS: payload_sent (o que foi mandado) e response_body (o que o provedor respondeu), ambos com dados sensíveis redigidos, mais response_status. É o bloco 'Ver detalhes' do histórico. 404 se o evento não for deste funil/conta.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do evento"
+   }
+  ],
+  "returns": "{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, response_status, kanban_item_id, kanban_item_title, payload_sent, response_body} | 404",
+  "common_use_cases": [
+   "Ler a mensagem de erro exata do provedor",
+   "Conferir que dados de usuário foram enviados"
+  ],
+  "related_tools": [
+   "lionchat_funnels_ga4_events_list",
+   "lionchat_funnels_ga4_events_retry"
+  ]
+ },
+ {
+  "id": "lionchat_funnels_ga4_events_retry",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/ga4_events/{id}/retry",
+  "title": "Reenviar Evento GA4 falhado",
+  "description": "AÇÃO DE ESCRITA. Reenfileira UM evento GA4 com status 'failed' (volta pra pending e o job envia de novo). Só failed: qualquer outro status responde 422 {error:'not failed'}. 404 se não for deste funil.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do evento falhado"
+   }
+  ],
+  "returns": "200 {ok: true} | 422 {error:'not failed'} | 404 {error:'not found'}",
+  "common_use_cases": [
+   "Reenviar a conversão depois de corrigir o token/pixel"
+  ],
+  "related_tools": [
+   "lionchat_funnels_ga4_events_list",
+   "lionchat_ga4_integrations_list"
+  ]
+ },
+ {
+  "id": "lionchat_funnels_google_ads_conversions_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/google_ads_conversions",
+  "title": "Histórico de Eventos Google Ads do Funil",
+  "description": "SÓ LEITURA. Lista os eventos de conversão Google Ads disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no Google Ads?'. Administrador ou cargo com marketing_integrations_manage (403).",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por status: pending | sent | failed"
+   },
+   {
+    "name": "event_name",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo nome do evento (ex.: Lead, Purchase)"
+   },
+   {
+    "name": "trigger_type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pela origem do disparo: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test"
+   },
+   {
+    "name": "kanban_item_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Só eventos deste card"
+   },
+   {
+    "name": "since",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Início (ISO 8601) — created_at >= since"
+   },
+   {
+    "name": "until",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim (ISO 8601) — created_at <= until"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (50 por página)"
+   }
+  ],
+  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title}], meta: {total, page}}",
+  "common_use_cases": [
+   "Ver se o evento de conversão chegou no Google Ads",
+   "Listar os disparos falhados pra reenviar"
+  ],
+  "related_tools": [
+   "lionchat_funnels_google_ads_conversions_show",
+   "lionchat_funnels_google_ads_conversions_retry",
+   "lionchat_google_ads_integrations_list",
+   "lionchat_funnels_meta_events_config"
+  ]
+ },
+ {
+  "id": "lionchat_funnels_google_ads_conversions_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/google_ads_conversions/{id}",
+  "title": "Detalhe de um Evento Google Ads",
+  "description": "SÓ LEITURA. Um evento Google Ads com os DADOS BRUTOS: payload_sent (o que foi mandado) e response_body (o que o provedor respondeu), ambos com dados sensíveis redigidos, mais response_status. É o bloco 'Ver detalhes' do histórico. 404 se o evento não for deste funil/conta.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do evento"
+   }
+  ],
+  "returns": "{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, response_status, kanban_item_id, kanban_item_title, payload_sent, response_body} | 404",
+  "common_use_cases": [
+   "Ler a mensagem de erro exata do provedor",
+   "Conferir que dados de usuário foram enviados"
+  ],
+  "related_tools": [
+   "lionchat_funnels_google_ads_conversions_list",
+   "lionchat_funnels_google_ads_conversions_retry"
+  ]
+ },
+ {
+  "id": "lionchat_funnels_google_ads_conversions_retry",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/google_ads_conversions/{id}/retry",
+  "title": "Reenviar Evento Google Ads falhado",
+  "description": "AÇÃO DE ESCRITA. Reenfileira UM evento Google Ads com status 'failed' (volta pra pending e o job envia de novo). Só failed: qualquer outro status responde 422 {error:'not failed'}. 404 se não for deste funil.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do evento falhado"
+   }
+  ],
+  "returns": "200 {ok: true} | 422 {error:'not failed'} | 404 {error:'not found'}",
+  "common_use_cases": [
+   "Reenviar a conversão depois de corrigir o token/pixel"
+  ],
+  "related_tools": [
+   "lionchat_funnels_google_ads_conversions_list",
+   "lionchat_google_ads_integrations_list"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_items_meta_capi_fire",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/meta_capi/fire",
+  "title": "Disparo manual de Conversão a partir do Card (Meta + GA4 + Google Ads)",
+  "description": "AÇÃO DE ESCRITA com efeito externo — confirme com o usuário. Dispara MANUALMENTE um evento de conversão a partir de um card do Kanban nos TRÊS destinos de uma vez (Meta CAPI, GA4 e Google Ads); cada destino decide sozinho se está configurado/permitido e falhas individuais não derrubam os outros (destino sem integração volta null). O contato vem do card (item_details.contact_id), do contact_id informado, ou da 1ª conversa não-grupo vinculada — sem contato: 422 'contact not found'. event_name: letras/números/_ até 40 caracteres (422 'invalid event_name'). currency vale só pro Meta. Rate limit: 10/min por usuário e 100/hora por conta (429). Administrador ou cargo com marketing_integrations_manage.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do card"
+   },
+   {
+    "name": "event_name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome do evento (ex.: Lead, Purchase, Schedule)"
+   },
+   {
+    "name": "value",
+    "type": "number",
+    "location": "body",
+    "required": false,
+    "description": "Valor monetário do evento"
+   },
+   {
+    "name": "currency",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Moeda ISO (ex.: BRL) — só o Meta usa"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Força o contato quando o card não tem contato vinculado"
+   },
+   {
+    "name": "custom_data_extra",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Campos extras de custom_data (chave/valor)"
+   }
+  ],
+  "returns": "200 {event_id, status (do Meta, compatibilidade), destinations: {meta_capi: {id, event_name, status}|null, ga4_mp: {...}|null, google_ads: {...}|null}} | 422 {error} | 429",
+  "common_use_cases": [
+   "Mandar a conversão de uma venda fechada fora do fluxo normal",
+   "Testar o pixel com um card real"
+  ],
+  "related_tools": [
+   "lionchat_funnels_meta_capi_events_list",
+   "lionchat_funnels_ga4_events_list",
+   "lionchat_funnels_google_ads_conversions_list",
+   "lionchat_kanban_items_show"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_kanban_items_ga4_mp_fire",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/ga4_mp/fire",
+  "title": "Disparo manual de Evento GA4 a partir do Card",
+  "description": "AÇÃO DE ESCRITA com efeito externo — confirme com o usuário. Dispara SÓ no GA4 (Measurement Protocol) um evento a partir do card; event_name ausente = 'Lead'. Mesma resolução de contato do disparo Meta (card -> contact_id -> 1ª conversa não-grupo; 422 'contact not found'). Sem integração GA4 configurada, devolve event_id null. Administrador ou cargo com marketing_integrations_manage.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do card"
+   },
+   {
+    "name": "event_name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome do evento (padrão Lead)"
+   },
+   {
+    "name": "value",
+    "type": "number",
+    "location": "body",
+    "required": false,
+    "description": "Valor do evento"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Força o contato"
+   },
+   {
+    "name": "custom_data_extra",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Parâmetros extras do evento"
+   }
+  ],
+  "returns": "200 {event_id, status} | 422 {error}",
+  "common_use_cases": [
+   "Reenviar um evento GA4 de um card sem tocar no Meta"
+  ],
+  "related_tools": [
+   "lionchat_funnels_ga4_events_list",
+   "lionchat_ga4_integrations_list",
+   "lionchat_kanban_items_meta_capi_fire"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_kanban_items_google_ads_fire",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/google_ads/fire",
+  "title": "Disparo manual de Conversão Google Ads a partir do Card",
+  "description": "AÇÃO DE ESCRITA com efeito externo — confirme com o usuário. Dispara SÓ no Google Ads uma conversão a partir do card; event_name ausente = 'Lead'. Mesma resolução de contato (422 'contact not found'). Sem integração Google Ads, devolve conversão nula. Administrador ou cargo com marketing_integrations_manage.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do card"
+   },
+   {
+    "name": "event_name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome da ação de conversão (padrão Lead)"
+   },
+   {
+    "name": "value",
+    "type": "number",
+    "location": "body",
+    "required": false,
+    "description": "Valor da conversão"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Força o contato"
+   },
+   {
+    "name": "custom_data_extra",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Dados extras"
+   }
+  ],
+  "returns": "200 {conversion_id, status} | 422 {error}",
+  "common_use_cases": [
+   "Registrar a conversão offline de um card no Google Ads"
+  ],
+  "related_tools": [
+   "lionchat_funnels_google_ads_conversions_list",
+   "lionchat_google_ads_integrations_list",
+   "lionchat_kanban_items_meta_capi_fire"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_kanban_items_recapture_attribution",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/recapture_attribution",
+  "title": "Recapturar Atribuição (LionTrack) do Card",
+  "description": "AÇÃO DE ESCRITA. Refaz a foto de atribuição do card (item_details.tracking_attributes) a partir do estado ATUAL: conversa + contato + último evento de rastreamento. Sobrescreve a foto anterior. Útil pra cards criados antes do rastreador funcionar ou quando a origem foi corrigida no contato. Precisa de permissão de edição do card.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do card"
+   }
+  ],
+  "returns": "200 {tracking_attributes: {origin_*, utm_*, fbclid, gclid, ...}}",
+  "common_use_cases": [
+   "Consertar a origem de um card antigo pro relatório de origem"
+  ],
+  "related_tools": [
+   "lionchat_kanban_items_show",
+   "lionchat_contacts_tracking_events_debug_timeline",
+   "lionchat_contacts_set_origin"
+  ]
+ },
+ {
+  "id": "lionchat_google_calendar_reactivate",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/google_calendar/reactivate",
+  "title": "Reativar a sincronização do Google Calendar",
+  "description": "AÇÃO DE ESCRITA. O botão 'Tentar novamente' do aviso amarelo da Agenda: tenta renovar o token, refazer a assinatura de mudanças (watch) se expirou e recuperar tarefas órfãs. 1 tentativa a cada 30 segundos por usuário (429 'Aguarde alguns segundos'). Se não reativar, 422 com message e requires_reconnect=true quando o token foi REVOGADO — aí só reconectar (lionchat_google_calendar_list_1).",
+  "category": "Google Calendar",
+  "params": [],
+  "returns": "200 {success: true, sync_enabled: true} | 422 {success: false, requires_reconnect: bool, message} | 429 {success: false, message}",
+  "common_use_cases": [
+   "Religar a Agenda depois de um erro de sincronização sem reconectar a conta Google"
+  ],
+  "related_tools": [
+   "lionchat_google_calendar_list",
+   "lionchat_google_calendar_list_1",
+   "lionchat_google_calendar_create_1"
+  ]
+ },
+ {
+  "id": "lionchat_google_contacts_status",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/google_contacts/status",
+  "title": "Status da Integração Google Contatos",
+  "description": "SÓ LEITURA. Estado da conexão única da conta com o Google Contatos: conta Google conectada, sincronização ligada, último erro (sync_error/sync_error_code) e o andamento do envio em lote (backfill_status/total/done/skipped). {connected: false} quando nunca foi conectado. Somente administrador.",
+  "category": "Integracoes",
+  "params": [],
+  "returns": "{connected: false} | {connected: true, google_email, sync_enabled, sync_error, sync_error_code, backfill_status, backfill_total, backfill_done, backfill_skipped}",
+  "common_use_cases": [
+   "Conferir se os contatos estão indo pro Google",
+   "Acompanhar o envio em lote"
+  ],
+  "related_tools": [
+   "lionchat_google_contacts_connect",
+   "lionchat_google_contacts_toggle_sync",
+   "lionchat_google_contacts_backfill",
+   "lionchat_google_contacts_disconnect"
+  ]
+ },
+ {
+  "id": "lionchat_google_contacts_connect",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/google_contacts/connect",
+  "title": "Conectar Google Contatos (link de autorização)",
+  "description": "Gera o LINK de autorização do Google pra conectar a conta de Contatos — não conecta sozinho: a pessoa precisa abrir auth_url no navegador e autorizar. Uma conexão por conta LionChat. 412 se as credenciais do Google não estiverem configuradas na instalação ('Contate o suporte'). Somente administrador.",
+  "category": "Integracoes",
+  "params": [],
+  "returns": "{auth_url} | 412 {error}",
+  "common_use_cases": [
+   "Entregar ao cliente o link pra autorizar o Google Contatos"
+  ],
+  "related_tools": [
+   "lionchat_google_contacts_status",
+   "lionchat_google_calendar_list_1"
+  ]
+ },
+ {
+  "id": "lionchat_google_contacts_disconnect",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/google_contacts/disconnect",
+  "title": "Desconectar Google Contatos",
+  "description": "AÇÃO DE ESCRITA IRREVERSÍVEL — confirme com o usuário. Revoga a autorização no Google e remove a conexão; os contatos já enviados ficam no Google. 404 'Nenhuma conexao encontrada' sem conexão. Somente administrador.",
+  "category": "Integracoes",
+  "params": [],
+  "returns": "200 {success: true} | 404 {error}",
+  "common_use_cases": [
+   "Trocar a conta Google usada pela integração"
+  ],
+  "related_tools": [
+   "lionchat_google_contacts_status",
+   "lionchat_google_contacts_connect"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_google_contacts_toggle_sync",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/google_contacts/toggle_sync",
+  "title": "Ligar/Desligar a sincronização do Google Contatos",
+  "description": "AÇÃO DE ESCRITA. ALTERNA o estado (ligado vira desligado e vice-versa — confira antes em status) e limpa o último erro. Sem corpo. 404 sem conexão. Somente administrador.",
+  "category": "Integracoes",
+  "params": [],
+  "returns": "200 {sync_enabled: bool} | 404 {error}",
+  "common_use_cases": [
+   "Pausar o envio de contatos pro Google"
+  ],
+  "related_tools": [
+   "lionchat_google_contacts_status"
+  ]
+ },
+ {
+  "id": "lionchat_google_contacts_backfill",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/google_contacts/backfill",
+  "title": "Enviar contatos existentes pro Google (lote)",
+  "description": "AÇÃO DE ESCRITA em segundo plano. Dispara o envio em lote dos contatos já existentes pro Google Contatos; acompanhe por status (backfill_status/total/done/skipped). Um lote por vez por conta: 422 'Envio ja em andamento'. 404 sem conexão. Somente administrador.",
+  "category": "Integracoes",
+  "params": [],
+  "returns": "200 {success: true} | 422 {error} | 404 {error}",
+  "common_use_cases": [
+   "Levar a base inteira pro Google logo depois de conectar"
+  ],
+  "related_tools": [
+   "lionchat_google_contacts_status",
+   "lionchat_google_contacts_toggle_sync"
+  ]
+ },
+ {
+  "id": "lionchat_greenn_webhooks_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/greenn_webhooks",
+  "title": "Listar Integracoes Greenn",
+  "description": "Retorna a(s) configuração(ões) de webhook Greenn (8ª plataforma de pagamento, ao lado de Guru, Hotmart, Kiwify, Ticto, Eduzz, Monetizze e Webhook Universal). Somente administrador.",
+  "category": "Integracoes E-commerce",
+  "params": [],
+  "returns": "array de configurações de webhook (id, name, inbox_id, active, events, event_automation_mapping, webhook_url, ...)",
+  "common_use_cases": [
+   "Dashboard: contar/exibir integrações de pagamento",
+   "Achar o id antes de ver eventos"
+  ],
+  "related_tools": [
+   "lionchat_greenn_webhooks_create",
+   "lionchat_greenn_webhooks_show",
+   "lionchat_ecommerce_webhooks_list_2"
+  ]
+ },
+ {
+  "id": "lionchat_greenn_webhooks_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/greenn_webhooks",
+  "title": "Criar Integracao Greenn",
+  "description": "AÇÃO DE ESCRITA. Cria a integração de webhook Greenn. O mapeamento evento->automação/fluxo é validado: automation_id/flow_id de outra conta = 422. Depois de criar, cadastre a webhook_url devolvida no painel da Greenn. Somente administrador.",
+  "category": "Integracoes E-commerce",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome da integração"
+   },
+   {
+    "name": "greenn_token",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Token do webhook da Greenn (valida a assinatura do que chega)"
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa onde a conversa do comprador é aberta"
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Integração ativa"
+   },
+   {
+    "name": "events",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Eventos a processar"
+   },
+   {
+    "name": "event_automation_mapping",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Mapeamento evento -> {automation_id | flow_id, first_purchase_only?: bool (pula renovações), conversation_attribute_keys?: [chaves de atributo de conversa a preencher, respeitando o tipo]} — ids precisam ser desta conta (422)"
+   }
+  ],
+  "returns": "webhook criado (com novo ID e webhook_url)",
+  "common_use_cases": [
+   "Cadastro inicial da integração Greenn",
+   "Automação a partir de compra aprovada"
+  ],
+  "related_tools": [
+   "lionchat_greenn_webhooks_list",
+   "lionchat_greenn_webhooks_update"
+  ],
+  "body_wrapper": "greenn_webhook"
+ },
+ {
+  "id": "lionchat_greenn_webhooks_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/greenn_webhooks/{id}",
+  "title": "Detalhes Integracao Greenn",
+  "description": "SÓ LEITURA. Detalhes da integração de webhook Greenn, com o mapeamento de eventos. Somente administrador.",
+  "category": "Integracoes E-commerce",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da integração"
+   }
+  ],
+  "returns": "webhook",
+  "common_use_cases": [
+   "Ver dados completos antes de editar"
+  ],
+  "related_tools": [
+   "lionchat_greenn_webhooks_list",
+   "lionchat_greenn_webhooks_update"
+  ]
+ },
+ {
+  "id": "lionchat_greenn_webhooks_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/greenn_webhooks/{id}",
+  "title": "Atualizar Integracao Greenn",
+  "description": "AÇÃO DE ESCRITA. Atualização parcial da integração Greenn (só o que for enviado). event_automation_mapping enviado SUBSTITUI o objeto inteiro — mande o mapa completo. Ids de automação/fluxo de outra conta = 422. Somente administrador.",
+  "category": "Integracoes E-commerce",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da integração"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome da integração"
+   },
+   {
+    "name": "greenn_token",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Token do webhook da Greenn (valida a assinatura do que chega)"
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa onde a conversa do comprador é aberta"
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Integração ativa"
+   },
+   {
+    "name": "events",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Eventos a processar"
+   },
+   {
+    "name": "event_automation_mapping",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Mapeamento evento -> {automation_id | flow_id, first_purchase_only?: bool (pula renovações), conversation_attribute_keys?: [chaves de atributo de conversa a preencher, respeitando o tipo]} — ids precisam ser desta conta (422)"
+   }
+  ],
+  "returns": "webhook atualizado",
+  "common_use_cases": [
+   "Trocar a caixa de destino",
+   "Ligar/desligar a integração",
+   "Apontar evento pra outro fluxo"
+  ],
+  "related_tools": [
+   "lionchat_greenn_webhooks_show",
+   "lionchat_greenn_webhooks_list"
+  ],
+  "body_wrapper": "greenn_webhook"
+ },
+ {
+  "id": "lionchat_greenn_webhooks_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/greenn_webhooks/{id}",
+  "title": "Excluir Integracao Greenn",
+  "description": "AÇÃO DE ESCRITA IRREVERSÍVEL — confirme com o usuário. Remove a integração Greenn e o histórico de eventos dela. Somente administrador.",
+  "category": "Integracoes E-commerce",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da integração"
+   }
+  ],
+  "returns": "200 sem corpo",
+  "common_use_cases": [
+   "Remoção após confirmação do cliente"
+  ],
+  "related_tools": [
+   "lionchat_greenn_webhooks_list"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_greenn_webhooks_events",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/greenn_webhooks/{id}/events",
+  "title": "Eventos Greenn",
+  "description": "SÓ LEITURA. Últimos 50 eventos recebidos da Greenn nos últimos 7 dias (mais novos primeiro) com tipo, status do evento na Greenn, situação do processamento (pending/processed/failed/rejected/skipped), erro e o payload bruto. Somente administrador.",
+  "category": "Integracoes E-commerce",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da integração"
+   }
+  ],
+  "returns": "array de eventos: [{id, event_type, event_status, processing_status, error_message, payload, created_at}]",
+  "common_use_cases": [
+   "Auditar se a compra chegou",
+   "Achar o evento falhado pra reprocessar"
+  ],
+  "related_tools": [
+   "lionchat_greenn_webhooks_retry_event",
+   "lionchat_greenn_webhooks_retry_preflight"
+  ]
+ },
+ {
+  "id": "lionchat_greenn_webhooks_retry_event",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/greenn_webhooks/{id}/events/{event_id}/retry",
+  "title": "Reprocessar Evento Greenn",
+  "description": "AÇÃO DE ESCRITA. Reprocessa um evento com processing_status failed, rejected OU processed (reprocessar um já processado pode repetir ações do mapeamento — use lionchat_greenn_webhooks_retry_preflight antes). Outros status: 422. Somente administrador.",
+  "category": "Integracoes E-commerce",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da integração"
+   },
+   {
+    "name": "event_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do evento"
+   }
+  ],
+  "returns": "200 {success: true} | 422 {error}",
+  "common_use_cases": [
+   "Reprocessar a compra que falhou por fluxo desligado"
+  ],
+  "related_tools": [
+   "lionchat_greenn_webhooks_events",
+   "lionchat_greenn_webhooks_retry_preflight"
+  ]
+ },
+ {
+  "id": "lionchat_greenn_webhooks_retry_preflight",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/greenn_webhooks/{id}/events/{event_id}/retry_preflight",
+  "title": "Pre-verificacao Retry Greenn",
+  "description": "SÓ LEITURA. Antes de reprocessar: diz se já existe OUTRO evento processado com a mesma transação (has_duplicate) e quando foi — reprocessar nesse caso repetiria a venda. Somente administrador.",
+  "category": "Integracoes E-commerce",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da integração"
+   },
+   {
+    "name": "event_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do evento"
+   }
+  ],
+  "returns": "{has_duplicate: bool, duplicate_processed_at: ISO|null}",
+  "common_use_cases": [
+   "Evitar reprocessar uma transação já contabilizada"
+  ],
+  "related_tools": [
+   "lionchat_greenn_webhooks_retry_event",
+   "lionchat_greenn_webhooks_events"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_health",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/health",
+  "title": "Saúde da Caixa WhatsApp Oficial (por que o número não envia)",
+  "description": "Painel de saúde de uma caixa WhatsApp CLOUD (API oficial): o veredito da Meta (health_status.can_send_message AVAILABLE/LIMITED/BLOCKED com os motivos, ex. verificação de empresa pendente), nota de qualidade (quality_rating/quality_score), faixa de limite diário (messaging_limit_tier) e quanto já foi usado nas últimas 24h (limit_usage cap/used_24h/remaining), status do nome, modo da conta, throughput, webhook configurado x esperado (expected_webhook_url) e o resumo das FALHAS de envio das últimas 24h por classe (failures_24h.reasons — pode trazer account_locked = bloqueio por pagamento 131031, nunca reenviável; truncated quando passa de 500). ATENÇÃO: este GET ESCREVE um efeito colateral desejado — quando a Meta diz AVAILABLE ele LIMPA o bloqueio por pagamento (whatsapp_send_blocked_billing) da caixa; é o único jeito de limpar sem um template OK. 400 em caixa que não é Cloud; 422 quando a Meta não responde (error com a mensagem).",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa WhatsApp Cloud"
+   }
+  ],
+  "returns": "{id, display_phone_number, verified_name, name_status, quality_rating, quality_score, messaging_limit_tier, account_mode, code_verification_status, webhook_configuration, expected_webhook_url, throughput, last_onboarded_time, platform_type, certificate, business_id, health_status: {can_send_message, entities[]...}, is_official_business_account, limit_usage: {cap, used_24h, remaining}, failures_24h: {total, reasons: {classe: n}, truncated}} | 400 | 422 {error}",
+  "common_use_cases": [
+   "Responder 'por que meu número não envia?' com o veredito da Meta em vez de chutar",
+   "Ver quanto do limite diário já foi consumido antes de uma campanha",
+   "Destravar a caixa após regularizar o pagamento na Meta"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_show",
+   "lionchat_inboxes_failed_messages_summary",
+   "lionchat_inboxes_register_webhook",
+   "lionchat_campaigns_estimate_audience"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_register_webhook",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/register_webhook",
+  "title": "Registrar de novo o Webhook da caixa WhatsApp Oficial",
+  "description": "AÇÃO DE ESCRITA de reparo. Refaz na Meta a assinatura do webhook desta caixa WhatsApp Cloud (o endereço que a Meta chama pra entregar mensagens). Use quando a caixa parou de RECEBER e lionchat_inboxes_health mostra webhook_configuration diferente de expected_webhook_url. Não mexe em token nem em número. 400 em caixa que não é Cloud; 422 com a mensagem da Meta quando falha. Somente administrador.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa WhatsApp Cloud"
+   }
+  ],
+  "returns": "200 {message: 'Webhook registered successfully'} | 400 | 422 {error}",
+  "common_use_cases": [
+   "Consertar caixa oficial que não recebe mensagens"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_health",
+   "lionchat_inboxes_show"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_connect",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha/connect",
+  "title": "Conectar/Iniciar a sessão WhatsApp QR Code (WAHA)",
+  "description": "AÇÃO DE ESCRITA. Inicia (ou reinicia) a sessão WhatsApp QR Code da caixa no servidor WAHA e a deixa pronta pra ler o QR. Idempotente: se a sessão já está STARTING, SCAN_QR_CODE ou WORKING devolve o estado atual sem recriar. Apaga a marca de 'desconectada de propósito' (a caixa volta a ser elegível ao religamento automático) e reaproveita o mesmo proxy/IP quando a caixa já tinha um. Depois de chamar, o QR vem por lionchat_inboxes_waha_qrcode e a leitura precisa ser feita no CELULAR do cliente — o MCP não conclui o pareamento. 422 com a mensagem do WAHA quando falha. Somente administrador.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa WhatsApp QR Code"
+   }
+  ],
+  "returns": "200 {status: 'starting'|'STARTING'|'SCAN_QR_CODE'|'WORKING', session_name, result} | 422 {error}",
+  "common_use_cases": [
+   "Religar uma caixa QR que ficou STOPPED/FAILED",
+   "Preparar a caixa pra um novo pareamento"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_status",
+   "lionchat_inboxes_waha_qrcode"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_qrcode",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha/qrcode",
+  "title": "QR Code da sessão WhatsApp (WAHA)",
+  "description": "SÓ LEITURA. Devolve o QR Code atual da sessão em formato RAW (value = o TEXTO do QR, não uma imagem): pra escanear é preciso transformar esse texto em imagem de QR. Só faz sentido com a sessão em SCAN_QR_CODE (confira em lionchat_inboxes_waha_status); em outros estados o WAHA responde erro (422). O QR expira em ~20-60 segundos — chame de novo se o cliente demorar. Somente administrador.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa WhatsApp QR Code"
+   }
+  ],
+  "returns": "{value: '<texto do QR>'} | 422 {error}",
+  "common_use_cases": [
+   "Gerar o QR pra um cliente parear o número"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_connect",
+   "lionchat_inboxes_waha_status"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_import_history",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha/import_history",
+  "title": "Puxar Histórico de conversas da caixa WhatsApp QR (iniciar)",
+  "description": "AÇÃO DE ESCRITA pesada em segundo plano. Inicia a importação do histórico de conversas do aparelho pra caixa QR Code (WAHA), dos últimos N dias (1 a 90). O texto entra em conversas de HISTÓRICO separadas (encerradas, datadas no passado, sem acordar IA/automação); a mídia vai pra uma fila de espera e chega depois (bolha âmbar 'chegando'; vermelha = o WhatsApp já apagou o arquivo, não volta). Uma rodada por vez: 409 se já está importando, pausada ou aguardando retomada; 403 se foi cancelada pelo suporte ou se já houve importação CONCLUÍDA com dados (reimportar é só pelo Super Admin); 429 se acabou de ser pedida (aguarde alguns segundos). Acompanhe por lionchat_inboxes_waha_import_status. Somente administrador.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa WhatsApp QR Code"
+   },
+   {
+    "name": "days",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Quantos dias pra trás (1 a 90; fora da faixa é ajustado)"
+   }
+  ],
+  "returns": "200 {status: 'started', days} | 409 {error} | 403 {error} | 429 {error}",
+  "common_use_cases": [
+   "Trazer as conversas antigas de um número recém-conectado"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_import_status",
+   "lionchat_inboxes_waha_status",
+   "lionchat_inboxes_whatsapp_history_start"
+  ]
+ },
+ {
+  "id": "lionchat_lead_origins_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/lead_origins",
+  "title": "Listar Origens de Lead personalizadas",
+  "description": "SÓ LEITURA. As origens de lead PERSONALIZADAS da conta (Configurações > Origens de Lead), ativas e inativas, em ordem alfabética. O valor usado em lionchat_contacts_set_origin e nos relatórios é custom:<slug>. Qualquer agente.",
+  "category": "Contatos",
+  "params": [],
+  "returns": "[{id, name, slug, color, active}]",
+  "common_use_cases": [
+   "Descobrir o slug antes de marcar a origem de um contato",
+   "Listar as origens disponíveis no relatório"
+  ],
+  "related_tools": [
+   "lionchat_lead_origins_create",
+   "lionchat_contacts_set_origin",
+   "lionchat_lead_origin_reports"
+  ]
+ },
+ {
+  "id": "lionchat_lead_origins_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/lead_origins",
+  "title": "Criar Origem de Lead personalizada",
+  "description": "AÇÃO DE ESCRITA. Cria uma origem personalizada (nome até 60 caracteres; slug gerado do nome e IMUTÁVEL). Se já existir origem com o mesmo slug (inclusive inativa), REATIVA e atualiza nome/cor em vez de duplicar. color no formato #RRGGBB (opcional). Somente administrador.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome da origem (até 60)"
+   },
+   {
+    "name": "color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor #RRGGBB"
+   }
+  ],
+  "returns": "{id, name, slug, color, active: true}",
+  "common_use_cases": [
+   "Cadastrar 'Indicação' ou 'Evento' como origem marcável"
+  ],
+  "related_tools": [
+   "lionchat_lead_origins_list",
+   "lionchat_contacts_set_origin"
+  ],
+  "body_wrapper": "lead_origin"
+ },
+ {
+  "id": "lionchat_lead_origins_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/lead_origins/{id}",
+  "title": "Atualizar Origem de Lead personalizada",
+  "description": "AÇÃO DE ESCRITA. Altera nome, cor e/ou active de uma origem. O slug NÃO muda (o histórico dos leads referencia custom:<slug>). Somente administrador.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da origem"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Novo nome"
+   },
+   {
+    "name": "color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor #RRGGBB"
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Reativar (true) ou desativar (false)"
+   }
+  ],
+  "returns": "{id, name, slug, color, active}",
+  "common_use_cases": [
+   "Renomear uma origem",
+   "Reativar uma origem desativada"
+  ],
+  "related_tools": [
+   "lionchat_lead_origins_list",
+   "lionchat_lead_origins_destroy"
+  ],
+  "body_wrapper": "lead_origin"
+ },
+ {
+  "id": "lionchat_lead_origins_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/lead_origins/{id}",
+  "title": "Desativar Origem de Lead personalizada",
+  "description": "AÇÃO DE ESCRITA. 'Excluir' = DESATIVAR (active: false): a origem some das opções de marcação mas o histórico e os relatórios antigos continuam. Pra voltar, crie de novo com o mesmo nome ou use update active=true. Somente administrador.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da origem"
+   }
+  ],
+  "returns": "200 sem corpo",
+  "common_use_cases": [
+   "Tirar uma origem que não é mais usada das opções"
+  ],
+  "related_tools": [
+   "lionchat_lead_origins_list",
+   "lionchat_lead_origins_update"
+  ]
+ },
+ {
+  "id": "lionchat_meta_lead_refresh_sample",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/integrations/meta_lead_forms/{id}/refresh_sample",
+  "title": "Buscar campos do formulário no Meta (amostra)",
+  "description": "AÇÃO DE ESCRITA leve. O botão 'Buscar campos do Meta': atualiza a AMOSTRA de payload do formulário de Lead Ads pra destravar o mapeamento de campos — tenta, em cascata, o último evento em cache, o último lead do formulário, os leads via Graph API e, por fim, as perguntas do formulário (refresh_source diz qual fonte venceu). Se o formulário ainda não tem field_mapping, monta um mapeamento automático. 401 'token_expired' (reconectar a conta Meta); 422 'no_data_available' | 'graph_error' | 'rate_limited'. Somente administrador.",
+  "category": "Meta Lead Ads",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do formulário Meta Lead"
+   }
+  ],
+  "returns": "200 formulário (mesmo formato de lionchat_meta_lead_show) + refresh_source: 'cached_event'|'latest_leadgen'|'graph_leads'|'graph_questions' | 401 {error:'token_expired'} | 422 {error}",
+  "common_use_cases": [
+   "Destravar um formulário que ficou sem campos pra mapear",
+   "Ver os campos reais antes de configurar o mapeamento"
+  ],
+  "related_tools": [
+   "lionchat_meta_lead_show",
+   "lionchat_meta_lead_update",
+   "lionchat_meta_lead_create_1"
+  ]
+ },
+ {
+  "id": "lionchat_reporting_events_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/reporting_events",
+  "title": "Eventos de Métrica da Conta (primeira resposta, resolução...)",
+  "description": "SÓ LEITURA, SOMENTE ADMINISTRADOR, recurso Enterprise. Lista os eventos brutos que alimentam os relatórios — first_response, reply_time, conversation_resolved, conversation_opened, conversation_bot_handoff — da conta inteira, 25 por página, mais novos primeiro, com valor em segundos e valor só dentro do horário de atendimento. since/until são timestamp UNIX em SEGUNDOS (data por extenso não é aceita); mandar só um dos dois vale como janela aberta. Versão por conversa: lionchat_conversations_reporting_events.",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "since",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Início — timestamp UNIX em SEGUNDOS"
+   },
+   {
+    "name": "until",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim — timestamp UNIX em SEGUNDOS"
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por caixa"
+   },
+   {
+    "name": "user_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por atendente"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Tipo do evento: first_response | reply_time | conversation_resolved | conversation_opened | conversation_bot_handoff"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (25 por página)"
+   }
+  ],
+  "returns": "{payload: [{id, name, value, value_in_business_hours, event_start_time, event_end_time, account_id, inbox_id, user_id, conversation_id, created_at, updated_at}], meta: {count, current_page, total_pages}}",
+  "common_use_cases": [
+   "Auditar de onde saiu o tempo médio de primeira resposta de um atendente",
+   "Exportar os eventos de resolução de um período"
+  ],
+  "related_tools": [
+   "lionchat_conversations_reporting_events",
+   "lionchat_reports_summary",
+   "lionchat_reports_list"
+  ]
+ },
+ {
+  "id": "lionchat_search_articles",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/search/articles",
+  "title": "Buscar Artigos da Base de Conhecimento",
+  "description": "Busca por texto nos artigos dos portais (central de ajuda) da conta — irmã de search/conversations, contacts e messages. 15 por página. Termos muito curtos devolvem lista vazia. since/until (timestamp UNIX em segundos) filtram por updated_at do artigo e só valem com a 'Busca avançada' ligada na conta.",
+  "category": "Busca",
+  "params": [
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "Termo"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (15 por página)"
+   },
+   {
+    "name": "since",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Início — timestamp UNIX em SEGUNDOS (só com Busca avançada)"
+   },
+   {
+    "name": "until",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim — timestamp UNIX em SEGUNDOS (só com Busca avançada)"
+   }
+  ],
+  "returns": "{payload: {articles: [{id, title, locale, content, slug, portal_slug, account_id, category_name, status, updated_at (unix)}]}}",
+  "common_use_cases": [
+   "Achar o artigo certo pra mandar o link ao cliente",
+   "Conferir se já existe artigo sobre um assunto antes de criar"
+  ],
+  "related_tools": [
+   "lionchat_search_search",
+   "lionchat_portals_list",
+   "lionchat_search_list"
+  ]
+ },
+ {
+  "id": "lionchat_upload_validate",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/upload/validate",
+  "title": "Testar uma URL de mídia (sem gravar nada)",
+  "description": "SÓ LEITURA na prática: baixa a URL pra validar tipo, tamanho e segurança (SSRF) com a MESMA lista de aceite que o FlowBuilder usa ao enviar mídia por URL — e descarta. Não cria arquivo. Como o MCP não faz upload, é o jeito de conferir se um link de foto/vídeo/áudio/documento vai funcionar num fluxo, campanha ou mensagem ANTES de usar. Sempre 200: valid=true com media_kind/content_type/size_mb/limit_mb, ou valid=false com error_key: 'web_page' (o link é uma página, não o arquivo), 'too_large' (com size_mb/limit_mb), 'unsupported', 'fetch_failed', 'invalid', 'unexpected'.",
+  "category": "Upload",
+  "params": [
+   {
+    "name": "external_url",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "URL pública do arquivo (http/https)"
+   }
+  ],
+  "returns": "{valid: true, media_kind: 'image'|'video'|'audio'|'file', content_type, size_mb, limit_mb} | {valid: false, error_key, size_mb?, limit_mb?}",
+  "common_use_cases": [
+   "Validar o link da imagem antes de montar o bloco de mídia do fluxo",
+   "Explicar por que a mídia por URL não saiu (página web em vez de arquivo, tamanho)"
+  ],
+  "related_tools": [
+   "lionchat_upload_create",
+   "lionchat_upload_limits_show",
+   "lionchat_flows_update"
+  ]
+ },
+ {
+  "id": "lionchat_webhooks_deliveries_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/webhooks/{webhook_id}/deliveries",
+  "title": "Logs de Entrega de um Webhook da conta",
+  "description": "SÓ LEITURA, somente administradores (403). As tentativas de entrega de um webhook configurado na conta, mais novas primeiro, com evento, código HTTP, duração, número da tentativa e erro. Quando o disjuntor pausou o webhook (error_class Webhooks::Blocked) há UMA linha por janela de pausa e a mensagem ganha o total de eventos descartados naquela pausa. Registros apagados depois de 7 dias — lista vazia pode ser só o período. Responde 'o webhook disparou? o sistema do outro lado recebeu?'.",
+  "category": "Webhooks",
+  "params": [
+   {
+    "name": "webhook_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do webhook (de lionchat_webhooks_list)"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "failed | success (sem filtro = todos)"
+   },
+   {
+    "name": "event",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo nome do evento (ex.: conversation_created)"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página"
+   },
+   {
+    "name": "per_page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Itens por página (padrão 25, máximo 100)"
+   }
+  ],
+  "returns": "{deliveries: [{id, event_name, http_status, duration_ms, attempt_number, error_class, error_message, delivery_id, webhook_type, source_type, source_id, webhook_id, inbox_id, account_id, created_at}], meta: {total (com filtro), failures, success, page, per_page}}",
+  "common_use_cases": [
+   "Diagnosticar integração que 'parou de receber'",
+   "Ver se o disjuntor pausou o webhook e quantos eventos perdeu"
+  ],
+  "related_tools": [
+   "lionchat_webhooks_deliveries_show",
+   "lionchat_webhooks_list",
+   "lionchat_macros_deliveries_list"
+  ]
+ },
+ {
+  "id": "lionchat_webhooks_deliveries_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/webhooks/{webhook_id}/deliveries/{id}",
+  "title": "Detalhe de uma Entrega de Webhook",
+  "description": "SÓ LEITURA, somente administradores. Uma tentativa de entrega (mesmos campos da lista). 404 se não for deste webhook.",
+  "category": "Webhooks",
+  "params": [
+   {
+    "name": "webhook_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do webhook"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da entrega"
+   }
+  ],
+  "returns": "{id, event_name, http_status, duration_ms, attempt_number, error_class, error_message, delivery_id, webhook_type, source_type, source_id, webhook_id, inbox_id, account_id, created_at}",
+  "common_use_cases": [
+   "Ler o erro de uma entrega específica"
+  ],
+  "related_tools": [
+   "lionchat_webhooks_deliveries_list"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_deliveries_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/kanban/deliveries",
+  "title": "Logs de Entrega do Webhook do Kanban",
+  "description": "SÓ LEITURA, somente administradores (403). As tentativas de entrega do WEBHOOK DO KANBAN (configurado em lionchat_kanban_config_*; source_type kanban_webhook), mais novas primeiro, com evento, código HTTP, duração e erro. Mesmo formato e mesma retenção de 7 dias dos logs de webhook da conta.",
+  "category": "Config Kanban",
+  "params": [
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "failed | success"
+   },
+   {
+    "name": "event",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo nome do evento"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página"
+   },
+   {
+    "name": "per_page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Itens por página (padrão 25, máximo 100)"
+   }
+  ],
+  "returns": "{deliveries: [{id, event_name, http_status, duration_ms, attempt_number, error_class, error_message, delivery_id, webhook_type, source_type, source_id, webhook_id, inbox_id, account_id, created_at}], meta: {total, failures, success, page, per_page}}",
+  "common_use_cases": [
+   "Conferir se o webhook do Kanban está entregando os movimentos de card"
+  ],
+  "related_tools": [
+   "lionchat_kanban_config_list",
+   "lionchat_kanban_config_create_1",
+   "lionchat_webhooks_deliveries_list"
+  ]
+ },
+ {
+  "id": "lionchat_eclinica_integrations_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}",
+  "title": "Detalhes da Integração e-Clínica",
+  "description": "SÓ LEITURA, somente administrador. A integração e-Clínica da conta (1 por conta; o id precisa ser o dela — 404 caso contrário) com status, saúde, mapeamento de eventos, lembretes, webhook_url e as UNIDADES (filiais) com status/token-por-variável/webhook próprio. Mesmo conteúdo de lionchat_eclinica_integrations_list, que já resolve o id.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da integração"
+   }
+  ],
+  "returns": "{payload: {eclinica_integration: {id, name, account_id, status, active, has_api_token, last_event_at, last_error, error_count, event_mapping, settings, reminder_config, webhook_token, webhook_url, healthy, units: [{id, name, city_slug, address, has_api_token, token_is_variable, token_reference, webhook_token, webhook_url, status, last_event_at, last_error, error_count, active, settings}], created_at, updated_at}}} | 404",
+  "common_use_cases": [
+   "Ver o mapeamento e os lembretes atuais"
+  ],
+  "related_tools": [
+   "lionchat_eclinica_integrations_list"
+  ]
+ },
+ {
+  "id": "lionchat_eclinica_integrations_events",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}/events",
+  "title": "Eventos recebidos da e-Clínica",
+  "description": "SÓ LEITURA, somente administrador. Os eventos de webhook recebidos da e-Clínica (50 por página, mais novos primeiro, janela de 7 dias) com tipo, situação do processamento (pending/processed/failed/skipped), erro em português, unidade, o contato resolvido e os dados do paciente no payload (nome, celular, e-mail, CPF) mais o payload bruto. event_type filtra NO SERVIDOR (tipos de menor volume somem atrás da agenda sem o filtro). É onde mora a mensagem de erro quando 'o evento chegou e o fluxo não disparou'.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da integração"
+   },
+   {
+    "name": "event_type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por tipo (ex.: cliente_novo, agendamento_novo, falta)"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (50 por página)"
+   }
+  ],
+  "returns": "{payload: {events: [{id, event_type, eclinica_event_id, processing_status, processed_at, error_message, created_at, raw_payload, contact_id, contact_name, contact_email, contact_phone, unit_name, customer_name, customer_phone, customer_email, customer_cpf, ...chips}]}}",
+  "common_use_cases": [
+   "Ver se a consulta marcada chegou do e-Clínica",
+   "Achar o evento falhado e o motivo"
+  ],
+  "related_tools": [
+   "lionchat_eclinica_integrations_retry_event",
+   "lionchat_eclinica_integrations_list",
+   "lionchat_eclinica_reminder_history_list"
+  ]
+ },
+ {
+  "id": "lionchat_eclinica_integrations_retry_event",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}/events/{event_id}/retry",
+  "title": "Reprocessar Evento da e-Clínica",
+  "description": "AÇÃO DE ESCRITA, somente administrador. Reprocessa UM evento com processing_status failed ou skipped (volta pra pending e o job roda de novo — pode disparar o fluxo mapeado). Outros status: 422 'Only failed/skipped can retry'.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da integração"
+   },
+   {
+    "name": "event_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do evento"
+   }
+  ],
+  "returns": "200 {success: true} | 422 {error}",
+  "common_use_cases": [
+   "Reprocessar o evento que falhou por fluxo desligado"
+  ],
+  "related_tools": [
+   "lionchat_eclinica_integrations_events",
+   "lionchat_omie_integrations_retry_event",
+   "lionchat_conta_azul_integrations_retry_event"
+  ]
+ },
+ {
+  "id": "lionchat_booking_reports",
+  "method": "GET",
+  "path": "/api/v2/accounts/{account_id}/booking_reports",
+  "title": "Relatorio de Agendamentos",
+  "category": "Relatorios",
+  "description": "[GET] A aba Relatorios > Agendamentos (2026-08-19). Unidade = o AGENDAMENTO (Booking nativo: link publico, IA e Agenda do painel — NAO e e-Clinica). Padrao de periodo: 30 dias pra TRAS e 30 pra FRENTE (agenda tem futuro). A SITUACAO vem da TAREFA da Agenda (account_tasks.status), nao de bookings.status — quem conclui/cancela pela Agenda deixa o booking parado em 'confirmado'; ler bookings direto pra contar concluidos da zero. attendance_rate = concluidos / (concluidos + cancelados), em % — pendentes ficam FORA do denominador (ainda nao aconteceram); nao recalcule com o total. snoozed (adiado) sai separado de pending. Admin ou agente.",
+  "params": [
+   {
+    "name": "since",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Inicio do periodo (qualquer data parseavel, ex. 2026-08-01). Default: 30 dias atras"
+   },
+   {
+    "name": "until",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim do periodo. Default: 30 dias a frente"
+   },
+   {
+    "name": "event_type_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por tipo de agendamento (booking_event_types)"
+   },
+   {
+    "name": "user_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo RESPONSAVEL da tarefa (id de usuario)"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "pending | completed | cancelled | snoozed (situacao da TAREFA da Agenda)"
+   },
+   {
+    "name": "group_by",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "day | week | month (agrupamento da timeline; default day)"
+   }
+  ],
+  "returns": "{period: {since, until, group_by}, totals: {total, pending, completed, cancelled, snoozed, attendance_rate}, timeline: [{period, count}], by_event_type, by_agent, by_origin}",
+  "common_use_cases": [
+   "Quantos agendamentos foram marcados/concluidos/cancelados no mes",
+   "Taxa de comparecimento por tipo de consulta ou por responsavel",
+   "De onde vem os agendamentos (origem/UTM)"
+  ],
+  "related_tools": [
+   "lionchat_booking_event_types_list",
+   "lionchat_tasks_list",
+   "lionchat_custom_dashboards_preview_widget"
+  ]
+ },
+ {
+  "id": "lionchat_custom_dashboards_show",
+  "method": "GET",
+  "path": "/api/v2/accounts/{account_id}/custom_dashboards/{id}",
+  "title": "Relatorio Personalizado (detalhe)",
+  "category": "Relatorios",
+  "description": "[GET] Um relatorio personalizado so, com o array `widgets` completo (id e desenho de cada bloco). Use no lugar de custom_dashboards_list quando a lista vier CORTADA pelo limite do conector (conta com muitos relatorios cheios) ou quando ja souber o id — e o jeito seguro de ler os blocos antes de um custom_dashboards_update. So administrador (401 caso contrario); 404 se o relatorio nao e da conta.",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do relatorio personalizado"
+   }
+  ],
+  "returns": "{ id, name, position, widgets: [...], created_at }",
+  "common_use_cases": [
+   "Ler os blocos de UM relatorio antes de editar",
+   "Pegar o widget_id pra calcular um bloco com custom_dashboards_widget_data"
+  ],
+  "related_tools": [
+   "lionchat_custom_dashboards_list",
+   "lionchat_custom_dashboards_widget_data",
+   "lionchat_custom_dashboards_update"
   ]
  }
 ]
