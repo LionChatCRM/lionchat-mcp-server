@@ -74,6 +74,15 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
   de WhatsApp — oficial e QR Code). A bolha mostra o selo "Encaminhada"
 - `content_attributes.frequently_forwarded`: `true` = encaminhada MUITAS vezes (o "encaminhada com
   frequência" do WhatsApp). Útil pra responder "essa mensagem foi encaminhada?" sem chutar
+- `content_attributes.edited`: `true` = o CLIENTE editou a mensagem no WhatsApp (`edited_at` traz
+  quando). O `content` já é o texto novo; a versão anterior não fica guardada. Vale nos dois canais
+  de WhatsApp (QR Code desde 18/07/2026; oficial desde 21/08/2026 — entra com o próximo deploy do
+  app depois de 21/08/2026; antes a edição virava um balão VAZIO novo, contado como mensagem nova).
+- `content_attributes.deleted`: `true` = mensagem APAGADA ("apagar para todos"), pelo cliente ou
+  pela empresa no celular (convivência). O `content` vira `"⛔ Esta mensagem foi excluída"` seguido
+  do texto original (a equipe continua vendo o que foi dito); os anexos são removidos. Ao resumir
+  uma conversa, trate como apagada — não cite o texto como se ainda estivesse de pé. (No canal
+  oficial, desde 21/08/2026 — entra com o próximo deploy do app depois de 21/08/2026.)
 
 ## Attachment (Anexo)
 
@@ -296,6 +305,18 @@ comportamento intencional.
 - `role`: `agent` (atendente) ou `administrator` (admin/dono)
 - `availability`: `online`, `busy`, `offline`
 - `permissions`: array de strings com permissões granulares
+- `replacing`: `true` em `lionchat_agents_list` por até 30 min enquanto uma substituição
+  (`lionchat_agents_replace`) transfere a carteira desse agente pro novo — ele está SAINDO; não
+  atribua nada a ele
+
+### Agente de SUPORTE (SupportAccessGrant) — não é agente da conta
+
+Quem entra na conta por **acesso de suporte** (operador da plataforma) aparece como administrador,
+mas **não é membro da equipe**: `lionchat_agents_list` não o lista (escopo `regular_users`), ele
+não ocupa vaga do plano, não pode ser substituído (`agents_replace` recusa) e, desde 17/08/2026,
+a IA também o ignora — não atribui conversa a ele, não agenda mensagem no nome dele, não o menciona
+em alerta nem o conta como "disponível". Exceção deliberada: se alguém o atribuir à mão como
+responsável, ele segue valendo como responsável.
 
 ## AutomationRule (Regra de automação)
 
@@ -309,7 +330,11 @@ comportamento intencional.
 - `booking_event_type_id`: FK pro tipo de evento (ex: "Demo 30min")
 - `attendee_email`, `attendee_name`, `attendee_phone`
 - `start_time`, `end_time`: ISO 8601
-- `status`: `scheduled`, `cancelled`, `completed`
+- `status`: `confirmed`, `cancelled`, `completed` — mas **só muda quando o cancelamento/conclusão
+  vem pelo link do paciente ou pela IA**. Quem conclui/cancela pela Agenda mexe na TAREFA
+  (`account_tasks.status`: `pending`/`completed`/`cancelled`/`snoozed`), e o booking fica
+  `confirmed`. Pra saber se um agendamento aconteceu, leia a tarefa (`lionchat_tasks_show`), não o
+  booking.
 
 **A IA agenda EXCLUSIVAMENTE por agenda de Booking (15/08/2026).** Não existe mais agendamento
 avulso/direto pela IA — ela consulta as agendas liberadas, respeita os dias em que a agenda não

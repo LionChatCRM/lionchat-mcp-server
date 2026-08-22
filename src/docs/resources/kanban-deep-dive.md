@@ -48,6 +48,17 @@ Stages NÃO são tabela separada. São armazenadas como jsonb dentro do Funnel:
 }
 ```
 
+**Etapa que não existe no funil (desde 19/08/2026):**
+- `kanban_items_create`/`_update`/`_move` com `funnel_stage` que o funil não tem **não falha e não
+  some**: o card é REDIRECIONADO — pro destino gravado quando a etapa foi apagada, senão pra etapa
+  da mesma posição, senão pra primeira. **Confira o `funnel_stage` da resposta**: pode ser diferente
+  do que você mandou. Leia `funnels_show` antes e use o slug exato.
+- `funnels_update` que tira do `stages` uma etapa com card responde **422 `STAGE_HAS_ITEMS`** com
+  `stages: {"<slug>": <quantos cards>}`. Primeiro mova os cards com `lionchat_funnels_create_2`
+  (`POST /funnels/{id}/migrate_stage`, `from_stage`, `to_stage` ou `to_funnel_id`) e só então
+  reenvie o funil sem a etapa. Não existe parâmetro de destino no `update` de propósito.
+- Funil apagado continua sendo erro (o card não é criado).
+
 ### KanbanConfig (Configuração Global do Kanban) — CRÍTICO
 
 **Tabela separada do Funnel.** 1:1 com a conta. Guarda configurações que valem pra TODOS os funis. Tem 5 campos jsonb importantes:
@@ -244,6 +255,11 @@ Log automático de eventos do card:
 ```
 
 Tipos comuns: `created`, `stage_changed`, `agent_assigned`, `agent_removed`, `note_added`, `value_changed`, `priority_changed`, `archived`.
+
+Quem fez: `by_user_id`/`user` traz a pessoa; ação de automação ou flow vem com o nome da regra/fluxo;
+ação da IA (desde 21/08/2026 — entra com o próximo deploy do app depois de 21/08/2026) vem como
+`"IA: <nome do assistente>"` com `id` nulo — antes saía sem autor. Ao explicar um histórico de card,
+use esse campo pra dizer se foi gente, automação ou IA.
 
 ## Checklist (tarefas dentro do card)
 
@@ -580,7 +596,9 @@ Cada card pode receber atributos custom de 3 origens diferentes. **A escolha do 
 ## Diagnóstico: "Card sumiu do funil"
 
 1. Está arquivado? `archived = true` em algum nível?
-2. Etapa atual existe ainda? (etapa removida do funil deixa card "órfão")
+2. Etapa atual existe ainda? Desde 19/08/2026 card em etapa inexistente é redirecionado na
+   gravação (e os 621 antigos foram movidos pra primeira etapa) — se ainda sumiu, filtre por
+   `funnel_stage` com o slug que aparece em `kanban_items_show` e compare com `funnels_show`.
 3. `position` está faltando? (cards sem position vão pro fim)
 4. Está em outro funil? (mover entre funis muda `funnel_id`)
 

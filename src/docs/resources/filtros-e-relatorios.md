@@ -36,6 +36,10 @@ E/OU é encadeado condição a condição (sem parênteses).
 Atributo personalizado: informe `custom_attribute_type` na condição — `'conversation_attribute'`
 (atributo da conversa) ou `'contact_attribute'`. Sem ele o escopo pode sair errado.
 
+- `chat_type` em `conversations_filter` funciona desde 19/08/2026 (antes respondia 500). `group` =
+  conversa de grupo de WhatsApp; `individual` cobre também canal, transmissão e status. Com
+  `not_equal_to`, conversa sem contato vinculado NÃO some do resultado.
+
 ### Data relativa — "Hoje", "Ontem", "últimos X dias" (novo 2026-08-01)
 
 Não calcule data no seu lado pra perguntar "quantas conversas entraram hoje". Existem operadores
@@ -273,8 +277,9 @@ custom_dashboards_preview_widget
 ```
 > ⚠️ `numerator` é **lista de IDs de etiqueta** (`[5]`), nunca nome de métrica. Mandar
 > `["label_count"]` faz a coluna de conversão **sumir em silêncio**.
-> ⚠️ `time_range=custom` aceita no máximo **92 dias**, e só existe em `agent_report` e
-> `conversations_timeseries`. Pedir "esse ano" volta 422 com a explicação.
+> ⚠️ `time_range=custom` aceita no máximo **92 dias** e vale em qualquer tipo de bloco (desde
+> 19/08/2026). Pedir "esse ano" volta 422 com a explicação. Para relatório diário use
+> `today`/`yesterday` em vez de datas fixas, que envelhecem.
 > ⚠️ O `total` da tabela **não é a soma das linhas** — cada métrica tem contagem própria.
 
 **R9 — Salvar isso como relatório na tela do cliente:** teste com o R8, mostre o número, confirme
