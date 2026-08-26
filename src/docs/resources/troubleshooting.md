@@ -553,16 +553,19 @@ Se alguma anotação antiga disser que esse filtro mente por API, está errada. 
 verdade nos filtros: data FIXA com `is_greater_than`/`is_less_than` passou a cortar o dia no fuso
 da CONTA (ver resource `filtros-e-relatorios`).
 
-## "Mapeei o campo da integração pro atributo da conversa e nada foi gravado" (21/08 — entra com o próximo deploy do app depois de 21/08/2026)
+## "Mapeei o campo da integração pro atributo da conversa e nada foi gravado" (Meta Lead / Webhook Universal)
 
-Quatro causas, nesta ordem: (1) o evento não abriu conversa — atributo de conversa só existe na
+ATENÇÃO (26/08/2026): atributo de conversa mapeado existe SÓ no Meta Lead e no Webhook Universal.
+Nos 9 gateways de pagamento a opção "salvar também na conversa" foi REMOVIDA (existiu de 21 a
+26/08) — o backend ignora `conversation_attribute_keys` se estiver gravada; os gateways gravam os
+dados da compra automaticamente no CONTATO, como sempre.
+
+Três causas, nesta ordem: (1) o evento não abriu conversa — atributo de conversa só existe na
 conversa que a automação/fluxo mapeado cria (contato sozinho não tem onde gravar); (2) a chave é
 reservada (`imported_from`, `type`, `captain_*`... — lista em `api-conventions`) e foi recusada;
 (3) o valor não é do TIPO do atributo (texto num campo de Número, data em formato estranho) e foi
-descartado — o log do servidor tem `[IntegrationAttributes] ... tipo_invalido=[...]`; (4) nos
-gateways, a chave não está em `conversation_attribute_keys` daquele evento (a granularidade é por
-evento: "compra aprovada" e "carrinho abandonado" gravam listas diferentes). Gravar por integração é
-silencioso: não espere automação nem webhook de saída reagindo ao atributo.
+descartado — o log do servidor tem `[IntegrationAttributes] ... tipo_invalido=[...]`.
+Gravar por integração é silencioso: não espere automação nem webhook de saída reagindo ao atributo.
 
 ## Quando reportar pro suporte
 

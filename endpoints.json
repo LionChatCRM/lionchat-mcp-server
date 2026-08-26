@@ -16574,7 +16574,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    },
    {
     "name": "sample_payload",
@@ -16686,7 +16686,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    },
    {
     "name": "sample_payload",
@@ -16881,7 +16881,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de guru_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de guru_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -16986,7 +16986,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de guru_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de guru_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook atualizado",
@@ -17195,7 +17195,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -17293,7 +17293,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook atualizado",
@@ -17502,7 +17502,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -17600,7 +17600,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook atualizado",
@@ -17809,7 +17809,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -17907,7 +17907,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook atualizado",
@@ -18116,7 +18116,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -18214,7 +18214,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook atualizado",
@@ -18423,7 +18423,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -18521,7 +18521,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook). Cada entrada aceita tambem conversation_attribute_keys: [...] (2026-08-21): chaves do catalogo de pagamento (product_name, offer_name, invoice_url, purchase_price, payment_method, purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name, event_date, charged_times, subscription_cycle, subscription_status, customer_document, transaction_id, payment_installments, payment_source) que serao gravadas como atributo da CONVERSA que a automacao/fluxo abrir (no contato a 2a compra apaga a 1a). Chave reservada da conversa e recusada; valor e convertido pelo TIPO do atributo e descartado se irreconhecivel; gravar por integracao NAO dispara automacao/flow."
+    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
    }
   ],
   "returns": "webhook atualizado",
@@ -30858,7 +30858,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento evento -> {automation_id | flow_id, first_purchase_only?: bool (pula renovações), conversation_attribute_keys?: [chaves de atributo de conversa a preencher, respeitando o tipo]} — ids precisam ser desta conta (422)"
+    "description": "Mapeamento evento -> {automation_id | flow_id, first_purchase_only?: bool (pula renovações)} — ids precisam ser desta conta (422). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto; o backend ignora a chave se gravada"
    }
   ],
   "returns": "webhook criado (com novo ID e webhook_url)",
@@ -30952,7 +30952,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento evento -> {automation_id | flow_id, first_purchase_only?: bool (pula renovações), conversation_attribute_keys?: [chaves de atributo de conversa a preencher, respeitando o tipo]} — ids precisam ser desta conta (422)"
+    "description": "Mapeamento evento -> {automation_id | flow_id, first_purchase_only?: bool (pula renovações)} — ids precisam ser desta conta (422). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto; o backend ignora a chave se gravada"
    }
   ],
   "returns": "webhook atualizado",

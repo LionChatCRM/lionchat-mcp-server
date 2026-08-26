@@ -101,7 +101,7 @@ Aceita: letras, números, underscore, hífen e ponto. Sem espaço. Convenção: 
 
 `+<código país><DDD><número>`. Brasil: `+5511999999999` (13 dígitos com 9). Sem espaços, sem parênteses, sem hífen.
 
-WAHA tem endpoint `/integrations/waha/check_phone?phone=+55...` que retorna o número CORRIGIDO (especialmente útil pra fixar o 9º dígito BR).
+WAHA tem endpoint `/integrations/waha/check_phone?phone=+55...` que retorna o número CORRIGIDO (especialmente útil pra fixar o 9º dígito BR). O valor de `phone` é sempre E.164 (`+55...`) — nunca um id interno `@lid` (o servidor WAHA 2026.8+ responde com `@lid`, e o sistema traduz pelo campo `pn`).
 
 ### `funnel.stages` — keys snake_case
 
