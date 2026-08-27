@@ -633,3 +633,12 @@ se o token é válido, de qual app e se alcança anúncio de verdade. Gravar/tro
 ficaram sem nome. E desde 25/08 o CONECTAR exige escolha: `meta_lead_create` com `page_ids` (sem
 ele TODAS as páginas do login entram — caso real de 25 páginas numa conta); pra limpar excesso
 antigo, `lionchat_meta_lead_bulk_destroy`.
+
+## "Atualizei a chave da caixa oficial pelo update e ela parou de receber" — 26/08
+
+`inboxes_update` com `channel.provider_config` SUBSTITUI o objeto inteiro: mandar só o campo
+alterado APAGA `webhook_verify_token` e a marca `source` em silêncio — a caixa para de receber
+webhook da Meta. Regra: leia a caixa antes (`inboxes_show`), reenvie o `provider_config` COMPLETO
+com o campo trocado. Os três campos da conexão manual (`phone_number_id`, `business_account_id`,
+`api_key`) são validados JUNTOS na Meta a cada gravação — 422 "Invalid Credentials" significa que
+algum dos três está errado ou a chave venceu (não salve campo a campo).
