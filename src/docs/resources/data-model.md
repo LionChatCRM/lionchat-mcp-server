@@ -376,7 +376,11 @@ db/schema.rb, tabela booking_event_types)
 │   agente; 2026-08-19)
 ├── active / ask_email / ask_description
 ├── confirmation_* (mensagem de confirmação própria: enabled, inbox_id, channel_type,
-│   template_name, blocks)
+│   template_name, blocks). Variáveis nos textos de confirmação E de lembrete (interpolador único):
+│   {{nome}} {{email}} {{telefone}} {{data}} {{horario}} {{dia_semana}} (NOVO 24/08 — dia por
+│   extenso em pt: "terça-feira"; irmã do {{booking.weekday}} do FlowBuilder, mesma grafia)
+│   {{tipo_evento}} {{titulo}} {{duracao}} {{agente}} {{descricao}} {{meet_link}}
+│   {{link_cancelar}} {{link_remarcar}} {{horas_ate_evento}} {{horas_desde_evento}}
 └── booking_availabilities (has_many — dias/horários; `booking_availabilities_attributes` no create)
 
 Booking (agendamento confirmado — tabela bookings)

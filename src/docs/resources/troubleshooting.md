@@ -589,3 +589,47 @@ qualquer resposta que fique 125 s sem um byte (Proxy Read Timeout). Quem usa pel
 abre esse canal e nunca vê isso.
 Correção (v1.15.1): o servidor manda um `ping` a cada 30 s enquanto o canal está aberto.
 Interruptor: `MCP_KEEPALIVE_INTERVAL_MS` (0 = desligado). Detalhe: `docs/plans/mcp-keepalive-cloudflare/`.
+
+## "O grupo não recebeu o resumo diário" (Avisos de relatório) — 27/08
+
+Diagnóstico em 2 passos: `lionchat_report_alerts_list` (colunas `last_delivery_status`/`last_error`
+resumem o último dia; `next_send_on` diz o próximo) e `lionchat_report_alerts_deliveries` (histórico
+de 90 dias com o TEXTO congelado de cada envio). Leitura dos status: `confirmed` = entregue COM
+recibo do canal; `sent` = saiu e o recibo ainda não veio (reconfere sozinho em ~15 min); `send_failed`
+= o canal recusou (motivo em `error_message` — caixa desconectada é o clássico: mande reconectar o
+WhatsApp QR); `skipped_late` = não saiu na janela de 3h (sistema congestionado; tenta amanhã — não é
+preciso fazer nada); `error` = falhou antes de enviar (ex.: 'conta suspensa', 'a conversa de destino
+não existe mais', 'nenhum bloco do relatório pôde ser calculado'). Aviso criado hoje DEPOIS do
+horário não dispara hoje (primeiro envio é amanhã) — não é defeito.
+
+## "A prévia do Aviso fica em pending pra sempre" — 27/08
+
+`report_alerts_preview_status` devolve `pending` enquanto o job (fila de baixa prioridade) não roda —
+normalmente 5-60 s, até ~2-3 min com a plataforma cheia. Espere 5-10 s entre leituras; NUNCA dispare
+outra prévia por impaciência (cada rodada com IA gasta a chave OpenAI da conta). O resultado expira
+5 min depois de pronto: `pending` que virou `error: token inválido` = token errado/expirado, rode a
+prévia de novo. Token tem 32 caracteres hex — confira que guardou o valor INTEIRO.
+
+## "Mandei mensagem numa conversa cheia de histórico e a Meta recusou (131047)" — 26/08
+
+Conversa que só tem mensagens IMPORTADAS de histórico NÃO tem janela de 24h aberta — para a Meta,
+aquele contato nunca escreveu pela conexão oficial (a mensagem existe no painel porque a importação a
+copiou do celular). O envio de texto livre é recusado mesmo com a fala do cliente visível na tela.
+Saída: modelo aprovado (template) ou esperar o cliente escrever de verdade pela caixa oficial.
+
+## "Adicionei etiqueta e as antigas sumiram" — CORRIGIDO em 24/08
+
+Era defeito real (o segundo bloco "Adicionar etiqueta" do mesmo fluxo apagava as do primeiro, e
+salvar status/prioridade apagava etiqueta posta por outro no meio do caminho). Hoje ADICIONAR SOMA,
+em todos os caminhos (fluxo, IA, API, ações em massa). Se um cliente relatar isso em versão antiga
+(whitelabel atrasado), é a versão — não oriente gambiarra de "reaplicar etiqueta".
+
+## "Os leads do Meta chegam só com id de campanha, sem nome" — 25/08
+
+Nome de campanha/conjunto/anúncio exige o **token de ANÚNCIOS** (é outro token, de CONTA — o login
+da página não basta). Diagnóstico: `lionchat_meta_lead_validate_token` (sem corpo testa o salvo) diz
+se o token é válido, de qual app e se alcança anúncio de verdade. Gravar/trocar:
+`lionchat_meta_lead_ads_token` — ao gravar, o servidor reprocessa retroativamente os leads que
+ficaram sem nome. E desde 25/08 o CONECTAR exige escolha: `meta_lead_create` com `page_ids` (sem
+ele TODAS as páginas do login entram — caso real de 25 páginas numa conta); pra limpar excesso
+antigo, `lionchat_meta_lead_bulk_destroy`.

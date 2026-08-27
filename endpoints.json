@@ -18687,7 +18687,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/integrations/meta_lead",
   "title": "Conectar Pagina Meta Lead Ads",
-  "description": "Conecta o Meta Lead Ads. Obrigatorio: user_access_token (token de usuario — conecta todas as paginas acessiveis).",
+  "description": "Conecta o Meta Lead Ads. Obrigatorio: user_access_token (token de usuario — conecta todas as paginas acessiveis). ESCOLHA DE PAGINAS (25/08): mande `page_ids` com as paginas marcadas — sem ele TODAS as paginas do login entram (comportamento legado). Pra limpar excesso ja conectado: meta_lead_bulk_destroy.",
   "category": "Meta Lead Ads",
   "params": [
    {
@@ -18696,6 +18696,13 @@
     "location": "body",
     "required": true,
     "description": "Token de usuario do Facebook (conecta todas as paginas acessiveis)"
+   },
+   {
+    "name": "page_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "As paginas MARCADAS pelo cliente (ids de pagina do Facebook). DESDE 25/08 mandar so as escolhidas — ausente/vazio conecta TODAS as paginas do login (era o defeito antigo: 25 paginas entraram numa conta real). SEMPRE pergunte quais paginas antes de conectar."
    }
   ],
   "returns": "integração Meta Lead criado (com novo ID)",
@@ -24961,7 +24968,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations",
   "title": "Listar Integração e-Clínica",
-  "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). ATENÇÃO: o mapeamento evento→flow NÃO é editável via MCP (somente pelo painel). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes NAO sao editaveis via MCP — somente pelo painel (Integracoes > e-Clinica > Lembretes). Cada unidade em units[] traz tambem settings {} (18/08). O atributo eclinica_cor (cor da agenda, hex com #) virou campo fresco dos lembretes: filtravel por filter_field e disponivel como variavel {{cor}}.",
+  "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). ATENÇÃO: o mapeamento evento→flow NÃO é editável via MCP (somente pelo painel). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes NAO sao editaveis via MCP — somente pelo painel (Integracoes > e-Clinica > Lembretes). Cada unidade em units[] traz tambem settings {} (18/08). O atributo eclinica_cor (cor da agenda, hex com #) virou campo fresco dos lembretes: filtravel por filter_field e disponivel como variavel {{cor}}. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` como alternativa ao `flow_id` — o lembrete dispara uma AUTOMACAO em vez de um fluxo (um dos dois, nao ambos). Mesmos gatilhos e mesma conferencia na hora do disparo.",
   "category": "Integracoes",
   "params": [],
   "returns": "200 {payload: {eclinica_integrations: [...]}}",
@@ -25573,7 +25580,7 @@
   "method": "POST",
   "path": "/api/v2/accounts/{account_id}/custom_dashboards/preview_widget",
   "title": "Calcular Bloco na Hora (sem salvar)",
-  "description": "[POST] Monta um bloco de relatorio NA HORA e devolve os numeros, SEM salvar nada. E a ferramenta pra responder pergunta de relatorio que nao tem grafico pronto — ex.: 'quantos cards foram GANHOS em cada etapa do funil X nos ultimos 30 dias' (funnel_stages + date_basis:closed + status:won). Nao existe consulta livre: escolha um `widget_type` e preencha SO os campos daquele tipo; o servidor revalida tudo antes de calcular. So administrador (401 caso contrario). Campo que nao esta na lista abaixo e DESCARTADO EM SILENCIO. Formato da resposta pelo campo `shape`: series {series:[{timestamp,value}]} (timestamp unix em segundos; metricas de tempo trazem tambem `count` por ponto) · categories {categories:[{label,value}]} (funnel_stages vem na ORDEM DAS ETAPAS, nunca por valor) · scalar {value,total,secondary} (use `total` pra separar 'ninguem respondeu' de 'zero legitimo'; SLA sem nenhum prazo aplicado devolve 100.0) · table {dimension,columns,rows,total} (o `total` NAO e a soma das linhas, e contagem propria por metrica). Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). Tabela completa de tipos, metricas e armadilhas no resource lionchat://docs/reports-guide. TIPOS NOVOS (21/08): `calls_report` = tabela de LIGACOES (feitas, atendidas, nao atendidas, nao concluidas, tempo total e medio) por atendente (`dimension:'agent'`) ou por caixa (`dimension:'inbox'`); ligacao sem atendente ganha linha propria. `stage_entries` = quantos cards ENTRARAM em cada etapa de um funil no periodo, lido do historico de movimentacao — DIFERENTE de `funnel_stages`, que conta quem ESTA na etapa agora: card que entrou e depois saiu aparece no stage_entries e SOME do funnel_stages (medido: 25% de diferenca). Use stage_entries pra 'quantos agendamentos/negocios aconteceram' e funnel_stages pra 'como esta o funil hoje'. stage_entries conta CARD DISTINTO (card que reentra na etapa conta uma vez) e o historico so existe a partir de 12/07/2026, com retencao de 365 dias — periodo anterior devolve menos do que aconteceu. PARAM NOVO `measure` em funnel_stages e stage_entries: 'count' (padrao, conta cards) ou 'value' (soma o VALOR dos cards = faturamento). Com status:'won' + date_basis:'closed' + measure:'value' sai o faturamento ganho da etapa no periodo. PERIODOS NOVOS: 'today' e 'yesterday'. CAMPO NOVO `title` em cada bloco: o nome que aparece no cabecalho. Sem ele varios blocos do mesmo tipo saem com rotulos identicos e nem a pessoa nem o agente sabem qual e qual — SEMPRE nomeie.",
+  "description": "[POST] Monta um bloco de relatorio NA HORA e devolve os numeros, SEM salvar nada. E a ferramenta pra responder pergunta de relatorio que nao tem grafico pronto — ex.: 'quantos cards foram GANHOS em cada etapa do funil X nos ultimos 30 dias' (funnel_stages + date_basis:closed + status:won). Nao existe consulta livre: escolha um `widget_type` e preencha SO os campos daquele tipo; o servidor revalida tudo antes de calcular. So administrador (401 caso contrario). Campo que nao esta na lista abaixo e DESCARTADO EM SILENCIO. Formato da resposta pelo campo `shape`: series {series:[{timestamp,value}]} (timestamp unix em segundos; metricas de tempo trazem tambem `count` por ponto) · categories {categories:[{label,value}]} (funnel_stages vem na ORDEM DAS ETAPAS, nunca por valor) · scalar {value,total,secondary} (use `total` pra separar 'ninguem respondeu' de 'zero legitimo'; SLA sem nenhum prazo aplicado devolve 100.0) · table {dimension,columns,rows,total} (o `total` NAO e a soma das linhas, e contagem propria por metrica). Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). Tabela completa de tipos, metricas e armadilhas no resource lionchat://docs/reports-guide. TIPOS NOVOS (21/08): `calls_report` = tabela de LIGACOES (feitas, atendidas, nao atendidas, nao concluidas, tempo total e medio) por atendente (`dimension:'agent'`) ou por caixa (`dimension:'inbox'`); ligacao sem atendente ganha linha propria. `stage_entries` = quantos cards ENTRARAM em cada etapa de um funil no periodo, lido do historico de movimentacao — DIFERENTE de `funnel_stages`, que conta quem ESTA na etapa agora: card que entrou e depois saiu aparece no stage_entries e SOME do funnel_stages (medido: 25% de diferenca). Use stage_entries pra 'quantos agendamentos/negocios aconteceram' e funnel_stages pra 'como esta o funil hoje'. stage_entries conta CARD DISTINTO (card que reentra na etapa conta uma vez) e o historico so existe a partir de 12/07/2026, com retencao de 365 dias — periodo anterior devolve menos do que aconteceu. PARAM NOVO `measure` em funnel_stages e stage_entries: 'count' (padrao, conta cards) ou 'value' (soma o VALOR dos cards = faturamento). Com status:'won' + date_basis:'closed' + measure:'value' sai o faturamento ganho da etapa no periodo. PERIODOS NOVOS: 'today' e 'yesterday'. CAMPO NOVO `title` em cada bloco: o nome que aparece no cabecalho. Sem ele varios blocos do mesmo tipo saem com rotulos identicos e nem a pessoa nem o agente sabem qual e qual — SEMPRE nomeie. TIPO NOVO (27/08, entra no ar com o PROXIMO deploy do app apos 27/08/2026 — antes disso o servidor recusa com 'widget_type desconhecido'): `stage_conversion` = CONVERSAO percentual entre grupos de etapas do funil, calculada pelo MOTOR: cards DISTINTOS que entraram nas etapas de `numerator_stage_ids` dividido pelos que entraram nas de `denominator_stage_ids` (listas de ids de etapa do funil — as chaves do hash stages do funnels_show), com `funnel_id` e `time_range`; chart_type 'number', shape scalar {value: percentual 1 casa, total: base do denominador (0 = sem dados), secondary: numerador/denominador nomeados}. Card que passou por DUAS etapas do denominador no periodo conta UMA vez (somar deflaria a conversao). Ex. real (Joint): Consulta Agendada dividido por Novos Leads + Agendamento Pendente. E o UNICO jeito de ter percentual confiavel no Aviso de relatorio (a IA do Aviso e PROIBIDA de calcular numeros). RECORTE POR CAIXA (26/08, ja no ar): em `agent_report` e `calls_report`, `scope_type:'inbox'` + `scope_id` recorta DE VERDADE pela caixa — membros da caixa contando SO o que fizeram NELA (antes os blocos saiam iguais pra qualquer caixa). `scope_type:'agent'/'team'` segue sendo recorte de PESSOAS (trabalho delas na conta inteira); 'inbox' + dimension 'team' e recusado. E `lead_origin` passou a respeitar `time_range` (antes ignorava o periodo).",
   "category": "Relatorios",
   "params": [
    {
@@ -25714,7 +25721,7 @@
   "method": "POST",
   "path": "/api/v2/accounts/{account_id}/custom_dashboards",
   "title": "Criar Relatorio Personalizado",
-  "description": "[POST] Cria um relatorio personalizado que passa a APARECER NA TELA do cliente, na aba 'Personalizados' de Relatorios. ALTERA O QUE O CLIENTE VE: exige confirm:true depois de confirmar com ele. So administrador (401 caso contrario). Cada bloco de `widgets` usa os MESMOS campos do preview_widget (teste o desenho la antes de salvar) e PRECISA de um `id` proprio e unico — se faltar, o servidor gera. Um bloco invalido barra a criacao INTEIRA com 422 e o motivo em texto: nunca salva pela metade. Tetos: 50 relatorios por conta, 12 blocos por relatorio. Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). TIPOS NOVOS (21/08): `calls_report` = tabela de LIGACOES (feitas, atendidas, nao atendidas, nao concluidas, tempo total e medio) por atendente (`dimension:'agent'`) ou por caixa (`dimension:'inbox'`); ligacao sem atendente ganha linha propria. `stage_entries` = quantos cards ENTRARAM em cada etapa de um funil no periodo, lido do historico de movimentacao — DIFERENTE de `funnel_stages`, que conta quem ESTA na etapa agora: card que entrou e depois saiu aparece no stage_entries e SOME do funnel_stages (medido: 25% de diferenca). Use stage_entries pra 'quantos agendamentos/negocios aconteceram' e funnel_stages pra 'como esta o funil hoje'. stage_entries conta CARD DISTINTO (card que reentra na etapa conta uma vez) e o historico so existe a partir de 12/07/2026, com retencao de 365 dias — periodo anterior devolve menos do que aconteceu. PARAM NOVO `measure` em funnel_stages e stage_entries: 'count' (padrao, conta cards) ou 'value' (soma o VALOR dos cards = faturamento). Com status:'won' + date_basis:'closed' + measure:'value' sai o faturamento ganho da etapa no periodo. PERIODOS NOVOS: 'today' e 'yesterday'. CAMPO NOVO `title` em cada bloco: o nome que aparece no cabecalho. Sem ele varios blocos do mesmo tipo saem com rotulos identicos e nem a pessoa nem o agente sabem qual e qual — SEMPRE nomeie.",
+  "description": "[POST] Cria um relatorio personalizado que passa a APARECER NA TELA do cliente, na aba 'Personalizados' de Relatorios. ALTERA O QUE O CLIENTE VE: exige confirm:true depois de confirmar com ele. So administrador (401 caso contrario). Cada bloco de `widgets` usa os MESMOS campos do preview_widget (teste o desenho la antes de salvar) e PRECISA de um `id` proprio e unico — se faltar, o servidor gera. Um bloco invalido barra a criacao INTEIRA com 422 e o motivo em texto: nunca salva pela metade. Tetos: 50 relatorios por conta, 12 blocos por relatorio. Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). TIPOS NOVOS (21/08): `calls_report` = tabela de LIGACOES (feitas, atendidas, nao atendidas, nao concluidas, tempo total e medio) por atendente (`dimension:'agent'`) ou por caixa (`dimension:'inbox'`); ligacao sem atendente ganha linha propria. `stage_entries` = quantos cards ENTRARAM em cada etapa de um funil no periodo, lido do historico de movimentacao — DIFERENTE de `funnel_stages`, que conta quem ESTA na etapa agora: card que entrou e depois saiu aparece no stage_entries e SOME do funnel_stages (medido: 25% de diferenca). Use stage_entries pra 'quantos agendamentos/negocios aconteceram' e funnel_stages pra 'como esta o funil hoje'. stage_entries conta CARD DISTINTO (card que reentra na etapa conta uma vez) e o historico so existe a partir de 12/07/2026, com retencao de 365 dias — periodo anterior devolve menos do que aconteceu. PARAM NOVO `measure` em funnel_stages e stage_entries: 'count' (padrao, conta cards) ou 'value' (soma o VALOR dos cards = faturamento). Com status:'won' + date_basis:'closed' + measure:'value' sai o faturamento ganho da etapa no periodo. PERIODOS NOVOS: 'today' e 'yesterday'. CAMPO NOVO `title` em cada bloco: o nome que aparece no cabecalho. Sem ele varios blocos do mesmo tipo saem com rotulos identicos e nem a pessoa nem o agente sabem qual e qual — SEMPRE nomeie. TIPO NOVO (27/08, entra no ar com o PROXIMO deploy do app apos 27/08/2026 — antes disso o servidor recusa com 'widget_type desconhecido'): `stage_conversion` = CONVERSAO percentual entre grupos de etapas do funil, calculada pelo MOTOR: cards DISTINTOS que entraram nas etapas de `numerator_stage_ids` dividido pelos que entraram nas de `denominator_stage_ids` (listas de ids de etapa do funil — as chaves do hash stages do funnels_show), com `funnel_id` e `time_range`; chart_type 'number', shape scalar {value: percentual 1 casa, total: base do denominador (0 = sem dados), secondary: numerador/denominador nomeados}. Card que passou por DUAS etapas do denominador no periodo conta UMA vez (somar deflaria a conversao). Ex. real (Joint): Consulta Agendada dividido por Novos Leads + Agendamento Pendente. E o UNICO jeito de ter percentual confiavel no Aviso de relatorio (a IA do Aviso e PROIBIDA de calcular numeros). RECORTE POR CAIXA (26/08, ja no ar): em `agent_report` e `calls_report`, `scope_type:'inbox'` + `scope_id` recorta DE VERDADE pela caixa — membros da caixa contando SO o que fizeram NELA (antes os blocos saiam iguais pra qualquer caixa). `scope_type:'agent'/'team'` segue sendo recorte de PESSOAS (trabalho delas na conta inteira); 'inbox' + dimension 'team' e recusado. E `lead_origin` passou a respeitar `time_range` (antes ignorava o periodo).",
   "category": "Relatorios",
   "params": [
    {
@@ -25756,7 +25763,7 @@
   "method": "PATCH",
   "path": "/api/v2/accounts/{account_id}/custom_dashboards/{id}",
   "title": "Alterar Relatorio Personalizado",
-  "description": "[PATCH] Altera um relatorio personalizado. ALTERA O QUE O CLIENTE VE: exige confirm:true depois de confirmar com ele. So administrador (401 caso contrario). ATENCAO — `widgets` SUBSTITUI a lista inteira, nao acrescenta: mandar um bloco APAGA os outros. Leia o relatorio com custom_dashboards_list, altere o array e devolva-o COMPLETO. Se a listagem tiver vindo cortada, NAO use: voce apagaria o que nao chegou. Nao ha historico de alteracao — bloco apagado nao volta. Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). TIPOS NOVOS (21/08): `calls_report` = tabela de LIGACOES (feitas, atendidas, nao atendidas, nao concluidas, tempo total e medio) por atendente (`dimension:'agent'`) ou por caixa (`dimension:'inbox'`); ligacao sem atendente ganha linha propria. `stage_entries` = quantos cards ENTRARAM em cada etapa de um funil no periodo, lido do historico de movimentacao — DIFERENTE de `funnel_stages`, que conta quem ESTA na etapa agora: card que entrou e depois saiu aparece no stage_entries e SOME do funnel_stages (medido: 25% de diferenca). Use stage_entries pra 'quantos agendamentos/negocios aconteceram' e funnel_stages pra 'como esta o funil hoje'. stage_entries conta CARD DISTINTO (card que reentra na etapa conta uma vez) e o historico so existe a partir de 12/07/2026, com retencao de 365 dias — periodo anterior devolve menos do que aconteceu. PARAM NOVO `measure` em funnel_stages e stage_entries: 'count' (padrao, conta cards) ou 'value' (soma o VALOR dos cards = faturamento). Com status:'won' + date_basis:'closed' + measure:'value' sai o faturamento ganho da etapa no periodo. PERIODOS NOVOS: 'today' e 'yesterday'. CAMPO NOVO `title` em cada bloco: o nome que aparece no cabecalho. Sem ele varios blocos do mesmo tipo saem com rotulos identicos e nem a pessoa nem o agente sabem qual e qual — SEMPRE nomeie.",
+  "description": "[PATCH] Altera um relatorio personalizado. ALTERA O QUE O CLIENTE VE: exige confirm:true depois de confirmar com ele. So administrador (401 caso contrario). ATENCAO — `widgets` SUBSTITUI a lista inteira, nao acrescenta: mandar um bloco APAGA os outros. Leia o relatorio com custom_dashboards_list, altere o array e devolva-o COMPLETO. Se a listagem tiver vindo cortada, NAO use: voce apagaria o que nao chegou. Nao ha historico de alteracao — bloco apagado nao volta. Erros: 401 = quem chamou NAO e administrador (nao mande reconectar o conector). 422 com {error} = desenho invalido ou recurso nao liberado (code:'feature_unavailable' distingue) — o motivo vem em texto, corrija e tente de novo. 422 com {message,attributes} = teto atingido (50 relatorios por conta, 12 blocos por relatorio). TIPOS NOVOS (21/08): `calls_report` = tabela de LIGACOES (feitas, atendidas, nao atendidas, nao concluidas, tempo total e medio) por atendente (`dimension:'agent'`) ou por caixa (`dimension:'inbox'`); ligacao sem atendente ganha linha propria. `stage_entries` = quantos cards ENTRARAM em cada etapa de um funil no periodo, lido do historico de movimentacao — DIFERENTE de `funnel_stages`, que conta quem ESTA na etapa agora: card que entrou e depois saiu aparece no stage_entries e SOME do funnel_stages (medido: 25% de diferenca). Use stage_entries pra 'quantos agendamentos/negocios aconteceram' e funnel_stages pra 'como esta o funil hoje'. stage_entries conta CARD DISTINTO (card que reentra na etapa conta uma vez) e o historico so existe a partir de 12/07/2026, com retencao de 365 dias — periodo anterior devolve menos do que aconteceu. PARAM NOVO `measure` em funnel_stages e stage_entries: 'count' (padrao, conta cards) ou 'value' (soma o VALOR dos cards = faturamento). Com status:'won' + date_basis:'closed' + measure:'value' sai o faturamento ganho da etapa no periodo. PERIODOS NOVOS: 'today' e 'yesterday'. CAMPO NOVO `title` em cada bloco: o nome que aparece no cabecalho. Sem ele varios blocos do mesmo tipo saem com rotulos identicos e nem a pessoa nem o agente sabem qual e qual — SEMPRE nomeie. TIPO NOVO (27/08, entra no ar com o PROXIMO deploy do app apos 27/08/2026 — antes disso o servidor recusa com 'widget_type desconhecido'): `stage_conversion` = CONVERSAO percentual entre grupos de etapas do funil, calculada pelo MOTOR: cards DISTINTOS que entraram nas etapas de `numerator_stage_ids` dividido pelos que entraram nas de `denominator_stage_ids` (listas de ids de etapa do funil — as chaves do hash stages do funnels_show), com `funnel_id` e `time_range`; chart_type 'number', shape scalar {value: percentual 1 casa, total: base do denominador (0 = sem dados), secondary: numerador/denominador nomeados}. Card que passou por DUAS etapas do denominador no periodo conta UMA vez (somar deflaria a conversao). Ex. real (Joint): Consulta Agendada dividido por Novos Leads + Agendamento Pendente. E o UNICO jeito de ter percentual confiavel no Aviso de relatorio (a IA do Aviso e PROIBIDA de calcular numeros). RECORTE POR CAIXA (26/08, ja no ar): em `agent_report` e `calls_report`, `scope_type:'inbox'` + `scope_id` recorta DE VERDADE pela caixa — membros da caixa contando SO o que fizeram NELA (antes os blocos saiam iguais pra qualquer caixa). `scope_type:'agent'/'team'` segue sendo recorte de PESSOAS (trabalho delas na conta inteira); 'inbox' + dimension 'team' e recusado. E `lead_origin` passou a respeitar `time_range` (antes ignorava o periodo).",
   "category": "Relatorios",
   "params": [
    {
@@ -31373,6 +31380,105 @@
   ]
  },
  {
+  "id": "lionchat_meta_lead_ads_token",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/integrations/meta_lead/ads_token",
+  "title": "Gravar Token de Anuncios (Meta Lead)",
+  "description": "[POST] Grava o token de ANUNCIOS da Meta colado a mao pelo cliente — e de CONTA (vale pra todas as paginas conectadas), nao de pagina. Com ele os leads passam a mostrar NOME de campanha/conjunto/anuncio em vez de so ids, e o servidor ja reprocessa retroativamente os leads que ficaram sem nome. Mandar vazio LIMPA o token. Valide antes com meta_lead_validate_token. Resposta: {meta} com a situacao do token.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "manual_ads_token",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Token de anuncios da Meta (System User ou usuario com acesso a conta de anuncios). Vazio/ausente limpa o token salvo."
+   }
+  ],
+  "returns": "{meta: situacao do token de anuncios}",
+  "common_use_cases": [
+   "Ligar a resolucao de nomes de campanha/conjunto/anuncio nos leads"
+  ],
+  "related_tools": [
+   "lionchat_meta_lead_validate_token",
+   "lionchat_meta_lead_list"
+  ]
+ },
+ {
+  "id": "lionchat_meta_lead_validate_token",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/integrations/meta_lead/validate_token",
+  "title": "Testar Token de Anuncios (Meta Lead)",
+  "description": "[POST] Confere o token de anuncios NA HORA, sem gravar nada: valido? de qual app? quais permissoes? alcanca anuncio de verdade? Sem manual_ads_token no corpo, testa o token JA SALVO. Resposta: {data} com o raio-x do token. Use pra diagnosticar 'os leads chegam so com id de campanha' antes de pedir token novo ao cliente.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "manual_ads_token",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Token a testar. Ausente = testa o token salvo na conta."
+   }
+  ],
+  "returns": "{data: diagnostico do token}",
+  "common_use_cases": [
+   "Diagnosticar por que o nome da campanha nao aparece nos leads"
+  ],
+  "related_tools": [
+   "lionchat_meta_lead_ads_token"
+  ]
+ },
+ {
+  "id": "lionchat_meta_lead_bulk_destroy",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/integrations/meta_lead/bulk_destroy",
+  "title": "Desconectar Paginas em Lote (Meta Lead)",
+  "description": "[POST] Remove VARIAS paginas conectadas de uma vez (assincrono — resposta 202 com {meta:{queued:N}}). Existiu porque ate 25/08 o conectar trazia TODAS as paginas do Facebook do cliente sem escolha (caso real: 25 paginas na Onipresenca) — esta e a ferramenta de limpeza. REMOVE integracoes de verdade: exige confirm:true depois de listar pro cliente QUAIS paginas vao sair. 422 se nenhum id for da conta.",
+  "category": "Integracoes",
+  "confirm_required": true,
+  "params": [
+   {
+    "name": "ids",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Ids das integracoes de pagina a remover (campo id de cada item do meta_lead_list — id da INTEGRACAO, nao da pagina do Facebook)"
+   }
+  ],
+  "returns": "202 {meta:{queued:N}}",
+  "common_use_cases": [
+   "Limpar paginas que entraram sem escolha na conexao antiga"
+  ],
+  "related_tools": [
+   "lionchat_meta_lead_list",
+   "lionchat_meta_lead_destroy"
+  ]
+ },
+ {
+  "id": "lionchat_meta_lead_sync_forms",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/integrations/meta_lead/{id}/sync_forms",
+  "title": "Sincronizar Formularios da Pagina (Meta Lead)",
+  "description": "[POST] Re-busca na Meta os formularios de lead da pagina conectada. Erro de PERMISSAO nao vira 422: volta 200 com meta.warnings e mode:'reactive' (a pagina segue funcionando no modo reativo — os formularios aparecem conforme os leads chegam). So token EXPIRADO da 422 (cliente precisa reconectar).",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "Id da integracao da pagina (meta_lead_list)"
+   }
+  ],
+  "returns": "{data: formularios, meta: {warnings?, mode?}}",
+  "common_use_cases": [
+   "Formulario novo criado na Meta nao aparece na lista"
+  ],
+  "related_tools": [
+   "lionchat_meta_lead_list"
+  ]
+ },
+ {
   "id": "lionchat_reporting_events_list",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/reporting_events",
@@ -31647,7 +31753,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}",
   "title": "Detalhes da Integração e-Clínica",
-  "description": "SÓ LEITURA, somente administrador. A integração e-Clínica da conta (1 por conta; o id precisa ser o dela — 404 caso contrário) com status, saúde, mapeamento de eventos, lembretes, webhook_url e as UNIDADES (filiais) com status/token-por-variável/webhook próprio. Mesmo conteúdo de lionchat_eclinica_integrations_list, que já resolve o id.",
+  "description": "SÓ LEITURA, somente administrador. A integração e-Clínica da conta (1 por conta; o id precisa ser o dela — 404 caso contrário) com status, saúde, mapeamento de eventos, lembretes, webhook_url e as UNIDADES (filiais) com status/token-por-variável/webhook próprio. Mesmo conteúdo de lionchat_eclinica_integrations_list, que já resolve o id. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` como alternativa ao `flow_id` — o lembrete dispara uma AUTOMACAO em vez de um fluxo (um dos dois, nao ambos). Mesmos gatilhos e mesma conferencia na hora do disparo.",
   "category": "Integracoes",
   "params": [
    {
@@ -31828,6 +31934,371 @@
    "lionchat_custom_dashboards_list",
    "lionchat_custom_dashboards_widget_data",
    "lionchat_custom_dashboards_update"
+  ]
+ },
+ {
+  "id": "lionchat_report_alerts_list",
+  "method": "GET",
+  "path": "/api/v2/accounts/{account_id}/report_alerts",
+  "title": "Listar Avisos de Relatorio",
+  "description": "[GET] Lista os Avisos da conta (aba Relatorios > Avisos): envio diario do resumo de um relatorio personalizado num grupo/conversa de WhatsApp QR, com texto escrito pela IA da conta. Retorna {payload:[...]} com, por aviso: custom_dashboard_id/_name, inbox_id/_name, conversation_display_id, destination_name, send_hour, frequency (daily|weekdays), enabled, next_send_on (proximo envio previsto, fuso da conta), last_sent_on, last_attempt_at, last_delivery_status (generating|sent|confirmed|send_failed|skipped_late|error), last_error e text_prompt. So administrador (401 caso contrario). Teto: 10 avisos por conta.",
+  "category": "Relatorios",
+  "params": [],
+  "returns": "{payload: [avisos]}",
+  "common_use_cases": [
+   "Ver quais resumos diarios a conta manda no WhatsApp e a situacao do ultimo envio",
+   "Diagnosticar por que o resumo nao chegou (last_delivery_status/last_error)",
+   "Descobrir o id do aviso antes de editar/ligar/desligar"
+  ],
+  "related_tools": [
+   "lionchat_report_alerts_create",
+   "lionchat_report_alerts_deliveries",
+   "lionchat_custom_dashboards_list"
+  ]
+ },
+ {
+  "id": "lionchat_report_alerts_show",
+  "method": "GET",
+  "path": "/api/v2/accounts/{account_id}/report_alerts/{id}",
+  "title": "Ver Aviso de Relatorio",
+  "description": "[GET] Um Aviso so, com os mesmos campos da lista. So administrador (401 caso contrario); 404 se nao e da conta.",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "Id do aviso (vem do report_alerts_list)"
+   }
+  ],
+  "returns": "objeto do aviso",
+  "common_use_cases": [
+   "Conferir a configuracao exata antes de um update"
+  ],
+  "related_tools": [
+   "lionchat_report_alerts_list",
+   "lionchat_report_alerts_update"
+  ]
+ },
+ {
+  "id": "lionchat_report_alerts_create",
+  "method": "POST",
+  "path": "/api/v2/accounts/{account_id}/report_alerts",
+  "title": "Criar Aviso de Relatorio",
+  "description": "[POST] Cria o envio diario do resumo de um relatorio personalizado num grupo/conversa de WhatsApp. MANDA MENSAGEM REAL NO WHATSAPP DO CLIENTE TODO DIA: exige confirm:true depois de confirmar destino, horario e relatorio com a pessoa. So administrador. FLUXO SEGURO (aprendido em producao 27/08): 1) crie com enabled:false; 2) rode report_alerts_preview e leia o texto com preview_status; 3) so entao ligue (update enabled:true) — criado LIGADO dentro da janela do dia (send_hour ate +3h, fuso da conta) dispara no proximo tick de hora. Regras do servidor: caixa PRECISA ser WhatsApp QR; a conversa precisa ser da MESMA caixa; teto 10 por conta; a mensagem sai como MENSAGEM DE SISTEMA na conversa (automacoes e fluxos ativos NAQUELA conversa reagem a ela; nao conta como resposta de atendente, nao mexe em SLA nem zera 'cliente aguardando'). O texto interno usa **negrito** e vira negrito do WhatsApp no envio. Erros 422 vem com a explicacao em texto (ex.: 'a caixa escolhida não é mais uma caixa QR').",
+  "category": "Relatorios",
+  "body_wrapper": "report_alert",
+  "confirm_required": true,
+  "params": [
+   {
+    "name": "custom_dashboard_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Relatorio personalizado cujo resumo sera enviado (vem do custom_dashboards_list). Obrigatorio no create."
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa que ENVIA — PRECISA ser WhatsApp QR (Channel::Waha; confira channel_type no inboxes_list). A API oficial e recusada (so manda modelo aprovado). Obrigatorio no create."
+   },
+   {
+    "name": "conversation_display_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Numero da conversa/grupo de DESTINO como aparece na tela e nas tools de conversa (o servidor resolve pro id interno). Use ESTE ou conversation_id — a conversa precisa ser DA MESMA caixa do inbox_id. Pra achar grupo pelo nome: conversations_list com inbox_id + busca."
+   },
+   {
+    "name": "conversation_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Id INTERNO da conversa de destino (alternativa ao conversation_display_id; na duvida use o display)."
+   },
+   {
+    "name": "send_hour",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Hora do envio (0-23) NO FUSO DA CONTA (campo timezone do account_show; sem fuso = America/Sao_Paulo). Default 7. Tolerancia de 3h: tick perdido sai atrasado; passou da janela = 'skipped_late' visivel e tenta de novo amanha."
+   },
+   {
+    "name": "frequency",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "daily (todo dia, default) ou weekdays (segunda a sexta)."
+   },
+   {
+    "name": "period",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Janela dos numeros. Hoje so 'yesterday' (ontem no fuso da conta) — e o default; nao ha outros valores."
+   },
+   {
+    "name": "text_prompt",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Instrucoes pra IA escrever o texto (ate 2000 chars), usando a chave OpenAI DA CONTA. Sem prompt ou sem chave = texto padrao do sistema (fiel, bloco a bloco). GOTCHAS medidos em producao: a conferencia de numeros REPROVA qualquer numero que nao exista no relatorio (a IA NUNCA calcula percentual/soma — percentual confiavel = bloco stage_conversion no relatorio) e prompt que pede pra RENOMEAR/reorganizar secoes ja fez a IA trocar rotulos de numeros (caso real 27/08). O prompt que funciona: 'mantenha os titulos e TODOS os numeros exatamente como estao, nao renomeie secoes, nao calcule nada, inclua TODOS os blocos'."
+   },
+   {
+    "name": "enabled",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Liga/desliga o envio automatico. ATENCAO (incidente real 27/08): criar LIGADO dentro da janela do dia (entre send_hour e send_hour+3h no fuso da conta) DISPARA no proximo tick de hora — se ainda vai validar a previa, crie com enabled:false e ligue depois."
+   }
+  ],
+  "returns": "objeto do aviso criado (com next_send_on)",
+  "common_use_cases": [
+   "Configurar o resumo comercial diario da conta num grupo de gestao",
+   "Migrar uma rotina externa de relatorio pro envio nativo do sistema"
+  ],
+  "related_tools": [
+   "lionchat_report_alerts_preview",
+   "lionchat_report_alerts_update",
+   "lionchat_report_alerts_send_now",
+   "lionchat_custom_dashboards_show"
+  ]
+ },
+ {
+  "id": "lionchat_report_alerts_update",
+  "method": "PATCH",
+  "path": "/api/v2/accounts/{account_id}/report_alerts/{id}",
+  "title": "Editar Aviso de Relatorio",
+  "description": "[PATCH] Edita um Aviso (qualquer campo do create, todos opcionais — inclusive enabled pra ligar/desligar). ALTERA um envio automatico real: exige confirm:true. So administrador. GOTCHA de ligar (enabled:true): se ainda estiver dentro da janela do dia (send_hour ate +3h no fuso da conta) e o aviso nao enviou hoje, ele DISPARA no proximo tick de hora; religado FORA da janela ganha 'skipped_late' de hoje (linha ambar inofensiva) e roda normal amanha.",
+  "category": "Relatorios",
+  "body_wrapper": "report_alert",
+  "confirm_required": true,
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "Id do aviso"
+   },
+   {
+    "name": "custom_dashboard_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Relatorio personalizado cujo resumo sera enviado (vem do custom_dashboards_list). Obrigatorio no create."
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa que ENVIA — PRECISA ser WhatsApp QR (Channel::Waha; confira channel_type no inboxes_list). A API oficial e recusada (so manda modelo aprovado). Obrigatorio no create."
+   },
+   {
+    "name": "conversation_display_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Numero da conversa/grupo de DESTINO como aparece na tela e nas tools de conversa (o servidor resolve pro id interno). Use ESTE ou conversation_id — a conversa precisa ser DA MESMA caixa do inbox_id. Pra achar grupo pelo nome: conversations_list com inbox_id + busca."
+   },
+   {
+    "name": "conversation_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Id INTERNO da conversa de destino (alternativa ao conversation_display_id; na duvida use o display)."
+   },
+   {
+    "name": "send_hour",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Hora do envio (0-23) NO FUSO DA CONTA (campo timezone do account_show; sem fuso = America/Sao_Paulo). Default 7. Tolerancia de 3h: tick perdido sai atrasado; passou da janela = 'skipped_late' visivel e tenta de novo amanha."
+   },
+   {
+    "name": "frequency",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "daily (todo dia, default) ou weekdays (segunda a sexta)."
+   },
+   {
+    "name": "period",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Janela dos numeros. Hoje so 'yesterday' (ontem no fuso da conta) — e o default; nao ha outros valores."
+   },
+   {
+    "name": "text_prompt",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Instrucoes pra IA escrever o texto (ate 2000 chars), usando a chave OpenAI DA CONTA. Sem prompt ou sem chave = texto padrao do sistema (fiel, bloco a bloco). GOTCHAS medidos em producao: a conferencia de numeros REPROVA qualquer numero que nao exista no relatorio (a IA NUNCA calcula percentual/soma — percentual confiavel = bloco stage_conversion no relatorio) e prompt que pede pra RENOMEAR/reorganizar secoes ja fez a IA trocar rotulos de numeros (caso real 27/08). O prompt que funciona: 'mantenha os titulos e TODOS os numeros exatamente como estao, nao renomeie secoes, nao calcule nada, inclua TODOS os blocos'."
+   },
+   {
+    "name": "enabled",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Liga/desliga o envio automatico. ATENCAO (incidente real 27/08): criar LIGADO dentro da janela do dia (entre send_hour e send_hour+3h no fuso da conta) DISPARA no proximo tick de hora — se ainda vai validar a previa, crie com enabled:false e ligue depois."
+   }
+  ],
+  "returns": "objeto do aviso atualizado",
+  "common_use_cases": [
+   "Ligar o aviso depois de validar a previa",
+   "Trocar o destino/horario/prompt",
+   "Desligar sem apagar"
+  ],
+  "related_tools": [
+   "lionchat_report_alerts_show",
+   "lionchat_report_alerts_preview"
+  ]
+ },
+ {
+  "id": "lionchat_report_alerts_destroy",
+  "method": "DELETE",
+  "path": "/api/v2/accounts/{account_id}/report_alerts/{id}",
+  "title": "Excluir Aviso de Relatorio",
+  "description": "[DELETE] Apaga o aviso E o historico de envios dele (irreversivel). Exige confirm:true depois de confirmar com a pessoa. Se a ideia e so parar de mandar, prefira update com enabled:false (mantem configuracao e historico).",
+  "category": "Relatorios",
+  "confirm_required": true,
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "Id do aviso"
+   }
+  ],
+  "returns": "204 sem corpo",
+  "common_use_cases": [
+   "Remover de vez um aviso que nao faz mais sentido"
+  ],
+  "related_tools": [
+   "lionchat_report_alerts_update"
+  ]
+ },
+ {
+  "id": "lionchat_report_alerts_send_now",
+  "method": "POST",
+  "path": "/api/v2/accounts/{account_id}/report_alerts/{id}/send_now",
+  "title": "Enviar Aviso Agora (teste real)",
+  "description": "[POST] Dispara o aviso AGORA como teste: compoe com os numeros de ontem e ENVIA DE VERDADE no destino configurado — o grupo/conversa do cliente RECEBE a mensagem. Exige confirm:true SEMPRE, nomeando o destino ('vou mandar o resumo agora no grupo X, confirma?'). Nao consome o envio automatico do dia (o das send_hour continua saindo) e funciona mesmo com o aviso desligado. Resposta 200 = entrou na fila (o resultado real aparece no historico ~3-20 min depois, via report_alerts_deliveries, marcado test_mode:true). 429 = trava de 60s por aviso (um teste ja esta a caminho — nunca repita o clique). Pra ver o TEXTO sem enviar nada, use report_alerts_preview.",
+  "category": "Relatorios",
+  "confirm_required": true,
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "Id do aviso"
+   }
+  ],
+  "returns": "200 sem corpo (na fila) | 429 (trava de 60s)",
+  "common_use_cases": [
+   "Validar o envio de ponta a ponta com o cliente acompanhando o grupo"
+  ],
+  "related_tools": [
+   "lionchat_report_alerts_preview",
+   "lionchat_report_alerts_deliveries"
+  ]
+ },
+ {
+  "id": "lionchat_report_alerts_deliveries",
+  "method": "GET",
+  "path": "/api/v2/accounts/{account_id}/report_alerts/{id}/deliveries",
+  "title": "Historico de Envios do Aviso",
+  "description": "[GET] Historico dos envios do aviso (90 dias, ate 100 linhas, mais novo primeiro): {payload:[{id, status, mode, test_mode, error_message, content_snapshot, created_at}]}. status: sent (saiu, aguardando recibo) -> confirmed (ENTREGUE com recibo do canal — o selo verde so existe com evidencia) | send_failed (recusado, motivo em error_message) | skipped_late (nao saiu no horario — sistema congestionado) | error (falha antes do envio). mode: ai (texto escrito pela IA) ou system/default (texto padrao). content_snapshot = o TEXTO EXATO enviado, congelado (apagar a mensagem na conversa nao apaga o historico). test_mode:true = disparo manual de teste.",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "Id do aviso"
+   }
+  ],
+  "returns": "{payload: [envios]}",
+  "common_use_cases": [
+   "Auditar o que a IA escreveu em cada dia",
+   "Investigar 'o grupo nao recebeu' (status + error_message)",
+   "Conferir se o teste do send_now chegou"
+  ],
+  "related_tools": [
+   "lionchat_report_alerts_send_now",
+   "lionchat_report_alerts_list"
+  ]
+ },
+ {
+  "id": "lionchat_report_alerts_preview",
+  "method": "POST",
+  "path": "/api/v2/accounts/{account_id}/report_alerts/preview",
+  "title": "Previa do Aviso (nao envia nada)",
+  "description": "[POST] Gera a PREVIA do texto do aviso SEM enviar nada — mesmo motor do envio real (blocos de ontem + IA da conta quando ha prompt/chave). ASSINCRONA: devolve {token} na hora e o texto sai depois; leia com report_alerts_preview_status (o job roda em fila de baixa prioridade — normalmente 5-60s, pode passar de 2 min com a plataforma cheia; o resultado fica guardado 5 min). O aviso NEM PRECISA existir: basta custom_dashboard_id (+ text_prompt opcional). Use SEMPRE antes de ligar um aviso novo ou depois de mudar o prompt.",
+  "category": "Relatorios",
+  "body_wrapper": "report_alert",
+  "params": [
+   {
+    "name": "custom_dashboard_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "Relatorio personalizado a resumir"
+   },
+   {
+    "name": "text_prompt",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Instrucoes pra IA (mesmas regras do create; ate 2000 chars)"
+   },
+   {
+    "name": "period",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "So 'yesterday' hoje (default)"
+   }
+  ],
+  "returns": "{token: hex de 32 chars}",
+  "common_use_cases": [
+   "Validar o texto com o cliente ANTES de ligar o envio automatico"
+  ],
+  "related_tools": [
+   "lionchat_report_alerts_preview_status",
+   "lionchat_report_alerts_create"
+  ]
+ },
+ {
+  "id": "lionchat_report_alerts_preview_status",
+  "method": "GET",
+  "path": "/api/v2/accounts/{account_id}/report_alerts/preview_status",
+  "title": "Resultado da Previa do Aviso",
+  "description": "[GET] Le o resultado da previa pelo token: {status:'pending'} (job ainda na fila — espere 5-10s e tente de novo, ate ~2-3 min) | {status:'ready', text, mode} (texto pronto; mode 'ai' ou 'default') | {status:'error', error}. O resultado expira em 5 min apos ficar pronto; token fora do formato (32 hex) = 422. Se expirar, rode report_alerts_preview de novo (cada rodada com IA gasta a chave OpenAI da conta — nao repita a toa).",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "token",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "Token devolvido pelo report_alerts_preview (32 caracteres hex)"
+   }
+  ],
+  "returns": "{status, text?, mode?, error?}",
+  "common_use_cases": [
+   "Polling do texto da previa"
+  ],
+  "related_tools": [
+   "lionchat_report_alerts_preview"
   ]
  }
 ]
