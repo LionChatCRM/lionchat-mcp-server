@@ -571,7 +571,7 @@ Não é consulta livre: escolha um `widget_type` e preencha **só os campos daqu
 | `sla_summary` | `time_range` | `sla` (Enterprise) |
 | `funnel_stages` | `funnel_id` · `date_basis` (created/moved/closed/any) · `status` (all/open/won/lost) · `measure` (count padrão / value = soma do valor dos cards) · `time_range` | `kanban_board` |
 | `stage_entries` | `funnel_id` · `measure` (count/value) · `time_range` — quantos cards DISTINTOS ENTRARAM em cada etapa no período (histórico desde 12/07/2026) | `kanban_board` |
-| `calls_report` | `dimension` (agent/inbox) · `time_range` — ligações / atendidas / não atendidas / não concluídas / tempo total / tempo médio | — |
+| `calls_report` | `dimension` (agent/inbox) · `scope_type` (só `inbox`, opcional — recorte por caixa, desde 27/08/2026) + `scope_id` · `time_range` — ligações / atendidas / não atendidas / não concluídas / tempo total / tempo médio | — |
 | `lead_origin` | `time_range` | `liontrack` |
 | `agent_report` | `dimension` (agent/team/inbox) · `scope_type`+`scope_id` · `columns[]` · `time_range` | — |
 
@@ -605,9 +605,14 @@ IDs de etiqueta**, nunca nome de métrica).
 
 ### Armadilhas que fazem o bloco sair errado
 
-1. **`scope_type`/`scope_id` têm sentido OPOSTO por tipo.** No `conversations_timeseries` = "o
-   gráfico é só daquela entidade". No `agent_report` = "mostre só as linhas de quem é dessa
-   equipe/caixa". Confundir troca a conta inteira.
+1. **`scope_type`/`scope_id` têm sentido DIFERENTE por tipo — e, no `agent_report`, por VALOR
+   (desde 27/08/2026).** No `conversations_timeseries` = "o gráfico é só daquela entidade". No
+   `agent_report`: `team`/`agent` = "mostre só as linhas de quem é dessa equipe/agente" (contando o
+   trabalho da pessoa na conta INTEIRA); `inbox` = recorte de CAIXA (membros da caixa, contando SÓ
+   o que fizeram naquela caixa — é o desenho de "relatório por médico/unidade"). `inbox` +
+   `dimension: team` é RECUSADO com motivo. No `calls_report`, `scope_type: inbox` conta só as
+   ligações daquela caixa — **ligação sem caixa fica de fora** (VTCall ~90% e Zenvia 100% das
+   ligações não têm caixa; LionCalls e Wavoip têm em 100%). Confundir troca a conta inteira.
 2. **Campo fora da lista é descartado em silêncio.** Se um valor "não fez efeito", provavelmente o
    nome do campo está errado.
 3. **Sempre envie `timezone_offset` em HORAS, derivado do fuso DA CONTA** (`account_show.timezone`;
@@ -712,3 +717,60 @@ Combinado com `status: 'won'` + `date_basis: 'closed'`, dá o faturamento ganho 
 
 **Cuidado ao escrever**: se os cards do cliente têm valor padrão (todos com o mesmo número), a soma
 não é faturamento — é o padrão multiplicado. Se todos os valores forem idênticos, desconfie e diga.
+
+## Avisos — o resumo diário nativo no WhatsApp (2026-08-27)
+
+O caso da seção anterior ("me traz o relatório todo dia") virou **funcionalidade nativa**: a aba
+**Relatórios > Avisos** manda, todo dia no horário escolhido, o resumo em texto de um relatório
+personalizado num grupo/conversa de **WhatsApp QR**, com o texto escrito pela IA da conta. Ferramentas
+`lionchat_report_alerts_*` (criar, editar, listar, excluir, enviar agora, histórico, prévia). Só
+administrador; teto de 10 por conta.
+
+### O fluxo seguro (aprendido em produção, 27/08)
+
+1. **Crie DESLIGADO** (`enabled: false`) — aviso criado ligado DENTRO da janela do dia
+   (`send_hour` até +3h, fuso da conta) dispara no próximo tick de hora, e o grupo do cliente
+   recebe sem ninguém ter validado.
+2. **Rode a prévia** (`report_alerts_preview` → token → `report_alerts_preview_status`): mesmo
+   motor do envio, sem mandar nada. Mostre o texto pra pessoa aprovar.
+3. **Só então ligue** (`report_alerts_update` com `enabled: true`).
+
+### Regras do texto (a IA do Aviso NÃO é a IA do chat)
+
+- A conferência de números **reprova qualquer número que não exista no relatório** — a IA nunca
+  calcula, soma nem inventa percentual. Reprovou = sai o texto padrão do sistema (fiel, bloco a
+  bloco). **Percentual confiável = bloco `stage_conversion` no relatório** (o motor calcula).
+- Prompt que pede pra **renomear/reorganizar seções já fez a IA trocar rótulos de números** (caso
+  real: "Novos leads: 9" com o número do bloco de atendentes). O prompt que funciona: *"mantenha os
+  títulos e TODOS os números exatamente como estão, não renomeie seções, não calcule nada, inclua
+  TODOS os blocos"*.
+- Teto do texto: 60.000 caracteres (o do WhatsApp) — relatório inteiro cabe.
+- A mensagem entra na conversa como **mensagem de sistema**: automações e fluxos ativos naquela
+  conversa reagem a ela; não conta como resposta de atendente, não mexe em SLA nem apaga o
+  "cliente aguardando".
+
+### Diagnóstico ("o grupo não recebeu")
+
+`report_alerts_deliveries` é o histórico (90 dias, texto congelado de cada envio):
+`sent` = saiu, aguardando recibo · `confirmed` = **entregue com recibo do canal** (o selo verde só
+existe com evidência) · `send_failed` = recusado (motivo em `error_message`; caixa desconectada é o
+clássico) · `skipped_late` = não saiu no horário (janela de 3h estourada; tenta amanhã) · `error` =
+falhou antes do envio. `test_mode: true` = disparo manual. Na lista, `next_send_on` diz o próximo
+envio previsto e `last_delivery_status`/`last_error` resumem o último.
+
+### Bloco `stage_conversion` — percentual entre etapas (entra com o próximo deploy pós-27/08)
+
+`widget_type: 'stage_conversion'`: conversão calculada PELO MOTOR — cards **distintos** que entraram
+nas etapas de `numerator_stage_ids` ÷ os que entraram nas de `denominator_stage_ids`, na janela
+(mesma fonte histórica do `stage_entries`). Ex. real: Consulta Agendada ÷ (Novos Leads + Agendamento
+Pendente). Card que passou por duas etapas do denominador conta UMA vez (somar deflaria a taxa).
+`chart_type: 'number'`; shape scalar (value = %, total = base; total 0 = "sem dados"). Os ids de
+etapa são as CHAVES do hash `stages` do `lionchat_funnels_show`. Janela curta pode passar de 100%
+(agendou hoje um lead que entrou ontem) — é verdade do dado, explique em vez de esconder.
+
+### Recorte por caixa nos blocos de tabela (2026-08-26, já no ar)
+
+Em `agent_report` e `calls_report`, `scope_type: 'inbox'` + `scope_id` recorta **de verdade** pela
+caixa: membros da caixa contando SÓ o que fizeram nela (era o defeito dos relatórios por médico
+saírem iguais). `'agent'`/`'team'` seguem sendo recorte de PESSOAS (trabalho na conta inteira);
+`'inbox'` + `dimension: 'team'` é recusado. E `lead_origin` passou a respeitar `time_range`.

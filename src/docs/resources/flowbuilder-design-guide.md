@@ -1005,7 +1005,7 @@ Presentes conforme o evento (ausente = resolve vazio, sem erro):
 |---|---|
 | `{{trigger.message.*}}` | `id`, `content` (texto da mensagem, cortado em 2.000 caracteres), `type`, `created_at` |
 | `{{trigger.conversation.*}}` | `id` (o display_id), `status`, `channel` (nome amigável: `Waha`, `Whatsapp`, `Instagram`), `inbox_id`, `inbox_name`, `created_at` |
-| `{{trigger.contact.*}}` | `id`, `name`, `phone` |
+| `{{trigger.contact.*}}` | `id`, `name`, `phone`, `email` — desde 22/08/2026 resolvem em TODO gatilho (lidos do contato da sessão quando o evento não os trouxe) |
 | `{{trigger.ad.*}}` (anúncio/CTWA) | `id`, `name`, `creative_id`, `creative_name`, `adset_id`, `adset_name`, `campaign_id`, `campaign_name`, `source`, `headline`, `description`, `cta`, `url` |
 | `{{trigger.attribute.*}}` | `name`, `previous_value`, `current_value`, `changed_at` — o valor ANTES e DEPOIS do atributo que disparou (só nos gatilhos de mudança de atributo) |
 | `{{trigger.user_name}}` | nome do usuário/atendente que disparou (gatilho manual ou botão do card) |
@@ -1015,6 +1015,8 @@ Presentes conforme o evento (ausente = resolve vazio, sem erro):
 | `{{trigger.source_flow_id}}` / `{{trigger.source_flow_name}}` | id e nome do flow de origem (quando outro flow iniciou este, ex.: action `start_flow`) |
 | `{{trigger.lead_form_id}}` / `{{trigger.response_id}}` / `{{trigger.kind}}` | formulário público: qual formulário, qual preenchimento e o tipo (`completed`/`milestone`/`abandoned`) |
 | `{{trigger.kind}}` / `{{trigger.booking_id}}` / `{{trigger.event_type_id}}` | agendamento (Booking nativo): `created`/`cancelled`/`rescheduled`/`completed`, id da reserva e id do tipo |
+| `{{trigger.kind}}` em `webhook_received` | origem da integração: `meta_lead`, `payment`, `eclinica`, `eclinica_reminder`, `topsend` (22/08/2026). O `type` continua `webhook_received` |
+| `{{trigger.meta_lead_event_id}}` | id do evento do Meta Lead (só `kind=meta_lead`) |
 
 Os cinco últimos são **novos 2026-08-07** e passam a aparecer no autocomplete de TODO bloco (ausente para
 o gatilho que não os fornece = resolve vazio, sem erro).
@@ -1022,6 +1024,16 @@ o gatilho que não os fornece = resolve vazio, sem erro).
 Dois atalhos: `{{trigger}}` devolve o contexto INTEIRO em JSON e `{{trigger.data}}` devolve o mesmo
 sem os metadados — úteis pra jogar tudo dentro de um node `ai` ou `api`. Bloco (Hash/Array) inteiro
 sai em JSON; valor simples sai cru.
+
+**O que o histórico mostra e NÃO é variável (22/08/2026).** O passo Início do histórico de execução
+passou a exibir, em todo gatilho, o contato (nome, telefone, e-mail), a conversa (número, canal, caixa)
+e os fatos do que disparou: etiqueta, responsável/equipe (ou "removido"), card (título, funil, etapa
+anterior → etapa), política de SLA, grupo, nome do formulário e do marco, anúncio/formulário/campanha
+do Meta Lead (+ as respostas, em bloco próprio), produto/oferta/meio de pagamento do gateway, evento/
+unidade/data/hora/compromisso da e-Clínica, tecla do TopSend, e os dados do agendamento. Esses fatos
+ficam numa área só-de-log (`_trigger_facts`) — **não existem como `{{trigger.*}}`** e não entram em
+`{{trigger.data}}`. Se o cliente precisar de um deles no fluxo, use a variável de origem quando
+existir (`{{booking.*}}`, `{{form_*}}`, `{{contact.*}}`, atributos do contato gravados pela integração).
 
 **NÃO duplique o que já tem variável própria.** `{{contact.name}}`, `{{conversation.status}}`,
 `{{inbox.name}}` e os atributos `ctwa_*` continuam existindo e são a forma canônica. O `{{trigger.*}}`

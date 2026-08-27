@@ -376,7 +376,11 @@ db/schema.rb, tabela booking_event_types)
 │   agente; 2026-08-19)
 ├── active / ask_email / ask_description
 ├── confirmation_* (mensagem de confirmação própria: enabled, inbox_id, channel_type,
-│   template_name, blocks)
+│   template_name, blocks). Variáveis nos textos de confirmação E de lembrete (interpolador único):
+│   {{nome}} {{email}} {{telefone}} {{data}} {{horario}} {{dia_semana}} (NOVO 24/08 — dia por
+│   extenso em pt: "terça-feira"; irmã do {{booking.weekday}} do FlowBuilder, mesma grafia)
+│   {{tipo_evento}} {{titulo}} {{duracao}} {{agente}} {{descricao}} {{meet_link}}
+│   {{link_cancelar}} {{link_remarcar}} {{horas_ate_evento}} {{horas_desde_evento}}
 └── booking_availabilities (has_many — dias/horários; `booking_availabilities_attributes` no create)
 
 Booking (agendamento confirmado — tabela bookings)
@@ -585,15 +589,11 @@ Gateways de pagamento (GuruWebhook, HotmartWebhook, KiwifyWebhook, EduzzWebhook,
 MonetizzeWebhook, GreennWebhook, ContaAzulIntegration, OmieIntegration — tools
 `lionchat_ecommerce_webhooks_*`, `conta_azul_integrations_*`, `omie_integrations_*`)
 ├── event_automation_mapping (jsonb) — uma entrada por evento do gateway:
-│   { "<evento>": { automation_id, flow_id, first_purchase_only,
-│                   conversation_attribute_keys: ["purchase_price", "product_name", ...] } }
-│   (Conta Azul/Omie usam `event_mapping`, por categoria). `conversation_attribute_keys`
-│   (2026-08-21 — entra com o próximo deploy do app depois de 21/08/2026) = quais campos da compra
-│   gravar TAMBÉM na conversa que a automação/fluxo abrir; chaves válidas = catálogo dos atributos
-│   de pagamento: product_name, offer_name, invoice_url, purchase_price, payment_method,
-│   purchase_email, pix_code, pix_qr_code_url, pix_expiration_date, ticket_hash_url, event_name,
-│   event_date, charged_times, subscription_cycle, subscription_status, customer_document,
-│   transaction_id, payment_installments, payment_source. Chave fora do catálogo é ignorada.
+│   { "<evento>": { automation_id, flow_id, first_purchase_only } }
+│   (Conta Azul/Omie usam `event_mapping`, por categoria).
+│   ATENÇÃO (26/08/2026): `conversation_attribute_keys` foi REMOVIDA dos gateways de pagamento
+│   (existiu de 21 a 26/08) — o backend IGNORA a chave se gravada. Atributo de conversa mapeado
+│   continua existindo SÓ no Meta Lead e no Webhook Universal.
 └── Leia o mapeamento atual antes de gravar: o `update` SUBSTITUI o jsonb INTEIRO (não mescla) —
     mande todos os eventos de volta, senão os outros somem.
 
