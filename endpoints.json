@@ -9906,6 +9906,20 @@
     "location": "body",
     "required": false,
     "description": "Cor hex (#RRGGBB) dos compromissos deste tipo no calendario (2026-08-19); vazio = cor do agente. A tarefa devolve booking_color ja resolvido."
+   },
+   {
+    "name": "booking_event_type.confirmation_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto da mensagem de CONFIRMACAO enviada ao paciente quando o agendamento e criado. Aceita variaveis {{nome}}, {{titulo}}, {{data}}, {{horario}} e quebra de linha (\\n). Negrito do WhatsApp = *texto*."
+   },
+   {
+    "name": "booking_event_type.follow_up_schedules_attributes",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Lembretes do agendamento (o bloco '1d antes do evento' da tela). Array de objetos: {id (obrigatorio para EDITAR o existente — sem id CRIA outro), offset_direction ('before'/'after'), offset_days, offset_hours, offset_minutes, message_body, blocks, active, position, _destroy}. IMPORTANTE: message_body E blocks[0].content precisam do MESMO texto — a tela le blocks e o envio usa message_body; gravar so um deixa a tela e a mensagem entregue diferentes. blocks = [{type:'text', content:'...'}]. Aceita variaveis {{titulo}}, {{data}}, {{horario}} e quebra de linha (\\n)."
    }
   ],
   "returns": "tipo de evento criado (com novo ID)",
@@ -9953,7 +9967,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/booking_event_types/{id}",
   "title": "Atualizar Tipo de Evento",
-  "description": "Atualiza um tipo de evento de agendamento. Atualiza campos do tipo de evento existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: booking_event_type.title, booking_event_type.active.",
+  "description": "Atualiza um tipo de evento de agendamento. Suporta atualizacao parcial (PATCH) — so campos enviados sao alterados. Alem de title/active/color/slug/user_id, aceita os TEXTOS que o paciente recebe: confirmation_message (confirmacao) e follow_up_schedules_attributes (lembretes).",
   "category": "Tipos de Evento",
   "params": [
    {
@@ -9997,6 +10011,20 @@
     "location": "body",
     "required": false,
     "description": "Cor hex (#RRGGBB) dos compromissos deste tipo no calendario (2026-08-19); vazio = cor do agente. A tarefa devolve booking_color ja resolvido."
+   },
+   {
+    "name": "booking_event_type.confirmation_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto da mensagem de CONFIRMACAO enviada ao paciente quando o agendamento e criado. Aceita variaveis {{nome}}, {{titulo}}, {{data}}, {{horario}} e quebra de linha (\\n). Negrito do WhatsApp = *texto*."
+   },
+   {
+    "name": "booking_event_type.follow_up_schedules_attributes",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Lembretes do agendamento (o bloco '1d antes do evento' da tela). Array de objetos: {id (obrigatorio para EDITAR o existente — sem id CRIA outro), offset_direction ('before'/'after'), offset_days, offset_hours, offset_minutes, message_body, blocks, active, position, _destroy}. IMPORTANTE: message_body E blocks[0].content precisam do MESMO texto — a tela le blocks e o envio usa message_body; gravar so um deixa a tela e a mensagem entregue diferentes. blocks = [{type:'text', content:'...'}]. Aceita variaveis {{titulo}}, {{data}}, {{horario}} e quebra de linha (\\n)."
    }
   ],
   "returns": "tipo de evento atualizado",
