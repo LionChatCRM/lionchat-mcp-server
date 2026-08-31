@@ -424,18 +424,29 @@ daquele tipo no calendário; vazio = cor do agente. A tarefa devolve `booking_co
 
 ## e-Clínicas (Efficient) — integração de clínicas
 
-15 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica
-(o mapeamento é SÓ pela tela — não há ferramenta MCP que escreva `event_mapping`):
+16 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica
+(o mapeamento e os lembretes passaram a ser editáveis por MCP em 31/08/2026, com
+`lionchat_eclinica_integrations_update` — ele **SUBSTITUI** o objeto inteiro, então leia com
+`_show` e devolva completo, senão apaga o resto):
 `cliente_novo`, `agendamento_novo`, `falta`, `pagamento` (os 4 da doc oficial) +
 `agendamento_atendido`, `agendamento_alterado`, `agendamento_desmarcado`,
 `agendamento_transferido`, `cliente_baixa_pagamento`, `cliente_alteracao`,
 `cliente_inclusao_pagamento`, `controle_laboratorio_novo`, `controle_laboratorio_alterado`,
-`agendamento_aguardando`, `odontograma_aprovado`
+`agendamento_aguardando`, `odontograma_aprovado`, `procedimento_finalizado`
 (capturados ao vivo, não documentados pelo e-Clínica).
 
-Os 2 últimos são do perfil ODONTOLÓGICO (2026-08-20): `agendamento_aguardando` = a recepção marcou a
+Os 3 últimos são do perfil ODONTOLÓGICO: `agendamento_aguardando` = a recepção marcou a
 chegada do paciente na clínica (grava a hora da chegada e `eclinica_status_agendamento = aguardando`);
-`odontograma_aprovado` = plano de tratamento aprovado (grava o cabeçalho do odontograma).
+`odontograma_aprovado` = plano de tratamento aprovado (grava o cabeçalho do odontograma);
+`procedimento_finalizado` (2026-08-31) = UM procedimento do plano foi concluído (implante, lente,
+cirurgia, instalação/remoção de aparelho).
+
+**`procedimento_finalizado` dispara UMA VEZ POR PROCEDIMENTO.** Medido na Goya em 31/08: 24 avisos
+com 23 procedimentos distintos, 4 deles em 15 segundos no mesmo paciente. A plataforma **não roda o
+mesmo flow duas vezes na mesma conversa ao mesmo tempo**, então ligar UM flow direto neste evento faz
+o paciente perder orientação em silêncio quando termina mais de um procedimento no mesmo atendimento.
+O flow PRECISA decidir pelo `eclinica_procedimento_id` (uma clínica manda orientações diferentes por
+tipo de procedimento — na Goya são 5 flows saindo deste mesmo evento).
 
 Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como variável):
 
@@ -470,6 +481,11 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_odontograma_valor` | text | Valor do plano — **pode vir `0.00`** quando a clínica não preenche |
 | `eclinica_odontograma_profissional` | text | NOME do profissional do odontograma |
 | `eclinica_odontograma_convenio_id` | text | Convênio do odontograma (número) |
+| `eclinica_procedimento_id` | text | Número do último procedimento CONCLUÍDO no plano de tratamento (2026-08-31). **É o campo que roteia o flow.** Número da lista da PRÓPRIA clínica — não comparável entre unidades (mesma armadilha de `eclinica_agendatipo_id`) |
+| `eclinica_procedimento_dente` | text | Dente ou região do procedimento (`opr_dente`) — ex `21`, `36`, ou `GE` para geral (não é dente) |
+| `eclinica_procedimento_valor` | text | Valor do procedimento concluído (`opr_valor`) |
+| `eclinica_procedimento_finalizado_em` | date | Dia em que o procedimento foi concluído (`opr_datafinalizado`) |
+| `eclinica_procedimento_profissional` | text | NOME do profissional que executou — pode DIVERGIR do profissional do odontograma (o plano é de um dentista, a cirurgia pode ser de outro) |
 | `eclinica_marcador_nome` | text | Marca que a clínica digita no fim do nome do paciente no e-Clínica (ex: `*`, `***`) — retirada do nome e guardada aqui (2026-08-20). Significado é da clínica |
 | `eclinica_laboratorio_data_prevista` | date | Previsão de entrega da medicação (novo 2026-07-23) |
 | `eclinica_laboratorio_data_moldagem` | date | Data do pedido da medicação |

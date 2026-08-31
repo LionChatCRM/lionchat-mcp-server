@@ -24996,7 +24996,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations",
   "title": "Listar Integração e-Clínica",
-  "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). ATENÇÃO: o mapeamento evento→flow NÃO é editável via MCP (somente pelo painel). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes NAO sao editaveis via MCP — somente pelo painel (Integracoes > e-Clinica > Lembretes). Cada unidade em units[] traz tambem settings {} (18/08). O atributo eclinica_cor (cor da agenda, hex com #) virou campo fresco dos lembretes: filtravel por filter_field e disponivel como variavel {{cor}}. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` alem do `flow_id` — pelo menos um dos dois (422 sem nenhum); com os DOIS preenchidos a AUTOMACAO vence no disparo. A automacao precisa ser da propria conta (422 senao). ALERTA de regra de negocio ao configurar: o caminho por automacao RODA AS ACOES SEM AVALIAR AS CONDICOES da automacao, e paciente com duas consultas no dia recebe DOIS lembretes (o caminho por fluxo descarta o segundo) — avise o cliente antes de trocar fluxo por automacao.",
+  "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). O mapeamento evento→flow É EDITÁVEL via MCP desde 31/08/2026 — use lionchat_eclinica_integrations_update (ele SUBSTITUI o mapeamento inteiro: leia aqui primeiro e devolva completo). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes SAO editaveis via MCP desde 31/08/2026 — use lionchat_eclinica_integrations_update (ele SUBSTITUI a lista inteira: leia aqui primeiro e devolva completa). Cada unidade em units[] traz tambem settings {} (18/08). O atributo eclinica_cor (cor da agenda, hex com #) virou campo fresco dos lembretes: filtravel por filter_field e disponivel como variavel {{cor}}. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` alem do `flow_id` — pelo menos um dos dois (422 sem nenhum); com os DOIS preenchidos a AUTOMACAO vence no disparo. A automacao precisa ser da propria conta (422 senao). ALERTA de regra de negocio ao configurar: o caminho por automacao RODA AS ACOES SEM AVALIAR AS CONDICOES da automacao, e paciente com duas consultas no dia recebe DOIS lembretes (o caminho por fluxo descarta o segundo) — avise o cliente antes de trocar fluxo por automacao.",
   "category": "Integracoes",
   "params": [],
   "returns": "200 {payload: {eclinica_integrations: [...]}}",
@@ -31798,6 +31798,44 @@
   ],
   "related_tools": [
    "lionchat_eclinica_integrations_list"
+  ]
+ },
+ {
+  "id": "lionchat_eclinica_integrations_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}",
+  "title": "Configurar Integração e-Clínica (mapeamento de eventos e lembretes)",
+  "description": "AÇÃO DE ESCRITA, somente administrador. Configura a integração e-Clínica: o MAPEAMENTO evento→automação/fluxo (event_mapping) e os LEMBRETES automáticos (reminder_config). Até 31/08/2026 os dois só existiam na tela — este comando fecha a lacuna.\n\nSUBSTITUIÇÃO TOTAL — LEIA ANTES DE GRAVAR: os dois campos SUBSTITUEM o conteúdo inteiro, NÃO mesclam (o backend faz update! direto no jsonb). Mandar event_mapping com um evento só APAGA todos os outros mapeamentos do cliente; o mesmo vale pra reminder_config. SEMPRE chame lionchat_eclinica_integrations_show ANTES, pegue o objeto atual, altere só o que precisa e devolva o objeto COMPLETO.\n\nevent_mapping: objeto {tipo_do_evento: {automation_id, flow_id}} — pode deixar um dos dois nulo. Tipos aceitos: cliente_novo, cliente_alteracao, agendamento_novo, agendamento_alterado, agendamento_atendido, agendamento_desmarcado, agendamento_transferido, falta, pagamento, cliente_baixa_pagamento, cliente_inclusao_pagamento, controle_laboratorio_novo, controle_laboratorio_alterado, agendamento_aguardando, odontograma_aprovado, procedimento_finalizado (NOVO 31/08 — um procedimento do plano de tratamento foi concluído; dispara UMA VEZ POR PROCEDIMENTO e grava eclinica_procedimento_id/_dente/_valor/_finalizado_em/_profissional no contato, então o fluxo ligado aqui precisa filtrar pelo número do procedimento). Tipo fora da lista = 422; flow_id e automation_id precisam ser da PRÓPRIA conta = 422 senão.\n\nreminder_config: array de {days_before (inteiro >= 0), event_type ('agendamento' padrão | 'controle_laboratorio_novo' | 'cliente_inclusao_pagamento'), flow_id e/ou automation_id (pelo menos um dos dois; com os dois a AUTOMAÇÃO vence), label, dispatch_time (OBRIGATÓRIA — 'HH:MM' fixo ou fórmula Liquid), filter_field/filter_operator/filter_value (opcional; filter_field precisa começar com eclinica_, operadores contains/equal/not_equal)}. Duas linhas com a MESMA régua = 422.\n\nALERTA de regra de negócio: isto muda, na hora e em produção, o que o paciente recebe. E no lembrete por automação as AÇÕES rodam SEM avaliar as CONDIÇÕES da automação — paciente com duas consultas no dia recebe DOIS lembretes (o caminho por fluxo descarta o segundo).",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da integração e-Clínica (de lionchat_eclinica_integrations_list)"
+   },
+   {
+    "name": "event_mapping",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Mapeamento COMPLETO evento→{automation_id, flow_id}. SUBSTITUI o mapeamento inteiro — leia o atual com _show e devolva completo, senão apaga o resto."
+   },
+   {
+    "name": "reminder_config",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Lista COMPLETA de lembretes automáticos. SUBSTITUI a lista inteira — leia a atual com _show e devolva completa, senão apaga o resto."
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome da integração (máx 100)"
+   }
   ]
  },
  {
