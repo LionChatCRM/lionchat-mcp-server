@@ -7200,7 +7200,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de blocos {type, content, is_private, delay_after, blob_signed_id}, dentro de canned_response"
+    "description": "Array de blocos {type, content, is_private, delay_after, blob_signed_id}, dentro de canned_response. Bloco de MIDIA aceita `caption` (legenda que vai colada na midia, como no WhatsApp) desde 29/08/2026 — antes era preciso um bloco de midia + um de texto. O disparo le `content || caption`. NAO use em bloco de audio: nenhum canal mostra legenda em nota de voz."
    },
    {
     "name": "requires_official_api",
@@ -7257,7 +7257,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Blocos, dentro de canned_response"
+    "description": "Blocos, dentro de canned_response. Bloco de MIDIA aceita `caption` (legenda que vai colada na midia, como no WhatsApp) desde 29/08/2026 — antes era preciso um bloco de midia + um de texto. O disparo le `content || caption`. NAO use em bloco de audio: nenhum canal mostra legenda em nota de voz."
    },
    {
     "name": "requires_official_api",
@@ -8433,6 +8433,13 @@
     "description": "ID do contato"
    },
    {
+    "name": "booked_for_contact_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Agendar PARA outro contato (caso mae/filho: a consulta e do filho, o aviso vai no WhatsApp de quem esta na conversa). Universo FECHADO por seguranca: so aceita ficha da PROPRIA conta que seja o contato da conversa OU um VINCULADO dele (ver lionchat_contacts_relationships_list) — id fora disso e recusado. Ausente/nulo = agenda pro proprio contato da conversa (comportamento de sempre). Novo em 28/08/2026."
+   },
+   {
     "name": "linked_kanban_item_id",
     "type": "integer",
     "location": "body",
@@ -8594,6 +8601,13 @@
     "location": "body",
     "required": false,
     "description": "ID do contato"
+   },
+   {
+    "name": "booked_for_contact_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Agendar PARA outro contato (caso mae/filho: a consulta e do filho, o aviso vai no WhatsApp de quem esta na conversa). Universo FECHADO por seguranca: so aceita ficha da PROPRIA conta que seja o contato da conversa OU um VINCULADO dele (ver lionchat_contacts_relationships_list) — id fora disso e recusado. Ausente/nulo = agenda pro proprio contato da conversa (comportamento de sempre). Novo em 28/08/2026."
    },
    {
     "name": "linked_kanban_item_id",
@@ -22844,6 +22858,125 @@
   "related_tools": []
  },
  {
+  "id": "lionchat_inboxes_waha_connect_link_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha/connect_link",
+  "title": "Gerar Link de Conexao — WhatsApp QR Code",
+  "description": "ACAO DE ESCRITA, somente administrador. Gera um LINK PUBLICO e temporario pra quem esta com o celular na mao ler o QR e conectar — sem precisar de acesso ao painel. Devolve {url, expires_at}. Novo em 28/08/2026.\n\nALERTA: o link conecta um canal de verdade. Ele so vale enquanto a janela aberta por um admin estiver de pe (conserto de seguranca de 28/08: antes um token forjado alcancava a frota inteira). Revogue assim que a conexao terminar ou se o link vazar.\n\nCaixa precisa ser Channel::Waha. Caixa JA conectada = 422 (nao ha o que escanear).",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa de entrada"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_connect_link_revoke",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha/connect_link",
+  "title": "Revogar Link de Conexao — WhatsApp QR Code",
+  "description": "ACAO DE ESCRITA, somente administrador. Mata o link e DERRUBA a sessao que ele tenha aberto — sem isso sobraria um QR escaneavel pendurado, que e exatamente o que revogar existe pra matar. Devolve {revoked: true} mesmo se nao havia link (idempotente).",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa de entrada"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_coex_backup_connect_link_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/coex_backup/connect_link",
+  "title": "Gerar Link de Conexao — WhatsApp Hibrido (coexistencia)",
+  "description": "ACAO DE ESCRITA, somente administrador. Gera um LINK PUBLICO e temporario pra quem esta com o celular na mao ler o QR e conectar — sem precisar de acesso ao painel. Devolve {url, expires_at}. Novo em 28/08/2026.\n\nALERTA: o link conecta um canal de verdade. Ele so vale enquanto a janela aberta por um admin estiver de pe (conserto de seguranca de 28/08: antes um token forjado alcancava a frota inteira). Revogue assim que a conexao terminar ou se o link vazar.\n\nCaixa WhatsApp OFICIAL com canal de apoio por QR (hibrida).",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa de entrada"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_coex_backup_connect_link_revoke",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/coex_backup/connect_link",
+  "title": "Revogar Link de Conexao — WhatsApp Hibrido (coexistencia)",
+  "description": "ACAO DE ESCRITA, somente administrador. Mata o link e DERRUBA a sessao que ele tenha aberto — sem isso sobraria um QR escaneavel pendurado, que e exatamente o que revogar existe pra matar. Devolve {revoked: true} mesmo se nao havia link (idempotente).",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa de entrada"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_lioncalls_connect_link_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/lioncalls/connect_link",
+  "title": "Gerar Link de Conexao — Ligacao (LionCalls)",
+  "description": "ACAO DE ESCRITA, somente administrador. Gera um LINK PUBLICO e temporario pra quem esta com o celular na mao ler o QR e conectar — sem precisar de acesso ao painel. Devolve {url, expires_at}. Novo em 28/08/2026.\n\nALERTA: o link conecta um canal de verdade. Ele so vale enquanto a janela aberta por um admin estiver de pe (conserto de seguranca de 28/08: antes um token forjado alcancava a frota inteira). Revogue assim que a conexao terminar ou se o link vazar.\n\nCaixa de LIGACAO — o QR conecta o WhatsApp que faz/recebe as chamadas.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa de entrada"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_lioncalls_connect_link_revoke",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/lioncalls/connect_link",
+  "title": "Revogar Link de Conexao — Ligacao (LionCalls)",
+  "description": "ACAO DE ESCRITA, somente administrador. Mata o link e DERRUBA a sessao que ele tenha aberto — sem isso sobraria um QR escaneavel pendurado, que e exatamente o que revogar existe pra matar. Devolve {revoked: true} mesmo se nao havia link (idempotente).",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa de entrada"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_bubble_icon_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/bubble_icon",
+  "title": "Remover Icone do Balao do Chat do Site",
+  "description": "ACAO DE ESCRITA. Volta o balao do chat do site pro icone padrao. So em caixa de SITE (Channel::WebWidget) — qualquer outro tipo = 422 'Not a website inbox'. Idempotente: sem icone, responde OK do mesmo jeito. Novo em 29/08/2026.\n\nATENCAO: ENVIAR um icone novo NAO tem comando no MCP — e upload de arquivo, que o conector nao faz. Pra trocar o icone, so pela tela (Caixa de entrada > Configuracoes do widget).",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa de entrada (precisa ser de SITE)"
+   }
+  ]
+ },
+ {
   "id": "lionchat_inboxes_waha_import_status",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha/import_status",
@@ -25193,6 +25326,71 @@
   ]
  },
  {
+  "id": "lionchat_contacts_relationships_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/relationships",
+  "title": "Vinculos do Contato",
+  "description": "SO LEITURA. Vinculo PAR A PAR entre duas fichas da MESMA conta (caso mae/filho: a consulta e do filho, o aviso vai no WhatsApp da mae). O vinculo NAO tem direcao nem papel — 'A vinculado a B' e o mesmo que 'B vinculado a A', e a listagem sempre devolve O OUTRO lado ja resolvido. Aparece SO na ficha do contato (decisao do dono 28/08: nada de vinculo em busca, lista ou conversa). Permissao: qualquer atendente com acesso a ficha. Novo em 28/08/2026. Cada item: {id, created_at, contact:{id, name, phone_number, email, thumbnail}} — o `contact` de dentro e SEMPRE o OUTRO contato do par, nunca o da URL. Mais novos primeiro.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contato dono da ficha"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_contacts_relationships_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/relationships",
+  "title": "Vincular Contato",
+  "description": "ACAO DE ESCRITA. Vinculo PAR A PAR entre duas fichas da MESMA conta (caso mae/filho: a consulta e do filho, o aviso vai no WhatsApp da mae). O vinculo NAO tem direcao nem papel — 'A vinculado a B' e o mesmo que 'B vinculado a A', e a listagem sempre devolve O OUTRO lado ja resolvido. Aparece SO na ficha do contato (decisao do dono 28/08: nada de vinculo em busca, lista ou conversa). Permissao: qualquer atendente com acesso a ficha. Novo em 28/08/2026. Vincular duas vezes o mesmo par = 422 'Estes contatos ja estao vinculados' (o indice unico do banco decide, entao clique duplo nao cria duplicata). linked_contact_id de OUTRA conta = 404 (o contato e resolvido sempre dentro da conta). Vincular o contato a ele mesmo = 422.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contato dono da ficha"
+   },
+   {
+    "name": "linked_contact_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do OUTRO contato a vincular (precisa ser da mesma conta)"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_contacts_relationships_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/relationships/{id}",
+  "title": "Desvincular Contato",
+  "description": "ACAO DE ESCRITA. Remove o vinculo. O `id` e o do VINCULO (vem de lionchat_contacts_relationships_list), NAO o id do contato — confundir os dois da 404. Vinculo de outro contato = 404.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contato dono da ficha"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do VINCULO (de _list), nao do contato"
+   }
+  ]
+ },
+ {
   "id": "lionchat_contacts_documents_create",
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents",
@@ -25771,7 +25969,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Lista de blocos. Cada item: {id, widget_type, chart_type, ...} com os mesmos campos do custom_dashboards_preview_widget. Maximo 12."
+    "description": "Lista de blocos. Cada item: {id, widget_type, chart_type, ...} com os mesmos campos do custom_dashboards_preview_widget. Maximo 12. DOIS campos de bloco que faltavam aqui: `follow_report_period` (true/false, tambem aceita as strings; AUSENTE = true) diz se o bloco obedece o calendario do TOPO do relatorio ou usa o periodo proprio — vale pra qualquer bloco, novo em 22/08/2026; e `direction_split` (true/false, padrao false) que SO faz efeito no bloco `calls_report` e troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida — OPT-IN de proposito pra nao mexer no relatorio de quem ja usa o bloco, novo em 28/08/2026."
    }
   ],
   "returns": "{ id, name, position, widgets, created_at }",
@@ -25820,7 +26018,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Lista COMPLETA de blocos — substitui a atual. Preserve o `id` de cada bloco que ja existia, senao a tela perde o vinculo. Maximo 12."
+    "description": "Lista COMPLETA de blocos — substitui a atual. Preserve o `id` de cada bloco que ja existia, senao a tela perde o vinculo. Maximo 12. DOIS campos de bloco que faltavam aqui: `follow_report_period` (true/false, tambem aceita as strings; AUSENTE = true) diz se o bloco obedece o calendario do TOPO do relatorio ou usa o periodo proprio — vale pra qualquer bloco, novo em 22/08/2026; e `direction_split` (true/false, padrao false) que SO faz efeito no bloco `calls_report` e troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida — OPT-IN de proposito pra nao mexer no relatorio de quem ja usa o bloco, novo em 28/08/2026."
    }
   ],
   "returns": "{ id, name, position, widgets, created_at }",

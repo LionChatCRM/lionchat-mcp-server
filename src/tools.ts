@@ -463,7 +463,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-08-21)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-08-31)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -636,6 +636,13 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
                                                // SSRF-safe e detecta o tipo) — tambem aceitos:
                                                // attachment|image|video|audio|file|document com
                                                // attachment_url (+ blob_signed_id quando veio de upload)
+    // LEGENDA NA MIDIA (2026-08-29): image, video, file, document, url_media e attachment aceitam
+    // "caption" — foto com texto vira UM bloco so (antes exigia bloco de midia + bloco de texto).
+    // A legenda resolve {{variavel}} como o item de texto. audio NAO tem legenda (nenhum canal
+    // mostra em nota de voz) — mandar caption ali e ignorado.
+    // POR CANAL: WhatsApp oficial e QR COLAM a legenda na midia; TELEGRAM manda o texto SEPARADO,
+    // ANTES da midia (2 envios). Instagram/Facebook/SMS/Line: nao medido.
+    // NAO existe item que junte midia e texto num campo so — a legenda e campo do item de midia.
     { id, type:"user_input", variable }        // legado: espera resposta dentro do proprio bloco
   ]}
   ATENCAO: messageItems (NAO items).
