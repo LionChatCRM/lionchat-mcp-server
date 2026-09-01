@@ -424,7 +424,7 @@ daquele tipo no calendário; vazio = cor do agente. A tarefa devolve `booking_co
 
 ## e-Clínicas (Efficient) — integração de clínicas
 
-16 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica
+17 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica
 (o mapeamento e os lembretes passaram a ser editáveis por MCP em 31/08/2026, com
 `lionchat_eclinica_integrations_update` — ele **SUBSTITUI** o objeto inteiro, então leia com
 `_show` e devolva completo, senão apaga o resto):
@@ -432,7 +432,8 @@ daquele tipo no calendário; vazio = cor do agente. A tarefa devolve `booking_co
 `agendamento_atendido`, `agendamento_alterado`, `agendamento_desmarcado`,
 `agendamento_transferido`, `cliente_baixa_pagamento`, `cliente_alteracao`,
 `cliente_inclusao_pagamento`, `controle_laboratorio_novo`, `controle_laboratorio_alterado`,
-`agendamento_aguardando`, `odontograma_aprovado`, `procedimento_finalizado`
+`agendamento_aguardando`, `odontograma_aprovado`, `procedimento_finalizado`,
+`cliente_alteracao_pagamento`
 (capturados ao vivo, não documentados pelo e-Clínica).
 
 Os 3 últimos são do perfil ODONTOLÓGICO: `agendamento_aguardando` = a recepção marcou a

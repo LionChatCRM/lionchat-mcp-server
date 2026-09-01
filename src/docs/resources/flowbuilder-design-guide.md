@@ -484,7 +484,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `add_card_checklist` | `{ template_id, funnel_id?, card_source? }` | Aplica um MODELO de checklist ao card (vira um grupo). `template_id` de `kanban_config.checklist_templates`. Um modelo por bloco (repita o bloco pra mais de um) |
 | `add_card_offer` | `{ offer_id, use_custom_value?, custom_value?, funnel_id?, card_source? }` | Adiciona uma OFERTA (produto/serviço) ao card. `offer_id` de `offers_list`. `use_custom_value: true` + `custom_value` grava um valor personalizado na oferta; senão usa o valor cadastrado. O total do card recalcula sozinho (soma das ofertas). Respeita `card_source` (funnel só localiza o card) |
 | `send_webhook` | `{ url, headers?, body? }` | Dispara webhook externo |
-| `start_flow` | `{ flow_id }` | Inicia outro fluxo |
+| `start_flow` | `{ flow_id }` | Inicia outro fluxo. **NÃO encerra o fluxo de origem** (desde 31/08): se houver bloco ligado depois dele, o fluxo SEGUE normalmente. Sendo o último do desenho, o fluxo termina ali como sempre. |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
 | `update_attribute` | `{ attr_source: 'contact'\|'conversation'\|'card', attr_key, attr_value }` | Seta custom_attribute (ver abaixo) |
 | `assign_captain` (ou `assign_captain_assistant`) | `{ assistant_id }` | Atribui IA Captain |
@@ -1065,6 +1065,7 @@ texto trocava o protocolo pelo id interno do banco.
 - `conversation_resolved` — `{ "type": "conversation_resolved" }`
 - `agent_assigned` / `team_assigned` — `{ "type": "agent_assigned", "value": "<id opcional>" }` (vazio = qualquer)
 - `kanban_won` / `kanban_lost` — `{ "type": "kanban_won", "value": "<funnel_id opcional>" }`
+- `agent_replied` — `{ "type": "agent_replied" }` (sem `value`; vale pra QUALQUER atendente). Sai no instante em que um humano assume: mensagem do painel, do celular da empresa (eco do app nativo) ou agendada por um atendente. NÃO conta nota interna, mensagem do próprio flow, da IA, de follow-up, de automação nem de campanha. É estritamente por EVENTO — conversa que já tinha mensagem de atendente ANTES do flow começar não derruba o flow.
 
 **Rico por atributo** (novo 2026-07-08; REATIVO desde 2026-07-09) — sai assim que o atributo VIRA pro valor que bate:
 ```json
