@@ -395,6 +395,38 @@ só pra destravar, ela pode sair.
 
 `greater_than`/`less_than` valem em atributo número (valor numérico) E temporais `date`/`time`/`datetime` (o backend detecta o formato do valor: instante > dia > minutos > número). `number_range` SÓ em número. Nunca use maior/menor em texto/lista.
 
+**Condição por ORIGEM / CAMPANHA — preset "Atributo de campanha" (novo 2026-09-01):** o filtro
+"só lead que veio de anúncio" (ou de uma campanha/UTM/origem específica) é uma regra de atributo da
+CONVERSA no formato `attr_config`. Forma canônica (é o que a tela grava; reabre no card "Atributo de
+campanha"):
+
+```json
+{ "id": "c1", "valueType": "attr_config", "attrSource": "conversation", "attrScope": "campaign",
+  "attr_key": "origin_kind", "operator": "equal", "value": "paid_ad" }
+```
+
+- `attrSource: "conversation"` + `attr_key` é o que o MOTOR lê (`conversation.custom_attributes[attr_key]`);
+  `valueType: "attr_config"` e `attrScope: "campaign"` são marcadores de TELA (sem `attrScope` a regra reabre
+  no card genérico "Atributo da conversa" — funciona igual).
+- Chaves da família de campanha (todas em `conversation.custom_attributes`): `origin_kind`, `origin_platform`,
+  `origin_first_kind`/`origin_first_platform`, `origin_last_kind`/`origin_last_platform`, `origin_*` em geral
+  (origem unificada), `ctwa_*` (anúncio click-to-WhatsApp: `ctwa_ad_id`, `ctwa_ad_title`, `ctwa_campaign_name`,
+  `ctwa_adset_name`...), `meta_lead_*` (formulário Meta Lead Ads), `lt_*` (LionTrack: UTMs, página, dispositivo).
+  Veja a lista real com `lionchat_custom_attributes_list` (`attribute_model: conversation`, `include_system: true` — as chaves de campanha são atributos de sistema).
+- **Valores fechados** de `origin_kind` (e `origin_first_kind`/`origin_last_kind`): `paid_ad` (Anúncio),
+  `lead_form` (Formulário), `organic` (Orgânico), `direct` (Direto), `referral` (Indicação), `manual` (Origem
+  cadastrada). O painel mostra o rótulo em português, mas a comparação é pelo VALOR — `"Anúncio"` nunca casa.
+- `origin_platform` (e first/last): `facebook`, `instagram`, `google`, `tiktok`, `linkedin`, `youtube`,
+  `whatsapp`, `direct` — e, para origem cadastrada pelo cliente em Configurações > Origens de Lead,
+  `custom:<slug>` (slug = nome parametrizado, ex.: "Indicação de amigo" → `custom:indicacao-de-amigo`;
+  liste com `lionchat_lead_origins_list`). Para filtrar por uma origem cadastrada use `origin_platform`
+  com `contains` + uma palavra do slug, ou `equal` + o `custom:<slug>` completo.
+- Alternativa equivalente pro motor, em texto livre: `{ "field": "{{conversation.custom_attribute.origin_kind}}",
+  "operator": "equal", "value": "paid_ad", "valueType": "variable" }` — reabre no card "Variável", não no de
+  campanha. Prefira o formato `attr_config` acima quando o cliente vai editar pela tela.
+- Caso real (Cast, 01/09): flow "Ativar IA" só para lead de anúncio = condição `origin_kind equal paid_ad`
+  na saída `cond_0` + ação `assign_captain` nessa saída; `default` sem nada.
+
 **Agente de IA — `conversation_has_ai_agent` e irmãos (novo 2026-08-01):** o flow sempre soube LIGAR e
 DESLIGAR a IA (ações `assign_captain` / `deactivate_captain`), mas não sabia PERGUNTAR se ela estava
 ligada. Agora sabe. É o espelho exato do trio do agente humano:
@@ -485,6 +517,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `add_card_offer` | `{ offer_id, use_custom_value?, custom_value?, funnel_id?, card_source? }` | Adiciona uma OFERTA (produto/serviço) ao card. `offer_id` de `offers_list`. `use_custom_value: true` + `custom_value` grava um valor personalizado na oferta; senão usa o valor cadastrado. O total do card recalcula sozinho (soma das ofertas). Respeita `card_source` (funnel só localiza o card) |
 | `send_webhook` | `{ url, headers?, body? }` | Dispara webhook externo |
 | `start_flow` | `{ flow_id }` | Inicia outro fluxo. **NÃO encerra o fluxo de origem** (desde 31/08): se houver bloco ligado depois dele, o fluxo SEGUE normalmente. Sendo o último do desenho, o fluxo termina ali como sempre. |
+| `send_conversion` (novo 2026-09-01) | `{ destinations: ['meta'\|'ga4'\|'google_ads'], event_name, value? }` | Manda o evento de conversão pro Meta (CAPI), Google Ads e/ou GA4 — o mesmo caminho do Funil, de dentro do fluxo. Aba Sistema (só flow `conversation`). Ver bloco próprio abaixo |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
 | `update_attribute` | `{ attr_source: 'contact'\|'conversation'\|'card', attr_key, attr_value }` | Seta custom_attribute (ver abaixo) |
 | `assign_captain` (ou `assign_captain_assistant`) | `{ assistant_id }` | Atribui IA Captain |
@@ -493,6 +526,35 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 **Handles que SAEM:** `success`. Não tem handle `error` — falhas viram warning silencioso e o flow continua.
 
 **`card_source` (blocos de card) — opcional:** as ações de card aceitam `card_source`: `'funnel'` (default — procura o card pelo `funnel_id`) ou `'trigger'` (usa o card que DISPAROU o flow, em flows iniciados por `card_created`/`card_moved`/`card_won`/`card_lost`). Com `'trigger'`, `funnel_id` deixa de ser obrigatório — EXCETO em `move_kanban_stage`/`create_kanban_item`, cujo funil/etapa são o DESTINO. Sem card-gatilho disponível, a ação é pulada (não cai no fallback de funil). Aplica-se a `move_kanban_stage`, `set_won`/`set_lost`/`set_open`, `assign_agent_card`, `add_card_note`, `add_card_checklist`, `add_card_offer`, `update_attribute` (com `attr_source: 'card'`) e às condições `card_attr_equals`/`card_attr_contains` (gravando `card_source` na própria regra).
+
+**`send_conversion` — Enviar conversão (2026-09-01):**
+
+```json
+{ "key": "send_conversion", "config": { "destinations": ["meta", "google_ads"], "event_name": "Lead", "value": "1500,50" } }
+```
+
+- `destinations`: array com `meta`, `ga4` e/ou `google_ads` — **OBRIGATÓRIO e não vazio** (vazio = a ação
+  sai calada e o passo fica sem registro). Só marque destino que a conta já conectou em Configurações >
+  Integrações (Meta Pixel/CAPI, Google Ads, GA4): destino sem integração é PULADO em silêncio pelo serviço
+  (o histórico do fluxo mostra "GA4: pulado (integração não configurada, evento não mapeado ou pausado)").
+  Confira antes com `lionchat_meta_pixel_integrations_list`, `lionchat_google_ads_integrations_list`,
+  `lionchat_ga4_integrations_list`.
+- `event_name`: **OBRIGATÓRIO**, só letras/números/sublinhado (até 40; ex.: `Lead`, `Schedule`,
+  `Purchase`); aceita variável `{{ }}`. No **Google Ads** o nome precisa estar mapeado no
+  `conversion_action_map` da integração, senão é pulado.
+- `value` (opcional): número (vírgula BR aceita, `1500,50`) ou variável. **Vazio = valor do CARD** (ver
+  abaixo); sem card, o evento sai sem valor (nunca zero).
+- **Card do evento:** o card que INICIOU o fluxo (gatilho `card_created`/`card_moved`/...) ou, sem ele, o
+  card mais recente da conversa (mesma busca das ações de card). Com card, o evento aparece na aba
+  Atividades do card e na tela de eventos do Funil (`funnels_meta_capi_events_list` e irmãs); **sem card o
+  registro só existe no histórico do fluxo** (as telas de eventos são por funil).
+- **Identidade/dedup:** uma conversão por (sessão do fluxo, bloco) — `event_id` `lc_flow_<sessão>_<bloco>_evt_<evento>`.
+  O mesmo lead passando duas vezes pelo mesmo bloco NÃO gera duas conversões; dois leads diferentes sim.
+- **Histórico:** o passo mostra uma linha por destino — `Meta: enfileirado (registro #161)` / `GA4: pulado (...)`
+  / `Meta: erro (...)`. O registro (`MetaCapiEvent`/`Ga4Event`/`GoogleAdsConversion`) guarda a resposta HTTP
+  e o motivo de falha; `trigger_type` = `flow`.
+- Falha de um destino nunca derruba o fluxo (rescue por destino). Dry-run (Testar) não dispara.
+- Cuidado com laço + `start_flow`: outra sessão = outra identidade = outra conversão.
 
 **`update_attribute` — campos EXATOS:** `attr_source` (`'contact'`, `'conversation'` ou `'card'`), `attr_key` (nome do atributo), `attr_value` (valor). NÃO existem `entity`/`key`/`value` — esses são ignorados e não salvam nada.
 
@@ -921,7 +983,7 @@ O campo `flow_type` (definido na criação, IMUTÁVEL depois) decide a natureza 
 Se o cliente pediu "uma ferramenta que a IA usa pra consultar X / calcular Y", é `ai_tool`. Se pediu "quando chega mensagem, faça Z", é `conversation`. Na dúvida, `conversation`.
 
 **No flow `ai_tool`, o node `action` NÃO aceita as keys da aba "Sistema"** (`send_webhook` /
-`start_flow`) — elas só valem em flow `conversation`. No `action` de um `ai_tool` use apenas keys
+`start_flow` / `send_conversion`) — elas só valem em flow `conversation`. No `action` de um `ai_tool` use apenas keys
 das abas Conversas / Contatos / Kanban (ex: `add_label`, `change_status`, `update_attribute`,
 `create_kanban_item`). Para gravar atributo no `ai_tool`, use `action` com `update_attribute`
 (o antigo node `save_attribute` foi removido — não existe mais em nenhum tipo de flow).

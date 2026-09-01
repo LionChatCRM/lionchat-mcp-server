@@ -378,6 +378,21 @@ Sem o tipo, o filtro pode bater no escopo errado. A UI mostra sufixo "(Conversa)
   pendência de permissão).
 - Meta CAPI: o evento `InitiateCheckout` foi RENOMEADO para `begin_checkout`.
 
+### Conversão de dentro do FLUXO — ação `send_conversion` (2026-09-01)
+
+O bloco de Ações (aba Sistema) manda o evento de conversão pro Meta, Google Ads e/ou GA4 pelos MESMOS
+serviços do Funil. Regras que valem a pena lembrar ao montar pelo MCP: destino só funciona com a
+integração conectada na conta (senão é pulado em silêncio — confira as listas de integração antes);
+`event_name` no Google Ads precisa estar no `conversion_action_map`; `value` vazio = valor do card
+(o que iniciou o fluxo ou o mais recente da conversa); sem card, o registro NÃO aparece nas telas de
+eventos do Funil (só no histórico do fluxo). Formato completo no `flowbuilder-design-guide`.
+
+### Meta Lead — token de anúncios de OUTRO app (2026-09-01)
+
+`lionchat_meta_lead_validate_token` pode voltar `app_verified: false` com `expires_at` nulo: é token
+válido de um app que não é o nosso (usuário de sistema da BM do cliente) — `debug_token` não alcança.
+Não trate como inválido nem afirme validade: o que prova o token é `ads_check.ok` e as `permissions`.
+
 ### Meta CAPI — moeda do valor (2026-06)
 
 O disparo da conversão aceita `currency` (código ISO, ex: `BRL`, `USD`); default `BRL`. Dá pra

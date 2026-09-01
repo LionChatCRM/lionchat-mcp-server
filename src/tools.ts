@@ -21,6 +21,7 @@ import {
   CONFIRM_DESCRIPTION,
   supportsFullResponse,
 } from './sanitize.js';
+import { blocksGuardRefusal } from './blocksGuard.js';
 
 // AIDEV-NOTE: Shape of each endpoint entry in endpoints.json
 interface EndpointParam {
@@ -367,6 +368,26 @@ function registerSingleTool(
         const queryStr = buildQueryString(queryParams);
         const fullPath = queryStr ? `${path}${queryStr}` : path;
 
+        // AIDEV-NOTE: [resposta-pronta-blocos 01/09/2026] recusa a gravacao que o Rails
+        // descartaria em silencio (so `content` numa resposta feita de blocos). Ver blocksGuard.ts.
+        // Fail-open: se a lista nao puder ser lida, segue como antes.
+        const blocksRefusal = await blocksGuardRefusal(
+          endpoint.id,
+          bodyParams,
+          pathParams['id'],
+          () =>
+            client.request({
+              method: 'GET',
+              path: `/api/v1/accounts/${effectiveAccountId}/canned_responses`,
+            })
+        );
+        if (blocksRefusal) {
+          return {
+            content: [{ type: 'text' as const, text: blocksRefusal }],
+            isError: true,
+          };
+        }
+
         const result = await client.request({
           method: endpoint.method,
           path: fullPath,
@@ -463,7 +484,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-08-31)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-01)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -478,7 +499,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   com tool_name (snake_case, max 50) + tool_description (max 500). SEM inbox_ids. No 'end' OBRIGATORIO.
   Nodes permitidos em ai_tool: start, end, api, condition, set_variable, ai, randomizer, action,
   send_message, note (SEM wait, wait_response, update_group). No action de ai_tool NAO use keys da
-  aba Sistema (send_webhook/start_flow). Vincular ao assistente: POST /flow_tools/{id}/assistants.
+  aba Sistema (send_webhook/start_flow/send_conversion). Vincular ao assistente: POST /flow_tools/{id}/assistants.
   Testar: POST /flow_tools/{id}/run.
 
 ═══ NODE GERAL ═══
@@ -720,6 +741,22 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
        salvar o flow pela tela nesse estado, a regra e PERDIDA. (Excecoes que nao usam field/valueType
        "variable": regras por attr_key/attrSource="attr_config", business_hours, can_reply, sla_check,
        kanban_*, conversation_has_agent/no_agent, pagetrack_*.)
+  ORIGEM / CAMPANHA (NOVO 01/09 — preset "Atributo de campanha" da tela): regra de atributo da CONVERSA:
+    { id, valueType:'attr_config', attrSource:'conversation', attrScope:'campaign', attr_key:'origin_kind',
+      operator:'equal', value:'paid_ad' }
+    O motor le attrSource+attr_key (conversation.custom_attributes[attr_key]); valueType e attrScope sao
+    marcadores de TELA (sem attrScope reabre no card generico "Atributo da conversa" — roda igual).
+    Chaves de campanha: origin_kind, origin_platform, origin_first_kind/_platform, origin_last_kind/_platform,
+    ctwa_* (anuncio click-to-WhatsApp: ctwa_ad_id, ctwa_ad_title, ctwa_campaign_name, ctwa_adset_name...),
+    meta_lead_* (formulario Meta Lead Ads), lt_* (LionTrack: UTMs, pagina, dispositivo). Lista real:
+    lionchat_custom_attributes_list {attribute_model:'conversation', include_system:true}.
+    VALORES FECHADOS de origin_kind (e first/last): paid_ad (Anuncio), lead_form (Formulario), organic
+    (Organico), direct (Direto), referral (Indicacao), manual (Origem cadastrada) — compara pelo VALOR, nunca
+    pelo rotulo ("Anuncio" nunca casa). origin_platform: facebook, instagram, google, tiktok, linkedin, youtube,
+    whatsapp, direct, e origem cadastrada pelo cliente = 'custom:<slug>' (ex 'custom:indicacao-de-amigo';
+    lionchat_lead_origins_list) — filtre com contains + palavra do slug ou equal + 'custom:<slug>'.
+    Caso real (Cast 01/09): "Ativar IA so para lead de anuncio" = cond_0 {origin_kind equal paid_ad} ->
+    assign_captain; default sem nada.
   Agrupar E/OU: cada saida pode trocar a regra plana por rules[]+logic:
     { id, label, logic: "and"|"or", rules: [ {field,operator,value,valueType}, ... ] }
     logic ausente = "and"; ate 10 regras por saida; sem rules = grupo de 1 (retrocompat).
@@ -816,7 +853,21 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         grava valor personalizado, senao usa o valor cadastrado; total do card recalcula sozinho
     Sistema (SO flow conversation): send_webhook({url,headers?,body?}), start_flow({flow_id}
       — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save mas IGNORADO
-      EM SILENCIO na execucao, e o fluxo para ali [2026-08-18]), deactivate_flow({})
+      EM SILENCIO na execucao, e o fluxo para ali [2026-08-18]), deactivate_flow({}),
+      send_conversion({destinations:['meta'|'ga4'|'google_ads'], event_name, value?}) — NOVO 01/09: manda o
+        evento de conversao pro Meta (CAPI), Google Ads e/ou GA4 pelos MESMOS servicos do Funil.
+        destinations OBRIGATORIO e nao vazio; so destino com integracao conectada na conta (senao o servico
+        PULA em silencio — confira meta_pixel_integrations_list / google_ads_integrations_list /
+        ga4_integrations_list antes). event_name OBRIGATORIO: letras/numeros/sublinhado ate 40 (Lead,
+        Schedule, Purchase), aceita variavel; no Google Ads precisa estar no conversion_action_map.
+        value opcional (virgula BR ok, variavel ok); VAZIO = valor do CARD; sem card = sem valor.
+        CARD do evento: o que iniciou o fluxo (gatilho de card) ou, sem ele, o card mais recente da conversa
+        (mesma busca das acoes de card). Com card aparece na aba Atividades do card e nas telas de eventos do
+        Funil (funnels_meta_capi_events_list e irmas); SEM card so existe no historico do fluxo.
+        DEDUP: 1 conversao por (sessao do fluxo, bloco) — event_id lc_flow_<sessao>_<bloco>_evt_<evento>;
+        o mesmo lead passando 2x pelo mesmo bloco NAO duplica, leads diferentes sim. Historico do passo mostra
+        uma linha por destino: "Meta: enfileirado (registro #N)" / "GA4: pulado (...)" / "Meta: erro (...)".
+        Falha de um destino nunca derruba o fluxo. Dry-run nao dispara.
   card_source (acoes de card): 'funnel' (default, acha o card pelo funnel_id) | 'trigger' (usa o card
     que DISPAROU o flow em card_created/card_moved/card_won/card_lost). Com 'trigger' o funnel_id e
     ignorado — EXCETO create_kanban_item/move_kanban_stage (funil = DESTINO). Vale pra move_kanban_stage,

@@ -433,7 +433,7 @@ daquele tipo no calendário; vazio = cor do agente. A tarefa devolve `booking_co
 `agendamento_transferido`, `cliente_baixa_pagamento`, `cliente_alteracao`,
 `cliente_inclusao_pagamento`, `controle_laboratorio_novo`, `controle_laboratorio_alterado`,
 `agendamento_aguardando`, `odontograma_aprovado`, `procedimento_finalizado`,
-`cliente_alteracao_pagamento`
+`cliente_alteracao_pagamento`, `odontograma_finalizado`, `inclusao_procedimento`
 (capturados ao vivo, não documentados pelo e-Clínica).
 
 Os 3 últimos são do perfil ODONTOLÓGICO: `agendamento_aguardando` = a recepção marcou a
@@ -441,6 +441,15 @@ chegada do paciente na clínica (grava a hora da chegada e `eclinica_status_agen
 `odontograma_aprovado` = plano de tratamento aprovado (grava o cabeçalho do odontograma);
 `procedimento_finalizado` (2026-08-31) = UM procedimento do plano foi concluído (implante, lente,
 cirurgia, instalação/remoção de aparelho).
+
+Dois tipos novos em 2026-09-01 (perfil odontológico, capturados ao vivo — antes caíam em "desconhecido"):
+`odontograma_finalizado` = **o plano de tratamento INTEIRO foi concluído** (não confundir com
+`procedimento_finalizado`, que é UM item do plano; payload igual ao do `odontograma_aprovado`, momento
+diferente — grava `eclinica_odontograma_finalizado_em` e NÃO mexe em `eclinica_odontograma_aprovado_em`);
+`inclusao_procedimento` = **um procedimento foi ACRESCENTADO ao plano, ainda não executado** (serve para
+aviso de orçamento; NÃO é gatilho de orientação pós-procedimento — grava em campos próprios
+`eclinica_procedimento_incluido_*`, nunca nos do finalizado, que são os que roteiam os flows de
+pós-procedimento).
 
 **`procedimento_finalizado` dispara UMA VEZ POR PROCEDIMENTO.** Medido na Goya em 31/08: 24 avisos
 com 23 procedimentos distintos, 4 deles em 15 segundos no mesmo paciente. A plataforma **não roda o
@@ -487,6 +496,10 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_procedimento_valor` | text | Valor do procedimento concluído (`opr_valor`) |
 | `eclinica_procedimento_finalizado_em` | date | Dia em que o procedimento foi concluído (`opr_datafinalizado`) |
 | `eclinica_procedimento_profissional` | text | NOME do profissional que executou — pode DIVERGIR do profissional do odontograma (o plano é de um dentista, a cirurgia pode ser de outro) |
+| `eclinica_odontograma_finalizado_em` | date | Dia em que o plano de tratamento INTEIRO foi concluído (evento `odontograma_finalizado`, 2026-09-01). Não confundir com a data do último procedimento |
+| `eclinica_procedimento_incluido_id` | text | Número do último procedimento ACRESCENTADO ao plano (evento `inclusao_procedimento`, 2026-09-01) — planejado, ainda não executado |
+| `eclinica_procedimento_incluido_dente` | text | Dente/região do procedimento acrescentado (`opr_dente`; `GE` = geral) |
+| `eclinica_procedimento_incluido_valor` | text | Valor do procedimento acrescentado (`opr_valor`) |
 | `eclinica_marcador_nome` | text | Marca que a clínica digita no fim do nome do paciente no e-Clínica (ex: `*`, `***`) — retirada do nome e guardada aqui (2026-08-20). Significado é da clínica |
 | `eclinica_laboratorio_data_prevista` | date | Previsão de entrega da medicação (novo 2026-07-23) |
 | `eclinica_laboratorio_data_moldagem` | date | Data do pedido da medicação |

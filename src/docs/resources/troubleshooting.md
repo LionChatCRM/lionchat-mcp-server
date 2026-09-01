@@ -165,7 +165,11 @@ Feature flag específica (ex: `feature_kanban`, `feature_captain`) está OFF.
 
 ### Contact
 - `"email has already been taken"` — duplicado na conta
-- `"phone_number has already been taken"` — mesmo problema
+- `"phone_number has already been taken"` — mesmo problema. **Desde 2026-09-01 é trava do BANCO** (índice
+  único telefone+conta, como e-mail e identifier têm desde 2023): dois `contacts_create` com o mesmo
+  telefone em paralelo já não criam gêmeos — o segundo volta 422. Antes de criar, procure com
+  `lionchat_contacts_search` (acha com e sem o 9º dígito desde 29/08); para atualizar, use `contacts_update`
+  no que já existe. Duplicado só aparece se as fichas nasceram ANTES da trava
 - `"phone_number must be a valid number with country code"` — formato E.164: `+5511999999999`
 
 ### Message
@@ -633,6 +637,27 @@ se o token é válido, de qual app e se alcança anúncio de verdade. Gravar/tro
 ficaram sem nome. E desde 25/08 o CONECTAR exige escolha: `meta_lead_create` com `page_ids` (sem
 ele TODAS as páginas do login entram — caso real de 25 páginas numa conta); pra limpar excesso
 antigo, `lionchat_meta_lead_bulk_destroy`.
+
+### "Testei o token de anúncios e voltou '(#100) App_id did not match' / a tela dizia Pendente com o token salvo" — 01/09
+
+Corrigido em 01/09. O token de anúncios que o cliente cola pode ser de OUTRO app da Meta (usuário de
+sistema da própria BM) — o `debug_token` só responde para tokens do nosso app, e o teste concluía
+"inválido" para um token válido (caso real: conta 53, 51 contas de anúncio alcançáveis). Agora
+`lionchat_meta_lead_validate_token` cai num caminho sem `debug_token`: responde `valid: true` com
+`app_verified: false` e `app_id`/`app_name`/`expires_at` **nulos** (não há como saber sem o debug_token —
+NÃO afirme "nunca expira"), `permissions` (do `me/permissions`, só as concedidas) e `ads_check`
+(`{ok, ad_accounts_count}` = alcança anúncio de verdade). Token do NOSSO app segue com `app_verified: true`
+e validade. Segundo ajuste: o resumo de conta (`ads_capable`/`has_manual_ads_token` em `meta_lead_list` e na
+resposta de `ads_token`) considerava só integrações LIGADAS — conta com todas as páginas desligadas parecia
+"sem token". Agora prefere as ligadas e, sem nenhuma, olha todas. Páginas com `token_expired` continuam
+precisando de reconexão por um admin da página — o token de anúncios não resolve isso.
+
+### "Menção em grupo mostra um código no lugar do nome" — 01/09
+
+`@201103320871050` no lugar de `@Marcelo`: o WhatsApp identifica cada APARELHO com `:NN` no fim do
+telefone e o aprendizado do grupo colava o número do aparelho no telefone (`551599749220048`), que não
+existe. Corrigido em 01/09 (aguarda deploy): a próxima mensagem de cada participante conserta o par
+sozinha; para reescrever menções antigas há o rake `waha:backfill_mentions` — só DEPOIS do deploy.
 
 ## "Atualizei a chave da caixa oficial pelo update e ela parou de receber" — 26/08
 
