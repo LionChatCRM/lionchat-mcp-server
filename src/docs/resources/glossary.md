@@ -150,8 +150,8 @@ DESCARTADAS na entrada (não criam conversa nem notificam). Bloquear NÃO resolv
 - `Channel::Whatsapp` — WhatsApp Cloud API (oficial)
 - `Channel::WebWidget` — chat ao vivo no site
 - `Channel::Email` — email
-- `Channel::FacebookPage` — Messenger
-- `Channel::Instagram` — Instagram DM
+- `Channel::FacebookPage` — Messenger; com `medium: "instagram"` é uma caixa **só de Instagram** conectada pela Página do Facebook (trate como Instagram)
+- `Channel::Instagram` — Instagram DM (login pelo Instagram)
 - `Channel::Telegram` — Telegram
 - `Channel::Api` — webhook custom
 - `Channel::Voice` — VoIP / chamadas

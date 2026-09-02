@@ -484,7 +484,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-01)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-02)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -743,7 +743,20 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
        kanban_*, conversation_has_agent/no_agent, pagetrack_*.)
   ORIGEM / CAMPANHA (NOVO 01/09 — preset "Atributo de campanha" da tela): regra de atributo da CONVERSA:
     { id, valueType:'attr_config', attrSource:'conversation', attrScope:'campaign', attr_key:'origin_kind',
-      operator:'equal', value:'paid_ad' }
+      operator:'equal', value:'', values:['paid_ad'] }
+    ONDE O VALOR VAI (defeito real 02/09, conta 137): com operator equal/not_equal/contains/not_contains o valor
+    vai em values:[...] (LISTA) e value fica ''. A TELA le SO a lista — regra gravada com value:'paid_ad' e sem
+    values roda certa no motor mas abre com a caixa de valor VAZIA e o cliente acha que nao foi configurada.
+    So greater_than/less_than/starts_with/ends_with usam value (campo unico); number_range usa value:'min-max';
+    is_empty/is_not_empty nao tem valor. Grave o shape completo da regra: { id, field:'{{last_response}}',
+    operator, value:'', values:[...], valueType:'attr_config', attrSource:'conversation', attrScope, attr_key,
+    funnel_id:'', stage:'' } dentro de rules[], e repita value/values/valueType no nivel da saida (branch).
+  ORIGEM DO LEAD (NOVO 02/09 — preset "Origem do lead", aba Conversas da tela): mesmo shape, com
+    attrScope:'lead_origin' e attr_key:'origin_platform' — na tela o valor e um SELETOR com as origens de
+    Configuracoes > Origens de Lead (facebook, instagram, google, tiktok, linkedin, email, messenger, direct e
+    as cadastradas como 'custom:<slug>'). Ex: { ..., attrScope:'lead_origin', attr_key:'origin_platform',
+    operator:'equal', value:'', values:['custom:indicacao','google'] }. attrScope e marcador de tela: sem ele
+    reabre como "Atributo de campanha"; o motor ignora.
     O motor le attrSource+attr_key (conversation.custom_attributes[attr_key]); valueType e attrScope sao
     marcadores de TELA (sem attrScope reabre no card generico "Atributo da conversa" — roda igual).
     Chaves de campanha: origin_kind, origin_platform, origin_first_kind/_platform, origin_last_kind/_platform,
@@ -755,10 +768,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     pelo rotulo ("Anuncio" nunca casa). origin_platform: facebook, instagram, google, tiktok, linkedin, youtube,
     whatsapp, direct, e origem cadastrada pelo cliente = 'custom:<slug>' (ex 'custom:indicacao-de-amigo';
     lionchat_lead_origins_list) — filtre com contains + palavra do slug ou equal + 'custom:<slug>'.
-    Caso real (Cast 01/09): "Ativar IA so para lead de anuncio" = cond_0 {origin_kind equal paid_ad} ->
-    assign_captain; default sem nada.
+    Caso real (Cast 01/09): "Ativar IA so para lead de anuncio" = cond_0 {origin_kind equal values:['paid_ad']}
+    -> assign_captain; default sem nada.
   Agrupar E/OU: cada saida pode trocar a regra plana por rules[]+logic:
-    { id, label, logic: "and"|"or", rules: [ {field,operator,value,valueType}, ... ] }
+    { id, label, logic: "and"|"or", rules: [ {field,operator,value,values,valueType}, ... ] }
     logic ausente = "and"; ate 10 regras por saida; sem rules = grupo de 1 (retrocompat).
     label = nome OPCIONAL da saida (cosmetico, aparece no canvas; NAO muda roteamento).
     As regras de um grupo podem ser de tipos diferentes (atributo + status + etiqueta + SLA...).
@@ -854,19 +867,27 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Sistema (SO flow conversation): send_webhook({url,headers?,body?}), start_flow({flow_id}
       — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save mas IGNORADO
       EM SILENCIO na execucao, e o fluxo para ali [2026-08-18]), deactivate_flow({}),
-      send_conversion({destinations:['meta'|'ga4'|'google_ads'], event_name, value?}) — NOVO 01/09: manda o
-        evento de conversao pro Meta (CAPI), Google Ads e/ou GA4 pelos MESMOS servicos do Funil.
+      send_conversion({destinations:['meta'|'ga4'|'google_ads'], event_names:{meta?,google_ads?,ga4?},
+        event_name, value?}) — NOVO 01/09, evento POR DESTINO desde 02/09: manda o evento de conversao pro
+        Meta (CAPI), Google Ads e/ou GA4 pelos MESMOS servicos do Funil.
         destinations OBRIGATORIO e nao vazio; so destino com integracao conectada na conta (senao o servico
         PULA em silencio — confira meta_pixel_integrations_list / google_ads_integrations_list /
-        ga4_integrations_list antes). event_name OBRIGATORIO: letras/numeros/sublinhado ate 40 (Lead,
-        Schedule, Purchase), aceita variavel; no Google Ads precisa estar no conversion_action_map.
+        ga4_integrations_list antes).
+        event_names (02/09): UM evento por destino marcado — { meta:'Lead', google_ads:'Contact',
+        ga4:'generate_lead' }. Letras/numeros/sublinhado ate 40, aceita variavel. Chave presente e em branco =
+        aquele destino e PULADO ("sem nome de evento"); chave AUSENTE cai em event_name (reserva, fluxo salvo
+        antes de 02/09). Grave SEMPRE event_names E event_name (= o primeiro nome). Meta aceita padrao (Lead,
+        Contact, CompleteRegistration, Schedule, InitiateCheckout, Subscribe, Purchase) e os personalizados da
+        conta (account.custom_attributes.meta_capi_custom_events); Google Ads SO nome que esteja no
+        conversion_action_map da integracao (outro nome e pulado); GA4 qualquer nome.
         value opcional (virgula BR ok, variavel ok); VAZIO = valor do CARD; sem card = sem valor.
         CARD do evento: o que iniciou o fluxo (gatilho de card) ou, sem ele, o card mais recente da conversa
         (mesma busca das acoes de card). Com card aparece na aba Atividades do card e nas telas de eventos do
         Funil (funnels_meta_capi_events_list e irmas); SEM card so existe no historico do fluxo.
         DEDUP: 1 conversao por (sessao do fluxo, bloco) — event_id lc_flow_<sessao>_<bloco>_evt_<evento>;
         o mesmo lead passando 2x pelo mesmo bloco NAO duplica, leads diferentes sim. Historico do passo mostra
-        uma linha por destino: "Meta: enfileirado (registro #N)" / "GA4: pulado (...)" / "Meta: erro (...)".
+        uma linha por destino: "Meta: enfileirado (registro #N) [Lead]" / "GA4: pulado (sem nome de evento)
+        [x]" / "Meta: erro (...)" — o [evento] no fim diz qual nome foi pra cada destino.
         Falha de um destino nunca derruba o fluxo. Dry-run nao dispara.
   card_source (acoes de card): 'funnel' (default, acha o card pelo funnel_id) | 'trigger' (usa o card
     que DISPAROU o flow em card_created/card_moved/card_won/card_lost). Com 'trigger' o funnel_id e

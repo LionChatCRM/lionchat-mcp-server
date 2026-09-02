@@ -280,8 +280,13 @@ Padrões que causam:
 Causa clássica: cache de LID inválido no contato. Desde 2026-06-10 há **self-healing**: o LID
 é validado (formato `digitos@lid`), o cache invalida sozinho se o número conectado ou o canal
 mudarem, e o envio re-resolve o LID na primeira falha. Se ainda assim falhar: confira
-`additional_attributes.waha_whatsapp_lid` do contato e o status da sessão
-(`GET /inboxes/{id}/waha/status`).
+`custom_attributes.waha_whatsapp_lid` do contato (é em `custom_attributes`, não em
+`additional_attributes`) e o status da sessão (`GET /inboxes/{id}/waha/status`).
+
+Desde 2026-09-02 há uma rede a mais: quando o WhatsApp recusa o endereço gravado na conversa
+(erro `no LID found`), o envio tenta o endereço por onde as mensagens **daquela conversa**
+chegaram e guarda a correção. Interruptor `WAHA_SEND_PROVEN_ADDRESS` (Super Admin > App Config >
+WAHA). Não cobre campanha de WhatsApp QR nem convivência, que montam o endereço por conta própria.
 
 ### "Cliente mandou um contato (vCard) e não apareceu nada"
 Corrigido em 2026-06-09: vCard agora vira anexo `file_type: "contact"` na mensagem (nome +
