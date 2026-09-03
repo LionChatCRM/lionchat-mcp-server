@@ -533,3 +533,54 @@ Termos do formulário (18/08):
 Detalhes completos (construtor, página pública, blocos, gatilhos de flow, tetos e limites) no
 resource `lionchat://docs/formularios-publicos`.
 
+## Histórico importado virou A conversa (02/09/2026)
+
+Antes, a conversa trazida do celular (importação) e a conversa viva do mesmo contato eram DUAS. A
+atendente escrevia da conversa de arquivo, o cliente respondia e a resposta abria uma terceira. Agora:
+
+- **Um contato, uma conversa por caixa.** A mensagem que chega ADOTA a conversa que já existe —
+  importada ou não — e a reabre. Os importadores escrevem na conversa do contato.
+- **A conversa é lida por DATA, não por número** (paginação e as leituras da IA mudaram juntas).
+- **`live_since`** marca quando a conversa passou a ter atendimento de verdade. Relatório de
+  resolução e SLA contam desse marco, nunca da data importada.
+- **Janela de 24h, reativação e seletor de modelo olham a última fala VIVA do cliente.** Conversa só
+  de arquivo, sem resposta, segue com a janela FECHADA — mandar texto livre nela falha.
+- **Adoção NÃO dispara "conversa criada".** Fluxo/automação/IA presos nesse gatilho não rodam na
+  adoção; o gatilho equivalente é **"Conversa reaberta"**.
+- Histórico importado continua fora do contexto da IA e não infla o contador do resumo pago.
+
+### Chaves reservadas do sistema — API e MCP não gravam mais
+
+`ConversationBuilder` passou a RECUSAR as chaves de `Conversation::RESERVED_ADDITIONAL_KEYS` vindas de
+fora ao criar conversa: `imported_from`, `import_digits`, `mail_subject`, `type`, `in_reply_to`,
+`initiated_by`, `auto_reply`, `original_channel_type`, `conversation_language`,
+`agent_reply_time_window`, `conference_sid`, `call_status`, `tiktok_capabilities`,
+`captain_media_asset_id`, `live_since`, `has_imported_history`.
+
+Não tente mandá-las em `additional_attributes` ao criar conversa — são ignoradas. Gravar `live_since`
+com data futura ou `has_imported_history` fecharia a janela de 24h daquela conversa para sempre.
+
+## Campos novos na resposta da API (02/09/2026)
+
+| Campo | Onde | Para que serve |
+|---|---|---|
+| `medium` | caixa (`inboxes_list`/`_show`) | sub-tipo do canal. Numa caixa de Página do Facebook diz se ela é Messenger ou **só Instagram** — é o que separa os dois |
+| `content` | mensagem | já vem no formato de exibição (mensagem apagada mostra o aviso, não o texto cru) |
+| `last_incoming_message_at` | conversa | data da última mensagem VIVA do cliente (unix). Use para saber se a janela de 24h está aberta — não confie na data da conversa, que pode vir de histórico importado |
+
+## Formulário público: código para incorporar no site (02/09/2026)
+
+Além do link público, o formulário passou a ter um **código para embutir no site do cliente** (iframe
+gerado na tela do formulário) e um **interruptor para desligar o reconhecimento do link repassado** —
+quando ligado, um link identificado enviado numa conversa pula os campos já conhecidos; desligado, o
+formulário sempre pergunta tudo. Use quando o cliente reclamar que o formulário "já vem preenchido"
+para a pessoa errada (link repassado a terceiros).
+
+## Gravação de ligação do VTCall (02-03/09/2026)
+
+A gravação permanente só nasce cerca de 24h depois da ligação. O card agora entra com a gravação
+**conferida** (o arquivo é sondado antes de virar link) e é reconferido por até 36h; ligação
+**recebida** passou a ter gravação, e o card é atualizado em silêncio (sem sino, sem reabrir a
+conversa). Quem atendeu voltou a aparecer nas recebidas. Se o cliente diz que o botão de ouvir não
+funciona numa ligação de hoje, o mais provável é que o arquivo permanente ainda não exista — a
+reconferência resolve sozinha dentro de 36h.
