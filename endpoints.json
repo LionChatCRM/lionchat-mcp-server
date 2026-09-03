@@ -28879,7 +28879,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuração visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..15 (default 15), button_label: string|null, resume: bool (continuar de onde parou, default true), chat_avatar: id de blob já subido (foto dos balões no formato chat), public_title: string (título que o LEAD vê na aba do navegador e no link — até 100 caracteres; vazio/ausente = usa o name, que é o nome INTERNO do painel)}. O objeto é gravado como vier (nenhuma chave é obrigatória)."
+    "description": "Configuração visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..15 (default 15), button_label: string|null, resume: bool (continuar de onde parou, default true), identify_by_link: bool (reconhecer quem recebeu o link, default true — DESLIGUE quando o link do formulario for repassado a outras pessoas, ex.: o cliente manda pros familiares; ligado, todos que abrem o link encaminhado sao tratados como o contato original e as respostas caem na MESMA ficha), chat_avatar: id de blob já subido (foto dos balões no formato chat), public_title: string (título que o LEAD vê na aba do navegador e no link — até 100 caracteres; vazio/ausente = usa o name, que é o nome INTERNO do painel)}. O objeto é gravado como vier (nenhuma chave é obrigatória)."
    },
    {
     "name": "inbox_id",
@@ -28984,7 +28984,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuração visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..15 (default 15), button_label: string|null, resume: bool (continuar de onde parou, default true), chat_avatar: id de blob já subido (foto dos balões no formato chat), public_title: string (título que o LEAD vê na aba do navegador e no link — até 100 caracteres; vazio/ausente = usa o name, que é o nome INTERNO do painel)}. O objeto é gravado como vier (nenhuma chave é obrigatória). SUBSTITUI o objeto inteiro — mande todas as chaves que quer manter."
+    "description": "Configuração visual/comportamento: {primary_color: '#7C3AED', theme: 'light'|'dark', abandon_minutes: 1..15 (default 15), button_label: string|null, resume: bool (continuar de onde parou, default true), identify_by_link: bool (reconhecer quem recebeu o link, default true — DESLIGUE quando o link do formulario for repassado a outras pessoas, ex.: o cliente manda pros familiares; ligado, todos que abrem o link encaminhado sao tratados como o contato original e as respostas caem na MESMA ficha), chat_avatar: id de blob já subido (foto dos balões no formato chat), public_title: string (título que o LEAD vê na aba do navegador e no link — até 100 caracteres; vazio/ausente = usa o name, que é o nome INTERNO do painel)}. O objeto é gravado como vier (nenhuma chave é obrigatória). SUBSTITUI o objeto inteiro — mande todas as chaves que quer manter."
    },
    {
     "name": "inbox_id",

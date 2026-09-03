@@ -145,6 +145,21 @@ Seguranças: o valor pulado **nunca aparece na tela nem no payload público**, e
 alcança** a pergunta pulada. Código de outra conta, contato apagado ou qualquer pane = o formulário
 roda anônimo normal. Link copiado do editor e colado fora de uma conversa NÃO tem carimbo.
 
+**Toggle "Reconhecer quem recebeu o link"** (`settings.identify_by_link`, default `true` — inclusive
+para formulário antigo, que não tem a chave). Desligado, o formulário **ignora o carimbo por
+completo**: a resposta nasce anônima e cada pessoa preenche do zero.
+
+Existe para o formulário **repassado**: o carimbo identifica o contato PARA QUEM o link foi enviado,
+então, se essa pessoa encaminha o link (caso real: formulário que o cliente manda para os
+familiares), todos abrem como se fossem ela — e o `ContactLinker` grava atributo personalizado, dado
+cadastral e etiqueta de **todos na mesma ficha** (`apply_to_linked_contact`). O sintoma visível é só
+o pulo das perguntas; o estrago real é no cadastro.
+
+O corte acontece no **nascimento da resposta** (`identified_contact_id`, no controller público), não
+no `WalkService`. Desligar apenas o pulo das perguntas seria conserto pela metade: a resposta
+continuaria nascendo com o `contact_id` errado. A chave **não vai** para o payload público (a
+whitelist do `metadata` segue sem ela) — a decisão é do servidor.
+
 ## O contrato do `form_data`
 
 ```json
