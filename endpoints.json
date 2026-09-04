@@ -22851,7 +22851,7 @@
     "description": "ID da caixa de entrada WAHA"
    }
   ],
-  "returns": "{ status, connected, phone_number, qr_code_available, phone_number_changed }",
+  "returns": "{ status, connected, phone_number, qr_code_available, phone_number_changed, previous_phone_number, qr_link_active, qr_link_expires_at, contacts_quota, reachout_timelock }. contacts_quota vem do WhatsApp (nao da Meta) e traz cappingStatus/totalQuota/usedQuota/cycleStart/cycleEnd; totalQuota -1 = sem limite (o caso de quase toda caixa). reachout_timelock null = pode iniciar conversas; presente = o WhatsApp bloqueou temporariamente abordagem fria por esse numero. Os dois podem vir AUSENTES (servidor WAHA que nao reporta saude) — ausencia nao significa \"sem limite\".",
   "common_use_cases": [
    "Diagnosticar 'mensagens não estão saindo' (sessão caiu?)"
   ],
