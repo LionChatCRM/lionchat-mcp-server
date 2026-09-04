@@ -872,3 +872,16 @@ Custom attribute em lugar errado vira:
   passageiro — o socorro cuida; reenviar por cima entrega em dobro.
 - **Filtros de data fixa cortam o dia no fuso da CONTA** (padrão America/Sao_Paulo) — e mudar o
   `timezone` da conta move essa fronteira.
+
+## Editar o PRÓPRIO agente (02/09/2026)
+
+`agents_update` passou a aceitar que a pessoa edite a si mesma — **times e caixas liberados**. Antes
+nem a tela oferecia: um administrador não conseguia se colocar nem se tirar de um time ou de uma caixa.
+
+**A trava:** ninguém muda o próprio **cargo** (nem o perfil base, nem o cargo personalizado). O
+servidor recusa com 422 e a mensagem *"Você não pode alterar o próprio cargo. Peça a outro
+administrador."* — a recusa é `before_action`, então NADA do resto do update é aplicado junto.
+
+Ao atualizar o próprio usuário: mande times e caixas à vontade; **não mande `role` nem
+`custom_role_id`** — se mandar, a chamada inteira falha e as outras alterações se perdem também.
+Para trocar o cargo de alguém, use a conta de OUTRO administrador.

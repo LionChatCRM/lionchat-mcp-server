@@ -385,6 +385,16 @@ só pra destravar, ela pode sair.
 | `pagetrack_visited` / `pagetrack_event` | LionTrack |
 | `sla_check` | status do SLA da conversa (usa `value` = código fixo; ver abaixo) |
 
+> **ATENÇÃO — onde o VALOR vai (defeito real de 02/09/2026, conta 137):** no nó **Condição**, uma regra de atributo
+> (`valueType: "attr_config"`) com operador `equal`, `not_equal`, `contains` ou `not_contains` guarda o valor em
+> **`values: ["..."]` (lista)** e deixa `value: ""`. A TELA lê SÓ a lista: regra gravada com `value: "paid_ad"` e
+> sem `values` roda certa no motor mas abre com a caixa de valor **VAZIA** — o cliente conclui que não foi
+> configurado. Só `greater_than`, `less_than`, `starts_with` e `ends_with` usam `value` (campo único);
+> `number_range` usa `value: "min-max"`; `is_empty`/`is_not_empty` não têm valor. Grave sempre o shape completo:
+> `{ "id": 1, "field": "{{last_response}}", "operator": "equal", "value": "", "values": ["paid_ad"],
+> "valueType": "attr_config", "attrSource": "conversation", "attrScope": "campaign", "attr_key": "origin_kind",
+> "funnel_id": "", "stage": "" }` dentro de `rules`, com o branch repetindo `value`/`values`/`valueType`.
+
 **Restrição por TIPO de atributo (a UI só oferece um subconjunto, e é o que faz sentido):**
 - **Texto/string:** `equal`, `not_equal`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`
 - **Número:** `equal`, `not_equal`, `greater_than`, `less_than`, `number_range`, `is_empty`, `is_not_empty`
@@ -426,6 +436,8 @@ campanha"):
   campanha. Prefira o formato `attr_config` acima quando o cliente vai editar pela tela.
 - Caso real (Cast, 01/09): flow "Ativar IA" só para lead de anúncio = condição `origin_kind equal paid_ad`
   na saída `cond_0` + ação `assign_captain` nessa saída; `default` sem nada.
+
+- **`attrScope: "lead_origin"` (02/09/2026):** preset "Origem do lead" da aba Conversas — mesmo shape do `campaign_attr`, ja nasce com `attr_key: "origin_platform"`. Valores: plataformas fixas (`facebook`, `google`...) ou origem cadastrada como `custom:<slug>`. O motor ignora `attrScope`; sem ele a regra reabre como "Atributo de campanha" (falha macia).
 
 **Agente de IA — `conversation_has_ai_agent` e irmãos (novo 2026-08-01):** o flow sempre soube LIGAR e
 DESLIGAR a IA (ações `assign_captain` / `deactivate_captain`), mas não sabia PERGUNTAR se ela estava
@@ -504,7 +516,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `remove_conversation_label` | `{ labels: ['slug'] }` | Remove labels da CONVERSA |
 | `mute_conversation` | `{}` | Silencia notificações |
 | `mark_unread` | `{}` | Marca a conversa como NÃO LIDA pro time (espelho do `mute_conversation`; típico logo após `assign_agent`/`assign_team` numa transferência) |
-| `add_private_note` | `{ content: 'texto' }` | Adiciona nota interna |
+| `add_private_note` | `{ text: 'texto' }` | Adiciona nota interna. **A chave é `text`** — é a que o formulário do bloco lê (`v-model="item.config.text"`). Até 04/09 esta linha dizia `content`, e por isso 56 blocos de 8 contas abriam VAZIOS na tela: a nota era gravada (o motor tem rede) mas ninguém conseguia ler nem editar o texto. `content` continua sendo aceito e normalizado para `text` na gravação |
 | `create_kanban_item` | `{ funnel_id, funnel_stage, title?, description? }` | Cria card no Kanban — `funnel_id` e `funnel_stage` OBRIGATÓRIOS; `title`/`description` aceitam variáveis `{{ }}` |
 | `move_kanban_item_to_stage` | `{ funnel_stage }` | Move card (precisa ter card vinculado) |
 | `move_kanban_stage` | `{ funnel_id, funnel_stage }` | Idem |
@@ -512,12 +524,12 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `set_won` | `{}` | Atalho pra ganho |
 | `set_lost` | `{ reason? }` | Atalho pra perdido |
 | `assign_agent_card` | `{ agent_id, mode? }` | Responsável do card. `mode`: `'add'` (default — SOMA na lista), `'replace'` (só o escolhido fica; atribui antes de remover os demais) ou `'remove_all'` (tira TODOS os responsáveis; `agent_id` dispensado) |
-| `add_card_note` | `{ content }` | Nota no card |
+| `add_card_note` | `{ text }` | Nota no card. **A chave é `text`**, igual à irmã `add_private_note`. Aqui é mais grave: o motor lê SÓ `text`, sem rede — nota criada com `content` sairia REALMENTE vazia, não só invisível no formulário. Corrigido em 04/09 (a linha dizia `content`); a gravação normaliza `content` para `text` |
 | `add_card_checklist` | `{ template_id, funnel_id?, card_source? }` | Aplica um MODELO de checklist ao card (vira um grupo). `template_id` de `kanban_config.checklist_templates`. Um modelo por bloco (repita o bloco pra mais de um) |
 | `add_card_offer` | `{ offer_id, use_custom_value?, custom_value?, funnel_id?, card_source? }` | Adiciona uma OFERTA (produto/serviço) ao card. `offer_id` de `offers_list`. `use_custom_value: true` + `custom_value` grava um valor personalizado na oferta; senão usa o valor cadastrado. O total do card recalcula sozinho (soma das ofertas). Respeita `card_source` (funnel só localiza o card) |
 | `send_webhook` | `{ url, headers?, body? }` | Dispara webhook externo |
 | `start_flow` | `{ flow_id }` | Inicia outro fluxo. **NÃO encerra o fluxo de origem** (desde 31/08): se houver bloco ligado depois dele, o fluxo SEGUE normalmente. Sendo o último do desenho, o fluxo termina ali como sempre. |
-| `send_conversion` (novo 2026-09-01) | `{ destinations: ['meta'\|'ga4'\|'google_ads'], event_name, value? }` | Manda o evento de conversão pro Meta (CAPI), Google Ads e/ou GA4 — o mesmo caminho do Funil, de dentro do fluxo. Aba Sistema (só flow `conversation`). Ver bloco próprio abaixo |
+| `send_conversion` (novo 2026-09-01; `event_names` 2026-09-02) | `{ destinations: ['meta'\|'ga4'\|'google_ads'], event_names: { meta?, google_ads?, ga4? }, event_name (reserva), value? }` | Manda o evento de conversão pro Meta (CAPI), Google Ads e/ou GA4 — o mesmo caminho do Funil, de dentro do fluxo. Aba Sistema (só flow `conversation`). Ver bloco próprio abaixo |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
 | `update_attribute` | `{ attr_source: 'contact'\|'conversation'\|'card', attr_key, attr_value }` | Seta custom_attribute (ver abaixo) |
 | `assign_captain` (ou `assign_captain_assistant`) | `{ assistant_id }` | Atribui IA Captain |
@@ -530,7 +542,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 **`send_conversion` — Enviar conversão (2026-09-01):**
 
 ```json
-{ "key": "send_conversion", "config": { "destinations": ["meta", "google_ads"], "event_name": "Lead", "value": "1500,50" } }
+{ "key": "send_conversion", "config": { "destinations": ["meta", "google_ads"], "event_names": { "meta": "Lead", "google_ads": "Contact" }, "event_name": "Lead", "value": "1500,50" } }
 ```
 
 - `destinations`: array com `meta`, `ga4` e/ou `google_ads` — **OBRIGATÓRIO e não vazio** (vazio = a ação
@@ -539,7 +551,11 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
   (o histórico do fluxo mostra "GA4: pulado (integração não configurada, evento não mapeado ou pausado)").
   Confira antes com `lionchat_meta_pixel_integrations_list`, `lionchat_google_ads_integrations_list`,
   `lionchat_ga4_integrations_list`.
-- `event_name`: **OBRIGATÓRIO**, só letras/números/sublinhado (até 40; ex.: `Lead`, `Schedule`,
+- `event_names` (**desde 2026-09-02**): um evento POR destino marcado — `{ "meta": "Lead", "google_ads": "Contact", "ga4": "generate_lead" }`.
+  Chave presente e em branco = aquele destino é PULADO ("sem nome de evento"); chave ausente cai em `event_name`.
+  Google Ads só envia evento que tenha ação mapeada na integração; a tela lista Meta (padrão + personalizados
+  da conta) e Google Ads (mapeados), GA4 é livre. Grave sempre `event_names` E `event_name` (= primeiro nome).
+- `event_name`: reserva/compatibilidade (fluxos de antes de 02/09), só letras/números/sublinhado (até 40; ex.: `Lead`, `Schedule`,
   `Purchase`); aceita variável `{{ }}`. No **Google Ads** o nome precisa estar mapeado no
   `conversion_action_map` da integração, senão é pulado.
 - `value` (opcional): número (vírgula BR aceita, `1500,50`) ou variável. **Vazio = valor do CARD** (ver
@@ -928,9 +944,34 @@ Node terminal, sem handles de saída. **EXCLUSIVO de flow `ai_tool`** — NUNCA 
 no último node, sem node de fim. Em `ai_tool` é OBRIGATÓRIO: o `data` do `end` define o que
 volta pro LLM (modo de saída + template do resultado).
 
+Campos do `data`:
+
+| Campo | Valores | Default | O que faz |
+|---|---|---|---|
+| `mode` | `template`, `auto`, `silent` | `template` | como o resultado volta pro LLM |
+| `template` | texto Liquid (`{{ params.x }}`, `{{ contact.x }}`) | vazio | SÓ no modo `template` |
+| `include_log` | `true`/`false` | `false` | SÓ no modo `auto` — anexa o log da execução ao JSON |
+
+- **`template`** — devolve o texto Liquid renderizado, precedido de um cabeçalho que MANDA a IA
+  cumprir aquilo neste turno. É o modo do "diga isso ao cliente".
+- **`auto`** — devolve JSON com `params`, `variables` e `status`. Dado, não ordem.
+- **`silent`** (desde 02/09/2026) — **encerra o turno sem resposta da IA**. Use quando o próprio
+  fluxo já enviou a mensagem final pelo bloco de mensagem: sem isso a IA fala de novo por cima e
+  duplica a informação. A IA continua ATIVA e responde normalmente a próxima mensagem do cliente.
+
 ```json
-{ "id": "node-end", "type": "end", "position": { "x": 1330, "y": 300 }, "data": { "label": "Retorno", "mode": "structured" } }
+{ "id": "node-end", "type": "end", "position": { "x": 1330, "y": 300 }, "data": { "label": "Retorno", "mode": "template", "template": "Orçamento enviado. Confirme o recebimento com o cliente." } }
 ```
+
+```json
+{ "id": "node-fim-mudo", "type": "end", "position": { "x": 1330, "y": 520 }, "data": { "label": "Fim sem resposta", "mode": "silent" } }
+```
+
+**ATENÇÃO:** `mode` aceita SÓ os três valores acima. Até 02/09/2026 esta página ensinava
+`mode: "structured"`, que NENHUMA tela produz e NENHUM leitor entende — o motor trata valor
+desconhecido como `template`, e sem `template` a IA recebe **string vazia**. Se você criou algum
+`end` com `structured` (ou qualquer outro valor), troque por um dos três. Mesma família do gatilho
+do bloco Início que a documentação do MCP ensinou errado (19/08).
 
 ### 2.14 `note` (anotação visual / sticky note colorido)
 

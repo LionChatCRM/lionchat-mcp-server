@@ -297,3 +297,41 @@ número/data em texto; array-de-objetos em query (padrão B exige JSON-string); 
 `custom_attribute_type` quando contato e conversa têm atributo de mesmo nome; esperar paginação
 no kanban_items_filter (não tem — estreite o filtro); montar um `custom_dashboards_update` em cima
 de uma listagem que veio cortada (apaga os blocos que não chegaram).
+
+## Filtro de DATA do Kanban (02/09/2026) — `kanban_items_filter` e `funnels_stage_report`
+
+Quatro eixos de data, cada um com **janela fixa** (`_start`/`_end`, ISO) OU **atalho relativo**
+(`_relative` + `_relative_days`). Formato FLAT (o Kanban não usa o shape `payload` dos outros filtros).
+
+| Eixo | Chaves | O que recorta |
+|---|---|---|
+| Criação do card | `date_start`/`date_end` · `date_relative`/`date_relative_days` | quando o card foi criado |
+| Entrada na etapa | `stage_date_start`/`_end` · `stage_date_relative`/`_days` | quando entrou na etapa ATUAL |
+| Atualização | `updated_date_start`/`_end` · `updated_date_relative`/`_days` | última alteração do card |
+| Ganho/perdido em | `closed_date_start`/`_end` · `closed_date_relative`/`_days` | data do desfecho |
+
+**Operadores do atalho** (`*_relative`): `today`, `yesterday`, `last_days`, `days_ago`, `days_before`.
+- `today` e `yesterday` **não levam número** — não mande `_relative_days` com eles.
+- `last_days` = os últimos N dias **incluindo hoje** (N=7 → de 6 dias atrás até o fim de hoje).
+- `days_ago` = o dia exato de N dias atrás. `days_before` = mais de N dias atrás (janela aberta à esquerda).
+- **N inteiro de 1 a 998.** Texto, zero, negativo, decimal ou maior que 998 é recusado.
+- A janela é calculada no **fuso da conta** (não em UTC).
+
+Os quatro eixos são independentes e podem ser combinados. Janela fixa e atalho no mesmo eixo:
+mande só um dos dois.
+
+> **CUIDADO — operador inválido NÃO dá erro, ALARGA o resultado.** Se `*_relative` vier com um
+> operador fora da lista, ou `last_days`/`days_ago`/`days_before` sem número válido, o atalho é
+> **ignorado em silêncio**: a resposta volta com MAIS cards (até 5.000) e a tela ainda mostra o selo
+> de "filtrado". Como o quadro tem **ação em massa, inclusive excluir**, nunca use o retorno de um
+> filtro de data para uma ação destrutiva sem conferir a contagem antes. (Em condição de ATRIBUTO o
+> comportamento é o oposto e seguro: valor inválido fecha o filtro e devolve vazio.)
+
+Exemplo — cards que entraram na etapa atual nos últimos 7 dias, no funil 12:
+```json
+{ "funnel_id": 12, "stage_date_relative": "last_days", "stage_date_relative_days": 7 }
+```
+Cards ganhos ou perdidos ontem:
+```json
+{ "closed_date_relative": "yesterday" }
+```

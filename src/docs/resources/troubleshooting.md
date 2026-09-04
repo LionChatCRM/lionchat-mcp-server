@@ -280,8 +280,13 @@ Padrões que causam:
 Causa clássica: cache de LID inválido no contato. Desde 2026-06-10 há **self-healing**: o LID
 é validado (formato `digitos@lid`), o cache invalida sozinho se o número conectado ou o canal
 mudarem, e o envio re-resolve o LID na primeira falha. Se ainda assim falhar: confira
-`additional_attributes.waha_whatsapp_lid` do contato e o status da sessão
-(`GET /inboxes/{id}/waha/status`).
+`custom_attributes.waha_whatsapp_lid` do contato (é em `custom_attributes`, não em
+`additional_attributes`) e o status da sessão (`GET /inboxes/{id}/waha/status`).
+
+Desde 2026-09-02 há uma rede a mais: quando o WhatsApp recusa o endereço gravado na conversa
+(erro `no LID found`), o envio tenta o endereço por onde as mensagens **daquela conversa**
+chegaram e guarda a correção. Interruptor `WAHA_SEND_PROVEN_ADDRESS` (Super Admin > App Config >
+WAHA). Não cobre campanha de WhatsApp QR nem convivência, que montam o endereço por conta própria.
 
 ### "Cliente mandou um contato (vCard) e não apareceu nada"
 Corrigido em 2026-06-09: vCard agora vira anexo `file_type: "contact"` na mensagem (nome +
@@ -667,3 +672,27 @@ webhook da Meta. Regra: leia a caixa antes (`inboxes_show`), reenvie o `provider
 com o campo trocado. Os três campos da conexão manual (`phone_number_id`, `business_account_id`,
 `api_key`) são validados JUNTOS na Meta a cada gravação — 422 "Invalid Credentials" significa que
 algum dos três está errado ou a chave venceu (não salve campo a campo).
+
+## Mutirões que NÃO são da API — o MCP não executa, mas deve saber que existem (02/09/2026)
+
+São tarefas de terminal (o operador da plataforma roda). Se o cliente pedir uma destas, explique o
+que faz e encaminhe — não tente resolver por comando do MCP.
+
+| Situação | Tarefa | Como é chamada |
+|---|---|---|
+| Contato com a conversa de arquivo separada da conversa viva (pares antigos, anteriores a 02/09) | juntar os pares | `conversas:juntar_pares[conta, modo, limite]` — **modo `ensaio` por padrão**, só junta com `valendo`; e `conversas:juntar_par[arquivo, viva]` para um par nomeado |
+| Fluxo parado em "ativo" há horas depois de uma queda de banco | destravar sessões | `flow_builder:sessoes_presas` com `MODO=ensaio` (padrão), `encerrar` ou `retomar` |
+| Gravação de ligação do VTCall que não abre | reconferir gravações | tarefa própria de VTCall |
+
+**A regra do ensaio:** os dois primeiros nascem em modo ENSAIO de propósito — mostram o que fariam
+sem mexer em nada. Nunca oriente a rodar direto em "valendo" sem o ensaio antes.
+
+## Conversa de arquivo: por que a mensagem não sai (02/09/2026)
+
+Conversa que só tem histórico importado, sem nenhuma resposta viva do cliente, está com a **janela de
+24h FECHADA** — para o WhatsApp aquele contato nunca escreveu. Texto livre falha; só modelo aprovado
+sai. Confira `last_incoming_message_at` na conversa: vazio ou antigo = janela fechada.
+
+Desde 02/09 a mensagem que chega ADOTA essa conversa (não abre outra). Se um fluxo/automação/IA
+dependia do gatilho **"conversa criada"** para acordar nesse caso, ele não roda mais na adoção —
+troque para **"Conversa reaberta"**.
