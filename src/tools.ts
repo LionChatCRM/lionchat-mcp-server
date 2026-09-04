@@ -835,7 +835,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       change_status({status: open|resolved|pending|snoozed}), change_priority({priority}),
       // change_status com 'snoozed' aceita snooze_option: an_hour_from_now|until_tomorrow|until_next_week|
       //   until_next_month|until_next_reply (ausente = adiada ate a proxima mensagem do cliente)
-      mute_conversation({}), mark_unread({}), add_private_note({content}), send_email_transcript({email}),
+      mute_conversation({}), mark_unread({}), add_private_note({text}), send_email_transcript({email}),
       add_conversation_label({labels:[...]}), remove_conversation_label({labels:[...]}),  // etiqueta NA CONVERSA
       assign_captain({assistant_id}), deactivate_captain({}),
       // mark_unread({}) — NOVO 07/08: deixa a conversa NAO LIDA pro time (badge acende). Tipico logo
@@ -850,9 +850,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Kanban: create_kanban_item({funnel_id, funnel_stage, title?, description?})
         — funnel_id e funnel_stage OBRIGATORIOS; title/description aceitam {{ }},
       move_kanban_stage({funnel_id,funnel_stage}), set_kanban_item_status({status:won|lost|active}),
-      set_won({}), set_lost({reason?}), add_card_note({content}),
+      set_won({}), set_lost({reason?}), add_card_note({text}),
       set_open({}) — reabre card ganho/perdido (status open; nao mexe nos responsaveis),
-      // title/description de create_kanban_item e content de add_card_note resolvem pelo resolvedor do
+      // title/description de create_kanban_item e text de add_card_note resolvem pelo resolvedor do
       //   FLUXO desde 20/08: {{conversation.id}} = numero da tela e variaveis da sessao valem ali
       assign_agent_card({agent_id, mode?}) — RESPONSAVEL DO CARD. mode (NOVO 2026-07-28):
         'add' (default, SOMA na lista — comportamento historico), 'replace' (so o escolhido

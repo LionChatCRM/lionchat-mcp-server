@@ -516,7 +516,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `remove_conversation_label` | `{ labels: ['slug'] }` | Remove labels da CONVERSA |
 | `mute_conversation` | `{}` | Silencia notificações |
 | `mark_unread` | `{}` | Marca a conversa como NÃO LIDA pro time (espelho do `mute_conversation`; típico logo após `assign_agent`/`assign_team` numa transferência) |
-| `add_private_note` | `{ content: 'texto' }` | Adiciona nota interna |
+| `add_private_note` | `{ text: 'texto' }` | Adiciona nota interna. **A chave é `text`** — é a que o formulário do bloco lê (`v-model="item.config.text"`). Até 04/09 esta linha dizia `content`, e por isso 56 blocos de 8 contas abriam VAZIOS na tela: a nota era gravada (o motor tem rede) mas ninguém conseguia ler nem editar o texto. `content` continua sendo aceito e normalizado para `text` na gravação |
 | `create_kanban_item` | `{ funnel_id, funnel_stage, title?, description? }` | Cria card no Kanban — `funnel_id` e `funnel_stage` OBRIGATÓRIOS; `title`/`description` aceitam variáveis `{{ }}` |
 | `move_kanban_item_to_stage` | `{ funnel_stage }` | Move card (precisa ter card vinculado) |
 | `move_kanban_stage` | `{ funnel_id, funnel_stage }` | Idem |
@@ -524,7 +524,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `set_won` | `{}` | Atalho pra ganho |
 | `set_lost` | `{ reason? }` | Atalho pra perdido |
 | `assign_agent_card` | `{ agent_id, mode? }` | Responsável do card. `mode`: `'add'` (default — SOMA na lista), `'replace'` (só o escolhido fica; atribui antes de remover os demais) ou `'remove_all'` (tira TODOS os responsáveis; `agent_id` dispensado) |
-| `add_card_note` | `{ content }` | Nota no card |
+| `add_card_note` | `{ text }` | Nota no card. **A chave é `text`**, igual à irmã `add_private_note`. Aqui é mais grave: o motor lê SÓ `text`, sem rede — nota criada com `content` sairia REALMENTE vazia, não só invisível no formulário. Corrigido em 04/09 (a linha dizia `content`); a gravação normaliza `content` para `text` |
 | `add_card_checklist` | `{ template_id, funnel_id?, card_source? }` | Aplica um MODELO de checklist ao card (vira um grupo). `template_id` de `kanban_config.checklist_templates`. Um modelo por bloco (repita o bloco pra mais de um) |
 | `add_card_offer` | `{ offer_id, use_custom_value?, custom_value?, funnel_id?, card_source? }` | Adiciona uma OFERTA (produto/serviço) ao card. `offer_id` de `offers_list`. `use_custom_value: true` + `custom_value` grava um valor personalizado na oferta; senão usa o valor cadastrado. O total do card recalcula sozinho (soma das ofertas). Respeita `card_source` (funnel só localiza o card) |
 | `send_webhook` | `{ url, headers?, body? }` | Dispara webhook externo |
