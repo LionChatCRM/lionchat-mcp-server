@@ -225,6 +225,17 @@ lionchat_conversations_messages_list (conversation_id: 123)
 3. lionchat_inboxes_public_conversations_create (vincula contato à inbox)
 ```
 
+**Telefone com ou sem o nono dígito (desde 05/09/2026):** a busca do passo 1 acha o contato
+mesmo que ele esteja salvo na OUTRA forma do celular brasileiro (com o 9 quando você busca sem, e
+vice-versa). Não precisa buscar duas vezes. Se mesmo assim `lionchat_contacts_create` devolver 422
+com `attributes: ["phone_number"]`, o contato já existe — busque de novo e ATUALIZE em vez de criar.
+Nunca tente "resolver" trocando a forma do número no create: a criação recusa as duas formas de
+propósito (a recusa protege contra ficha em dobro).
+**Atenção:** como a busca e o `contacts_filter` agora enxergam as duas formas, uma pessoa que tenha
+ficha duplicada pode voltar como **2 resultados**. Nunca pegue o primeiro às cegas para
+`contacts_update` — confira nome/e-mail ou pergunte ao usuário qual é a ficha certa. A lupa geral
+(`lionchat_search_list`) NÃO tem essa tolerância: para telefone, use `lionchat_contacts_search`.
+
 ### Criar funil (kanban) novo com etapas
 
 **FUNIL = KANBAN = pipeline = board — são a MESMA coisa no LionChat.** Quando o usuário pedir "cria um kanban", "monta um pipeline" ou "cria um funil", a ferramenta é `lionchat_funnels_create` (não existe endpoint separado de "criar kanban").

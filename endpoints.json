@@ -173,7 +173,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts",
   "title": "Criar Contato",
-  "description": "Cria um contato. Nenhum campo e estritamente obrigatorio (recomendado phone_number ou email). Aceita name, email, phone_number, identifier, additional_attributes, custom_attributes, blocked. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): phone_number ja cadastrado em outro contato da conta = 422 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe.",
+  "description": "Cria um contato. Nenhum campo e estritamente obrigatorio (recomendado phone_number ou email). Aceita name, email, phone_number, identifier, additional_attributes, custom_attributes, blocked. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): phone_number ja cadastrado em outro contato da conta = 422 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe.\n\nSE VOLTAR 422 com attributes:['phone_number']: o contato JA EXISTE — na forma exata OU na outra forma do nono digito. Nao tente criar de novo trocando a forma do numero (a recusa protege contra ficha em dobro): busque com lionchat_contacts_search e use contacts_update. Case os 'attributes' da resposta, nunca o texto da mensagem (ela sai no idioma padrao da instalacao, em ingles).",
   "category": "Contatos",
   "params": [
    {
@@ -646,7 +646,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts/search",
   "title": "Buscar Contatos",
-  "description": "Busca contatos por texto (insensivel a acento) em nome/email/telefone/identifier. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "Busca contatos por texto (insensivel a acento) em nome/email/telefone/identifier. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).\n\nTELEFONE COM E SEM O 9 (desde 05/09/2026): quando 'q' e um celular brasileiro completo (com ou sem o nono digito, com ou sem '+', formatado ou nao), a busca acha o contato salvo em QUALQUER das duas formas. Nao precisa buscar duas vezes. Uma pessoa com ficha duplicada pode voltar como 2 resultados — nunca pegue o primeiro as cegas para contacts_update; confira nome/e-mail. A lupa geral (lionchat_search_list) NAO tem essa tolerancia: para telefone, use esta.",
   "category": "Contatos",
   "params": [
    {
@@ -654,7 +654,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo de busca"
+    "description": "Termo de busca. Telefone: qualquer forma (com/sem +, com/sem o nono digito, formatado) acha a mesma ficha."
    },
    {
     "name": "page",
@@ -698,7 +698,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/filter",
   "title": "Filtrar Contatos",
-  "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422. [2026-07-25] Nova chave id (id interno do contato, equal_to/not_equal_to) — serve pra exportar/checar UM contato especifico. NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas.",
+  "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422. [2026-07-25] Nova chave id (id interno do contato, equal_to/not_equal_to) — serve pra exportar/checar UM contato especifico. NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas.\n\nTELEFONE COM E SEM O 9 (desde 05/09/2026): phone_number com equal_to/not_equal_to casa as DUAS formas do celular brasileiro (mande +5541999887766 ou +554199887766 — acham a mesma ficha; not_equal_to exclui as duas). Valor formatado ('(41) 99988-7766') tambem casa. Telefone fixo, estrangeiro ou trecho segue exato. ATENCAO: 'Selecionar todos' + excluir sobre um filtro de telefone apaga as 2 fichas da mesma pessoa (decisao do dono, 05/09).",
   "category": "Contatos",
   "params": [
    {

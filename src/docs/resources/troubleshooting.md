@@ -168,8 +168,12 @@ Feature flag específica (ex: `feature_kanban`, `feature_captain`) está OFF.
 - `"phone_number has already been taken"` — mesmo problema. **Desde 2026-09-01 é trava do BANCO** (índice
   único telefone+conta, como e-mail e identifier têm desde 2023): dois `contacts_create` com o mesmo
   telefone em paralelo já não criam gêmeos — o segundo volta 422. Antes de criar, procure com
-  `lionchat_contacts_search` (acha com e sem o 9º dígito desde 29/08); para atualizar, use `contacts_update`
-  no que já existe. Duplicado só aparece se as fichas nasceram ANTES da trava
+  `lionchat_contacts_search` — **a busca acha o telefone com e sem o 9º dígito a partir da versão de
+  05/09/2026** (29/08 entregou só a busca de ficha ÚNICA usada pela criação; a busca de LISTA e o filtro
+  ficaram exatos até 05/09 — por isso a integração ficava presa: buscava, não achava, criava e levava 422).
+  Para atualizar, use `contacts_update` no que já existe. Duplicado só aparece se as fichas nasceram
+  ANTES da trava. O texto do 422 sai no idioma padrão da instalação (inglês) mesmo em conta pt_BR —
+  case `attributes: ["phone_number"]`, nunca a frase
 - `"phone_number must be a valid number with country code"` — formato E.164: `+5511999999999`
 
 ### Message

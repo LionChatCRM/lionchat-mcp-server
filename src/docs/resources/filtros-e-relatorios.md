@@ -79,7 +79,7 @@ Mesmo shape de condição. 15/página.
 |---|---|
 | `id` (id interno do contato) | equal_to, not_equal_to |
 | `name`, `email`, `identifier`, `city`, `company`, `profession` | equal_to, not_equal_to, contains, does_not_contain |
-| `phone_number` | + starts_with (busca por DDD/prefixo) — **corrigido na atualização de 26/07/2026**; em instalação anterior devolve SEMPRE lista vazia (virava igualdade exata). Vazio com prefixo que existe = instalação antiga |
+| `phone_number` | + starts_with (busca por DDD/prefixo) — **corrigido na atualização de 26/07/2026**; em instalação anterior devolve SEMPRE lista vazia (virava igualdade exata). Vazio com prefixo que existe = instalação antiga. **`equal_to`/`not_equal_to` casam as DUAS formas do celular BR (com e sem o 9º dígito) desde 05/09/2026** — mande `+5541999887766` ou `+554199887766`, os dois acham a mesma ficha; `not_equal_to` exclui as duas. Termo que não é celular BR completo (fixo, estrangeiro, trecho) segue exato |
 | `cpf`, `cnpj`, `rg` (cadastral) | equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present |
 | `country_code` | equal_to, not_equal_to |
 | `labels` | equal_to, not_equal_to, is_present, is_not_present |
