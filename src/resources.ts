@@ -100,6 +100,13 @@ export const RESOURCES: ResourceDef[] = [
       'Feature Formularios (captacao estilo Typeform/Typebot): contrato completo do form_data (blocos, handles, variaveis, blocos de API e IA), regras de publicacao, tetos e receitas. Use SEMPRE antes de criar/editar formularios via lionchat_lead_forms_*.',
     filename: 'formularios-publicos.md',
   },
+  {
+    name: 'Assinatura Eletronica de Contratos',
+    uri: 'lionchat://docs/assinatura-eletronica',
+    description:
+      'Assinatura eletronica de DOCUMENTOS (nao e a assinatura do plano): modelos, contratos, participantes, estados, linha do tempo/evidencias, receita de envio, trava de variaveis, limites; gatilhos/acao do Flow e bloco do Formulario. Use antes de lionchat_signature_*.',
+    filename: 'assinatura-eletronica.md',
+  },
 ];
 
 function findDocsPath(filename: string): string | null {

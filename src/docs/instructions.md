@@ -19,9 +19,11 @@ Comprovado em produção (24/07): a sessão que dizia "não há função de list
   kanban_items, funnels, flows, flow_tools, campaigns, macros, automation_rules, agents, teams,
   inboxes, labels, canned_responses, reports, sla, csat, captain_assistants, captain_documents,
   scheduled_messages, custom_attributes, webhooks, eclinica_integrations, tasks, notifications,
-  lead_forms (Formulários públicos de captação).
-- **Fora do MCP por decisão do dono (19/08): assinatura, plano, fatura, forma de pagamento, cartão,
-  saldo e recarga.** Não existem ferramentas dessas áreas e não devem ser criadas. Se o usuário
+  lead_forms (Formulários públicos de captação), signature_documents / signature_envelopes
+  (assinatura ELETRÔNICA de contratos — modelos e contratos enviados).
+- **Fora do MCP por decisão do dono (19/08): assinatura DO PLANO (cobrança), plano, fatura, forma de
+  pagamento, cartão, saldo e recarga.** (A assinatura ELETRÔNICA de contratos é outra coisa e TEM
+  ferramentas: `lionchat_signature_*`.) Não existem ferramentas dessas áreas e não devem ser criadas. Se o usuário
   pedir, diga que isso se resolve no painel, na área de assinatura da conta — não tente por
   ferramenta nem por chamada direta.
 - Só depois de pesquisar e não encontrar é que se pode dizer que a função não existe.
@@ -372,13 +374,14 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 |---|---|---|
 | Listar / ver não lidas | `lionchat_conversations_list` (`conversation_type: 'unread'`) ou `lionchat_conversations_meta` | NÃO use `lionchat_conversations_unread` — é AÇÃO DE ESCRITA (marca como não-lida) |
 | Achar a conversa **de uma pessoa/empresa** (nome, telefone, e-mail, CPF/CNPJ, nº da conversa) | `lionchat_search_list` (`/search/conversations`) ou `lionchat_contacts_search` | RÁPIDO. **NÃO use `lionchat_conversations_search`**: apesar do nome, ele é o legado que procura dentro das mensagens e leva **15 a 22 s** (medido em produção 11/08). O sufixo `_list` aqui é histórico — `lionchat_search_list*` **são buscas**, não listagens; a regra "não baixe tudo com `*_list`" vale para `lionchat_<recurso>_list` |
-| Achar **onde foi dito** algo (palavra dentro da conversa) | `lionchat_search_list_2` (`/search/messages`) | RÁPIDO: índice trigram próprio e teto de tempo em duas fases (2 s / 14 s). É a substituta certa do `lionchat_conversations_search` |
+| Achar **onde foi dito** algo (palavra dentro da conversa) | `lionchat_search_list_2` (`/search/messages`) | RÁPIDO: índice trigram próprio e teto de tempo em duas fases (2 s / 2 s desde 04/09 — antes a 2ª fase herdava 14 s e o pior caso da seção era 16 s). Estourou as duas, o payload volta com `message_search_interrupted: true` e a lista VAZIA — isso NÃO quer dizer que não existe, quer dizer que não deu tempo: tente de novo. É a substituta certa do `lionchat_conversations_search` |
 | Não sei se o termo é nome de alguém ou algo dito no papo | `lionchat_search_search` (`/search`) | Cobre os dois numa chamada. Opção mais segura quando a intenção é ambígua |
 | (qualquer busca) termo com menos de 3 caracteres | — | Volta **vazio de propósito** em todas as buscas. Vazio ≠ "não existe": quer dizer que a busca não rodou. Refaça com 3+ caracteres. Só-dígitos é isento nas rotas `/search/*`, mas **não** no `lionchat_conversations_search` legado |
 | Só a contagem / números | `lionchat_conversations_meta` / `lionchat_reports_summary` | Não liste o conteúdo completo |
 | Criar contato | `lionchat_contacts_create` base (path `/contacts`) | NÃO use as variantes `_1` … `_9` |
 | Pausar a IA agora (botão de pânico) | `lionchat_captain_assistants_update` (`paused: true`, top-level) | — |
 | Criar/editar **formulário público de captação** (página de captura própria) | `lionchat_lead_forms_create` / `_update` | Leia `lionchat://docs/formularios-publicos` ANTES — o desenho vai em `form_data` e só entra no ar depois do `publish` (que valida o desenho e pode voltar 422 com a lista de pendências). Caixa de WhatsApp vinculada (`inbox_id`) é obrigatória pra publicar. Escrita é só de administrador |
+| **Mandar um contrato pra assinar** / ver quem assinou / reenviar / cancelar / criar ou editar o modelo escrito | `lionchat_signature_envelopes_create` / `_list` / `_show` / `_resend` / `_cancel`; `lionchat_signature_documents_list` / `_create` / `_update` | Leia `lionchat://docs/assinatura-eletronica` ANTES. Modelo `text` a API cria e edita (texto com `{{contact.*}}`); PDF/Word só pela tela. Campo do modelo sem valor na ficha bloqueia o envio (422 `variaveis_sem_valor` com a lista); `422 escolher_caixa` = repita com `inbox_id`. Cada contrato consome 1 vaga do limite mensal |
 | **Testar um formulário** antes de publicar | `lionchat_lead_forms_test_run` | Roda o RASCUNHO no motor real e desfaz tudo no fim — zero rastro. Mande `answers: [{node_id, value}]` (até 60) pra reproduzir um caminho; a resposta traz o bloco atual + o log do percurso |
 | Conferir se um site **aceita ser exibido dentro do formulário** (bloco Página externa) | `lionchat_lead_forms_check_embed` | Body `{url}`; devolve `{status: allowed\|blocked\|unknown, reason}`. Grave o veredito em `embed_allowed` do bloco. Admin-only |
 | Ver **tudo que uma pessoa preencheu** (nosso formulário, anúncio do Meta, Webhook Universal, fluxo) | `lionchat_contacts_form_entries_list` / `_show` | Por CONTATO, sem paginação (teto 250 por origem, `meta.truncated`). O detalhe de Meta/webhook mostra SÓ os campos vinculados e gravados — nunca o payload cru. `show` exige `source` + `id` da mesma linha |

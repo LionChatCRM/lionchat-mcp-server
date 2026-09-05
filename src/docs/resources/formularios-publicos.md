@@ -194,6 +194,7 @@ whitelist do `metadata` segue sem ela) — a decisão é do servidor.
 | `end` | `title, description, redirect_url, button_label, image, video_url` | — | sim |
 | `api_request` | `label, method, url, headers, body, timeout` | `success`, `error` | não (mostra bloco de espera) |
 | `ai` | `label, mode, prompt, categories, include_answers, model` | modo `generate`: `success`, `error` / modo `classify`: um `cat_<id>` por categoria + `other` | não (mostra bloco de espera) |
+| `generate_contract` | `label, document_id, send_link` | `success`, `error` | não (mostra bloco de espera) |
 
 **Chave fora da lista não é lida pelo motor** e o editor a **remove no próximo salvamento pela
 tela**. Escrever um campo inventado pela API não gera erro nenhum — ele simplesmente não faz nada e
@@ -318,6 +319,16 @@ respostas já dadas como contexto. `model` é validado contra a lista suportada;
 da conta. A IA usa a **chave da própria conta** — conta sem chave faz o bloco sair pela saída de
 erro.
 
+**`generate_contract`** (04/09 — bloco "Gerar contrato", feature `document_signing`): gera o CONTRATO de
+assinatura eletrônica daquela pessoa a partir de um modelo (`document_id` = id de
+`lionchat_signature_documents_list`) com os dados da FICHA — mapeie as perguntas com `map_to` para os
+campos que o modelo usa (nome, CPF, endereço…); campo sem valor = saída `error` com o motivo
+(`variaveis_sem_valor: contact.cpf`). `send_link` (padrão `true`) manda o link de assinatura no WhatsApp da
+pessoa (conversa da caixa vinculada); `false` deixa o contrato pronto e você manda `{{contrato.<node_id>.link}}`
+pelo bloco `send_message`. Roda DEPOIS do vínculo do contato, como efeito (bloco de espera), dentro dos
+orçamentos do formulário (200 contratos/formulário/dia, 2.000/conta/dia). Consome 1 vaga do limite mensal
+de contratos. Saídas: `success` (contrato criado) e `error`.
+
 ### Variáveis
 
 | Variável | O que traz | Onde vale |
@@ -326,6 +337,7 @@ erro.
 | `{{contact.name}}` `{{contact.phone}}` `{{contact.email}}` | O que a pessoa respondeu (a ficha é reserva) | idem |
 | `{{api.<node_id>.<caminho>}}` | Um pedaço da resposta de uma consulta | idem |
 | `{{ia.<node_id>}}` | O texto que a IA gerou naquele bloco | idem |
+| `{{contrato.<node_id>.link}}` `.titulo` `.prazo` `.id` `.status` | O contrato gerado pelo bloco Gerar contrato (endereço de assinatura, título, data-limite) | mensagem, prompt, valores |
 | `{{var.<nome>}}` | Variável criada pelo bloco Definir variável | idem |
 | `{{conta.<variável>}}` | Variável da conta (cofre) | cabeçalho e CORPO de `api_request` (com segredo); em `set_variable` e no valor das Ações só as NÃO-secretas |
 
