@@ -601,4 +601,5 @@ reconferência resolve sozinha dentro de 36h.
 ### `role` do participante: `signer` (titular), `witness` (testemunha), `sender` (remetente — assina no painel).
 ### `status` do participante: `pending` → `viewed` → `verified` → `signed` | `refused`.
 ### Erros do envio (`signature_envelopes_create`): `variaveis_sem_valor` (+ `missing[]`), `escolher_caixa` (+ `inboxes[]`),
-`entrega_falhou`, `sem_caixa_whatsapp`, `telefone_invalido`, `limite_do_mes`, `cpf_invalido`, `funcionalidade_desligada`.
+`entrega_falhou`, `sem_caixa_whatsapp`, `telefone_invalido`, `limite_do_mes`, `cpf_invalido`, `funcionalidade_desligada`,
+`fila_cheia` (fila única de conversão do Word cheia — repetir em instantes), `conversor_indisponivel` (o serviço de conversão de Word não respondeu — repetir em instantes).

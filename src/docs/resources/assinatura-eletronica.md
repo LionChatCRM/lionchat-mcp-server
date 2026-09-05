@@ -48,6 +48,9 @@ Participante: `pending` → `viewed` → `verified` (confirmou o código) → `s
 - **Validade** (`roles_layout.validity_days`, padrão 7) conta do ENVIO; `{{document.deadline}}` imprime a data no
   texto; passou = `expired` (cron de hora em hora). **Lembrete** (`reminder_days`, padrão 2, 0 = off): quem não
   assinou recebe o link de novo a cada N dias.
+- **Conversor de Word** é um serviço separado (docx-converter). Fora do ar = `422 conversor_indisponivel` na prévia e no envio de modelo Word — é o serviço, não o arquivo; repetir em instantes. Modelos `text` e `file` não passam por ele.
+- **Fila única de conversão do Word**: uma conversão por vez em toda a instalação (todas as contas); pela tela espera-se até 10 s, automação/macro/fluxo/formulário até 2 s.
+  Passou disso o envio/prévia volta `422 fila_cheia` — é só repetir em instantes (o modelo está bom).
 - **Limite mensal** (`signature_envelopes_limits`): cada contrato criado consome 1 vaga; cancelar não devolve.
 - **PDFs** (original, assinado, evidências) e o **QR de conferência** só existem pela tela/download autenticado —
   não há ferramenta que devolva os bytes. O `sealed_sha256` é o hash do documento final.
