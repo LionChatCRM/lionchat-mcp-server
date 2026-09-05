@@ -23,7 +23,7 @@ caixa de WhatsApp vinculada e (opcionalmente) dispara um fluxo do FlowBuilder no
   responde 404** — ninguém consegue preencher. As tools de dashboard (listar, criar, editar,
   publicar, ver respostas, simular) **funcionam mesmo assim**. Dá pra montar tudo antes de ligar a
   flag; não adianta divulgar o link antes.
-- **Escrita é só de administrador.** `create`, `update`, `destroy`, `publish`, `duplicate` e
+- **Escrita é de administrador ou de cargo personalizado com "Gerenciar Formulários" (`lead_form_manage`).** `create`, `update`, `destroy`, `publish`, `duplicate` e
   `check_embed` passam por `check_admin_authorization?`; usuário não-admin recebe **401**. Leitura
   (`list`, `show`, `stats`, `responses`) e o **simulador** (`test_run`) são liberados a qualquer
   agente da conta.

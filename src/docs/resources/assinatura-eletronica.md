@@ -44,6 +44,9 @@ Participante: `pending` → `viewed` → `verified` (confirmou o código) → `s
    (`contact_id`, `status`, `q`). Não chegou? `resend`. Errou? `cancel` (admin).
 
 ## Regras que valem sempre
+- **Quem pode**: administrador ou cargo personalizado com "Gerenciar Assinaturas" (`signature_manage`) — vale para
+  criar/editar modelo, prévia, enviar, reenviar, baixar e "eu também assino" (403 sem a chave). A LISTA de modelos e a
+  leitura de um modelo continuam abertas a qualquer membro. Cancelar contrato e apagar modelo: só administrador.
 - **Trava sagrada**: campo do modelo sem valor na ficha bloqueia o envio. Preencher a ficha primeiro.
 - **Validade** (`roles_layout.validity_days`, padrão 7) conta do ENVIO; `{{document.deadline}}` imprime a data no
   texto; passou = `expired` (cron de hora em hora). **Lembrete** (`reminder_days`, padrão 2, 0 = off): quem não
