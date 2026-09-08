@@ -168,8 +168,12 @@ Feature flag específica (ex: `feature_kanban`, `feature_captain`) está OFF.
 - `"phone_number has already been taken"` — mesmo problema. **Desde 2026-09-01 é trava do BANCO** (índice
   único telefone+conta, como e-mail e identifier têm desde 2023): dois `contacts_create` com o mesmo
   telefone em paralelo já não criam gêmeos — o segundo volta 422. Antes de criar, procure com
-  `lionchat_contacts_search` (acha com e sem o 9º dígito desde 29/08); para atualizar, use `contacts_update`
-  no que já existe. Duplicado só aparece se as fichas nasceram ANTES da trava
+  `lionchat_contacts_search` — **a busca acha o telefone com e sem o 9º dígito a partir da versão de
+  05/09/2026** (29/08 entregou só a busca de ficha ÚNICA usada pela criação; a busca de LISTA e o filtro
+  ficaram exatos até 05/09 — por isso a integração ficava presa: buscava, não achava, criava e levava 422).
+  Para atualizar, use `contacts_update` no que já existe. Duplicado só aparece se as fichas nasceram
+  ANTES da trava. O texto do 422 sai no idioma padrão da instalação (inglês) mesmo em conta pt_BR —
+  case `attributes: ["phone_number"]`, nunca a frase
 - `"phone_number must be a valid number with country code"` — formato E.164: `+5511999999999`
 
 ### Message
@@ -625,6 +629,14 @@ Conversa que só tem mensagens IMPORTADAS de histórico NÃO tem janela de 24h a
 aquele contato nunca escreveu pela conexão oficial (a mensagem existe no painel porque a importação a
 copiou do celular). O envio de texto livre é recusado mesmo com a fala do cliente visível na tela.
 Saída: modelo aprovado (template) ou esperar o cliente escrever de verdade pela caixa oficial.
+
+## "A conversa mostra fala do cliente de hoje, mas a Meta recusou com 131047" — 08/09
+A Meta às vezes entrega uma mensagem HORAS depois de o cliente mandar (reentrega depois de uma queda ou
+congelamento). Até 08/09 o LionChat contava a janela de 24h pela CHEGADA no servidor, e a Meta conta pelo
+ENVIO — a tela dizia "dentro da janela", o `can_reply` vinha `true`, e a Meta recusava (131047). Desde 08/09
+a mensagem atrasada carrega a hora de envio da Meta e a janela é contada por ela: `last_incoming_message_at`,
+`can_reply` e a tela passam a concordar com a Meta. Diagnóstico: se `can_reply` é `false` com uma fala recente
+na tela, é isso — mande template (utilidade) em vez de texto livre. Caso real: Onipresença, 28 conversas.
 
 ## "Adicionei etiqueta e as antigas sumiram" — CORRIGIDO em 24/08
 

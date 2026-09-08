@@ -672,13 +672,15 @@ aiModel nos modos novos (proteção de nós antigos que carregam aiModel de defa
 padrão da conta).
 Exemplo: `{"aiMode":"sentiment","aiAssistantId":"12","aiModel":"gpt-4.1-mini","aiModelExplicit":true}`.
 
-**A whitelist (`FlowBuilder::RawLlmService::SUPPORTED_MODELS`) é uma lista FECHADA de 16 nomes, SEM
+**A whitelist (`FlowBuilder::RawLlmService::SUPPORTED_MODELS`) é uma lista FECHADA de 19 nomes, SEM
 curinga** — não existe "a família gpt-5 inteira":
 `gpt-4o-mini`, `gpt-4o`, `gpt-4.1-nano`, `gpt-4.1-mini`, `gpt-4.1`, `gpt-5-mini`, `gpt-5`,
-`gpt-5.2`, `gpt-5.4-nano`, `gpt-5.4-mini`, `gpt-5.4`, `gpt-5.5`, `o1`, `o3`, `o3-mini`, `o4-mini`.
-A família **`gpt-5.6` (luna/terra/sol) foi REMOVIDA em 2026-07-29**: ela recusa function tools
-(erro 400 na OpenAI), o que deixava o Agente de IA **mudo em 100% das chamadas** — saiu também daqui
-pra não ser oferecida numa tela e faltar na outra. Também não existem `o1-mini`, `gpt-4.5-preview`,
+`gpt-5.2`, `gpt-5.4-nano`, `gpt-5.4-mini`, `gpt-5.4`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-terra`,
+`gpt-5.6-sol`, `o1`, `o3`, `o3-mini`, `o4-mini`.
+A família **`gpt-5.6` (luna/terra/sol) voltou em 09/2026** (tinha sido removida em 2026-07-29 porque
+recusa function tools no canal antigo): o servidor fala com esses três pela porta `/v1/responses`.
+Eles ignoram a temperatura do bloco (só o padrão) e **NÃO valem no bloco de IA do Formulário de Lead**
+(teto de 15 s — o servidor exclui e usa o fallback). Também não existem `o1-mini`, `gpt-4.5-preview`,
 `gpt-5.2-pro` nem `gpt-5.5-pro` (a OpenAI recusa).
 
 **OBRIGATÓRIO via API — `aiAssistantId`:** os modos `generate`/`intent`/`sentiment`/`extract`

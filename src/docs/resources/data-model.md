@@ -724,3 +724,20 @@ Os limites que a API devolve (`resource_limits.*` da conta, `email_usage.limit`,
 duas contas no MESMO plano podem ter limites diferentes — não é defeito. Limite `0` significa
 ILIMITADO em toda a plataforma. A contratação/remoção de adicionais é feita SÓ pela tela de
 Cobrança do painel (não há ferramenta MCP para isso, por decisão do dono).
+
+## Assinatura eletrônica de contratos (04/09)
+
+```
+SignatureDocument (modelo)  1 ──── N  SignatureEnvelope (contrato de UMA pessoa)  1 ──── N  SignatureParticipant
+   name, kind (text|file|word)            title, status, sent_at, expires_at,                name, role (signer|witness|sender),
+   body ({{variáveis}}), tags,             contact_id, conversation_id,                       status, phone/email, delivery_channel,
+   roles_layout {signers, witnesses,       original_sha256, sealed_sha256,                    conversation_id (a conversa DELE),
+   sender_signs, require_id_photo,         created_by (quem mandou)                           public_url, signed_at, viewed_at
+   validity_days, reminder_days}                │
+   progress (contagem por balde)                └── N  SignatureEvent (append-only: kind, occurred_at, ip, user_agent, detail)
+```
+- Contrato aponta pro contato (`contact_id`, nulifica se a ficha for apagada — a prova sobrevive) e pra conversa
+  do titular; cada participante tem a PRÓPRIA conversa (testemunha na dela).
+- `roles_layout` é jsonb aberto e MESCLADO no update; `progress` é calculado (aguardando/visualizado/assinado/encerrado).
+- Feature por conta: `document_signing`. Limite mensal em `usage_limits.signature_requests_per_month` (0 = ilimitado).
+- Detalhe completo: resource `lionchat://docs/assinatura-eletronica`.

@@ -173,7 +173,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts",
   "title": "Criar Contato",
-  "description": "Cria um contato. Nenhum campo e estritamente obrigatorio (recomendado phone_number ou email). Aceita name, email, phone_number, identifier, additional_attributes, custom_attributes, blocked. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): phone_number ja cadastrado em outro contato da conta = 422 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe.",
+  "description": "Cria um contato. Nenhum campo e estritamente obrigatorio (recomendado phone_number ou email). Aceita name, email, phone_number, identifier, additional_attributes, custom_attributes, blocked. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): phone_number ja cadastrado em outro contato da conta = 422 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe.\n\nSE VOLTAR 422 com attributes:['phone_number']: o contato JA EXISTE — na forma exata OU na outra forma do nono digito. Nao tente criar de novo trocando a forma do numero (a recusa protege contra ficha em dobro): busque com lionchat_contacts_search e use contacts_update. Case os 'attributes' da resposta, nunca o texto da mensagem (ela sai no idioma padrao da instalacao, em ingles).",
   "category": "Contatos",
   "params": [
    {
@@ -646,7 +646,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts/search",
   "title": "Buscar Contatos",
-  "description": "Busca contatos por texto (insensivel a acento) em nome/email/telefone/identifier. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "Busca contatos por texto (insensivel a acento) em nome/email/telefone/identifier. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).\n\nTELEFONE COM E SEM O 9 (desde 05/09/2026): quando 'q' e um celular brasileiro completo (com ou sem o nono digito, com ou sem '+', formatado ou nao), a busca acha o contato salvo em QUALQUER das duas formas. Nao precisa buscar duas vezes. Uma pessoa com ficha duplicada pode voltar como 2 resultados — nunca pegue o primeiro as cegas para contacts_update; confira nome/e-mail. A lupa geral (lionchat_search_list) NAO tem essa tolerancia: para telefone, use esta.",
   "category": "Contatos",
   "params": [
    {
@@ -654,7 +654,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo de busca"
+    "description": "Termo de busca. Telefone: qualquer forma (com/sem +, com/sem o nono digito, formatado) acha a mesma ficha."
    },
    {
     "name": "page",
@@ -698,7 +698,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/filter",
   "title": "Filtrar Contatos",
-  "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422. [2026-07-25] Nova chave id (id interno do contato, equal_to/not_equal_to) — serve pra exportar/checar UM contato especifico. NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas.",
+  "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422. [2026-07-25] Nova chave id (id interno do contato, equal_to/not_equal_to) — serve pra exportar/checar UM contato especifico. NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas.\n\nTELEFONE COM E SEM O 9 (desde 05/09/2026): phone_number com equal_to/not_equal_to casa as DUAS formas do celular brasileiro (mande +5541999887766 ou +554199887766 — acham a mesma ficha; not_equal_to exclui as duas). Valor formatado ('(41) 99988-7766') tambem casa. Telefone fixo, estrangeiro ou trecho segue exato. ATENCAO: 'Selecionar todos' + excluir sobre um filtro de telefone apaga as 2 fichas da mesma pessoa (decisao do dono, 05/09).",
   "category": "Contatos",
   "params": [
    {
@@ -4347,7 +4347,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Modelo LLM do assistente. O campo NAO E VALIDADO: qualquer texto e aceito e gravado, e o erro so aparece depois, em producao. NUNCA use a familia gpt-5.6 (gpt-5.6-luna / gpt-5.6-terra / gpt-5.6-sol): ela recusa function tools, e como a IA usa ferramenta em TODA resposta, 100% das chamadas falham e o Agente fica MUDO em silencio (removida da plataforma em 29/07). Valores validos hoje — os mesmos 16 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL."
+    "description": "Modelo LLM do assistente. VALIDADO no servidor desde 08/09/2026: valor fora da lista devolve 422 (message 'Model is not included in the list') e nada e gravado. Valores validos — os mesmos 19 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3, gpt-5.6-luna, gpt-5.6-terra, gpt-5.6-sol. Familia gpt-5.6 (luna/terra/sol) LIBERADA em 08/09/2026: o servidor fala com esses tres por um canal proprio da OpenAI (/v1/responses, so pra eles; os outros 16 seguem como sempre). Regras dela: nao aceita temperatura (o campo some na tela e e ignorado), custo premium, e o Formulario publico (bloco de IA) NAO usa esses tres — la o servidor cai no modelo padrao da conta. Nao existe 'gpt-5.6' sem sufixo. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL. Assistente antigo com modelo fora da lista continua salvando o resto do config; so a TROCA de modelo e conferida."
    },
    {
     "name": "config.instructions",
@@ -4572,7 +4572,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Modelo LLM do assistente. O campo NAO E VALIDADO: qualquer texto e aceito e gravado, e o erro so aparece depois, em producao. NUNCA use a familia gpt-5.6 (gpt-5.6-luna / gpt-5.6-terra / gpt-5.6-sol): ela recusa function tools, e como a IA usa ferramenta em TODA resposta, 100% das chamadas falham e o Agente fica MUDO em silencio (removida da plataforma em 29/07). Valores validos hoje — os mesmos 16 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL."
+    "description": "Modelo LLM do assistente. VALIDADO no servidor desde 08/09/2026: valor fora da lista devolve 422 (message 'Model is not included in the list') e nada e gravado. Valores validos — os mesmos 19 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3, gpt-5.6-luna, gpt-5.6-terra, gpt-5.6-sol. Familia gpt-5.6 (luna/terra/sol) LIBERADA em 08/09/2026: o servidor fala com esses tres por um canal proprio da OpenAI (/v1/responses, so pra eles; os outros 16 seguem como sempre). Regras dela: nao aceita temperatura (o campo some na tela e e ignorado), custo premium, e o Formulario publico (bloco de IA) NAO usa esses tres — la o servidor cai no modelo padrao da conta. Nao existe 'gpt-5.6' sem sufixo. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL. Assistente antigo com modelo fora da lista continua salvando o resto do config; so a TROCA de modelo e conferida."
    },
    {
     "name": "config.instructions",
@@ -8228,7 +8228,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/messages",
   "title": "Buscar Mensagens",
-  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nE A SUBSTITUTA CERTA do lionchat_conversations_search legado, que faz a mesma busca em 15 a 22 segundos: aqui ha indice trigram proprio e teto de tempo em duas fases (2 s na primeira tentativa, 14 s no limite absoluto), entao nao trava. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha.",
+  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nE A SUBSTITUTA CERTA do lionchat_conversations_search legado, que faz a mesma busca em 15 a 22 segundos: aqui ha indice trigram proprio e teto de tempo em duas fases (2 s na primeira tentativa, 14 s no limite absoluto), entao nao trava. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha. Leia message_search_interrupted no retorno antes de afirmar 'nao encontrado'.",
   "category": "Busca",
   "params": [
    {
@@ -8274,7 +8274,7 @@
     "description": "Página"
    }
   ],
-  "returns": "{ payload: { messages: [...] } } — sem meta e sem total. 15 mensagens por pagina, das MAIS RECENTES para as mais antigas; para ver o resto use `page` (a resposta NAO informa quantas paginas existem, entao vindo 15 itens assuma que pode haver mais). Cada mensagem traz contact_name, contact_thumbnail, conversation_status e previous_message/next_message (as vizinhas da MESMA conversa, ou null). O resultado de MENSAGEM nao traz `labels` — as etiquetas so vem nos cards de conversa e de contato.",
+  "returns": "{ payload: { messages: [...] } } — sem meta e sem total. 15 mensagens por pagina, das MAIS RECENTES para as mais antigas; para ver o resto use `page` (a resposta NAO informa quantas paginas existem, entao vindo 15 itens assuma que pode haver mais). Cada mensagem traz contact_name, contact_thumbnail, conversation_status e previous_message/next_message (as vizinhas da MESMA conversa, ou null). O resultado de MENSAGEM nao traz `labels` — as etiquetas so vem nos cards de conversa e de contato. Desde 04/09 o payload traz tambem message_search_interrupted (boolean): true = a secao de mensagens estourou o teto de tempo (2 s + 2 s) e a lista voltou VAZIA/incompleta — NAO quer dizer que nao existe; refine o termo ou recorte por conversa.",
   "common_use_cases": [
    "Dashboard: contar/exibir resultados de busca",
    "Buscar com filtros antes de outra operação",
@@ -10101,7 +10101,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Modelo LLM (gpt-4o-mini, gpt-4o, etc.)"
+    "description": "Modelo LLM (gpt-4o-mini, gpt-4.1-mini, gpt-5.4, gpt-5.6-luna/terra/sol etc. — a mesma lista de 19 do assistente). A familia gpt-5.6 e aceita no bloco de IA do fluxo desde 08/09/2026 e nao usa temperatura."
    },
    {
     "name": "instructions",
@@ -13558,7 +13558,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Array de permissoes"
+    "description": "Array de permissoes (array de strings). Valores aceitos (22): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu)."
    }
   ],
   "returns": "papel personalizado criado (com novo ID)",
@@ -13636,7 +13636,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Permissoes"
+    "description": "Permissoes (array de strings). Valores aceitos (22): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu)."
    }
   ],
   "returns": "papel personalizado atualizado",
@@ -22851,7 +22851,7 @@
     "description": "ID da caixa de entrada WAHA"
    }
   ],
-  "returns": "{ status, connected, phone_number, qr_code_available, phone_number_changed }",
+  "returns": "{ status, connected, phone_number, qr_code_available, phone_number_changed, previous_phone_number, qr_link_active, qr_link_expires_at, contacts_quota, reachout_timelock }. contacts_quota vem do WhatsApp (nao da Meta) e traz cappingStatus/totalQuota/usedQuota/cycleStart/cycleEnd; totalQuota -1 = sem limite (o caso de quase toda caixa). reachout_timelock null = pode iniciar conversas; presente = o WhatsApp bloqueou temporariamente abordagem fria por esse numero. Os dois podem vir AUSENTES (servidor WAHA que nao reporta saude) — ausencia nao significa \"sem limite\".",
   "common_use_cases": [
    "Diagnosticar 'mensagens não estão saindo' (sessão caiu?)"
   ],
@@ -32563,6 +32563,479 @@
   ],
   "related_tools": [
    "lionchat_report_alerts_preview"
+  ]
+ },
+ {
+  "id": "lionchat_signature_documents_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/signature_documents",
+  "title": "Listar Modelos de Contrato",
+  "description": "Lista os MODELOS de documento para assinatura eletronica da conta (o 'contrato padrao' escrito uma vez com {{variaveis}} e reaproveitado), com o andamento agregado dos contratos de cada um (progress: aguardando/visualizado/assinado/encerrado). Exige a feature document_signing ligada na conta (403 feature_disabled). Guia: resource lionchat://docs/assinatura-eletronica.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "archived",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = inclui os modelos arquivados"
+   }
+  ],
+  "returns": "payload: [{id, name, kind (text|file|word), body, variables, tags, archived, roles_layout, progress, envelopes_count, has_source_file, source_file_name}]",
+  "common_use_cases": [
+   "Ver quais modelos existem antes de mandar um contrato",
+   "Acompanhar quantos contratos de cada modelo estao aguardando/assinados",
+   "Achar o id do modelo pra usar em signature_envelopes_create, na acao de fluxo ou no bloco do formulario"
+  ],
+  "related_tools": [
+   "lionchat_signature_documents_show",
+   "lionchat_signature_documents_create",
+   "lionchat_signature_envelopes_list"
+  ]
+ },
+ {
+  "id": "lionchat_signature_documents_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/signature_documents/{id}",
+  "title": "Detalhes do Modelo de Contrato",
+  "description": "Um modelo de contrato com as variaveis que ele usa, a configuracao (roles_layout) e os contratos ja mandados a partir dele (envelopes, ate 200 — pra listar com filtro/busca/pagina use signature_envelopes_list com signature_document_id).",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do modelo"
+   }
+  ],
+  "returns": "modelo + envelopes: [{id, title, status, contact_id, contact_name, sent_at, completed_at, expires_at, participants[]}]",
+  "common_use_cases": [
+   "Ver o texto e as variaveis do modelo antes de editar",
+   "Conferir quem ja recebeu este contrato"
+  ],
+  "related_tools": [
+   "lionchat_signature_documents_list",
+   "lionchat_signature_documents_update",
+   "lionchat_signature_envelopes_list"
+  ]
+ },
+ {
+  "id": "lionchat_signature_documents_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/signature_documents",
+  "title": "Criar Modelo de Contrato (texto)",
+  "description": "Cria um MODELO de contrato ESCRITO (kind=text) usando o editor de texto do LionChat: o corpo e texto/markdown simples (**negrito**, listas, paragrafos) com {{variaveis}} da ficha — {{contact.name}}, {{contact.cpf}}, {{contact.phone_number}}, {{contact.email}}, {{contact.address.street}}, {{contact.marital_status}}, {{contact.profession}}, {{account.name}}, {{document.deadline}} (data-limite) e {{document.validity_days}} — veja o catalogo em signature_documents_field_catalog. Cada pessoa recebe o PDF com os dados DELA; campo mapeado sem valor na ficha BLOQUEIA o envio (trava). NAO da pra subir arquivo (PDF/Word) por aqui — isso e so pela tela (kind file/word); aqui e so escrever o contrato.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome do modelo (ex.: Contrato de prestacao de servicos)"
+   },
+   {
+    "name": "body",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Texto do contrato com {{variaveis}}. Blocos de assinatura de cada pessoa sao desenhados automaticamente no fim."
+   },
+   {
+    "name": "kind",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Sempre 'text' pela API (padrao). file/word exigem upload pela tela."
+   },
+   {
+    "name": "tags",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Etiquetas do modelo (strings) — organizam e filtram a lista"
+   },
+   {
+    "name": "roles_layout",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto), reminder_days (lembrete a cada N dias a quem nao assinou; 0 desliga; padrao 2)."
+   }
+  ],
+  "returns": "o modelo criado (id, name, kind, body, variables, roles_layout, progress)",
+  "common_use_cases": [
+   "Escrever um contrato padrao com variaveis da ficha pra mandar depois",
+   "Criar o modelo que um fluxo, uma macro ou um formulario vai usar"
+  ],
+  "related_tools": [
+   "lionchat_signature_documents_field_catalog",
+   "lionchat_signature_documents_update",
+   "lionchat_signature_envelopes_create"
+  ]
+ },
+ {
+  "id": "lionchat_signature_documents_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/signature_documents/{id}",
+  "title": "Editar Modelo de Contrato",
+  "description": "Edita nome, texto, etiquetas, arquivamento ou configuracao do modelo. roles_layout e MESCLADO (mande so as chaves que mudam; as posicoes de assinatura e o mapeamento do Word gravados pela tela ficam intactos). Contratos JA mandados nao mudam (o PDF de cada um e fixo).",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do modelo"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Novo nome"
+   },
+   {
+    "name": "body",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Novo texto (so modelo kind=text)"
+   },
+   {
+    "name": "tags",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Etiquetas (substitui a lista)"
+   },
+   {
+    "name": "archived",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "true = arquiva (some da lista padrao, sem apagar); false = desarquiva"
+   },
+   {
+    "name": "roles_layout",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto), reminder_days (lembrete a cada N dias a quem nao assinou; 0 desliga; padrao 2)."
+   }
+  ],
+  "returns": "o modelo atualizado",
+  "common_use_cases": [
+   "Trocar o nome ou corrigir o texto do contrato",
+   "Mudar validade, lembrete, testemunhas ou 'eu tambem assino'",
+   "Arquivar um modelo antigo"
+  ],
+  "related_tools": [
+   "lionchat_signature_documents_show",
+   "lionchat_signature_documents_list"
+  ]
+ },
+ {
+  "id": "lionchat_signature_documents_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/signature_documents/{id}",
+  "title": "Apagar Modelo de Contrato",
+  "description": "Apaga o modelo (so ADMINISTRADOR). Os contratos ja mandados NAO sao apagados (ficam sem o nome do modelo). Prefira arquivar (update archived=true).",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do modelo"
+   }
+  ],
+  "returns": "204 sem corpo",
+  "common_use_cases": [
+   "Remover um modelo criado por engano"
+  ],
+  "related_tools": [
+   "lionchat_signature_documents_update"
+  ]
+ },
+ {
+  "id": "lionchat_signature_documents_field_catalog",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/signature_documents/field_catalog",
+  "title": "Catalogo de Variaveis do Contrato",
+  "description": "As variaveis que o contrato consegue preencher a partir da ficha do contato e da conta (value + label), pra escrever o texto do modelo ou mapear campos de um Word.",
+  "category": "Assinatura eletronica",
+  "params": [],
+  "returns": "catalog: [{value: 'contact.name', label: 'Nome do contato'}, ...] (inclui document.deadline)",
+  "common_use_cases": [
+   "Saber quais {{variaveis}} existem antes de escrever um modelo"
+  ],
+  "related_tools": [
+   "lionchat_signature_documents_create"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes",
+  "title": "Listar Contratos Enviados",
+  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "signature_document_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "So contratos deste modelo"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "So contratos desta pessoa"
+   },
+   {
+    "name": "conversation_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "So contratos desta conversa (display_id)"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Balde: aguardando | visualizado | assinado | encerrado | falta_eu"
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Busca por nome, telefone ou e-mail de quem assina"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Pagina (padrao 1, 25 por pagina)"
+   }
+  ],
+  "returns": "payload: [{id, title, status, signature_document_id, document_name, contact_id, contact_name, conversation_id, sent_at, completed_at, expires_at, participants[{id, name, role, status, delivery_channel, phone, email, signed_at, viewed_at, public_url, signs_in_panel}], delivery: {failed[], delivered_participant_ids[]}, has_signed_document, pending_for_me}], meta: {page, per_page, has_more, counts}",
+  "common_use_cases": [
+   "Ver o status dos contratos de um cliente (assinou? abriu? expirou?)",
+   "Relatorio de um modelo: quantos aguardando/assinados, quem falta",
+   "Achar contratos nao entregues (delivery.failed) pra reenviar"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_show",
+   "lionchat_signature_envelopes_resend",
+   "lionchat_signature_envelopes_create"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}",
+  "title": "Detalhes do Contrato (linha do tempo)",
+  "description": "Um contrato com quem assina e a LINHA DO TEMPO completa (events): created, delivered, sent, opened, code_requested, code_verified, signed (com ip, device, location e panel=true quando foi assinado no painel), all_signed, sealed (documento final gerado, com hash), refused, expired, cancelled, delivery_failed, reminded, resent. E o relatorio de evidencias em dados; os PDFs (original, assinado, evidencias) so saem pela tela/API de download.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   }
+  ],
+  "returns": "contrato + events: [{kind, occurred_at, ip, device, location, participant_id, panel}] + original_sha256/sealed_sha256",
+  "common_use_cases": [
+   "Conferir quando e de onde a pessoa abriu e assinou",
+   "Ver por que um contrato nao foi entregue (delivery.failed) ou foi recusado"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_list",
+   "lionchat_signature_envelopes_resend",
+   "lionchat_signature_envelopes_cancel"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes",
+  "title": "Enviar Contrato para Assinar",
+  "description": "Cria o contrato DAQUELA pessoa a partir de um modelo e ENTREGA o link (na conversa de WhatsApp da pessoa — uma conversa POR assinante — ou por e-mail). O PDF e gerado com os dados da ficha; variavel do modelo sem valor na ficha = 422 variaveis_sem_valor com a lista do que falta (preencha a ficha e tente de novo). Sem inbox_id e com o contato conversando em MAIS de uma caixa de WhatsApp = 422 escolher_caixa com inboxes[] — repita mandando inbox_id. Ninguem recebeu = 422 entrega_falhou (o contrato fica como rascunho; use resend). Recebeu parcialmente = 201 com delivery_failures[]. Consome 1 vaga do limite mensal (veja signature_envelopes_limits). Modelo com sender_signs cria sozinho o participante do remetente (o usuario do token), que assina NO PAINEL (nao ha ferramenta pra assinar por ele).",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "signature_document_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do modelo"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ficha do titular (recomendado — preenche as variaveis e a conversa)"
+   },
+   {
+    "name": "conversation_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Conversa (display_id) por onde o link sai, quando ja se sabe qual"
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa de WhatsApp por onde entregar (obrigatorio quando a resposta anterior foi escolher_caixa)"
+   },
+   {
+    "name": "participants",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Quem assina (array). Cada item: {name (obrigatorio), role: signer|witness (titular|testemunha; NAO mande sender — o remetente e criado sozinho quando o modelo tem sender_signs), phone (+55DDDNUMERO, quando delivery_channel=whatsapp), email (quando delivery_channel=email), delivery_channel: whatsapp|email (padrao whatsapp), cpf (opcional; invalido = 422 cpf_invalido), contact_id (ficha da pessoa; recomendado no titular)}. Cada pessoa recebe o proprio link e assina com codigo de uso unico."
+   }
+  ],
+  "returns": "201: o contrato (status sent) com participants[] (public_url de cada um), events[] e delivery_failures[]; 422: {error, detail, missing, inboxes, envelope}",
+  "common_use_cases": [
+   "Mandar o contrato padrao pra um cliente assinar pelo WhatsApp",
+   "Mandar com testemunha (participants com role witness e o telefone dela)",
+   "Reenviar um contrato que ficou como rascunho por falha de entrega (use resend)"
+  ],
+  "related_tools": [
+   "lionchat_signature_documents_list",
+   "lionchat_signature_envelopes_limits",
+   "lionchat_signature_envelopes_show",
+   "lionchat_signature_envelopes_resend"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_resend",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/resend",
+  "title": "Reenviar Link do Contrato",
+  "description": "Reenvia o link a quem ainda nao assinou (nao cria contrato novo, nao consome vaga). Le o resultado: {ok, resent, failures[{participant_id, name, motivo}]}. Contrato que nasceu sem entrega vira 'sent' no primeiro link que sai.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   }
+  ],
+  "returns": "{ok, resent, failures[]}",
+  "common_use_cases": [
+   "Cliente diz que nao recebeu o link",
+   "Contrato marcado como 'nao entregue'"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_show"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_sign_as_sender",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/sign_as_sender",
+  "title": "Remetente Assina o Contrato pelo Painel",
+  "description": "A assinatura do REMETENTE (a pessoa do token), quando o modelo tem 'eu tambem assino' (roles_layout.sender_signs). Nao serve pra assinar no lugar do cliente: titular e testemunha assinam pelo link publico deles. Manda o desenho da assinatura como PNG em base64 com o prefixo data:image/png;base64,... (o mesmo rabisco da tela; remember_drawing guarda pra proxima vez). Recusas 422: nao_e_sua (o usuario do token nao e o remetente deste contrato), ja_assinado, sem_desenho. Quando era a ultima assinatura que faltava, o contrato fecha e o PDF final e gerado em seguida (status signed_pending_seal -> signed). Ache os contratos que esperam a sua assinatura com status=falta_eu em lionchat_signature_envelopes_list.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   },
+   {
+    "name": "signature_image",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Desenho da assinatura em base64, com prefixo data URL (data:image/png;base64,...). Obrigatorio — sem ele 422 sem_desenho"
+   },
+   {
+    "name": "location",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Onde o remetente assinou, se souber: {latitude, longitude, accuracy} (graus decimais; fora da faixa e ignorado). Vai pra prova (evidencias)"
+   },
+   {
+    "name": "remember_drawing",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "true = guarda o desenho nas preferencias do usuario pra reaproveitar no proximo contrato"
+   }
+  ],
+  "returns": "o contrato atualizado com participants[] e events[] (o seu participante vira signed); 422: {error: nao_e_sua | ja_assinado | sem_desenho}",
+  "common_use_cases": [
+   "Fechar um contrato em que so falta a assinatura do remetente",
+   "Assinar em lote os contratos listados com status=falta_eu"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_list",
+   "lionchat_signature_envelopes_show",
+   "lionchat_signature_envelopes_create"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_cancel",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/cancel",
+  "title": "Cancelar Contrato",
+  "description": "Cancela um contrato ainda aberto (so ADMINISTRADOR). O link para de funcionar; a linha do tempo guarda o cancelamento. Contrato assinado/recusado/expirado nao cancela (422 ja_concluido).",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   }
+  ],
+  "returns": "o contrato com status cancelled",
+  "common_use_cases": [
+   "Mandou pro cliente errado",
+   "O negocio nao vai acontecer"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_show"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_limits",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/limits",
+  "title": "Limite Mensal de Contratos",
+  "description": "Quantos contratos a conta ja mandou no mes e o teto do plano ({used, limit, unlimited}). Contrato cancelado/expirado NAO devolve a vaga.",
+  "category": "Assinatura eletronica",
+  "params": [],
+  "returns": "{used, limit, unlimited}",
+  "common_use_cases": [
+   "Avisar antes de um disparo em lote que o teto vai estourar"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_create"
   ]
  }
 ]

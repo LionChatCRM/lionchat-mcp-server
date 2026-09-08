@@ -566,7 +566,7 @@ com data futura ou `has_imported_history` fecharia a janela de 24h daquela conve
 |---|---|---|
 | `medium` | caixa (`inboxes_list`/`_show`) | sub-tipo do canal. Numa caixa de Página do Facebook diz se ela é Messenger ou **só Instagram** — é o que separa os dois |
 | `content` | mensagem | já vem no formato de exibição (mensagem apagada mostra o aviso, não o texto cru) |
-| `last_incoming_message_at` | conversa | data da última mensagem VIVA do cliente (unix). Use para saber se a janela de 24h está aberta — não confie na data da conversa, que pode vir de histórico importado |
+| `last_incoming_message_at` | conversa | data da última mensagem VIVA do cliente (unix). Use para saber se a janela de 24h está aberta — não confie na data da conversa, que pode vir de histórico importado. Mensagem que a Meta entregou ATRASADA (reentrega depois de uma queda) conta pela hora de ENVIO da Meta, não pela chegada (08/09): o campo, `can_reply` e a tela seguem a mesma régua que a Meta usa pra recusar |
 
 ## Formulário público: código para incorporar no site (02/09/2026)
 
@@ -584,3 +584,22 @@ A gravação permanente só nasce cerca de 24h depois da ligação. O card agora
 conversa). Quem atendeu voltou a aparecer nas recebidas. Se o cliente diz que o botão de ouvir não
 funciona numa ligação de hoje, o mais provável é que o arquivo permanente ainda não exista — a
 reconferência resolve sozinha dentro de 36h.
+
+## Assinatura eletrônica de contratos (04/09)
+
+### `status` do contrato (`signature_envelopes`)
+| Valor | Balde de filtro | Significado |
+|---|---|---|
+| `draft` | aguardando | criado sem nenhuma entrega (falhou) — use `resend` |
+| `sent` | aguardando | link entregue, ninguém abriu ainda |
+| `viewed` | visualizado | alguém abriu o link |
+| `partially_signed` | visualizado | parte das pessoas assinou |
+| `signed_pending_seal` | assinado | todos assinaram; o documento final está sendo gerado |
+| `signed` | assinado | documento final pronto (`sealed_sha256`) |
+| `refused` / `cancelled` / `expired` | encerrado | recusado / cancelado pela equipe / prazo venceu |
+
+### `role` do participante: `signer` (titular), `witness` (testemunha), `sender` (remetente — assina no painel).
+### `status` do participante: `pending` → `viewed` → `verified` → `signed` | `refused`.
+### Erros do envio (`signature_envelopes_create`): `variaveis_sem_valor` (+ `missing[]`), `escolher_caixa` (+ `inboxes[]`),
+`entrega_falhou`, `sem_caixa_whatsapp`, `telefone_invalido`, `limite_do_mes`, `cpf_invalido`, `funcionalidade_desligada`,
+`fila_cheia` (fila única de conversão do Word cheia — repetir em instantes), `conversor_indisponivel` (o serviço de conversão de Word não respondeu — repetir em instantes).

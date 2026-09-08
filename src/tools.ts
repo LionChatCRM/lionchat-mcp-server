@@ -484,7 +484,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-02)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-08)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -608,6 +608,26 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     receber duas mensagens (a tela avisa). Caixa WhatsApp OFICIAL: conversa criada nova (ou parada ha
     mais de 24h) esta FORA da janela — texto livre no 1o bloco cai em "window_closed"/erro; comece por
     template.
+    signature_sent / signature_viewed / signature_signed_signer / signature_signed_witness /
+    signature_signed_other / signature_all_signed / signature_refused / signature_expired (NOVOS
+    2026-09-04 — gatilhos de ASSINATURA ELETRONICA de contratos; aba "Assinatura" do Inicio, so com a
+    feature document_signing ligada na conta): documento enviado pra alguem assinar / a pessoa abriu o
+    link (1a vez) / o titular assinou / uma testemunha assinou / o remetente ou outro papel assinou /
+    todos assinaram (documento final gerado) / alguem recusou / o prazo terminou sem todas as
+    assinaturas. INERTES a evento de conversa (quem dispara e o SignatureEnvelopes::FlowTriggerDispatcher,
+    a partir do proprio registro da prova). Item: {key:'signature_signed_signer', config:{document_ids:[]}}
+    — document_ids = ids de MODELO de contrato (STRINGS; vazio = qualquer modelo). A sessao nasce na
+    conversa da PESSOA do acontecimento (a testemunha tem a dela); contrato so por e-mail (sem conversa)
+    nao dispara; o flow precisa estar ligado a caixa da conversa (ou a nenhuma). Sessao ativa do MESMO
+    flow na conversa NAO e atropelada (pulo visivel 'session_already_active'). Idempotente por 24h.
+    SO flow individual. Variaveis {{contrato.*}}: contrato.id, contrato.evento (sent|opened|signed|
+    sealed|refused|expired), contrato.titulo, contrato.modelo, contrato.modelo_id, contrato.status,
+    contrato.enviado_em, contrato.prazo, contrato.validade_dias, contrato.assinado_por_todos (sim|nao),
+    contrato.conversa_id; quem agiu: contrato.assinante.nome / .papel (Assinante|Testemunha|Remetente) /
+    .papel_chave (signer|witness|sender) / .email / .telefone / .cpf / .status / .assinou_em /
+    .abriu_em / .link (endereco de assinatura; vazio pra quem assina no painel) / .ip / .dispositivo /
+    .localizacao / .foto_documento (sim|nao) / .pelo_painel (sim|nao); lista: contrato.participantes
+    (array de {nome, papel, status, assinou_em}). trigger.type = a chave do gatilho.
     CONFLITO (flow_trigger_conflict): e por CONTA, nao por caixa — dois flows ATIVOS com o mesmo
     booking_* colidem quando os tipos se cruzam E os agentes se cruzam (lista vazia = todos, entao dois
     flows "vazio + vazio" colidem). Resolva com filtros disjuntos ou um flow so com condition.
@@ -843,6 +863,12 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       add_sla({sla_policy_id}) — NOVO 24/07: aplica politica de SLA na conversa (id de sla_list;
         aceita variavel Liquid). NO-OP se a conversa JA tem SLA (nunca troca/reinicia); politica
         inexistente nao quebra o fluxo
+      send_signature_document({document_id, inbox_id?}) — NOVO 04/09: manda um MODELO de contrato
+        (assinatura eletronica; id de lionchat_signature_documents_list) pra pessoa desta conversa; o
+        link sai NESTA conversa (ou por e-mail se a ficha nao tem telefone). O PDF e gerado com os
+        dados da ficha: variavel do modelo sem valor na ficha = o bloco fica com ERRO e o motivo
+        ('variaveis_sem_valor: contact.cpf'), nunca verde por engano. A mesma acao existe em macro e
+        automacao (send_signature_document, action_params [document_id]). Exige document_signing.
     Contato: add_label({labels:[...]}), remove_label({labels:[...]}),  // etiqueta NO CONTATO
       update_attribute({attr_source:'contact'|'conversation'|'card', attr_key, attr_value})
         — campos EXATOS (NAO entity/key/value). Somar/subtrair via Liquid no attr_value:
@@ -918,6 +944,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     aiModel,                         // opcional: modelo LLM SO deste node (ex "gpt-4.1-mini");
                                      // vazio/ausente = modelo padrao da conta; vale em TODOS os
                                      // modos e tambem com assistente (sobrepoe o modelo dele)
+                                     // gpt-5.6-luna/terra/sol aceitos desde 08/09 (sem temperatura);
+                                     // modelo fora da lista de 19 = 422 na hora de salvar o assistente
     aiModelExplicit: true,           // OBRIGATORIO junto do aiModel — sem esta flag o backend
                                      // IGNORA o aiModel (protecao de nodes antigos)
     aiIntents: [{name}],            // se intent — ARRAY DE OBJETOS (NAO array de strings)
