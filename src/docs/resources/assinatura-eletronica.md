@@ -41,7 +41,8 @@ Participante: `pending` → `viewed` → `verified` (confirmou o código) → `s
    com `role: 'witness'` e o telefone dela).
 4. `422 escolher_caixa` → a pessoa conversa em mais de uma caixa de WhatsApp: repita com `inbox_id`.
 5. Acompanhe com `signature_envelopes_show` (linha do tempo) ou `signature_envelopes_list`
-   (`contact_id`, `status`, `q`). Não chegou? `resend`. Errou? `cancel` (admin).
+   (`contact_id`, `status`, `q`). Não chegou? `resend`. Errou? `cancel` (admin). Falta a SUA assinatura
+   (modelo com "eu também assino")? `signature_envelopes_sign_as_sender` — ver regra abaixo.
 
 ## Regras que valem sempre
 - **Quem pode**: administrador ou cargo personalizado com "Gerenciar Assinaturas" (`signature_manage`) — vale para
@@ -57,7 +58,14 @@ Participante: `pending` → `viewed` → `verified` (confirmou o código) → `s
 - **Limite mensal** (`signature_envelopes_limits`): cada contrato criado consome 1 vaga; cancelar não devolve.
 - **PDFs** (original, assinado, evidências) e o **QR de conferência** só existem pela tela/download autenticado —
   não há ferramenta que devolva os bytes. O `sealed_sha256` é o hash do documento final.
-- **Assinar no painel** ("eu também assino") não tem ferramenta: é um gesto humano na página do modelo.
+- **Só pela tela, de propósito** (existem na API, mas NÃO como ferramenta): importar um Word (`import_docx`),
+  pré-visualizar modelo ou rascunho (`preview`, `preview_draft`) e baixar PDF (`download`). O conector não envia
+  arquivo nem recebe PDF — não prometa "vou gerar a prévia" ou "vou baixar o assinado"; oriente a tela.
+- **Assinar no painel** ("eu também assino", 08/09): `lionchat_signature_envelopes_sign_as_sender` assina como o
+  REMETENTE (a pessoa do token) — nunca no lugar do cliente. Manda `signature_image` (PNG em base64 com prefixo
+  `data:image/png;base64,...`), opcional `location {latitude, longitude, accuracy}` (vai pra prova) e
+  `remember_drawing`. 422: `nao_e_sua` (não é o remetente deste contrato), `ja_assinado`, `sem_desenho`. Era a
+  última que faltava? o contrato fecha e o PDF final é gerado em seguida. Os que esperam você: `status=falta_eu`.
 - **Envio por outros caminhos**: ação `send_signature_document` no FlowBuilder, na Macro e na Automação;
   bloco `generate_contract` no Formulário público (gera pelas respostas e manda o link). Gatilhos do Flow
   `signature_*` (8 acontecimentos) trazem `{{contrato.*}}` — ver `lionchat_flows_schema_reference`.

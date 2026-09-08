@@ -630,6 +630,14 @@ aquele contato nunca escreveu pela conexão oficial (a mensagem existe no painel
 copiou do celular). O envio de texto livre é recusado mesmo com a fala do cliente visível na tela.
 Saída: modelo aprovado (template) ou esperar o cliente escrever de verdade pela caixa oficial.
 
+## "A conversa mostra fala do cliente de hoje, mas a Meta recusou com 131047" — 08/09
+A Meta às vezes entrega uma mensagem HORAS depois de o cliente mandar (reentrega depois de uma queda ou
+congelamento). Até 08/09 o LionChat contava a janela de 24h pela CHEGADA no servidor, e a Meta conta pelo
+ENVIO — a tela dizia "dentro da janela", o `can_reply` vinha `true`, e a Meta recusava (131047). Desde 08/09
+a mensagem atrasada carrega a hora de envio da Meta e a janela é contada por ela: `last_incoming_message_at`,
+`can_reply` e a tela passam a concordar com a Meta. Diagnóstico: se `can_reply` é `false` com uma fala recente
+na tela, é isso — mande template (utilidade) em vez de texto livre. Caso real: Onipresença, 28 conversas.
+
 ## "Adicionei etiqueta e as antigas sumiram" — CORRIGIDO em 24/08
 
 Era defeito real (o segundo bloco "Adicionar etiqueta" do mesmo fluxo apagava as do primeiro, e

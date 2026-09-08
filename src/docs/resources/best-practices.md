@@ -160,11 +160,11 @@ Travas que valem conhecer (não dá pra desligar):
 ## Limite do prompt e cache OpenAI (2026-05-22)
 
 - `config.instructions` (system prompt do agente) aceita até **20.000 caracteres** (antes 10k). Acima de 15k, o frontend mostra aviso "lost in the middle" — prefira colocar instruções críticas no início ou final.
-- **Cache automático** ativo em todos os 16 modelos oferecidos na plataforma. Desconto 50-75% no input cachado, sem configuração. Reuso do prompt do agente em múltiplas conversas maximiza a economia.
+- **Cache automático** ativo em todos os 19 modelos oferecidos na plataforma. Desconto 50-75% no input cachado, sem configuração. Reuso do prompt do agente em múltiplas conversas maximiza a economia.
 
 ### Lista real de modelos (`config.model`)
 
-Estes são os 16 valores que o seletor de modelo do painel oferece (`ModelSelector.vue`). Só recomende
+Estes são os 19 valores que o seletor de modelo do painel oferece (`ModelSelector.vue`). Só recomende
 valores desta lista:
 
 | Faixa | Modelos |
@@ -172,18 +172,21 @@ valores desta lista:
 | Econômicos / rápidos | `gpt-4.1-nano`, `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-5.4-nano`, `gpt-5.4-mini` |
 | Intermediários | `gpt-4o`, `gpt-4.1`, `gpt-5-mini`, `gpt-5.4` |
 | Raciocínio | `o3-mini`, `o4-mini` |
-| Premium | `gpt-5`, `gpt-5.2`, `gpt-5.5`, `o1`, `o3` |
+| Premium | `gpt-5`, `gpt-5.2`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `o1`, `o3` |
 
 **`GPT-5.2 Pro` não existe.** O valor válido é `gpt-5.2`, sem "Pro".
 
-> **PERIGO — família `gpt-5.6` (`gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`): REMOVIDA em 29/07/2026.**
-> Esses modelos **recusam function tools** em `/v1/chat/completions` (erro 400 real: "Function tools with
-> reasoning_effort are not supported"). Como o AI Agente usa ferramentas em **toda** resposta, 100% das
-> chamadas falhavam e a IA ficava **MUDA** — sem erro na tela, sem resposta. Ficou 2 semanas invisível.
-> **Nunca sugira, nunca grave** um `gpt-5.6` — nem se o cliente pedir "o mais novo/mais forte".
+> **Família `gpt-5.6` (`gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`) — LIBERADA em 09/2026.**
+> Foi removida em 29/07/2026 porque recusa function tools no canal antigo da OpenAI e deixava a IA MUDA.
+> Desde 09/2026 o servidor fala com esses três pela porta `/v1/responses` (só para eles — nenhum outro
+> modelo muda de canal). Podem ser gravados em `config.model` do assistente, no Copilot e no bloco de IA do
+> Flow. **Recusam temperatura personalizada: `config.temperature` é ignorada** (só o padrão). O `sol` custa
+> ~5x o `luna` — recomende o `luna` salvo pedido explícito. **NUNCA no bloco de IA do Formulário de Lead**
+> (teto de 15 s; o servidor exclui e cai no fallback).
 >
-> O campo `config.model` **não tem lista branca no servidor**: ele é `store_accessor` do `config` e
-> aceita qualquer texto sem validar. Modelo inválido salva com 200 e só quebra na hora de responder.
+> Desde 09/2026 o campo `config.model` **tem lista branca no servidor** (`LlmConstants::SELECTABLE_MODELS`):
+> trocar para um modelo fora da lista devolve **422** (`model is not included in the list`). Registro
+> antigo com modelo fora da lista continua salvando os outros campos; só a troca é recusada.
 > Desde 29/07 o erro vira uma **nota privada em português** na conversa (`llm_request_rejected`) — é o
 > primeiro lugar a olhar quando "a IA parou de responder logo depois de mexerem nas configurações".
 

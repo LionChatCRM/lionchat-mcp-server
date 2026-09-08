@@ -4347,7 +4347,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Modelo LLM do assistente. O campo NAO E VALIDADO: qualquer texto e aceito e gravado, e o erro so aparece depois, em producao. NUNCA use a familia gpt-5.6 (gpt-5.6-luna / gpt-5.6-terra / gpt-5.6-sol): ela recusa function tools, e como a IA usa ferramenta em TODA resposta, 100% das chamadas falham e o Agente fica MUDO em silencio (removida da plataforma em 29/07). Valores validos hoje — os mesmos 16 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL."
+    "description": "Modelo LLM do assistente. VALIDADO no servidor desde 08/09/2026: valor fora da lista devolve 422 (message 'Model is not included in the list') e nada e gravado. Valores validos — os mesmos 19 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3, gpt-5.6-luna, gpt-5.6-terra, gpt-5.6-sol. Familia gpt-5.6 (luna/terra/sol) LIBERADA em 08/09/2026: o servidor fala com esses tres por um canal proprio da OpenAI (/v1/responses, so pra eles; os outros 16 seguem como sempre). Regras dela: nao aceita temperatura (o campo some na tela e e ignorado), custo premium, e o Formulario publico (bloco de IA) NAO usa esses tres — la o servidor cai no modelo padrao da conta. Nao existe 'gpt-5.6' sem sufixo. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL. Assistente antigo com modelo fora da lista continua salvando o resto do config; so a TROCA de modelo e conferida."
    },
    {
     "name": "config.instructions",
@@ -4572,7 +4572,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Modelo LLM do assistente. O campo NAO E VALIDADO: qualquer texto e aceito e gravado, e o erro so aparece depois, em producao. NUNCA use a familia gpt-5.6 (gpt-5.6-luna / gpt-5.6-terra / gpt-5.6-sol): ela recusa function tools, e como a IA usa ferramenta em TODA resposta, 100% das chamadas falham e o Agente fica MUDO em silencio (removida da plataforma em 29/07). Valores validos hoje — os mesmos 16 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL."
+    "description": "Modelo LLM do assistente. VALIDADO no servidor desde 08/09/2026: valor fora da lista devolve 422 (message 'Model is not included in the list') e nada e gravado. Valores validos — os mesmos 19 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3, gpt-5.6-luna, gpt-5.6-terra, gpt-5.6-sol. Familia gpt-5.6 (luna/terra/sol) LIBERADA em 08/09/2026: o servidor fala com esses tres por um canal proprio da OpenAI (/v1/responses, so pra eles; os outros 16 seguem como sempre). Regras dela: nao aceita temperatura (o campo some na tela e e ignorado), custo premium, e o Formulario publico (bloco de IA) NAO usa esses tres — la o servidor cai no modelo padrao da conta. Nao existe 'gpt-5.6' sem sufixo. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL. Assistente antigo com modelo fora da lista continua salvando o resto do config; so a TROCA de modelo e conferida."
    },
    {
     "name": "config.instructions",
@@ -8228,7 +8228,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/messages",
   "title": "Buscar Mensagens",
-  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nE A SUBSTITUTA CERTA do lionchat_conversations_search legado, que faz a mesma busca em 15 a 22 segundos: aqui ha indice trigram proprio e teto de tempo em duas fases (2 s na primeira tentativa, 14 s no limite absoluto), entao nao trava. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha.",
+  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nE A SUBSTITUTA CERTA do lionchat_conversations_search legado, que faz a mesma busca em 15 a 22 segundos: aqui ha indice trigram proprio e teto de tempo em duas fases (2 s na primeira tentativa, 14 s no limite absoluto), entao nao trava. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha. Leia message_search_interrupted no retorno antes de afirmar 'nao encontrado'.",
   "category": "Busca",
   "params": [
    {
@@ -8274,7 +8274,7 @@
     "description": "Página"
    }
   ],
-  "returns": "{ payload: { messages: [...] } } — sem meta e sem total. 15 mensagens por pagina, das MAIS RECENTES para as mais antigas; para ver o resto use `page` (a resposta NAO informa quantas paginas existem, entao vindo 15 itens assuma que pode haver mais). Cada mensagem traz contact_name, contact_thumbnail, conversation_status e previous_message/next_message (as vizinhas da MESMA conversa, ou null). O resultado de MENSAGEM nao traz `labels` — as etiquetas so vem nos cards de conversa e de contato.",
+  "returns": "{ payload: { messages: [...] } } — sem meta e sem total. 15 mensagens por pagina, das MAIS RECENTES para as mais antigas; para ver o resto use `page` (a resposta NAO informa quantas paginas existem, entao vindo 15 itens assuma que pode haver mais). Cada mensagem traz contact_name, contact_thumbnail, conversation_status e previous_message/next_message (as vizinhas da MESMA conversa, ou null). O resultado de MENSAGEM nao traz `labels` — as etiquetas so vem nos cards de conversa e de contato. Desde 04/09 o payload traz tambem message_search_interrupted (boolean): true = a secao de mensagens estourou o teto de tempo (2 s + 2 s) e a lista voltou VAZIA/incompleta — NAO quer dizer que nao existe; refine o termo ou recorte por conversa.",
   "common_use_cases": [
    "Dashboard: contar/exibir resultados de busca",
    "Buscar com filtros antes de outra operação",
@@ -10101,7 +10101,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Modelo LLM (gpt-4o-mini, gpt-4o, etc.)"
+    "description": "Modelo LLM (gpt-4o-mini, gpt-4.1-mini, gpt-5.4, gpt-5.6-luna/terra/sol etc. — a mesma lista de 19 do assistente). A familia gpt-5.6 e aceita no bloco de IA do fluxo desde 08/09/2026 e nao usa temperatura."
    },
    {
     "name": "instructions",
@@ -13558,7 +13558,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Array de permissoes"
+    "description": "Array de permissoes (array de strings). Valores aceitos (22): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu)."
    }
   ],
   "returns": "papel personalizado criado (com novo ID)",
@@ -13636,7 +13636,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Permissoes"
+    "description": "Permissoes (array de strings). Valores aceitos (22): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu)."
    }
   ],
   "returns": "papel personalizado atualizado",
@@ -32947,6 +32947,54 @@
   ],
   "related_tools": [
    "lionchat_signature_envelopes_show"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_sign_as_sender",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/sign_as_sender",
+  "title": "Remetente Assina o Contrato pelo Painel",
+  "description": "A assinatura do REMETENTE (a pessoa do token), quando o modelo tem 'eu tambem assino' (roles_layout.sender_signs). Nao serve pra assinar no lugar do cliente: titular e testemunha assinam pelo link publico deles. Manda o desenho da assinatura como PNG em base64 com o prefixo data:image/png;base64,... (o mesmo rabisco da tela; remember_drawing guarda pra proxima vez). Recusas 422: nao_e_sua (o usuario do token nao e o remetente deste contrato), ja_assinado, sem_desenho. Quando era a ultima assinatura que faltava, o contrato fecha e o PDF final e gerado em seguida (status signed_pending_seal -> signed). Ache os contratos que esperam a sua assinatura com status=falta_eu em lionchat_signature_envelopes_list.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   },
+   {
+    "name": "signature_image",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Desenho da assinatura em base64, com prefixo data URL (data:image/png;base64,...). Obrigatorio — sem ele 422 sem_desenho"
+   },
+   {
+    "name": "location",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Onde o remetente assinou, se souber: {latitude, longitude, accuracy} (graus decimais; fora da faixa e ignorado). Vai pra prova (evidencias)"
+   },
+   {
+    "name": "remember_drawing",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "true = guarda o desenho nas preferencias do usuario pra reaproveitar no proximo contrato"
+   }
+  ],
+  "returns": "o contrato atualizado com participants[] e events[] (o seu participante vira signed); 422: {error: nao_e_sua | ja_assinado | sem_desenho}",
+  "common_use_cases": [
+   "Fechar um contrato em que so falta a assinatura do remetente",
+   "Assinar em lote os contratos listados com status=falta_eu"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_list",
+   "lionchat_signature_envelopes_show",
+   "lionchat_signature_envelopes_create"
   ]
  },
  {

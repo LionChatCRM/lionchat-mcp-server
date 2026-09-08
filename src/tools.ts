@@ -484,7 +484,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-02)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-08)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -944,6 +944,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     aiModel,                         // opcional: modelo LLM SO deste node (ex "gpt-4.1-mini");
                                      // vazio/ausente = modelo padrao da conta; vale em TODOS os
                                      // modos e tambem com assistente (sobrepoe o modelo dele)
+                                     // gpt-5.6-luna/terra/sol aceitos desde 08/09 (sem temperatura);
+                                     // modelo fora da lista de 19 = 422 na hora de salvar o assistente
     aiModelExplicit: true,           // OBRIGATORIO junto do aiModel — sem esta flag o backend
                                      // IGNORA o aiModel (protecao de nodes antigos)
     aiIntents: [{name}],            // se intent — ARRAY DE OBJETOS (NAO array de strings)

@@ -566,7 +566,7 @@ com data futura ou `has_imported_history` fecharia a janela de 24h daquela conve
 |---|---|---|
 | `medium` | caixa (`inboxes_list`/`_show`) | sub-tipo do canal. Numa caixa de Página do Facebook diz se ela é Messenger ou **só Instagram** — é o que separa os dois |
 | `content` | mensagem | já vem no formato de exibição (mensagem apagada mostra o aviso, não o texto cru) |
-| `last_incoming_message_at` | conversa | data da última mensagem VIVA do cliente (unix). Use para saber se a janela de 24h está aberta — não confie na data da conversa, que pode vir de histórico importado |
+| `last_incoming_message_at` | conversa | data da última mensagem VIVA do cliente (unix). Use para saber se a janela de 24h está aberta — não confie na data da conversa, que pode vir de histórico importado. Mensagem que a Meta entregou ATRASADA (reentrega depois de uma queda) conta pela hora de ENVIO da Meta, não pela chegada (08/09): o campo, `can_reply` e a tela seguem a mesma régua que a Meta usa pra recusar |
 
 ## Formulário público: código para incorporar no site (02/09/2026)
 
