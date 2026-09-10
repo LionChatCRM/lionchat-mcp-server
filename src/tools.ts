@@ -484,7 +484,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-08)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-10)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -894,8 +894,18 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save mas IGNORADO
       EM SILENCIO na execucao, e o fluxo para ali [2026-08-18]), deactivate_flow({}),
       send_conversion({destinations:['meta'|'ga4'|'google_ads'], event_names:{meta?,google_ads?,ga4?},
-        event_name, value?}) — NOVO 01/09, evento POR DESTINO desde 02/09: manda o evento de conversao pro
+        messaging_event_names:{meta?}, event_name, value?}) — NOVO 01/09, evento POR DESTINO desde 02/09,
+        evento de ANUNCIO DE WHATSAPP desde 10/09: manda o evento de conversao pro
         Meta (CAPI), Google Ads e/ou GA4 pelos MESMOS servicos do Funil.
+        messaging_event_names.meta (10/09): o evento de ANUNCIO DE WHATSAPP. Quem chegou por anuncio de
+        WhatsApp (conversa com ctwa_clid numa caixa oficial vinculada a Meta) sai como business_messaging e
+        a Meta so aceita 14 nomes: LeadSubmitted, QualifiedLead, ViewContent, AddToCart, InitiateCheckout,
+        Purchase, OrderCreated, OrderShipped, OrderDelivered, OrderCanceled, OrderReturned, CartAbandoned,
+        RatingProvided, ReviewProvided. Tri-estado: chave AUSENTE = automatico (Lead/Contact -> LeadSubmitted,
+        Purchase -> Purchase, InitiateCheckout -> InitiateCheckout; sem sugestao o lead de anuncio sai como
+        site com fallback_reason); '' = nao enviar como WhatsApp (sai como site); um dos 14 = escolha. Nome
+        fora dos 14 e ignorado (vira automatico). NAO afeta GA4/Google Ads. O nome interno (event_names.meta)
+        vai em custom_data.internal_event. A caixa precisa estar vinculada (inboxes_capi_dataset_link).
         destinations OBRIGATORIO e nao vazio; so destino com integracao conectada na conta (senao o servico
         PULA em silencio — confira meta_pixel_integrations_list / google_ads_integrations_list /
         ga4_integrations_list antes).

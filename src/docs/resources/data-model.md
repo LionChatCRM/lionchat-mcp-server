@@ -196,11 +196,22 @@ Funnel
 ├── stages (jsonb: hash com slug_etapa => { name, color, position, description, checklist_templates })
 ├── settings (jsonb: { agents: [], goals: [], automations: [{trigger_type, action, action_config, enabled}] })
 ├── global_custom_attributes (jsonb array)
-├── meta_events_config (jsonb: won/lost/stages → Meta Pixel/CAPI events)
+├── meta_events_config (jsonb: won/lost/stages → Meta Pixel/CAPI events; cada bloco: enabled, name,
+│     is_standard, value_strategy, value_fixed, currency, messaging_name — este último é o evento de
+│     ANÚNCIO DE WHATSAPP, tri-estado: ausente = automático, '' = não enviar, um dos 14 nomes da Meta;
+│     só em stages e won, nunca em lost)
 ├── archived (bool)
 ├── active (bool)
 ├── position (int, ordem entre funis)
 └── created_at
+
+MetaCapiEvent (meta_capi_events — cada envio de conversão pro Meta)
+├── event_name (nome INTERNO, o que o cliente escolheu), event_id (idempotência), status (pending/sent/failed/duplicate)
+├── trigger_type, kanban_item_id, contact_id, conversation_id, funnel_id, meta_pixel_integration_id
+├── inbox_id (2026-09-10: a caixa oficial de onde saiu a WABA — o envio de anúncio de WhatsApp usa o dataset e a chave DESSA caixa)
+├── fallback_reason (2026-09-10: preenchido quando um evento de anúncio de WhatsApp saiu como SITE — plano B; NULL = não degradou)
+├── payload_sent (jsonb: data[0].action_source = website | business_messaging; data[0].event_name = o nome que FOI pra Meta)
+└── response_body (jsonb: resposta da Meta; `fallback_from` = a recusa original quando houve plano B)
 
 KanbanItem
 ├── id (PK)

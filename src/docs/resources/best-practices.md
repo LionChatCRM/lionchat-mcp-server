@@ -390,6 +390,40 @@ integração conectada na conta (senão é pulado em silêncio — confira as li
 (o que iniciou o fluxo ou o mais recente da conversa); sem card, o registro NÃO aparece nas telas de
 eventos do Funil (só no histórico do fluxo). Formato completo no `flowbuilder-design-guide`.
 
+### Meta CAPI — lead que chegou por ANÚNCIO DE WHATSAPP (2026-09-10)
+
+Quem chegou pelo botão de WhatsApp de um anúncio (a conversa carrega `ctwa_clid` e a caixa é a
+oficial, com WABA) sai pra Meta como evento de MENSAGEM (`action_source: business_messaging`) — e a
+Meta só aceita isso num **dataset vinculado à WABA**, nunca no pixel do site (recusa 2804132). Até
+10/09 100% desses eventos caíam no plano B (saíam como site) sem ninguém ver. Regras pro MCP:
+
+- **Vincular a caixa primeiro:** `lionchat_inboxes_capi_dataset_link` (POST `/inboxes/{id}/capi_dataset`).
+  Idempotente, vale para todos os números da mesma WABA, usa a chave da PRÓPRIA caixa (a do pixel não
+  serve). O id fica em `provider_config.capi_dataset_id` (visível em `lionchat_inboxes_show` para admin).
+  Sem o vínculo os eventos de anúncio saem como site com `fallback_reason: lionchat:dataset_nao_configurado`.
+- **Nome do evento em mensagem = SÓ 14:** `LeadSubmitted`, `QualifiedLead`, `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`, `OrderCreated`, `OrderShipped`, `OrderDelivered`, `OrderCanceled`, `OrderReturned`, `CartAbandoned`, `RatingProvided`, `ReviewProvided`.
+  O evento de SITE continua com o nome que o cliente quiser. A escolha de WhatsApp mora em
+  `messaging_name` (etapa e `won` do `meta_events_config`, tool `lionchat_funnels_meta_events_config`),
+  em `messaging_event_names.meta` (bloco `send_conversion` do fluxo) e em `messaging_event_name`
+  (disparo manual `lionchat_kanban_items_meta_capi_fire`). Tri-estado: chave AUSENTE = automático
+  (Lead/Contact → LeadSubmitted, Purchase → Purchase, InitiateCheckout → InitiateCheckout; sem sugestão
+  o lead de anúncio sai como site com motivo), `''` = não enviar como WhatsApp, um dos 14 = escolha.
+  Nome fora dos 14 é descartado no funil e dá 422 no disparo manual. `lost` (Perdido) é sempre site —
+  não existe evento de "perdido" em mensagens. O nome interno do cliente vai em `custom_data.internal_event`.
+- **Diagnóstico "por que a venda não contou como conversão de WhatsApp?":**
+  `lionchat_funnels_meta_capi_events_list` com `degraded=true` e ler `fallback_reason` + `action_source`.
+  Motivos nossos: `lionchat:dataset_nao_configurado` (falta o vínculo), `lionchat:caixa_token_recusado`
+  (a Meta recusou a chave da caixa — reconectar a caixa), `lionchat:caixa_nao_encontrada`,
+  `lionchat:caixa_sem_token`, `lionchat:dataset_id_invalido`, `lionchat:desligado_pelo_cliente`,
+  `lionchat:nome_sem_equivalente_whatsapp`; da Meta: `"<subcode>: <mensagem>"` (ex.: 2804087 = clique
+  do anúncio inválido/expirado).
+- Recusa ao vincular (422 com `subcode`, ex.: 2804116 / "whatsapp_business_manage_events"): a chave da
+  caixa não tem a permissão — reconectar a caixa pelo Cadastro Incorporado da Meta; nunca pedir o token
+  do pixel para isso. Um 401/403 da caixa NUNCA desliga o pixel da conta (site, formulário e agenda
+  continuam) — o evento de anúncio apenas sai como site com o motivo.
+- NUNCA prometer que eventos antigos voltam: o plano B marca como enviado (não há retry) e a Meta só
+  aceita evento com até 7 dias.
+
 ### Meta Lead — token de anúncios de OUTRO app (2026-09-01)
 
 `lionchat_meta_lead_validate_token` pode voltar `app_verified: false` com `expires_at` nulo: é token
