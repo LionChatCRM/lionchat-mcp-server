@@ -30262,7 +30262,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/funnels/{id}/meta_events_config",
   "title": "Configurar Eventos de Conversão do Funil (Meta/GA4/Ads)",
-  "description": "AÇÃO DE ESCRITA — confirme com o usuário. Define quais eventos de conversão o funil dispara automaticamente: por ETAPA (stages.<id da etapa>) e nos desfechos won/lost. Cada bloco aceita SÓ: enabled, name (nome do evento, ex. Lead, Purchase), is_standard, value_strategy, value_fixed, currency — qualquer outra chave é descartada em silêncio. O merge é PROFUNDO e atômico: mande só o que muda; etapas não citadas ficam como estão. Administrador ou cargo com marketing_integrations_manage (403). Devolve a configuração inteira depois do merge.",
+  "description": "AÇÃO DE ESCRITA — confirme com o usuário. Define quais eventos de conversão o funil dispara automaticamente: por ETAPA (stages.<id da etapa>) e nos desfechos won/lost. Cada bloco aceita SÓ: enabled, name (nome do evento de SITE, ex. Lead, Purchase ou personalizado), is_standard, value_strategy, value_fixed, currency e messaging_name — qualquer outra chave é descartada em silêncio. messaging_name = evento de ANÚNCIO DE WHATSAPP (só etapas e won; lost é sempre site). A Meta só aceita 14 nomes em anúncio de WhatsApp: LeadSubmitted | QualifiedLead | ViewContent | AddToCart | InitiateCheckout | Purchase | OrderCreated | OrderShipped | OrderDelivered | OrderCanceled | OrderReturned | CartAbandoned | RatingProvided | ReviewProvided. Tri-estado: chave AUSENTE = automático (sugestão pelo nome do site: Lead/Contact → LeadSubmitted, Purchase → Purchase, InitiateCheckout → InitiateCheckout; sem sugestão o lead de anúncio sai como site com motivo); '' = não enviar como WhatsApp (sai como site); um dos 14 = escolha. Valor fora disso é descartado e vira 'ausente'. O merge é PROFUNDO e atômico: mande só o que muda; etapas não citadas ficam como estão. Administrador ou cargo com marketing_integrations_manage (403). Devolve a configuração inteira depois do merge.",
   "category": "Funis",
   "params": [
    {
@@ -30277,13 +30277,14 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "{stages: {<stage_id>: {enabled, name, is_standard, value_strategy, value_fixed, currency}}, won: {...}, lost: {...}} — parcial"
+    "description": "{stages: {<stage_id>: {enabled, name, is_standard, value_strategy, value_fixed, currency, messaging_name}}, won: {...}, lost: {...}} — parcial. messaging_name: um dos 14 nomes de anúncio de WhatsApp da Meta, '' (não enviar como WhatsApp) ou ausente (automático)"
    }
   ],
   "returns": "200 meta_events_config completo do funil após o merge | 403",
   "common_use_cases": [
    "Disparar 'Purchase' quando o card for ganho",
-   "Ligar o evento 'Lead' na etapa de qualificação"
+   "Ligar o evento 'Lead' na etapa de qualificação",
+   "Escolher o evento de anúncio de WhatsApp de uma etapa (messaging_name: 'QualifiedLead')"
   ],
   "related_tools": [
    "lionchat_funnels_show",
@@ -30297,7 +30298,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/meta_capi_events",
   "title": "Histórico de Eventos Meta CAPI do Funil",
-  "description": "SÓ LEITURA. Lista os eventos de conversão Meta CAPI disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed | duplicate), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | manual | automation | auto_create | test | booking_reservation | lead_form), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no Meta CAPI?'. Administrador ou cargo com marketing_integrations_manage (403).",
+  "description": "SÓ LEITURA. Lista os eventos de conversão Meta CAPI disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed | duplicate), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | manual | automation | auto_create | test | booking_reservation | lead_form), motivo da falha, o card de origem (kanban_item_title), por onde saiu (action_source: website | business_messaging) e fallback_reason — preenchido quando um lead de ANÚNCIO DE WHATSAPP saiu como site (plano B): lionchat:dataset_nao_configurado (caixa sem 'Vincular à Meta'), lionchat:caixa_token_recusado, lionchat:caixa_nao_encontrada, lionchat:caixa_sem_token, lionchat:dataset_id_invalido, lionchat:desligado_pelo_cliente, lionchat:nome_sem_equivalente_whatsapp, ou '<subcode>: <mensagem da Meta>'. Responde 'por que a venda não apareceu no Meta CAPI?'. Administrador ou cargo com marketing_integrations_manage (403).",
   "category": "Integracoes",
   "params": [
    {
@@ -30336,6 +30337,13 @@
     "description": "Só eventos deste card"
    },
    {
+    "name": "degraded",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = só os eventos de anúncio de WhatsApp que saíram como site (plano B), isto é, com fallback_reason preenchido"
+   },
+   {
     "name": "since",
     "type": "string",
     "location": "query",
@@ -30357,10 +30365,11 @@
     "description": "Página (50 por página)"
    }
   ],
-  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title, fbtrace_id}], meta: {total, page}}",
+  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, fallback_reason, action_source, created_at, sent_at, kanban_item_id, kanban_item_title, fbtrace_id}], meta: {total, page}}",
   "common_use_cases": [
    "Ver se o evento de conversão chegou no Meta CAPI",
-   "Listar os disparos falhados pra reenviar"
+   "Listar os disparos falhados pra reenviar",
+   "Descobrir por que os leads de anúncio de WhatsApp estão saindo como site (degraded=true e ler fallback_reason)"
   ],
   "related_tools": [
    "lionchat_funnels_meta_capi_events_show",
@@ -30723,7 +30732,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/meta_capi/fire",
   "title": "Disparo manual de Conversão a partir do Card (Meta + GA4 + Google Ads)",
-  "description": "AÇÃO DE ESCRITA com efeito externo — confirme com o usuário. Dispara MANUALMENTE um evento de conversão a partir de um card do Kanban nos TRÊS destinos de uma vez (Meta CAPI, GA4 e Google Ads); cada destino decide sozinho se está configurado/permitido e falhas individuais não derrubam os outros (destino sem integração volta null). O contato vem do card (item_details.contact_id), do contact_id informado, ou da 1ª conversa não-grupo vinculada — sem contato: 422 'contact not found'. event_name: letras/números/_ até 40 caracteres (422 'invalid event_name'). currency vale só pro Meta. Rate limit: 10/min por usuário e 100/hora por conta (429). Administrador ou cargo com marketing_integrations_manage.",
+  "description": "AÇÃO DE ESCRITA com efeito externo — confirme com o usuário. Dispara MANUALMENTE um evento de conversão a partir de um card do Kanban nos TRÊS destinos de uma vez (Meta CAPI, GA4 e Google Ads); cada destino decide sozinho se está configurado/permitido e falhas individuais não derrubam os outros (destino sem integração volta null). O contato vem do card (item_details.contact_id), do contact_id informado, ou da 1ª conversa não-grupo vinculada — sem contato: 422 'contact not found'. event_name: letras/números/_ até 40 caracteres (422 'invalid event_name'). currency e messaging_event_name valem só pro Meta. Lead que chegou por anúncio de WhatsApp (ctwa_clid + caixa oficial vinculada à Meta) sai como business_messaging com o messaging_event_name (ou a sugestão automática); sem nome possível sai como site com fallback_reason. Rate limit: 10/min por usuário e 100/hora por conta (429). Administrador ou cargo com marketing_integrations_manage.",
   "category": "Itens",
   "params": [
    {
@@ -30739,6 +30748,13 @@
     "location": "body",
     "required": true,
     "description": "Nome do evento (ex.: Lead, Purchase, Schedule)"
+   },
+   {
+    "name": "messaging_event_name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Evento de ANÚNCIO DE WHATSAPP (só o Meta usa). Um dos 14: LeadSubmitted | QualifiedLead | ViewContent | AddToCart | InitiateCheckout | Purchase | OrderCreated | OrderShipped | OrderDelivered | OrderCanceled | OrderReturned | CartAbandoned | RatingProvided | ReviewProvided; '' = não enviar como WhatsApp (sai como site); ausente = automático (sugestão pelo event_name). Fora disso: 422 'invalid messaging_event_name'"
    },
    {
     "name": "value",
@@ -31368,6 +31384,35 @@
    "lionchat_inboxes_health",
    "lionchat_inboxes_show"
   ]
+ },
+ {
+  "id": "lionchat_inboxes_capi_dataset_link",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/capi_dataset",
+  "title": "Vincular a caixa WhatsApp Oficial à Meta (dataset de anúncio de WhatsApp)",
+  "description": "AÇÃO DE ESCRITA — confirme com o usuário. Cria (ou recupera, é idempotente) na Meta o dataset da Conversions API ligado à conta do WhatsApp Business (WABA) desta caixa WhatsApp Cloud e grava o id em provider_config.capi_dataset_id. É para esse dataset que a Meta aceita evento de ANÚNCIO DE WHATSAPP (action_source business_messaging); no pixel do site ela recusa (subcode 2804132). Sem o vínculo, os leads de anúncio saem como evento de site (plano B, fallback_reason = lionchat:dataset_nao_configurado). O vínculo vale para todas as caixas da mesma WABA. Usa o token da própria caixa (precisa da permissão whatsapp_business_manage_events). 400 em caixa que não é Cloud; 422 {error (mensagem da Meta), subcode} quando a Meta recusa. Rate limit 10/hora por caixa. Somente administrador.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa WhatsApp Cloud"
+   }
+  ],
+  "returns": "200 a caixa inteira (inbox) já com provider_config.capi_dataset_id | 400 | 422 {error, subcode}",
+  "common_use_cases": [
+   "Fazer os leads de anúncio de WhatsApp contarem como conversão de WhatsApp na Meta",
+   "Resolver eventos com fallback_reason lionchat:dataset_nao_configurado"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_show",
+   "lionchat_funnels_meta_capi_events_list",
+   "lionchat_funnels_meta_events_config",
+   "lionchat_meta_pixel_integrations_list"
+  ],
+  "confirm_required": true
  },
  {
   "id": "lionchat_inboxes_waha_connect",

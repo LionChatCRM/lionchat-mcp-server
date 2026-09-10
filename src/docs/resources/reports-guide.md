@@ -574,6 +574,21 @@ Não é consulta livre: escolha um `widget_type` e preencha **só os campos daqu
 | `calls_report` | `dimension` (agent/inbox) · `scope_type` (só `inbox`, opcional — recorte por caixa, desde 27/08/2026) + `scope_id` · `time_range` — ligações / atendidas / não atendidas / não concluídas / tempo total / tempo médio | — |
 | `lead_origin` | `time_range` | `liontrack` |
 | `agent_report` | `dimension` (agent/team/inbox) · `scope_type`+`scope_id` · `columns[]` · `time_range` | — |
+| `eclinica_no_show` | `dimension` (unit / operator / date) · `time_range` — faltas na agenda da e-Clínica: agendados / compareceram / faltaram / desmarcados / sem desfecho / % de falta | `eclinica_integration` |
+| `eclinica_conversion` | `dimension` (unit / operator) · `time_range` — consultas que viraram procedimento: consultas / viraram procedimento (até 60 dias) / % / procedimentos / não classificado | `eclinica_integration` |
+
+**Os dois blocos da e-Clínica (09/09/2026)** leem os eventos da agenda (`eclinica_webhook_events`) e
+só existem em conta com a integração ligada. Três regras que mudam o número e por isso estão na tela:
+
+- a régua é a **data da consulta**, não a data em que o evento chegou, e só conta data já passada;
+- `operator` é sempre **(unidade, operador)** — o número do operador é por filial e se repete entre
+  elas, então uma linha "Operador 2" sem unidade não corresponde a ninguém;
+- a **% de falta** é calculada sobre os desfechos conhecidos (compareceram + faltaram), e a coluna
+  **"Sem desfecho"** mostra quanto da agenda não teve desfecho anotado. Medido em agosto/2026: isso
+  vai de 6,9% a 33,1% conforme a unidade, e a filial que menos anota apareceria como a melhor da
+  rede se a conta fosse sobre "agendados". Leia sempre as duas colunas juntas.
+- no bloco de conversão, **"Não classificado"** é o que não é consulta nem procedimento pela lista
+  de prefixos (retirada de medicação, aplicação, reposição hormonal): 17% da agenda em 09/09/2026.
 
 `stage_entries`, `calls_report`, `measure`, `today`/`yesterday` e os metadados `title`/`width`/`height`
 são commits de 21/08/2026 (entram com o próximo deploy do app depois de 21/08/2026); `custom` em
