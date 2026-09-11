@@ -352,6 +352,17 @@ Macro
 └── visibility (personal/global)
 ```
 
+**Macro — ações e freios (10/09/2026).** `actions` aceita 40 nomes: todos os das automações (mesmos
+`action_params`, ver a tabela em conversation-flows.md) mais os que só a macro tem — `mark_unread` (`[]`),
+`add_contact_label`/`remove_contact_label` (`[titulos]`, etiqueta do CONTATO), `distribute_agents`
+(`[agent_ids]`, rodízio de verdade), `update_card_attribute` (`[{funnel_id, attribute_key, value}]`),
+`add_card_checklist` (`[{funnel_id, checklist_template_ids}]`), `add_card_offer` (`[{funnel_id, offer_ids}]`)
+e `send_conversion` (`[{destinations, event_names, value}]` — só administrador ou cargo com
+`marketing_integrations_manage` consegue SALVAR a macro; executar segue livre; teto de 50 conversões por
+execução). Atributo protegido em `update_*_attribute` é recusado na execução (só no log). Executar
+(`lionchat_macros_execute`): até 100 conversas por chamada, a mesma conversa em 5 s é pulada em silêncio,
+30 execuções por minuto por usuário (429). A mensagem de `send_canned_response` sai assinada por quem executou.
+
 ## Agenda / Tarefas / Booking
 
 ```
@@ -446,6 +457,11 @@ daquele tipo no calendário; vazio = cor do agente. A tarefa devolve `booking_co
 `agendamento_aguardando`, `odontograma_aprovado`, `procedimento_finalizado`,
 `cliente_alteracao_pagamento`, `odontograma_finalizado`, `inclusao_procedimento`
 (capturados ao vivo, não documentados pelo e-Clínica).
+
+O recurso `eclinica_integration` da conta passou a ser ligado e desligado pelo PRÓPRIO cadastro da
+integração (10/09/2026, `auto_managed`): sumiu do Super Admin e não há passo manual — os blocos de
+relatório e as tools da e-Clínica valem assim que a integração existe. Contas que já tinham integração
+receberam o recurso no deploy (migração).
 
 Os 3 últimos são do perfil ODONTOLÓGICO: `agendamento_aguardando` = a recepção marcou a
 chegada do paciente na clínica (grava a hora da chegada e `eclinica_status_agendamento = aguardando`);
@@ -603,6 +619,11 @@ MetaLeadIntegration (Facebook Lead Ads)
 ├── facebook_page_id (FK polimórfico)
 ├── status (active/token_expired/paused)
 └── meta_lead_forms (has_many)
+    → cada lead vira CONTATO com os atributos meta_lead_* (form_id/form_name, campaign_id/name,
+      adset_id/name, ad_id/name, creative_id/name, platform, account_id/name; definidos por conta como
+      atributo de contato). Filtráveis em contacts_filter como atributo personalizado; desde 10/09/2026
+      também no filtro da tela de contatos e no painel "Atributos de Campanha" da conversa
+      (meta_lead_form_name aparece como "Origem - Formulário")
 
 LeadForm (Formulário público de captação — feature flag lead_forms, por conta)
 ├── account_id (FK)

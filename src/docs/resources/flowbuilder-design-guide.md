@@ -1031,6 +1031,7 @@ O campo `flow_type` (definido na criação, IMUTÁVEL depois) decide a natureza 
 | Campos extra | — | `tool_name` (snake_case, `[a-z][a-z0-9_]`, max 50) + `tool_description` (max 500) OBRIGATÓRIOS |
 | Retorno | manda mensagens | retorna dado estruturado ao LLM via node `end` |
 | Nodes permitidos | todos | `start`, `end`, `api`, `condition`, `set_variable`, `ai`, `note`, `randomizer`, `action`, `send_message` |
+| Aviso de espera (10/09/2026) | — | enquanto a ferramenta roda, o cliente recebe "Só um momento, estou verificando isso pra você...". Cada ferramenta escolhe o seu no node `start`: `data.toolWaitMessageEnabled` (`false` desliga; AUSENTE = ligado — só um `false` de verdade desliga, `""` ou lixo mantém ligado) e `data.toolWaitMessageText` (texto próprio, até 1000 caracteres; vazio = frase padrão). Vive no `flow_data` e viaja no snapshot de versão; ferramenta já existente não muda de comportamento |
 
 Se o cliente pediu "uma ferramenta que a IA usa pra consultar X / calcular Y", é `ai_tool`. Se pediu "quando chega mensagem, faça Z", é `conversation`. Na dúvida, `conversation`.
 

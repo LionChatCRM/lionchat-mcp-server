@@ -501,6 +501,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   send_message, note (SEM wait, wait_response, update_group). No action de ai_tool NAO use keys da
   aba Sistema (send_webhook/start_flow/send_conversion). Vincular ao assistente: POST /flow_tools/{id}/assistants.
   Testar: POST /flow_tools/{id}/run.
+  Aviso de espera (10/09/2026): enquanto a ferramenta roda, o cliente recebe "So um momento, estou
+  verificando isso pra voce...". Cada ferramenta escolhe o SEU no node start: data.toolWaitMessageEnabled
+  (false desliga; AUSENTE = ligado — so um false de verdade desliga, "" ou lixo mantem ligado) e
+  data.toolWaitMessageText (texto proprio, ate 1000 caracteres; vazio = frase padrao). Vive no flow_data
+  e viaja no snapshot de versao; ferramenta que ja existe nao muda de comportamento.
 
 ═══ NODE GERAL ═══
 { "id": "string-unico", "type": "start|send_message|wait_response|condition|action|api|set_variable|wait|randomizer|update_group|ai|end|note", "position": {"x":0,"y":0}, "data": { ... } }
@@ -1136,6 +1141,19 @@ trigger.* (variaveis do GATILHO que iniciou o flow — no autocomplete de TODO b
     trigger.event_name/page_url (site), trigger.source_flow_id/source_flow_name (fluxo que chamou),
     trigger.lead_form_id/response_id/kind (formulario), trigger.kind/booking_id/event_type_id (agendamento).
   Cada uma so tem valor quando o gatilho fornece — fora disso resolve vazio.
+  FATOS do gatilho viraram variaveis (08/09/2026, no ar desde 10/09): {{trigger.<bloco>.<campo>}}, so
+    quando o Inicio tem o gatilho que os preenche — card_created/card_moved/card_won/card_lost/
+    card_attribute_changed: trigger.kanban.title, trigger.kanban.funnel_name, trigger.kanban.stage_name,
+    trigger.kanban.stage (codigo da etapa); card_moved: trigger.kanban.previous_stage_name/previous_stage;
+    card_won/card_lost: trigger.kanban.status (won/lost); label_added/label_removed: trigger.label.name;
+    assignee_changed: trigger.assignee.name (vazio = responsavel removido); team_changed: trigger.team.name;
+    sla_missed: trigger.sla.policy_name/type (frt/nrt/rt); group_participant_joined/left:
+    trigger.group.name/id. Resolvem mas ficam FORA do seletor (produtor unico): trigger.attribute.name/
+    current_value, trigger.form.name/milestone, trigger.payment.gateway/event/product/offer/method/status/
+    amount, trigger.eclinica.event/unit/date/time/compromisso/idagenda, trigger.lead.form/page/ad/adset/
+    campaign/platform, trigger.dtmf.key/campaign, trigger.reminder.date/time/compromisso/unit/days_before.
+    O bloco do card chama-se kanban, NUNCA card. Ficam FORA de trigger.data; sessoes anteriores a 22/08
+    nao tem fatos gravados (saem vazias). As respostas do lead do Meta NAO viram variavel.
 DESDE 23/07 essas variaveis padrao funcionam em TODOS os nodes (Chamada API, Condicoes, IA, Definir
   Variavel) — antes so no Enviar Mensagem. Campo vazio resolve pra string vazia (nunca trava o flow).
 REGRA-MAE: variavel FORA da lista acima SOME do texto, sem erro em lugar nenhum — nao quebra o save,

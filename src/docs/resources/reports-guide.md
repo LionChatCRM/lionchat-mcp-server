@@ -574,8 +574,8 @@ Não é consulta livre: escolha um `widget_type` e preencha **só os campos daqu
 | `calls_report` | `dimension` (agent/inbox) · `scope_type` (só `inbox`, opcional — recorte por caixa, desde 27/08/2026) + `scope_id` · `time_range` — ligações / atendidas / não atendidas / não concluídas / tempo total / tempo médio | — |
 | `lead_origin` | `time_range` | `liontrack` |
 | `agent_report` | `dimension` (agent/team/inbox) · `scope_type`+`scope_id` · `columns[]` · `time_range` | — |
-| `eclinica_no_show` | `dimension` (unit / operator / date) · `time_range` — faltas na agenda da e-Clínica: agendados / compareceram / faltaram / desmarcados / sem desfecho / % de falta | `eclinica_integration` |
-| `eclinica_conversion` | `dimension` (unit / operator) · `time_range` — consultas que viraram procedimento: consultas / viraram procedimento (até 60 dias) / % / procedimentos / não classificado | `eclinica_integration` |
+| `eclinica_no_show` | `dimension` (unit / operator / date) · `time_range` · `no_show_over_scheduled` (true/false, nasce desligada) — faltas na agenda da e-Clínica: agendados / compareceram / faltaram / desmarcados / sem desfecho / % de falta (o rótulo da coluna declara a base) | `eclinica_integration` |
+| `eclinica_conversion` | `dimension` (unit / operator) · `time_range` · `count_retorno_as_consulta` (true/false, nasce LIGADA) — consultas que viraram procedimento: consultas / viraram procedimento (até 60 dias) / % / procedimentos / não classificado | `eclinica_integration` |
 
 **Os dois blocos da e-Clínica (09/09/2026)** leem os eventos da agenda (`eclinica_webhook_events`) e
 só existem em conta com a integração ligada. Três regras que mudam o número e por isso estão na tela:
@@ -587,8 +587,21 @@ só existem em conta com a integração ligada. Três regras que mudam o número
   **"Sem desfecho"** mostra quanto da agenda não teve desfecho anotado. Medido em agosto/2026: isso
   vai de 6,9% a 33,1% conforme a unidade, e a filial que menos anota apareceria como a melhor da
   rede se a conta fosse sobre "agendados". Leia sempre as duas colunas juntas.
-- no bloco de conversão, **"Não classificado"** é o que não é consulta nem procedimento pela lista
-  de prefixos (retirada de medicação, aplicação, reposição hormonal): 17% da agenda em 09/09/2026.
+- **bloqueio de agenda fica FORA dos dois blocos** (10/09/2026): a e-Clínica guarda na mesma tabela as
+  linhas que só reservam horário ("BLOQUEIO", "DAY OFF", "FERIADO", "SEM ATENDIMENTO"). O corte é por
+  **ausência de paciente E ausência de qualquer desfecho** — nunca por nome (essa lista não fecha). Na
+  conta 56 eram 267 linhas em 30 dias entrando como "Sem desfecho".
+- **`no_show_over_scheduled`** (true/false, nasce desligada — 10/09/2026): ligada, a % de falta passa a
+  ser `faltaram / agendados`, e a unidade que não anota desfecho aparece como a melhor da rede; o rótulo
+  da coluna declara qual base está valendo. Aceita `"true"`/`"false"` em texto; outro valor = 422.
+- no bloco de conversão, **a lista de nomes de procedimento foi abolida** (10/09/2026): começa com
+  `CONSULTA` ou contém `RETORNO` (em qualquer posição) é consulta; **todo o resto que tem paciente é
+  procedimento**. Antes, 1.961 agendamentos em 30 dias (13,8% da agenda) caíam em "Não classificado" só
+  por escrita diferente do nome ("ONDAS 1/3" x "ONDAS DE CHOQUE").
+- **`count_retorno_as_consulta`** (true/false, nasce LIGADA — 10/09/2026): ligada, o bloco responde "de
+  toda consulta atendida, quantas viraram tratamento"; desligada, "do paciente NOVO, quantos fecham" — o
+  retorno sai da base para "Não classificado", nunca para procedimento. Medido (jun-ago/2026): 48,4%
+  ligada contra 35,1% desligada. Aceita `"true"`/`"false"` em texto; outro valor = 422.
 
 `stage_entries`, `calls_report`, `measure`, `today`/`yesterday` e os metadados `title`/`width`/`height`
 são commits de 21/08/2026 (entram com o próximo deploy do app depois de 21/08/2026); `custom` em

@@ -7862,7 +7862,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/macros",
   "title": "Criar Macro",
-  "description": "Cria uma nova macro com ações. Cria novo macro. Obrigatórios: name, actions. Valida unicidade quando aplicável. Retorna o macro criado com ID atribuído. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500). NOVO 23/07 — cardápio equiparado ao das automações, 13 ações novas aceitas em action_name: add_sla (params [sla_policy_id]), open_conversation, pending_conversation (sem params), send_canned_response ([canned_response_id] — na MACRO a mensagem sai assinada pelo EXECUTOR da macro; na automação sai como robô), send_email_to_team ([{team_ids, message}]), assign_captain_assistant ([assistant_id]), e 7 de Kanban: create_kanban_item, move_kanban_item_to_stage, assign_agent_to_kanban_item, add_note_to_kanban_item, start_kanban_item_timer, stop_kanban_item_timer, set_kanban_item_status (params espelham os das automações: funil/etapa/nota/status). Fora do cardápio: send_whatsapp_template (exige caixa oficial específica).",
+  "description": "Cria uma nova macro com ações. Obrigatórios: name, actions (visibility: personal ou global). As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422. CARDÁPIO (10/09/2026, 40 ações — os action_params seguem os MESMOS formatos das automações, ver conversation-flows.md 'Acoes de automacao'): send_message, add_private_note, send_canned_response ([id] — na MACRO a mensagem sai assinada pelo EXECUTOR; na automação sai como robô), send_attachment, send_email_transcript, send_email_to_team, send_webhook_event, add_label/remove_label (etiqueta da CONVERSA), add_contact_label/remove_contact_label ([titulos] — etiqueta do CONTATO), assign_agent, assign_team, remove_assigned_team, distribute_agents ([agent_ids] — rodízio de verdade, nunca sorteio), change_status, change_priority, open_conversation/pending_conversation/resolve_conversation, snooze_conversation ([] = até a próxima resposta, ou ['until_tomorrow'] etc.), mute_conversation, mark_unread ([]), add_sla ([sla_policy_id]), assign_captain_assistant ([id] ou [{assistant_id, proactive}]), deactivate_captain ([]), send_signature_document, update_contact_attribute/update_conversation_attribute ([{attribute_key, value}] — chave PROTEGIDA é recusada na execução e fica só no log: prefixos waha_whatsapp_/whatsapp_/origin_/ctwa_/meta_lead_/lt_ e atributos de sistema como utm_*/gclid), update_card_attribute ([{funnel_id, attribute_key, value}]), add_card_checklist ([{funnel_id, checklist_template_ids}]), add_card_offer ([{funnel_id, offer_ids}]), e as 7 de Kanban: create_kanban_item, move_kanban_item_to_stage, assign_agent_to_kanban_item, add_note_to_kanban_item, start_kanban_item_timer, stop_kanban_item_timer, set_kanban_item_status (todas exigem card já existente no funil informado, exceto create). send_conversion ([{destinations, event_names, value}] — Meta CAPI/GA4/Google Ads com trigger_type 'macro') só pode ser SALVO por administrador ou cargo com marketing_integrations_manage: para os demais, 422 com o motivo; EXECUTAR segue liberado; teto de 50 conversões por execução (o excedente é pulado com log e as outras ações rodam). Fora do cardápio: send_whatsapp_template.",
   "category": "Macros",
   "params": [
    {
@@ -7884,7 +7884,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Array de {action_name, action_params[]}"
+    "description": "Array de {action_name, action_params[]} — 40 nomes aceitos, listados na descrição da tool; formatos iguais aos das automações"
    }
   ],
   "returns": "macro criado (com novo ID)",
@@ -7924,7 +7924,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/macros/{id}",
   "title": "Atualizar Macro",
-  "description": "Atualiza macro. Atualiza campos do macro existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, actions. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500). NOVO 23/07 — cardápio equiparado ao das automações, 13 ações novas aceitas em action_name: add_sla (params [sla_policy_id]), open_conversation, pending_conversation (sem params), send_canned_response ([canned_response_id] — na MACRO a mensagem sai assinada pelo EXECUTOR da macro; na automação sai como robô), send_email_to_team ([{team_ids, message}]), assign_captain_assistant ([assistant_id]), e 7 de Kanban: create_kanban_item, move_kanban_item_to_stage, assign_agent_to_kanban_item, add_note_to_kanban_item, start_kanban_item_timer, stop_kanban_item_timer, set_kanban_item_status (params espelham os das automações: funil/etapa/nota/status). Fora do cardápio: send_whatsapp_template (exige caixa oficial específica).",
+  "description": "Atualiza macro. PATCH parcial: só campos enviados são alterados (name, actions, visibility). As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado retorna 422. CARDÁPIO (10/09/2026, 40 ações — os action_params seguem os MESMOS formatos das automações, ver conversation-flows.md 'Acoes de automacao'): send_message, add_private_note, send_canned_response ([id] — na MACRO a mensagem sai assinada pelo EXECUTOR; na automação sai como robô), send_attachment, send_email_transcript, send_email_to_team, send_webhook_event, add_label/remove_label (etiqueta da CONVERSA), add_contact_label/remove_contact_label ([titulos] — etiqueta do CONTATO), assign_agent, assign_team, remove_assigned_team, distribute_agents ([agent_ids] — rodízio de verdade, nunca sorteio), change_status, change_priority, open_conversation/pending_conversation/resolve_conversation, snooze_conversation ([] = até a próxima resposta, ou ['until_tomorrow'] etc.), mute_conversation, mark_unread ([]), add_sla ([sla_policy_id]), assign_captain_assistant ([id] ou [{assistant_id, proactive}]), deactivate_captain ([]), send_signature_document, update_contact_attribute/update_conversation_attribute ([{attribute_key, value}] — chave PROTEGIDA é recusada na execução e fica só no log: prefixos waha_whatsapp_/whatsapp_/origin_/ctwa_/meta_lead_/lt_ e atributos de sistema como utm_*/gclid), update_card_attribute ([{funnel_id, attribute_key, value}]), add_card_checklist ([{funnel_id, checklist_template_ids}]), add_card_offer ([{funnel_id, offer_ids}]), e as 7 de Kanban: create_kanban_item, move_kanban_item_to_stage, assign_agent_to_kanban_item, add_note_to_kanban_item, start_kanban_item_timer, stop_kanban_item_timer, set_kanban_item_status (todas exigem card já existente no funil informado, exceto create). send_conversion ([{destinations, event_names, value}] — Meta CAPI/GA4/Google Ads com trigger_type 'macro') só pode ser SALVO por administrador ou cargo com marketing_integrations_manage: para os demais, 422 com o motivo; EXECUTAR segue liberado; teto de 50 conversões por execução (o excedente é pulado com log e as outras ações rodam). Fora do cardápio: send_whatsapp_template.",
   "category": "Macros",
   "params": [
    {
@@ -7946,7 +7946,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Ações"
+    "description": "Array de {action_name, action_params[]} — 40 nomes aceitos, listados na descrição da tool; formatos iguais aos das automações"
    },
    {
     "name": "visibility",
@@ -7993,7 +7993,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/macros/{id}/execute",
   "title": "Executar Macro",
-  "description": "Executa uma macro numa conversa (job async). Obrigatorio: conversation_id.",
+  "description": "Executa uma macro em uma ou mais conversas (job assíncrono; responde 200 sem corpo). Obrigatório: conversation_ids (array). FREIOS (10/09/2026): (1) até 100 conversas por chamada — acima disso 422 'Too many conversations'; (2) a mesma macro na MESMA conversa dentro de 5 s é PULADA em silêncio (as demais conversas da lista seguem) — se todas forem puladas, 422 'executed just now'; lista vazia = 422; (3) 30 execuções por minuto por usuário — acima disso 429. Dentro da macro, send_conversion dispara no máximo 50 conversões por execução. Cada ação que falhar numa conversa fica no log do servidor e não interrompe as outras.",
   "category": "Macros",
   "params": [
    {
@@ -8008,14 +8008,13 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "IDs das conversas"
+    "description": "IDs das conversas (1 a 100 por chamada; ids repetidos e vazios são ignorados)"
    }
   ],
   "returns": "200 OK (sem corpo)",
   "common_use_cases": [
-   "Cadastro inicial de macro",
-   "Automação a partir de evento externo",
-   "Importação manual via API"
+   "Aplicar uma sequência de ações em lote numa lista de conversas",
+   "Rodar por API a macro que o atendente escolheu"
   ],
   "related_tools": []
  },
@@ -25927,6 +25926,27 @@
     "location": "body",
     "required": false,
     "description": "Nome do bloco, exibido no cabecalho (ate 80 caracteres). Vazio = mostra o rotulo do tipo."
+   },
+   {
+    "name": "direction_split",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "true/false (padrao false). SO no bloco `calls_report`: troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida. Opt-in de proposito (novo 28/08/2026)."
+   },
+   {
+    "name": "no_show_over_scheduled",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "true/false (padrao false). SO no bloco `eclinica_no_show`: a % de falta passa a ser faltaram/agendados em vez de faltaram/(compareceram+faltaram). Ligado, a unidade que nao anota desfecho parece a melhor da rede — o rotulo da coluna declara a base. Aceita as strings 'true'/'false' (novo 10/09/2026)."
+   },
+   {
+    "name": "count_retorno_as_consulta",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "true/false (padrao true). SO no bloco `eclinica_conversion`: retorno conta como consulta na base ('de toda consulta atendida, quantas viraram tratamento'); desligado, responde 'do paciente NOVO, quantos fecham' e o retorno vai para 'Nao classificado', nunca para procedimento. Aceita as strings 'true'/'false' (novo 10/09/2026)."
    }
   ],
   "returns": "Um dos 4 formatos normalizados (series | categories | scalar | table), com o campo `shape` dizendo qual",
@@ -25969,7 +25989,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Lista de blocos. Cada item: {id, widget_type, chart_type, ...} com os mesmos campos do custom_dashboards_preview_widget. Maximo 12. DOIS campos de bloco que faltavam aqui: `follow_report_period` (true/false, tambem aceita as strings; AUSENTE = true) diz se o bloco obedece o calendario do TOPO do relatorio ou usa o periodo proprio — vale pra qualquer bloco, novo em 22/08/2026; e `direction_split` (true/false, padrao false) que SO faz efeito no bloco `calls_report` e troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida — OPT-IN de proposito pra nao mexer no relatorio de quem ja usa o bloco, novo em 28/08/2026."
+    "description": "Lista de blocos. Cada item: {id, widget_type, chart_type, ...} com os mesmos campos do custom_dashboards_preview_widget. Maximo 12. DOIS campos de bloco que faltavam aqui: `follow_report_period` (true/false, tambem aceita as strings; AUSENTE = true) diz se o bloco obedece o calendario do TOPO do relatorio ou usa o periodo proprio — vale pra qualquer bloco, novo em 22/08/2026; e `direction_split` (true/false, padrao false) que SO faz efeito no bloco `calls_report` e troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida — OPT-IN de proposito pra nao mexer no relatorio de quem ja usa o bloco, novo em 28/08/2026. Desde 10/09/2026, dois campos SO dos blocos da e-Clinica: `no_show_over_scheduled` (true/false, padrao false — a % de falta passa a ser faltaram/agendados em vez de sobre os desfechos conhecidos; so faz efeito em `eclinica_no_show`) e `count_retorno_as_consulta` (true/false, padrao true — retorno conta como consulta na base da conversao; desligado, o retorno vai para 'Nao classificado'; so faz efeito em `eclinica_conversion`). Aceitam as strings 'true'/'false'; qualquer outro valor = 422 com o motivo."
    }
   ],
   "returns": "{ id, name, position, widgets, created_at }",
@@ -26018,7 +26038,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Lista COMPLETA de blocos — substitui a atual. Preserve o `id` de cada bloco que ja existia, senao a tela perde o vinculo. Maximo 12. DOIS campos de bloco que faltavam aqui: `follow_report_period` (true/false, tambem aceita as strings; AUSENTE = true) diz se o bloco obedece o calendario do TOPO do relatorio ou usa o periodo proprio — vale pra qualquer bloco, novo em 22/08/2026; e `direction_split` (true/false, padrao false) que SO faz efeito no bloco `calls_report` e troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida — OPT-IN de proposito pra nao mexer no relatorio de quem ja usa o bloco, novo em 28/08/2026."
+    "description": "Lista COMPLETA de blocos — substitui a atual. Preserve o `id` de cada bloco que ja existia, senao a tela perde o vinculo. Maximo 12. DOIS campos de bloco que faltavam aqui: `follow_report_period` (true/false, tambem aceita as strings; AUSENTE = true) diz se o bloco obedece o calendario do TOPO do relatorio ou usa o periodo proprio — vale pra qualquer bloco, novo em 22/08/2026; e `direction_split` (true/false, padrao false) que SO faz efeito no bloco `calls_report` e troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida — OPT-IN de proposito pra nao mexer no relatorio de quem ja usa o bloco, novo em 28/08/2026. Desde 10/09/2026, dois campos SO dos blocos da e-Clinica: `no_show_over_scheduled` (true/false, padrao false — a % de falta passa a ser faltaram/agendados em vez de sobre os desfechos conhecidos; so faz efeito em `eclinica_no_show`) e `count_retorno_as_consulta` (true/false, padrao true — retorno conta como consulta na base da conversao; desligado, o retorno vai para 'Nao classificado'; so faz efeito em `eclinica_conversion`). Aceitam as strings 'true'/'false'; qualquer outro valor = 422 com o motivo."
    }
   ],
   "returns": "{ id, name, position, widgets, created_at }",
