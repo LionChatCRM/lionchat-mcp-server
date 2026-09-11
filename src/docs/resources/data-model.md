@@ -196,11 +196,22 @@ Funnel
 ├── stages (jsonb: hash com slug_etapa => { name, color, position, description, checklist_templates })
 ├── settings (jsonb: { agents: [], goals: [], automations: [{trigger_type, action, action_config, enabled}] })
 ├── global_custom_attributes (jsonb array)
-├── meta_events_config (jsonb: won/lost/stages → Meta Pixel/CAPI events)
+├── meta_events_config (jsonb: won/lost/stages → Meta Pixel/CAPI events; cada bloco: enabled, name,
+│     is_standard, value_strategy, value_fixed, currency, messaging_name — este último é o evento de
+│     ANÚNCIO DE WHATSAPP, tri-estado: ausente = automático, '' = não enviar, um dos 14 nomes da Meta;
+│     só em stages e won, nunca em lost)
 ├── archived (bool)
 ├── active (bool)
 ├── position (int, ordem entre funis)
 └── created_at
+
+MetaCapiEvent (meta_capi_events — cada envio de conversão pro Meta)
+├── event_name (nome INTERNO, o que o cliente escolheu), event_id (idempotência), status (pending/sent/failed/duplicate)
+├── trigger_type, kanban_item_id, contact_id, conversation_id, funnel_id, meta_pixel_integration_id
+├── inbox_id (2026-09-10: a caixa oficial de onde saiu a WABA — o envio de anúncio de WhatsApp usa o dataset e a chave DESSA caixa)
+├── fallback_reason (2026-09-10: preenchido quando um evento de anúncio de WhatsApp saiu como SITE — plano B; NULL = não degradou)
+├── payload_sent (jsonb: data[0].action_source = website | business_messaging; data[0].event_name = o nome que FOI pra Meta)
+└── response_body (jsonb: resposta da Meta; `fallback_from` = a recusa original quando houve plano B)
 
 KanbanItem
 ├── id (PK)
@@ -341,6 +352,17 @@ Macro
 └── visibility (personal/global)
 ```
 
+**Macro — ações e freios (10/09/2026).** `actions` aceita 40 nomes: todos os das automações (mesmos
+`action_params`, ver a tabela em conversation-flows.md) mais os que só a macro tem — `mark_unread` (`[]`),
+`add_contact_label`/`remove_contact_label` (`[titulos]`, etiqueta do CONTATO), `distribute_agents`
+(`[agent_ids]`, rodízio de verdade), `update_card_attribute` (`[{funnel_id, attribute_key, value}]`),
+`add_card_checklist` (`[{funnel_id, checklist_template_ids}]`), `add_card_offer` (`[{funnel_id, offer_ids}]`)
+e `send_conversion` (`[{destinations, event_names, value}]` — só administrador ou cargo com
+`marketing_integrations_manage` consegue SALVAR a macro; executar segue livre; teto de 50 conversões por
+execução). Atributo protegido em `update_*_attribute` é recusado na execução (só no log). Executar
+(`lionchat_macros_execute`): até 100 conversas por chamada, a mesma conversa em 5 s é pulada em silêncio,
+30 execuções por minuto por usuário (429). A mensagem de `send_canned_response` sai assinada por quem executou.
+
 ## Agenda / Tarefas / Booking
 
 ```
@@ -436,6 +458,11 @@ daquele tipo no calendário; vazio = cor do agente. A tarefa devolve `booking_co
 `cliente_alteracao_pagamento`, `odontograma_finalizado`, `inclusao_procedimento`
 (capturados ao vivo, não documentados pelo e-Clínica).
 
+O recurso `eclinica_integration` da conta passou a ser ligado e desligado pelo PRÓPRIO cadastro da
+integração (10/09/2026, `auto_managed`): sumiu do Super Admin e não há passo manual — os blocos de
+relatório e as tools da e-Clínica valem assim que a integração existe. Contas que já tinham integração
+receberam o recurso no deploy (migração).
+
 Os 3 últimos são do perfil ODONTOLÓGICO: `agendamento_aguardando` = a recepção marcou a
 chegada do paciente na clínica (grava a hora da chegada e `eclinica_status_agendamento = aguardando`);
 `odontograma_aprovado` = plano de tratamento aprovado (grava o cabeçalho do odontograma);
@@ -468,6 +495,8 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_data_consulta` | date | Data da consulta, ISO |
 | `eclinica_hora_consulta` | **time** | Hora da consulta 24h `"HH:MM"` (novo 2026-07-06) |
 | `eclinica_hora_final` | **time** | Hora final da consulta (novo 2026-07-27) |
+| `eclinica_link_confirmacao` | **link** | Link ecli.co para o paciente confirmar/cancelar a ÚLTIMA consulta (novo 2026-09-08; só existe quando a unidade aprendeu o padrão na aba Unidades). No LEMBRETE use a variável `{{link_confirmacao}}` do fluxo (ou `{{agendamento.link_confirmacao}}` na automação): é da consulta certa — a ficha aponta para a última, e quem tem duas marcadas receberia o link errado |
+| `eclinica_paciente_nome` | text | Nome do PACIENTE como está no cadastro da e-Clínica (novo 2026-09-09). O nome do contato pode ser o do WhatsApp (mãe que agenda o filho pelo celular dela) — por isso NUNCA use `{{contact.name}}` nas mensagens da clínica. Nos fluxos por evento: `{{ contact.custom_attribute.eclinica_paciente_nome \| default: contact.name \| primeiro_nome }}`; no LEMBRETE use a variável `{{ paciente_nome \| default: contact.name \| primeiro_nome }}` (por consulta) ou `{{agendamento.paciente_nome}}` na automação. `primeiro_nome` = primeira palavra com inicial maiúscula. |
 | `eclinica_status_agendamento` | text | `agendado` / `aguardando` (paciente chegou) / `no_show` / `atendido` / `desmarcado`. Vem do TIPO do evento, nunca da letra da situação. **Estado terminal do MESMO agendamento não volta pra `agendado`** (2026-08-20): a e-Clínica manda `agendamento_alterado` a cada edição da consulta, inclusive depois da chegada/atendimento, e isso NÃO reabre o status. Consulta com `eclinica_idagenda` DIFERENTE nasce `agendado` |
 | `eclinica_situacao` | text | Situação do agendamento no painel, **POR EXTENSO** (2026-08-21, legenda oficial da e-Clínica): AGUARDANDO, NA CADEIRA, PASSAR FINANCEIRO, AGENDAR RETORNO, ATENDIDO, CONFIRMADO, CONFIRMADO PELO LINK, CONFIRMADO PELA API, FALTA, DESMARCADO, CANCELADO PELO LINK, CANCELADO PELA API. Antes guardava a letra crua (`A`, `C`…). Código nunca visto aparece como veio |
 | `eclinica_compromisso` | text | Tipo da consulta — TEXTO LIVRE da recepção (ex: Consulta, Retorno) |
@@ -590,6 +619,11 @@ MetaLeadIntegration (Facebook Lead Ads)
 ├── facebook_page_id (FK polimórfico)
 ├── status (active/token_expired/paused)
 └── meta_lead_forms (has_many)
+    → cada lead vira CONTATO com os atributos meta_lead_* (form_id/form_name, campaign_id/name,
+      adset_id/name, ad_id/name, creative_id/name, platform, account_id/name; definidos por conta como
+      atributo de contato). Filtráveis em contacts_filter como atributo personalizado; desde 10/09/2026
+      também no filtro da tela de contatos e no painel "Atributos de Campanha" da conversa
+      (meta_lead_form_name aparece como "Origem - Formulário")
 
 LeadForm (Formulário público de captação — feature flag lead_forms, por conta)
 ├── account_id (FK)

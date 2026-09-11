@@ -529,7 +529,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `add_card_offer` | `{ offer_id, use_custom_value?, custom_value?, funnel_id?, card_source? }` | Adiciona uma OFERTA (produto/serviço) ao card. `offer_id` de `offers_list`. `use_custom_value: true` + `custom_value` grava um valor personalizado na oferta; senão usa o valor cadastrado. O total do card recalcula sozinho (soma das ofertas). Respeita `card_source` (funnel só localiza o card) |
 | `send_webhook` | `{ url, headers?, body? }` | Dispara webhook externo |
 | `start_flow` | `{ flow_id }` | Inicia outro fluxo. **NÃO encerra o fluxo de origem** (desde 31/08): se houver bloco ligado depois dele, o fluxo SEGUE normalmente. Sendo o último do desenho, o fluxo termina ali como sempre. |
-| `send_conversion` (novo 2026-09-01; `event_names` 2026-09-02) | `{ destinations: ['meta'\|'ga4'\|'google_ads'], event_names: { meta?, google_ads?, ga4? }, event_name (reserva), value? }` | Manda o evento de conversão pro Meta (CAPI), Google Ads e/ou GA4 — o mesmo caminho do Funil, de dentro do fluxo. Aba Sistema (só flow `conversation`). Ver bloco próprio abaixo |
+| `send_conversion` (novo 2026-09-01; `event_names` 2026-09-02; `messaging_event_names` 2026-09-10) | `{ destinations: ['meta'\|'ga4'\|'google_ads'], event_names: { meta?, google_ads?, ga4? }, messaging_event_names: { meta? }, event_name (reserva), value? }` | Manda o evento de conversão pro Meta (CAPI), Google Ads e/ou GA4 — o mesmo caminho do Funil, de dentro do fluxo. Aba Sistema (só flow `conversation`). Ver bloco próprio abaixo |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
 | `update_attribute` | `{ attr_source: 'contact'\|'conversation'\|'card', attr_key, attr_value }` | Seta custom_attribute (ver abaixo) |
 | `assign_captain` (ou `assign_captain_assistant`) | `{ assistant_id }` | Atribui IA Captain |
@@ -542,7 +542,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 **`send_conversion` — Enviar conversão (2026-09-01):**
 
 ```json
-{ "key": "send_conversion", "config": { "destinations": ["meta", "google_ads"], "event_names": { "meta": "Lead", "google_ads": "Contact" }, "event_name": "Lead", "value": "1500,50" } }
+{ "key": "send_conversion", "config": { "destinations": ["meta", "google_ads"], "event_names": { "meta": "Lead", "google_ads": "Contact" }, "messaging_event_names": { "meta": "QualifiedLead" }, "event_name": "Lead", "value": "1500,50" } }
 ```
 
 - `destinations`: array com `meta`, `ga4` e/ou `google_ads` — **OBRIGATÓRIO e não vazio** (vazio = a ação
@@ -555,6 +555,15 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
   Chave presente e em branco = aquele destino é PULADO ("sem nome de evento"); chave ausente cai em `event_name`.
   Google Ads só envia evento que tenha ação mapeada na integração; a tela lista Meta (padrão + personalizados
   da conta) e Google Ads (mapeados), GA4 é livre. Grave sempre `event_names` E `event_name` (= primeiro nome).
+- `messaging_event_names` (**desde 2026-09-10**, só a chave `meta`): o evento de **ANÚNCIO DE WHATSAPP**. Quem chegou
+  por anúncio de WhatsApp (clique para o WhatsApp, caixa oficial vinculada à Meta) sai como `business_messaging`, e
+  nesse caso a Meta só aceita 14 nomes: `LeadSubmitted`, `QualifiedLead`, `ViewContent`, `AddToCart`,
+  `InitiateCheckout`, `Purchase`, `OrderCreated`, `OrderShipped`, `OrderDelivered`, `OrderCanceled`, `OrderReturned`,
+  `CartAbandoned`, `RatingProvided`, `ReviewProvided`. Tri-estado: chave **ausente** = automático (sugestão pelo
+  evento de site: Lead/Contact → LeadSubmitted, Purchase → Purchase, InitiateCheckout → InitiateCheckout; sem sugestão
+  o lead de anúncio sai como site com `fallback_reason`); `""` = não enviar como WhatsApp (sai como site); um dos
+  14 = escolha. Nome fora da lista é ignorado (vira automático). Não afeta GA4/Google Ads. O nome interno do
+  cliente (`event_names.meta`) vai em `custom_data.internal_event`.
 - `event_name`: reserva/compatibilidade (fluxos de antes de 02/09), só letras/números/sublinhado (até 40; ex.: `Lead`, `Schedule`,
   `Purchase`); aceita variável `{{ }}`. No **Google Ads** o nome precisa estar mapeado no
   `conversion_action_map` da integração, senão é pulado.
@@ -1022,6 +1031,7 @@ O campo `flow_type` (definido na criação, IMUTÁVEL depois) decide a natureza 
 | Campos extra | — | `tool_name` (snake_case, `[a-z][a-z0-9_]`, max 50) + `tool_description` (max 500) OBRIGATÓRIOS |
 | Retorno | manda mensagens | retorna dado estruturado ao LLM via node `end` |
 | Nodes permitidos | todos | `start`, `end`, `api`, `condition`, `set_variable`, `ai`, `note`, `randomizer`, `action`, `send_message` |
+| Aviso de espera (10/09/2026) | — | enquanto a ferramenta roda, o cliente recebe "Só um momento, estou verificando isso pra você...". Cada ferramenta escolhe o seu no node `start`: `data.toolWaitMessageEnabled` (`false` desliga; AUSENTE = ligado — só um `false` de verdade desliga, `""` ou lixo mantém ligado) e `data.toolWaitMessageText` (texto próprio, até 1000 caracteres; vazio = frase padrão). Vive no `flow_data` e viaja no snapshot de versão; ferramenta já existente não muda de comportamento |
 
 Se o cliente pediu "uma ferramenta que a IA usa pra consultar X / calcular Y", é `ai_tool`. Se pediu "quando chega mensagem, faça Z", é `conversation`. Na dúvida, `conversation`.
 
@@ -1130,15 +1140,35 @@ Dois atalhos: `{{trigger}}` devolve o contexto INTEIRO em JSON e `{{trigger.data
 sem os metadados — úteis pra jogar tudo dentro de um node `ai` ou `api`. Bloco (Hash/Array) inteiro
 sai em JSON; valor simples sai cru.
 
-**O que o histórico mostra e NÃO é variável (22/08/2026).** O passo Início do histórico de execução
-passou a exibir, em todo gatilho, o contato (nome, telefone, e-mail), a conversa (número, canal, caixa)
-e os fatos do que disparou: etiqueta, responsável/equipe (ou "removido"), card (título, funil, etapa
-anterior → etapa), política de SLA, grupo, nome do formulário e do marco, anúncio/formulário/campanha
-do Meta Lead (+ as respostas, em bloco próprio), produto/oferta/meio de pagamento do gateway, evento/
-unidade/data/hora/compromisso da e-Clínica, tecla do TopSend, e os dados do agendamento. Esses fatos
-ficam numa área só-de-log (`_trigger_facts`) — **não existem como `{{trigger.*}}`** e não entram em
-`{{trigger.data}}`. Se o cliente precisar de um deles no fluxo, use a variável de origem quando
-existir (`{{booking.*}}`, `{{form_*}}`, `{{contact.*}}`, atributos do contato gravados pela integração).
+**Os fatos do que disparou VIRARAM variáveis (08/09/2026).** Desde 22/08 o passo Início do histórico
+mostra, em todo gatilho, o contato, a conversa e os fatos do que disparou. Desde 08/09 esses fatos
+também RESOLVEM como `{{trigger.<bloco>.<campo>}}` (contexto do gatilho vence o fato na mesma chave).
+Eles continuam FORA de `{{trigger.data}}` e de `{{trigger}}` — fluxo já em produção não muda de conteúdo.
+
+Oferecidos no autocompletar (só quando o bloco Início tem o gatilho que os preenche):
+
+| Gatilhos do Início | Variáveis |
+|---|---|
+| `card_created`, `card_moved`, `card_won`, `card_lost`, `card_attribute_changed` | `{{trigger.kanban.title}}`, `{{trigger.kanban.funnel_name}}`, `{{trigger.kanban.stage_name}}`, `{{trigger.kanban.stage}}` (código da etapa) |
+| `card_moved` | `{{trigger.kanban.previous_stage_name}}`, `{{trigger.kanban.previous_stage}}` |
+| `card_won`, `card_lost` | `{{trigger.kanban.status}}` (`won`/`lost`) |
+| `label_added`, `label_removed` | `{{trigger.label.name}}` |
+| `assignee_changed` | `{{trigger.assignee.name}}` (vazio = responsável removido) |
+| `team_changed` | `{{trigger.team.name}}` (vazio = equipe removida) |
+| `sla_missed` | `{{trigger.sla.policy_name}}`, `{{trigger.sla.type}}` (`frt`/`nrt`/`rt`) |
+| `group_participant_joined`, `group_participant_left` | `{{trigger.group.name}}`, `{{trigger.group.id}}` |
+
+Resolvem mas NÃO aparecem no seletor (produtor único — só o gatilho daquela integração preenche):
+`{{trigger.attribute.name}}`/`current_value` (atributo do contato entrou no valor), `{{trigger.form.name}}`/
+`milestone`, `{{trigger.payment.gateway|event|product|offer|method|status|amount}}`,
+`{{trigger.eclinica.event|unit|date|time|compromisso|idagenda}}`, `{{trigger.lead.form|page|ad|adset|campaign|platform}}`
+(nome do anúncio, não dado de pessoa), `{{trigger.dtmf.key|campaign}}`, `{{trigger.reminder.date|time|compromisso|unit|days_before}}`,
+além de `{{trigger.kanban.id}}`/`funnel_id` (use `{{trigger.kanban_item_id}}`/`{{trigger.funnel_id}}`),
+`{{trigger.assignee.id}}`, `{{trigger.team.id}}`, `{{trigger.kanban.previous_status}}` e
+`{{trigger.group.participants_count}}`. As RESPOSTAS do lead do Meta não viram variável (só aparecem no
+histórico). Sessões anteriores a 22/08 não têm fatos gravados: essas variáveis saem vazias nelas.
+O bloco do card chama-se `kanban` — nunca `card`. Se o cliente precisar de um dado que não está aqui,
+use a variável de origem quando existir (`{{booking.*}}`, `{{form_*}}`, `{{contact.*}}`).
 
 **NÃO duplique o que já tem variável própria.** `{{contact.name}}`, `{{conversation.status}}`,
 `{{inbox.name}}` e os atributos `ctwa_*` continuam existindo e são a forma canônica. O `{{trigger.*}}`

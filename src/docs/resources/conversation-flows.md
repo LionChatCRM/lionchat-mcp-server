@@ -704,6 +704,7 @@ Todos os formatos abaixo foram conferidos linha a linha em `app/services/action_
 | `assign_agent` | `[70]` — o agente precisa ser membro da caixa. `["nil"]` desatribui |
 | `assign_team` | `[3]`. `["nil"]` desatribui |
 | `assign_captain_assistant` | `[17]` ou `[{"assistant_id": 17, "proactive": true}]` — `proactive` false = a IA assume mas nao fala na hora |
+| `deactivate_captain` | `[]` — desliga o AI Agente da conversa (novo 10/09/2026; a macro também tem) |
 | `send_email_to_team` | `[{"team_ids": [1], "message": "texto"}]` |
 | `send_webhook_event` | `["https://..."]` |
 | `send_attachment` | `[blob_ids]` — so funciona se a regra ja tiver arquivo anexado; nao da pra montar so por API |
@@ -713,7 +714,7 @@ Todos os formatos abaixo foram conferidos linha a linha em `app/services/action_
 | `mute_conversation` | `[]` |
 | `snooze_conversation` | `[]` |
 | `resolve_conversation` / `open_conversation` / `pending_conversation` | `[]` |
-| `update_contact_attribute` / `update_conversation_attribute` | `[{"attribute_key": "chave", "value": "texto ou {{contact.phone_number}}"}]` |
+| `update_contact_attribute` / `update_conversation_attribute` | `[{"attribute_key": "chave", "value": "texto ou {{contact.phone_number}}"}]` — chave PROTEGIDA é recusada na execução e fica só no log (10/09/2026): prefixos `waha_whatsapp_`, `whatsapp_`, `origin_`, `ctwa_`, `meta_lead_`, `lt_` e atributos de sistema como `utm_*`/`gclid`. Vale pra macro e automação |
 | `create_kanban_item` | `[{"funnel_id": 31, "funnel_stage": "prospeccao", "allow_duplicates": false}]` |
 | `move_kanban_item_to_stage` | `[{"funnel_id": 31, "funnel_stage": "qualificacao"}]` |
 | `assign_agent_to_kanban_item` | `[{"funnel_id": 31, "agent_id": 70, "mode": "add"}]` — `mode` aceita `add` (padrao) ou `remove_all` |

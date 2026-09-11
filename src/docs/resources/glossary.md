@@ -497,6 +497,21 @@ Ao disparar uma conversão pro Meta (Conversions API), o valor agora carrega uma
 tanto no disparo individual da conversão quanto na configuração do funil (valor padrão herdado pelos
 cards daquele funil).
 
+## Meta CAPI — evento de anúncio de WhatsApp, dataset da WABA e plano B (2026-09-10)
+
+- **Evento de anúncio de WhatsApp** (`action_source: business_messaging`): conversão de quem chegou
+  pelo botão de WhatsApp de um anúncio (conversa com `ctwa_clid` numa caixa oficial). A Meta só
+  aceita 14 nomes nele (`LeadSubmitted`, `QualifiedLead`, `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`, `OrderCreated`, `OrderShipped`, `OrderDelivered`, `OrderCanceled`, `OrderReturned`, `CartAbandoned`, `RatingProvided`, `ReviewProvided`) e só num dataset vinculado à WABA.
+- **Dataset da WABA** (`provider_config.capi_dataset_id` da caixa oficial): destino desses eventos,
+  criado/recuperado pelo botão "Vincular à Meta" (`lionchat_inboxes_capi_dataset_link`) com a chave da
+  própria caixa. Um por conta do WhatsApp Business; vale para todos os números dela.
+- **`messaging_name` / `messaging_event_names.meta` / `messaging_event_name`**: a escolha do evento de
+  WhatsApp (funil / fluxo / disparo manual). Tri-estado: ausente = automático, `''` = não enviar como
+  WhatsApp, um dos 14 = escolha.
+- **Plano B** (`fallback_reason` no `meta_capi_events`): o evento de anúncio saiu como SITE. O motivo
+  fica gravado (`lionchat:*` nosso ou `"<subcode>: <mensagem>"` da Meta); na tela é o selo âmbar
+  "site (plano B)" e o filtro "Só plano B" (`degraded=true` na API).
+
 ## Idiomas da plataforma (2026-06)
 
 A plataforma opera com 6 idiomas: `en`, `es`, `fr`, `it`, `pt`, `pt_BR` (default das contas
