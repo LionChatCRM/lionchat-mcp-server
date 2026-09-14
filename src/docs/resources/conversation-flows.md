@@ -439,7 +439,7 @@ POST .../conversations/{id}/toggle_status
 
 | Ação | Tool / endpoint | Efeito |
 |---|---|---|
-| Marcar como **lida** | `update_last_seen` (POST `.../update_last_seen`) | Atualiza `agent_last_seen_at`; em canal WAHA dispara check azul no WhatsApp |
+| Marcar como **lida** | `update_last_seen` (POST `.../update_last_seen`) | Atualiza `agent_last_seen_at` e, em canal WhatsApp (QR Code ou oficial), dispara o check azul — **só quando há mensagem do cliente ainda não lida** (12/09); sem entrante nova a chamada cai na trava de 1 h e devolve o carimbo já gravado |
 | Marcar como **não-lida** | `conversations_unread` (POST `.../unread`) | Recua o `last_seen` pra antes da última mensagem do cliente — conversa volta a aparecer como não-lida |
 
 Ambas são **ações de escrita** (POST). `unread` é o oposto de `update_last_seen`, não uma consulta.

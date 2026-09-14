@@ -50,8 +50,10 @@ Participante: `pending` → `viewed` → `verified` (confirmou o código) → `s
   leitura de um modelo continuam abertas a qualquer membro. Cancelar contrato e apagar modelo: só administrador.
 - **Trava sagrada**: campo do modelo sem valor na ficha bloqueia o envio. Preencher a ficha primeiro.
 - **Validade** (`roles_layout.validity_days`, padrão 7) conta do ENVIO; `{{document.deadline}}` imprime a data no
-  texto; passou = `expired` (cron de hora em hora). **Lembrete** (`reminder_days`, padrão 2, 0 = off): quem não
-  assinou recebe o link de novo a cada N dias.
+  texto; passou = `expired` (cron de hora em hora). **Lembrete NÃO é mais função do sistema** (14/09): o campo
+  `reminder_days` e a tarefa diária das 10h foram REMOVIDOS. Quem lembra é um fluxo do cliente, com o texto e a
+  caixa dele — gatilho "Link de assinatura enviado para uma pessoa" (`signature_delivered`, um disparo por
+  pessoa), bloco Esperar em dias e a condição "Situação do contrato". Nunca sugerir `reminder_days`.
 - **Conversor de Word** é um serviço separado (docx-converter). Fora do ar = `422 conversor_indisponivel` na prévia e no envio de modelo Word — é o serviço, não o arquivo; repetir em instantes. Modelos `text` e `file` não passam por ele.
 - **Fila única de conversão do Word**: uma conversão por vez em toda a instalação (todas as contas); pela tela espera-se até 10 s, automação/macro/fluxo/formulário até 2 s.
   Passou disso o envio/prévia volta `422 fila_cheia` — é só repetir em instantes (o modelo está bom).

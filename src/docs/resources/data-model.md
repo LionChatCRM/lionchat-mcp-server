@@ -150,7 +150,27 @@ Company
 ├── account_id (FK)
 ├── name
 └── domain
+
+AttributeChange (histórico de alterações de atributo — 2026-09-11)
+├── id (PK)
+├── account_id (FK)
+├── contact_id (FK, opcional) / conversation_id (FK, opcional)
+├── target_type + target_id ('Contact' | 'Conversation')
+├── field (name | email | phone_number | date_of_birth | gender | cadastral.* | address.* | custom.<chave>)
+├── old_value / new_value (jsonb)
+├── actor_type + actor_id + actor_label (User | Captain::Assistant | Flow | AutomationRule | LeadForm | Integration | System)
+├── source (panel | api | mcp:npm | mcp:remote | flow | automation | ai | form | integration:<nome> | merge | system)
+├── merged_from_contact_id (linha que veio de ficha mesclada)
+└── created_at
 ```
+
+**Histórico de alterações (`attribute_changes`, 2026-09-11):** uma linha por campo que mudou (contato ou
+conversa), com valor antes/depois, quem mudou e por onde. Mudança feita pelo MCP sai com `source`
+`mcp:npm`/`mcp:remote` e o usuário do token como ator. Criação não gera linha; importação de planilha
+não gera; chaves protegidas (rastreio `utm_*`/`gclid`, `waha_*`, `eclinica_*`, e toda definição
+`system: true`) ficam fora. Leitura: `GET contacts/{id}/attribute_changes` e
+`GET conversations/{id}/attribute_changes` (50/página; filtros `field`, `source`); telefone, e-mail,
+nascimento e documentos vêm mascarados (`masked: true`) para quem não é administrador. Retenção 180 dias.
 
 **`additional_attributes` vs `custom_attributes` no Contato:**
 - `additional_attributes` (jsonb): campos do sistema porém **EDITÁVEIS via API** (`permitted_params` permite `additional_attributes: {}`). Guarda chaves padrão como `city`, `company`, `country_code` — que são as chaves filtráveis em `lib/filters/filter_keys.yml` (tipo `additional_attributes`). NÃO é não-editável.
@@ -767,7 +787,7 @@ SignatureDocument (modelo)  1 ──── N  SignatureEnvelope (contrato de UMA
    body ({{variáveis}}), tags,             contact_id, conversation_id,                       status, phone/email, delivery_channel,
    roles_layout {signers, witnesses,       original_sha256, sealed_sha256,                    conversation_id (a conversa DELE),
    sender_signs, require_id_photo,         created_by (quem mandou)                           public_url, signed_at, viewed_at
-   validity_days, reminder_days}                │
+   validity_days}                               │
    progress (contagem por balde)                └── N  SignatureEvent (append-only: kind, occurred_at, ip, user_agent, detail)
 ```
 - Contrato aponta pro contato (`contact_id`, nulifica se a ficha for apagada — a prova sobrevive) e pra conversa

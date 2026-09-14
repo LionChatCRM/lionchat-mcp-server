@@ -449,7 +449,7 @@ Campos MUTÁVEIS (atualizáveis livremente por IA/integração): `marital_status
 | **LionCalls** | Voz pelo WhatsApp em caixa **QR Code**, mas pelo **motor próprio do LionChat** (credencial global, 1 sessão por caixa; flag `lioncalls_calling`, nasce desligada e é ligada conta a conta) | **NENHUMA — sem tool no MCP** | WhatsApp QR Code |
 | **WhatsApp Calling (Cloud)** | Voz pelo WhatsApp na **API oficial** (enterprise) | `whatsapp_calls_*` + enable/disable_whatsapp_calling | WhatsApp oficial |
 | **VoIP (Zenvia)** | Telefonia COMUM com softphone no navegador (ramais, ligações) | `voip_*` | Telefone |
-| **VTCall** | Telefonia por **PABX click-to-call**, config por conta + ramal por atendente; **sem softphone no navegador** — o atendente fala pelo app/ramal do VTCall | `vtcall_settings_*` (show/update/test_connection), `vtcall_ramals_*` (list/create/destroy) | Telefone (PABX do cliente) |
+| **VTCall** | Telefonia por **PABX click-to-call**, config por conta + ramal por atendente; **sem softphone no navegador** — o atendente fala pelo app/ramal do VTCall; desde 11/09/2026 a ligação discada direto no aparelho (ramal cadastrado) também entra no histórico | `vtcall_settings_*` (show/update/test_connection), `vtcall_ramals_*` (list/create/destroy) | Telefone (PABX do cliente) |
 
 Quando o usuário falar "ligação", descubra o canal ANTES de responder: caixa QR Code → **LionCalls**;
 caixa oficial → `whatsapp_calls`; telefone/ramal → Zenvia (softphone) ou VTCall (PABX).
@@ -503,7 +503,8 @@ cards daquele funil).
   pelo botão de WhatsApp de um anúncio (conversa com `ctwa_clid` numa caixa oficial). A Meta só
   aceita 14 nomes nele (`LeadSubmitted`, `QualifiedLead`, `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase`, `OrderCreated`, `OrderShipped`, `OrderDelivered`, `OrderCanceled`, `OrderReturned`, `CartAbandoned`, `RatingProvided`, `ReviewProvided`) e só num dataset vinculado à WABA.
 - **Dataset da WABA** (`provider_config.capi_dataset_id` da caixa oficial): destino desses eventos,
-  criado/recuperado pelo botão "Vincular à Meta" (`lionchat_inboxes_capi_dataset_link`) com a chave da
+  criado/recuperado AUTOMATICAMENTE (na criação da caixa e por varredura a cada 10 min) e, como plano B,
+  pelo botão "Vincular à Meta" (`lionchat_inboxes_capi_dataset_link`) com a chave da
   própria caixa. Um por conta do WhatsApp Business; vale para todos os números dela.
 - **`messaging_name` / `messaging_event_names.meta` / `messaging_event_name`**: a escolha do evento de
   WhatsApp (funil / fluxo / disparo manual). Tri-estado: ausente = automático, `''` = não enviar como
@@ -599,6 +600,17 @@ A gravação permanente só nasce cerca de 24h depois da ligação. O card agora
 conversa). Quem atendeu voltou a aparecer nas recebidas. Se o cliente diz que o botão de ouvir não
 funciona numa ligação de hoje, o mais provável é que o arquivo permanente ainda não exista — a
 reconferência resolve sozinha dentro de 36h.
+
+## Ligação feita direto no aparelho do VTCall (11/09/2026)
+
+Antes, só a ligação iniciada pelo botão Ligar do LionChat entrava no histórico e na coluna "Feitas" do bloco de
+ligações. Agora a ligação que o atendente disca direto no aparelho ou no app do VTCall também entra, desde que o ramal
+esteja cadastrado (`vtcall_ramals_*`). Ela aparece em `voip_calls_list` com `direction: "outbound"`, protocolo `LIG-...`
+(o do botão continua `AAMMDD-NNN`) e sem caixa. O card na conversa sai sem autor, com o nome do atendente.
+
+Cuidado ao ler "Feitas atendidas": pelo botão a central marca atendida sempre (é a perna em que o atendente atende o
+próprio ramal); pelo aparelho, só quando o cliente atende. Não compare as duas taxas como se medissem a mesma coisa.
+Ramal sem cadastro não gera registro — se o cliente diz que "liguei e não apareceu", confira os ramais primeiro.
 
 ## Assinatura eletrônica de contratos (04/09)
 

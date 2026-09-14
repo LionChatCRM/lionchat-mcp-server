@@ -721,6 +721,9 @@ Colunas: Ligações · Atendidas · Não atendidas · **Não concluídas** · Te
 - **Ligação sem atendente tem linha própria** e pode ser boa parte do volume (23% numa conta real).
   Não a esconda ao resumir por pessoa.
 - A tabela lista só quem teve ligação no período — atendente ausente da tabela fez zero.
+- **VTCall (11/09/2026):** "Feitas" conta também a ligação discada direto no aparelho de ramal cadastrado. No botão a
+  central marca "atendida" sempre; no aparelho, só quando o cliente atende — não compare a taxa de atendidas de quem
+  liga pelo botão com a de quem liga pelo aparelho.
 
 ### Agendamentos (`lionchat_booking_reports`) — 2026-08-19
 

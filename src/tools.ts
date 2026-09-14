@@ -484,7 +484,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-10)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-14)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -621,6 +621,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     todos assinaram (documento final gerado) / alguem recusou / o prazo terminou sem todas as
     assinaturas. INERTES a evento de conversa (quem dispara e o SignatureEnvelopes::FlowTriggerDispatcher,
     a partir do proprio registro da prova). Item: {key:'signature_signed_signer', config:{document_ids:[]}}
+    signature_delivered (NOVO 2026-09-14 — o UNICO gatilho de contrato POR PESSOA): dispara uma vez
+    para CADA participante que recebeu o link, na conversa DELE. O signature_sent nasce de evento com
+    participante NULO e cai na conversa do CONTRATO — contrato mandado pra cinco pessoas rende UM fluxo
+    e quatro nunca recebem lembrete; e ESTE o gatilho de lembrete de assinatura. Sai TAMBEM no botao
+    Reenviar (o link saiu pra pessoa outra vez). Participante que recebe por E-MAIL nao tem conversa e
+    NAO dispara — de proposito nao cai pra conversa do contrato, senao o lembrete da testemunha iria
+    pro WhatsApp do titular com as variaveis da outra pessoa.
+    Item: {key:'signature_delivered', config:{document_ids:[]}}
     — document_ids = ids de MODELO de contrato (STRINGS; vazio = qualquer modelo). A sessao nasce na
     conversa da PESSOA do acontecimento (a testemunha tem a dela); contrato so por e-mail (sem conversa)
     nao dispara; o flow precisa estar ligado a caixa da conversa (ou a nenhuma). Sessao ativa do MESMO
@@ -829,7 +837,18 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       Desde 20/08 as 4 condicoes kanban_* enxergam o card da conversa ATUAL ou o card cuja conversa de
       ORIGEM e a atual (card religado pra conversa mais nova) — antes "nao tem card" na conversa velha.
     sla_check (SO value, codigo fixo: frt_breached/frt_ok/nrt_breached/nrt_ok/rt_breached/rt_ok/has_sla/no_sla;
-      frt=primeira resp, nrt=proxima, rt=resolucao; _ok exige politica de SLA aplicada).
+      frt=primeira resp, nrt=proxima, rt=resolucao; _ok exige politica de SLA aplicada),
+    signature_status (NOVO 2026-09-14 — aba "Contrato" da tela; SO value, codigo fixo:
+      person_signed/person_not_signed/all_signed/pending/refused/expired/cancelled; escreva tambem
+      field:'_signature_status' e valueType:'signature_status'): RELE o contrato no BANCO na hora de
+      avaliar — as variaveis {{contrato.*}} sao RETRATO do disparo, e um fluxo que espera dias
+      responderia "nao assinou" pra quem JA assinou. Recorta o contrato que COMECOU o fluxo
+      (_trigger_context); sem contrato-gatilho responde FALSO, nunca verdadeiro por omissao. Regra sem
+      value cai no padrao person_signed em vez de ser pulada.
+      RECEITA DO LEMBRETE: UMA saida com logic:'and' e DUAS regras — person_not_signed + pending — e a
+      mensagem na saida cond_0. Sem a segunda regra, contrato cancelado, vencido ou recusado durante a
+      espera ainda cobra assinatura (a pessoa segue sem ter assinado, e a pergunta sobre a PESSOA
+      sozinha nao sabe que o contrato morreu).
   greater_than/less_than: atributo numero (valor numerico) OU temporais (novo 2026-07-21) —
     date (value ISO YYYY-MM-DD, compara por DIA), time (value "HH:MM", compara minutos-do-dia),
     datetime (value "YYYY-MM-DDTHH:MM", compara HORARIO DE PAREDE — ignora fuso/offset).

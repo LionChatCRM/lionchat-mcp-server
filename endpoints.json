@@ -8354,6 +8354,13 @@
     "location": "query",
     "required": false,
     "description": "Data fim"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
    }
   ],
   "returns": "LISTA PURA (array no topo, SEM embrulho meta/payload) — a resposta JA E a lista de tarefas da agenda. Cada tarefa traz todos os campos da tarefa (id, title, description, task_type, status, scheduled_at, completed, recurrence_*), mais assignees [{id, name, agenda_color}], assignee_ids, conversation_display_id, conversation_contact_name, contact_name/contact_phone/contact_email, meeting_url, calendar_color, is_readonly, is_private, guest_emails, attendee_rsvp e booking_id. Lista vazia = []. Com filtro de data (date_start/date_end) devolve TUDO do periodo sem paginar (teto de 10.000). Sem filtro de data, pagina por `page`/`per_page` — mas a resposta NAO traz numero de paginas nem total: pagina cheia sugere que ha mais.",
@@ -8493,6 +8500,13 @@
     "location": "body",
     "required": false,
     "description": "IGNORADO — não é consumido pelo endpoint"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o compromisso nasce. NULO = agenda principal, que e onde moram os compromissos de quem nao usa multiplas agendas. So aceita agenda que o usuario ENXERGA; agenda de outra conta e recusada."
    }
   ],
   "returns": "tarefa/agenda criado (com novo ID)",
@@ -8656,6 +8670,20 @@
     "location": "body",
     "required": false,
     "description": "Incluir email do contato como convidado"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o compromisso nasce. NULO = agenda principal, que e onde moram os compromissos de quem nao usa multiplas agendas. So aceita agenda que o usuario ENXERGA; agenda de outra conta e recusada."
+   },
+   {
+    "name": "attendance",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Presenca: attended (compareceu) ou no_show (faltou). E um CARIMBO, nao um status — nao substitui `status`, e marcar falta NAO devolve o horario para a agenda."
    }
   ],
   "returns": "tarefa/agenda atualizado",
@@ -8733,6 +8761,13 @@
     "location": "path",
     "required": true,
     "description": "ID"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o compromisso nasce. NULO = agenda principal, que e onde moram os compromissos de quem nao usa multiplas agendas. So aceita agenda que o usuario ENXERGA; agenda de outra conta e recusada."
    }
   ],
   "returns": "tarefa atualizada",
@@ -8804,6 +8839,20 @@
     "location": "body",
     "required": false,
     "description": "Data"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o compromisso nasce. NULO = agenda principal, que e onde moram os compromissos de quem nao usa multiplas agendas. So aceita agenda que o usuario ENXERGA; agenda de outra conta e recusada."
+   },
+   {
+    "name": "attendance",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Presenca: attended (compareceu) ou no_show (faltou). E um CARIMBO, nao um status — nao substitui `status`, e marcar falta NAO devolve o horario para a agenda."
    }
   ],
   "returns": "tarefa/agenda atualizado",
@@ -8849,7 +8898,15 @@
   "title": "Meu Dia",
   "description": "Retorna tarefas agrupadas: atrasadas, hoje, amanhã, próximos 7 dias. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda).",
   "category": "Agenda / Tarefas",
-  "params": [],
+  "params": [
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
+   }
+  ],
   "returns": "Objeto com QUATRO listas separadas, sem meta e sem payload: { overdue: [...], today: [...], tomorrow: [...], next_7_days: [...] }. Traz APENAS tarefas em aberto (status pendente ou adiada — concluida/cancelada nao aparece) e nao ocultas, ja filtradas pela permissao de quem chama (administrador ve todas; agente ve so as que criou ou em que e responsavel). Agrupamento pela data agendada: overdue = antes de hoje 00:00 (ordenado da mais recente para a mais antiga), today = hoje, tomorrow = amanha, next_7_days = ate 7 dias a frente. Cada item e a tarefa completa (serializacao do modelo AccountTask, ja com assignees/assignee_ids, completed, dados de recorrencia, conversation_display_id, nome/telefone/email do contato, meeting_url e links de booking). Sem paginacao (teto de 10 mil por grupo).",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
@@ -8868,7 +8925,15 @@
   "title": "Contagem Badge",
   "description": "Retorna contagem para badge de tarefas pendentes. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda).",
   "category": "Agenda / Tarefas",
-  "params": [],
+  "params": [
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
+   }
+  ],
   "returns": "Objeto simples, NAO e lista: { overdue_count, today_count }. `today_count` = quantas tarefas pendentes ou adiadas estao marcadas para HOJE. `overdue_count` vem SEMPRE 0 — de proposito, o contador do badge nao inclui atrasadas. Para ver as tarefas em si, use a listagem de tarefas.",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
@@ -9933,6 +9998,69 @@
     "location": "body",
     "required": false,
     "description": "Lembretes do agendamento (o bloco '1d antes do evento' da tela). Array de objetos: {id (obrigatorio para EDITAR o existente — sem id CRIA outro), offset_direction ('before'/'after'), offset_days, offset_hours, offset_minutes, message_body, blocks, active, position, _destroy}. IMPORTANTE: message_body E blocks[0].content precisam do MESMO texto — a tela le blocks e o envio usa message_body; gravar so um deixa a tela e a mensagem entregue diferentes. blocks = [{type:'text', content:'...'}]. Aceita variaveis {{titulo}}, {{data}}, {{horario}} e quebra de linha (\\n)."
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o agendamento feito por este Booking vai nascer. NULO = agenda principal, que e o que todo Booking de hoje herda."
+   },
+   {
+    "name": "allow_reschedule",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode remarcar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "allow_cancel",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode cancelar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "ask_attendance_confirmation",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Mostra o botao 'Sim, vou comparecer' na pagina publica. Padrao FALSE. Ligado, use a variavel {{link_confirmar}} na mensagem para entregar o link ao cliente."
+   },
+   {
+    "name": "reschedule_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para remarcar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "cancel_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para cancelar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "reschedule_max_advance_days",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ate quantos dias a frente o cliente pode remarcar. Vazio usa o max_advance_days do tipo."
+   },
+   {
+    "name": "max_reschedules",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Quantas vezes o mesmo agendamento pode ser remarcado. Vazio = sem teto."
+   },
+   {
+    "name": "manage_page_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}}. Variavel desconhecida sai CRUA para o cliente."
    }
   ],
   "returns": "tipo de evento criado (com novo ID)",
@@ -10038,6 +10166,69 @@
     "location": "body",
     "required": false,
     "description": "Lembretes do agendamento (o bloco '1d antes do evento' da tela). Array de objetos: {id (obrigatorio para EDITAR o existente — sem id CRIA outro), offset_direction ('before'/'after'), offset_days, offset_hours, offset_minutes, message_body, blocks, active, position, _destroy}. IMPORTANTE: message_body E blocks[0].content precisam do MESMO texto — a tela le blocks e o envio usa message_body; gravar so um deixa a tela e a mensagem entregue diferentes. blocks = [{type:'text', content:'...'}]. Aceita variaveis {{titulo}}, {{data}}, {{horario}} e quebra de linha (\\n)."
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o agendamento feito por este Booking vai nascer. NULO = agenda principal, que e o que todo Booking de hoje herda."
+   },
+   {
+    "name": "allow_reschedule",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode remarcar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "allow_cancel",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode cancelar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "ask_attendance_confirmation",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Mostra o botao 'Sim, vou comparecer' na pagina publica. Padrao FALSE. Ligado, use a variavel {{link_confirmar}} na mensagem para entregar o link ao cliente."
+   },
+   {
+    "name": "reschedule_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para remarcar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "cancel_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para cancelar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "reschedule_max_advance_days",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ate quantos dias a frente o cliente pode remarcar. Vazio usa o max_advance_days do tipo."
+   },
+   {
+    "name": "max_reschedules",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Quantas vezes o mesmo agendamento pode ser remarcado. Vazio = sem teto."
+   },
+   {
+    "name": "manage_page_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}}. Variavel desconhecida sai CRUA para o cliente."
    }
   ],
   "returns": "tipo de evento atualizado",
@@ -10653,6 +10844,69 @@
     "location": "body",
     "required": true,
     "description": "update, cancel ou backfill"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o agendamento feito por este Booking vai nascer. NULO = agenda principal, que e o que todo Booking de hoje herda."
+   },
+   {
+    "name": "allow_reschedule",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode remarcar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "allow_cancel",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode cancelar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "ask_attendance_confirmation",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Mostra o botao 'Sim, vou comparecer' na pagina publica. Padrao FALSE. Ligado, use a variavel {{link_confirmar}} na mensagem para entregar o link ao cliente."
+   },
+   {
+    "name": "reschedule_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para remarcar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "cancel_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para cancelar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "reschedule_max_advance_days",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ate quantos dias a frente o cliente pode remarcar. Vazio usa o max_advance_days do tipo."
+   },
+   {
+    "name": "max_reschedules",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Quantas vezes o mesmo agendamento pode ser remarcado. Vazio = sem teto."
+   },
+   {
+    "name": "manage_page_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}}. Variavel desconhecida sai CRUA para o cliente."
    }
   ],
   "returns": "tipo de evento criado (com novo ID)",
@@ -32726,7 +32980,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto), reminder_days (lembrete a cada N dias a quem nao assinou; 0 desliga; padrao 2)."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days."
    }
   ],
   "returns": "o modelo criado (id, name, kind, body, variables, roles_layout, progress)",
@@ -32788,7 +33042,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto), reminder_days (lembrete a cada N dias a quem nao assinou; 0 desliga; padrao 2)."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days."
    }
   ],
   "returns": "o modelo atualizado",
@@ -33102,5 +33356,305 @@
   "related_tools": [
    "lionchat_signature_envelopes_create"
   ]
+ },
+ {
+  "id": "lionchat_agendas_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agendas",
+  "title": "Listar agendas (unidades)",
+  "description": "Lista as AGENDAS da conta. Uma agenda e um LUGAR — uma unidade, uma filial, um consultorio —, nunca uma pessoa: tem fuso, cor, quem enxerga e conta Google proprios. Devolve so as que o usuario enxerga (admin ve todas). `meta` traz a cota: `liberada` (o recurso 'multiple_agendas' esta ligado na conta), `limite` (nulo = ilimitado), `usadas` e `pode_criar`. SEM o recurso a conta tem UMA agenda; compromissos com agenda_id nulo pertencem a ela. Cada agenda traz `google: { connected, email, state }` — a conta Google ligada a ela e o estado da sincronizacao (healthy / needs_reconnect / needs_calendar_selection / reactivatable; nulos sem conexao). [13/09]",
+  "category": "Agenda / Tarefas",
+  "params": []
+ },
+ {
+  "id": "lionchat_agendas_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agendas/{id}",
+  "title": "Ver agenda",
+  "description": "Detalhe de uma agenda (unidade): nome, fuso, cor, se e a principal e quem enxerga. Cada agenda traz `google: { connected, email, state }` — a conta Google ligada a ela e o estado da sincronizacao (healthy / needs_reconnect / needs_calendar_selection / reactivatable; nulos sem conexao). [13/09]",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da agenda"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_agendas_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/agendas",
+  "title": "Criar agenda (unidade)",
+  "description": "Cria uma agenda. SO ADMINISTRADOR. Exige o recurso 'multiple_agendas' ligado na conta (Super Admin) e respeita o numero de Extras Manuais — ZERO ali significa ILIMITADO. Sem o recurso, a conta fica com a agenda principal e a criacao e recusada.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome da unidade (ex.: Matriz, Consultorio Boa Vista). Obrigatorio, unico na conta."
+   },
+   {
+    "name": "timezone",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Fuso IANA (ex.: America/Sao_Paulo). VAZIO usa o fuso da conta. E o horario que aparece na tela e que vai escrito para o cliente."
+   },
+   {
+    "name": "color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor hex (#RRGGBB). Pinta o compromisso no calendario quando o tipo de Booking e o atendente nao tem cor propria."
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Agenda ativa. Padrao true."
+   },
+   {
+    "name": "position",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ordem na lista."
+   },
+   {
+    "name": "member_user_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs dos usuarios que enxergam. SUBSTITUI a lista inteira. Vazio em pessoas E equipes = todo mundo da conta enxerga."
+   },
+   {
+    "name": "member_team_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs das equipes que enxergam. SUBSTITUI a lista inteira. Quem entrar na equipe ganha acesso sozinho."
+   }
+  ]
+ },
+ {
+  "id": "lionchat_agendas_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/agendas/{id}",
+  "title": "Editar agenda",
+  "description": "Edita a agenda. SO ADMINISTRADOR. `member_user_ids`/`member_team_ids` SUBSTITUEM a lista inteira.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da agenda"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome da unidade (ex.: Matriz, Consultorio Boa Vista). Obrigatorio, unico na conta."
+   },
+   {
+    "name": "timezone",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Fuso IANA (ex.: America/Sao_Paulo). VAZIO usa o fuso da conta. E o horario que aparece na tela e que vai escrito para o cliente."
+   },
+   {
+    "name": "color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor hex (#RRGGBB). Pinta o compromisso no calendario quando o tipo de Booking e o atendente nao tem cor propria."
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Agenda ativa. Padrao true."
+   },
+   {
+    "name": "position",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ordem na lista."
+   },
+   {
+    "name": "member_user_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs dos usuarios que enxergam. SUBSTITUI a lista inteira. Vazio em pessoas E equipes = todo mundo da conta enxerga."
+   },
+   {
+    "name": "member_team_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs das equipes que enxergam. SUBSTITUI a lista inteira. Quem entrar na equipe ganha acesso sozinho."
+   }
+  ]
+ },
+ {
+  "id": "lionchat_agendas_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/agendas/{id}",
+  "title": "Excluir agenda",
+  "description": "Exclui a agenda. SO ADMINISTRADOR. A agenda PRINCIPAL nao pode ser excluida. Os compromissos dela NAO sao apagados — ficam sem agenda e passam a aparecer na principal.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da agenda"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_account_task_types_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/account_task_types",
+  "title": "Listar tipos de compromisso da conta",
+  "description": "Tipos de compromisso CRIADOS PELA EMPRESA, alem dos 7 de fabrica (task, follow_up, call, meeting, video_call, deadline, custom). Cada um tem `key` (o que fica gravado em account_tasks.task_type), `name` (o que aparece na tela) e `icon`. Leitura liberada a todos; criar/editar/excluir e so de administrador.",
+  "category": "Agenda / Tarefas",
+  "params": []
+ },
+ {
+  "id": "lionchat_account_task_types_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/account_task_types",
+  "title": "Criar tipo de compromisso",
+  "description": "Cria um tipo com o nome da empresa (ex.: Consulta, Ondas de Choque, Visita ao imovel). SO ADMINISTRADOR. A `key` e derivada do nome e NUNCA muda depois — renomear troca so o que aparece na tela, o historico fica inteiro. O nome nao pode gerar uma key de fabrica. O tipo fica disponivel na lista Tipo do Booking e no Novo compromisso.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome do tipo. Obrigatorio, unico na conta, ate 60 caracteres."
+   },
+   {
+    "name": "icon",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Icone. LISTA FECHADA — qualquer outro valor e RECUSADO (nome fora da lista vira icone invisivel na tela). Valores: i-lucide-calendar-check, i-lucide-stethoscope, i-lucide-syringe, i-lucide-heart-pulse, i-lucide-smile, i-lucide-sparkles, i-lucide-utensils, i-lucide-dumbbell, i-lucide-home, i-lucide-scale, i-lucide-wrench, i-lucide-graduation-cap"
+   },
+   {
+    "name": "color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor hex (#RRGGBB), opcional."
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Padrao true."
+   },
+   {
+    "name": "position",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ordem na lista."
+   }
+  ]
+ },
+ {
+  "id": "lionchat_account_task_types_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/account_task_types/{id}",
+  "title": "Editar tipo de compromisso",
+  "description": "Edita o tipo. SO ADMINISTRADOR. A `key` e IMUTAVEL: renomear muda so o nome exibido.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do tipo"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Novo nome."
+   },
+   {
+    "name": "icon",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Icone (lista fechada): i-lucide-calendar-check, i-lucide-stethoscope, i-lucide-syringe, i-lucide-heart-pulse, i-lucide-smile, i-lucide-sparkles, i-lucide-utensils, i-lucide-dumbbell, i-lucide-home, i-lucide-scale, i-lucide-wrench, i-lucide-graduation-cap"
+   },
+   {
+    "name": "color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor hex."
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Ativo."
+   },
+   {
+    "name": "position",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ordem."
+   }
+  ]
+ },
+ {
+  "id": "lionchat_account_task_types_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/account_task_types/{id}",
+  "title": "Excluir tipo de compromisso",
+  "description": "SO ADMINISTRADOR. Tipo EM USO nao e apagado: e DESATIVADO (some das listas de escolha, mas os compromissos antigos continuam com nome e icone). A resposta traz `deactivated: true` nesse caso. So o que nunca foi usado e apagado de vez.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do tipo"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_google_calendar_agendas",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/google_calendar/agendas",
+  "title": "Google Calendar por agenda (unidade)",
+  "description": "Uma linha por AGENDA com o estado do Google de cada uma: `connected`, `state`, `calendar_id`, `connected_by`. A conexao Google e UMA POR AGENDA — cada unidade liga a conta Google dela, inclusive a mesma pessoa com contas diferentes. SO ADMINISTRADOR. Conta sem agendas devolve uma linha com agenda_id nulo (a principal).",
+  "category": "Integracoes / Google Calendar",
+  "params": []
  }
 ]

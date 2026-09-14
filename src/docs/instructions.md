@@ -441,6 +441,7 @@ Quando precisar de detalhes profundos, leia um destes documents via `resources/r
 - `lionchat://docs/api-conventions` — Auth, paginação, filtros, errors, rate limits
 - `lionchat://docs/conversation-flows` — Ciclo de vida de uma conversa (criação, auto-assignment, IA, resolução)
 - `lionchat://docs/kanban-deep-dive` — Estrutura completa do Kanban (Funnel/Stage/Item/pipeline)
+- `lionchat://docs/agenda-multiplas-unidades` — **Agenda por unidade**: o que `agenda_id` nulo significa, tipos de compromisso da conta, Booking ligado a unidade, página pública (cancelar/remarcar/confirmar) e Google **uma conexão por agenda**
 - `lionchat://docs/best-practices` — Como economizar tokens, evitar rate limit, ordem de operações
 - `lionchat://docs/troubleshooting` — Códigos HTTP, erros comuns, debugging
 - `lionchat://docs/flowbuilder-design-guide` — **OBRIGATÓRIO** antes de criar/editar fluxo: schema de nodes, handles expostos por tipo, layout/positioning, erros comuns, checklist
