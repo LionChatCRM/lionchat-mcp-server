@@ -742,7 +742,7 @@ Resposta: `totals` (`total`, `pending`, `completed`, `cancelled`, `snoozed`, `at
   que NINGUÉM marcou presença (dado anterior a 14/09, equipe que só conclui/cancela) cai na regra
   antiga — concluídos / (concluídos + cancelados), pendentes FORA — e `attendance_basis` diz qual
   valeu: `attendance` ou `status`. Não recalcule com o total; diga qual base valeu.
-- **`treatments`** (15/09) é um RETRATO DE HOJE dos tratamentos em sessões — ignora `since`/`until`,
+- **`treatments`** (15/09) é um RETRATO DE HOJE dos programas de sessões (na tela: "Programas de sessões") — ignora `since`/`until`,
   `user_id` e `status`; só `event_type_id` recorta. Campos: `em_andamento`, `atrasados`, `concluidos`
   (gravados + os que concluíram sem o status virar), `encerrados`, `sessoes_planejadas`,
   `sessoes_usadas`, `percentual` (**só dos em andamento** — somar os concluídos puxaria para 100) e

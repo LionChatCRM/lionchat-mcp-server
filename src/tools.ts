@@ -484,7 +484,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-14)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-15)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -585,6 +585,17 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Agenda — ADIAR conta como remarcado); completed = equipe concluiu na Agenda (exige a Agenda unificada
     ligada na conta). Excluir a tarefa, reabrir cancelada e desfazer conclusao NAO disparam; cancelamento
     vence remarcacao quando os dois mudam no mesmo save.
+    booking_treatment_completed / booking_treatment_late (NOVOS 2026-09-15 — os DOIS gatilhos do PROGRAMA de
+    sessoes; na tela o nome e "programa", na API o campo segue treatment). treatment_completed = a ULTIMA sessao
+    do pacote recebeu Compareceu ou Faltou, ou seja o programa fechou (nasce da PRESENCA, nao do status: concluir a
+    tarefa NAO conta; trocar a presenca depois NAO dispara de novo). treatment_late = varredura DIARIA (09:00 de
+    Brasilia) que cobra quando a proxima sessao ja passou da data prevista e nada esta marcado pra frente — UMA vez
+    por semana por sessao, e so em conta que tem um flow com esse gatilho. Os dois usam o MESMO painel de filtros do
+    booking_* (tipos + agente + criar conversa) e exigem a Agenda unificada. O assunto e a ULTIMA sessao existente:
+    programa sem nenhuma sessao marcada nao dispara o atraso (nao ha conversa a que se referir).
+    Alem de {{booking.*}}, os dois recebem {{programa.*}}: titulo, sessoes, usadas, restantes, percentual,
+    compareceu, faltou, proxima_sessao, proxima_prevista, dias_de_atraso, intervalo. {{programa.*}} NAO existe nos
+    outros booking_* (la o compromisso pode nem ser sessao de programa).
     Item: {key:'booking_created', config:{booking_event_type_ids:['44'], agent_ids:[], create_conversation:false}}
     — tudo opcional, vazio = todos: booking_event_type_ids = ids de tipo de agendamento (STRINGS — e o que
     a tela grava; o disparo compara por texto, entao numero ate funciona, mas escreva string), agent_ids =

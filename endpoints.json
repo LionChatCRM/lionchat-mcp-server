@@ -8513,7 +8513,7 @@
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "Modo booking, tipo com sessoes: quantidade de sessoes do tratamento NOVO (2 a 60). Sem isto vale o padrao do tipo. Validado antes da reserva (422)"
+    "description": "Modo booking, tipo com sessoes: quantidade de sessoes do programa NOVO (2 a 60). Sem isto vale o padrao do tipo. Validado antes da reserva (422)"
    },
    {
     "name": "treatment.interval_value",
@@ -8534,7 +8534,7 @@
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "'Marcar proxima': ID do tratamento do CONTATO ao qual esta sessao pertence (tratamento de outra ficha = 422)"
+    "description": "'Marcar proxima': ID do programa do CONTATO ao qual esta sessao pertence (programa de outra ficha = 422)"
    },
    {
     "name": "treatment_session_number",
@@ -8725,7 +8725,7 @@
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "Modo booking, tipo com sessoes: quantidade de sessoes do tratamento NOVO (2 a 60). Sem isto vale o padrao do tipo. Validado antes da reserva (422)"
+    "description": "Modo booking, tipo com sessoes: quantidade de sessoes do programa NOVO (2 a 60). Sem isto vale o padrao do tipo. Validado antes da reserva (422)"
    },
    {
     "name": "treatment.interval_value",
@@ -8746,7 +8746,7 @@
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "'Marcar proxima': ID do tratamento do CONTATO ao qual esta sessao pertence (tratamento de outra ficha = 422)"
+    "description": "'Marcar proxima': ID do programa do CONTATO ao qual esta sessao pertence (programa de outra ficha = 422)"
    },
    {
     "name": "treatment_session_number",
@@ -10137,7 +10137,7 @@
     "type": "boolean",
     "location": "body",
     "required": false,
-    "description": "Tratamento em sessoes: este tipo e UMA sessao de um tratamento com varias (15/09). Ligado, todo agendamento deste tipo nasce (ou engrossa) um tratamento do contato"
+    "description": "Programa de sessoes: este tipo e UMA sessao de um programa com varias (15/09; tratamento, mentoria, onboarding). Ligado, todo agendamento deste tipo nasce (ou engrossa) um tratamento do contato"
    },
    {
     "name": "booking_event_type.sessions_default_count",
@@ -10333,7 +10333,7 @@
     "type": "boolean",
     "location": "body",
     "required": false,
-    "description": "Tratamento em sessoes: este tipo e UMA sessao de um tratamento com varias (15/09). Ligado, todo agendamento deste tipo nasce (ou engrossa) um tratamento do contato"
+    "description": "Programa de sessoes: este tipo e UMA sessao de um programa com varias (15/09; tratamento, mentoria, onboarding). Ligado, todo agendamento deste tipo nasce (ou engrossa) um tratamento do contato"
    },
    {
     "name": "booking_event_type.sessions_default_count",
@@ -32561,7 +32561,7 @@
   "path": "/api/v2/accounts/{account_id}/booking_reports",
   "title": "Relatorio de Agendamentos",
   "category": "Relatorios",
-  "description": "[GET] A aba Relatorios > Agendamentos (2026-08-19). Unidade = o AGENDAMENTO (Booking nativo: link publico, IA e Agenda do painel — NAO e e-Clinica). Padrao de periodo: 30 dias pra TRAS e 30 pra FRENTE (agenda tem futuro). A SITUACAO vem da TAREFA da Agenda (account_tasks.status), nao de bookings.status — quem conclui/cancela pela Agenda deixa o booking parado em 'confirmado'; ler bookings direto pra contar concluidos da zero. attendance_rate (15/09) = attended / (attended + no_show), em %, pelas marcas Compareceu/Faltou; periodo SEM marca nenhuma cai na regra antiga concluidos / (concluidos + cancelados) — pendentes FORA do denominador (ainda nao aconteceram) — e attendance_basis diz qual valeu ('attendance' ou 'status'); nao recalcule com o total. snoozed (adiado) sai separado de pending. [15/09] totals traz tambem attended/no_show (marcas Compareceu/Faltou da tarefa — eixo proprio, NAO mexem no status nem na taxa) e a resposta ganha `treatments`: retrato de HOJE dos tratamentos em sessoes (sem recorte de periodo, so o filtro event_type_id) — em_andamento, atrasados, concluidos, encerrados, sessoes_planejadas/sessoes_usadas/percentual (so dos em andamento) e por_tipo[]. Admin ou agente.",
+  "description": "[GET] A aba Relatorios > Agendamentos (2026-08-19). Unidade = o AGENDAMENTO (Booking nativo: link publico, IA e Agenda do painel — NAO e e-Clinica). Padrao de periodo: 30 dias pra TRAS e 30 pra FRENTE (agenda tem futuro). A SITUACAO vem da TAREFA da Agenda (account_tasks.status), nao de bookings.status — quem conclui/cancela pela Agenda deixa o booking parado em 'confirmado'; ler bookings direto pra contar concluidos da zero. attendance_rate (15/09) = attended / (attended + no_show), em %, pelas marcas Compareceu/Faltou; periodo SEM marca nenhuma cai na regra antiga concluidos / (concluidos + cancelados) — pendentes FORA do denominador (ainda nao aconteceram) — e attendance_basis diz qual valeu ('attendance' ou 'status'); nao recalcule com o total. snoozed (adiado) sai separado de pending. [15/09] totals traz tambem attended/no_show (marcas Compareceu/Faltou da tarefa — eixo proprio, NAO mexem no status nem na taxa) e a resposta ganha `treatments`: retrato de HOJE dos programas de sessoes (sem recorte de periodo, so o filtro event_type_id) — em_andamento, atrasados, concluidos, encerrados, sessoes_planejadas/sessoes_usadas/percentual (so dos em andamento) e por_tipo[]. Admin ou agente.",
   "params": [
    {
     "name": "since",
@@ -33779,7 +33779,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/agenda_treatments",
   "title": "Listar tratamentos em sessoes de um contato",
-  "description": "Tratamentos em sessoes do CONTATO (ficha): cada um e N sessoes de um tipo de agendamento com `sessions_enabled`. Devolve o RESUMO pronto por tratamento: `planejadas`, `usadas` (compareceu + faltou), `percentual`, `compareceu`, `faltou`, `marcadas`, `concluido`, `cheio` (tudo marcado, nada usado), `atrasado`, `proxima` ({numero, prevista_em}), `intervalo` e `sessoes` (uma linha por sessao: `numero`, `situacao` a_marcar|marcada|compareceu|faltou, `prevista_em`, `data_passou`, `tarefa` {id, title, scheduled_at, status, attendance} ou null, `oculta` quando o compromisso e de agenda/privado que o usuario nao enxerga). Em andamento primeiro, depois concluidos e encerrados. O tratamento NASCE junto do agendamento (tasks_create no modo booking ou link publico) — nao existe create aqui. Exige a Agenda ligada na conta.",
+  "description": "Programas de sessoes do CONTATO (ficha; na tela o nome e PROGRAMA — pode ser tratamento, mentoria, onboarding): cada um e N sessoes de um tipo de agendamento com `sessions_enabled`. Devolve o RESUMO pronto por tratamento: `planejadas`, `usadas` (compareceu + faltou), `percentual`, `compareceu`, `faltou`, `marcadas`, `concluido`, `cheio` (tudo marcado, nada usado), `atrasado`, `proxima` ({numero, prevista_em}), `intervalo` e `sessoes` (uma linha por sessao: `numero`, `situacao` a_marcar|marcada|compareceu|faltou, `prevista_em`, `data_passou`, `tarefa` {id, title, scheduled_at, status, attendance} ou null, `oculta` quando o compromisso e de agenda/privado que o usuario nao enxerga). Em andamento primeiro, depois concluidos e encerrados. O programa NASCE junto do agendamento (tasks_create no modo booking ou link publico) — nao existe create aqui. Exige a Agenda ligada na conta.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -33808,7 +33808,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/agenda_treatments/{id}",
   "title": "Ver um tratamento em sessoes",
-  "description": "O resumo de UM tratamento (mesmo formato da listagem). 404 fora da conta.",
+  "description": "O resumo de UM programa (mesmo formato da listagem). 404 fora da conta.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -33833,7 +33833,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/agenda_treatments/{id}",
   "title": "Ajustar um tratamento em sessoes (quantidade, encerrar, reabrir)",
-  "description": "Muda a quantidade de sessoes (`planned_sessions`, 2..60, NUNCA abaixo da maior sessao ja marcada — 422 'Ha sessoes marcadas alem dessa quantidade') e encerra/reabre (`status`: `closed` grava motivo `manual`; `active` reabre). Reabrir com OUTRO tratamento em andamento do mesmo tipo para o contato e recusado com 422 ('Ja existe um tratamento em andamento deste tipo para este contato'). Tratamento encerrado por mesclagem de fichas (`close_reason: mesclagem`) fica so como historico. Qualquer usuario da conta pode ajustar. O ajuste roda sob a MESMA trava do agendamento (conta, contato, tipo).",
+  "description": "Muda a quantidade de sessoes (`planned_sessions`, 2..60, NUNCA abaixo da maior sessao ja marcada — 422 'Ha sessoes marcadas alem dessa quantidade') e encerra/reabre (`status`: `closed` grava motivo `manual`; `active` reabre). Reabrir com OUTRO tratamento em andamento do mesmo tipo para o contato e recusado com 422 ('Ja existe um programa em andamento deste tipo para este contato'). Programa encerrado por mesclagem de fichas (`close_reason: mesclagem`) fica so como historico. Qualquer usuario da conta pode ajustar. O ajuste roda sob a MESMA trava do agendamento (conta, contato, tipo).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -33867,6 +33867,67 @@
   "related_tools": [
    "lionchat_agenda_treatments_list",
    "lionchat_agenda_treatments_show"
+  ]
+ },
+ {
+  "id": "lionchat_agenda_treatments_plano_sugerido",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agenda_treatments/{id}/plano_sugerido",
+  "title": "Programa: sugestao de datas para marcar todas",
+  "category": "Agenda / Tarefas",
+  "description": "[GET] (15/09) O que a tela de conferencia do \"Marcar todas as sessoes\" mostra ANTES de marcar nada. Devolve, por sessao que ainda falta: `numero`, `prevista_em` (a data pela regra do programa), `data`/`slot` sugeridos, `slots` (os horarios livres daquele dia) e `deslocada` (true = o dia previsto nao tinha vaga e a sugestao andou para a frente). Traz tambem `timezone` e `tipo` (dias da semana configurados e janela de antecedencia) para o calendario de vagas acender os dias certos. LEITURA PURA: nada e gravado. 422 quando o programa perdeu o tipo de agendamento. Exige a Agenda ligada na conta.",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do programa (agenda_treatment)"
+   }
+  ],
+  "returns": "{ timezone, tipo: {booking_availabilities, max_advance_days, available_from, available_until, duration_minutes}, sessoes: [{numero, prevista_em, data, slot, slots, deslocada}] }",
+  "common_use_cases": [
+   "Mostrar as datas sugeridas antes de marcar todas as sessoes que faltam",
+   "Saber quais sessoes nao tem vaga na janela de procura (data nula)"
+  ],
+  "related_tools": [
+   "lionchat_agenda_treatments_marcar_todas",
+   "lionchat_agenda_treatments_show",
+   "lionchat_booking_event_types_slots"
+  ]
+ },
+ {
+  "id": "lionchat_agenda_treatments_marcar_todas",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/agenda_treatments/{id}/marcar_todas",
+  "title": "Programa: marcar varias sessoes de uma vez",
+  "category": "Agenda / Tarefas",
+  "description": "[POST] (15/09) Marca de uma vez as sessoes confirmadas do programa. Body: `sessoes: [{numero, date, slot}]` — o numero da sessao, o dia (YYYY-MM-DD) e o horario (HH:MM). NAO e transacao unica de proposito: cada sessao e uma reserva DE VERDADE (cria a tarefa, dispara confirmacao, lembrete e Google como qualquer agendamento), entao uma falha no meio NAO desfaz as que ja entraram na agenda — a resposta e 200 com `marcadas` e `falhas: [{numero, erro}]`. ATENCAO: com confirmacao ligada no tipo, o cliente recebe UMA mensagem por sessao. Teto de 60 sessoes por chamada. 422 se o programa estiver encerrado/concluido ou sem tipo de agendamento. Sessao que ja tem compromisso vivo volta em `falhas` ('Essa sessao ja foi marcada').",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do programa (agenda_treatment)"
+   },
+   {
+    "name": "sessoes",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Lista [{numero, date, slot}] — use o `plano_sugerido` para montar"
+   }
+  ],
+  "returns": "{ marcadas: [numeros], falhas: [{numero, erro}], tratamento: resumo atualizado }",
+  "common_use_cases": [
+   "Marcar todas as sessoes que faltam num pacote de fisioterapia/mentoria/onboarding",
+   "Reagendar em lote as sessoes que ainda nao aconteceram"
+  ],
+  "related_tools": [
+   "lionchat_agenda_treatments_plano_sugerido",
+   "lionchat_tasks_create",
+   "lionchat_agenda_treatments_update"
   ]
  },
  {
