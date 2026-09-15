@@ -404,7 +404,24 @@ AccountTask (agenda interna)
 ├── meeting_url (string, sala de reunião call/meeting)
 ├── guest_emails (jsonb array, convidados extras — máx 20)
 ├── conversation_id / contact_id / linked_kanban_item_id (FK opcionais)
+├── booked_by (polimórfico User/Contact/Captain::Assistant) / booked_by_name / booking_source
+│   (painel|link|ia|sistema|fluxo) — QUEM agendou e por onde (14/09)
+├── attendance (enum attended=0 / no_show=1, NULO = nada registrado — CARIMBO, não muda status)
+│   / attendance_by (polimórfico) / attendance_source — quem marcou Compareceu/Faltou (14/09)
+├── agenda_treatment_id (FK → AgendaTreatment, nullify) / treatment_session_number (1..N) — a sessão
+│   que este compromisso é; índice único parcial por tratamento+número entre os NÃO cancelados (15/09)
 └── assignees (has_many → User, via account_task_assignments)
+
+AgendaTreatment (tratamento em sessões — tools `agenda_treatments_*`; tabela agenda_treatments; 15/09)
+├── id (PK) / account_id (FK) / contact_id (FK) / booking_event_type_id (FK, nullify)
+├── event_type_title (cópia do nome do tipo — sobrevive à exclusão do tipo)
+├── planned_sessions (2..60) / interval_value (1..365) / interval_unit (days|weeks|months)
+├── status (active|completed|closed) / close_reason (manual|mesclagem) / closed_at
+├── source (painel|link|ia|sistema|fluxo) / created_by_id (FK → User, só quando foi gente)
+├── índice único parcial (account_id, contact_id, booking_event_type_id) WHERE status='active'
+│   — UM tratamento ativo por contato + tipo
+└── account_tasks (has_many, nullify) — sessão k = tarefa VIVA de número k; usadas/percentual/atrasado/
+    concluído são DERIVADOS na leitura (nenhuma coluna de cache)
 
 BookingEventType (template de agendamento — tools `booking_event_types_*`; colunas de
 db/schema.rb, tabela booking_event_types)
@@ -417,6 +434,8 @@ db/schema.rb, tabela booking_event_types)
 ├── color (hex `#RRGGBB`, opcional — cor dos compromissos desse tipo no calendário; vazio = cor do
 │   agente; 2026-08-19)
 ├── active / ask_email / ask_description
+├── sessions_enabled (bool) / sessions_default_count (2..60) / sessions_interval_value (1..365) /
+│   sessions_interval_unit (days|weeks|months) — tratamento em sessões: padrão do tipo (15/09)
 ├── confirmation_* (mensagem de confirmação própria: enabled, inbox_id, channel_type,
 │   template_name, blocks). Variáveis nos textos de confirmação E de lembrete (interpolador único):
 │   {{nome}} {{email}} {{telefone}} {{data}} {{horario}} {{dia_semana}} (NOVO 24/08 — dia por

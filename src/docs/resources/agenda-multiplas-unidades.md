@@ -1,7 +1,7 @@
 # Agenda — unidades, tipos de compromisso e Google por agenda
 
-Guia da Agenda depois da frente de 13/09/2026. Leia antes de mexer em agendas, tipos de
-compromisso, Booking ligado a unidade ou conexão Google.
+Guia da Agenda depois das frentes de 13/09 e 15/09/2026. Leia antes de mexer em agendas, tipos de
+compromisso, Booking ligado a unidade, conexão Google ou tratamento em sessões.
 
 ---
 
@@ -124,10 +124,49 @@ A listagem de compromissos já vem recortada pelas agendas que o usuário enxerg
 
 ---
 
-## 7. Erros comuns
+## 7. Tratamento em sessões (15/09)
+
+Um **tratamento** é um pacote de N sessões do mesmo tipo de evento para um contato ("10 sessões de
+ondas de choque a cada 30 dias"). Só a primeira sessão nasce marcada; as outras ficam "a marcar" e a
+ficha do contato mostra em que pé está: quantas foram feitas, quantos por cento, quando é a próxima
+e se está atrasada.
+
+- **Liga-se no tipo de evento**: `sessions_enabled` + `sessions_default_count` (2 a 60) +
+  `sessions_interval_value`/`sessions_interval_unit` (`days`/`weeks`/`months`). Tipo sem isso não
+  cria tratamento nunca.
+- **O tratamento NASCE junto do agendamento** — não existe `create`. Todo agendamento de um tipo com
+  sessões (painel, link público ou IA) cria o tratamento do contato ou **engrossa** o que já está em
+  andamento como a próxima sessão livre. Um tratamento ativo por contato + tipo.
+- **Plano por pessoa**: no `tasks_create` em modo booking, `treatment: {sessions, interval_value,
+  interval_unit}` vence o padrão do tipo. É validado ANTES da reserva (422 sem agendar nada).
+- **"Marcar próxima"**: `tasks_create` com `agenda_treatment_id` + `treatment_session_number`. Sessão já
+  marcada dá 422; tratamento de outra ficha dá 422.
+- **Sessão k = compromisso VIVO (não cancelado) de número k.** Cancelar devolve a sessão; remarcar
+  mantém o número; **faltar consome** (decisão do dono — a falta gasta a sessão). "Usadas" = compareceu
+  + faltou. Nada disso é cache: o resumo é derivado das tarefas na leitura.
+- **Cheio** = todas as N marcadas e nenhuma usada ainda. Agendamento novo pelo painel/IA num
+  tratamento cheio vira **sessão extra** (N+1, até 60); pelo link público não vira nada (o
+  agendamento nasce solto, sem tratamento).
+- **Concluído** = usadas ≥ N. O `status` do tratamento só vira `completed` na próxima reserva daquele
+  tipo (aí abre um ciclo novo); `closed` é encerramento pela equipe (`close_reason: manual`) ou pela
+  junção de contatos (`mesclagem` — o tratamento do perdedor que colide com um do vencedor).
+- **Atrasado** = em andamento, próxima sessão com data prevista já passada e nenhuma sessão viva com
+  data futura. A previsão é a última data conhecida + intervalo × distância.
+- Ferramentas: `lionchat_agenda_treatments_list` (por `contact_id`, resumo pronto por tratamento),
+  `_show`, `_update` (`planned_sessions` nunca abaixo da maior sessão já marcada; `status`
+  `closed`/`active`). O compromisso devolve `tratamento: {id, sessao, total, titulo}` quando pertence a
+  um. Compromisso de agenda que o usuário não enxerga aparece na sessão como `oculta: true`.
+- O relatório de Agendamentos tem o bloco `treatments` (retrato de hoje, ver `reports-guide`).
+
+---
+
+## 8. Erros comuns
 
 | Sintoma | Causa |
 |---|---|
+| 422 'Ha sessoes marcadas alem dessa quantidade' ao reduzir `planned_sessions` | já existe sessão marcada acima do novo total; cancele-a antes |
+| 422 'Ja existe um tratamento em andamento deste tipo para este contato' ao reabrir | um tratamento ativo por contato + tipo; encerre o outro primeiro |
+| Agendamento novo não entrou no tratamento | tipo sem `sessions_enabled`, ou tratamento CHEIO agendado pelo link público (sessão extra só pelo painel/IA) |
 | 422 ao criar compromisso com `task_type: "consulta"` | os tipos clínicos saíram; use a `key` que `account_task_types_list` devolve |
 | Ícone do tipo não aparece | valor fora da lista fechada de 12 |
 | Agendamento do Booking caiu na unidade errada | `agenda_id` do tipo de evento não foi definido (nulo = principal) |

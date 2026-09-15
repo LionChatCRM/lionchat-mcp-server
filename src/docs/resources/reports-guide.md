@@ -731,11 +731,23 @@ Colunas: Ligações · Atendidas · Não atendidas · **Não concluídas** · Te
 AGENDAMENTO (Booking). Params: `since`/`until` (datas; padrão 30 dias pra trás E 30 pra frente,
 porque agenda tem futuro), `event_type_id`, `user_id` (responsável da tarefa), `status`
 (`pending` | `completed` | `cancelled` | `snoozed`), `group_by` (`day` | `week` | `month`).
-Resposta: `totals` (`total`, `pending`, `completed`, `cancelled`, `snoozed`, `attendance_rate`),
-`timeline`, `by_event_type`, `by_agent`, `by_origin`.
+Resposta: `totals` (`total`, `pending`, `completed`, `cancelled`, `snoozed`, `attended`, `no_show`,
+`attendance_rate`, `attendance_basis`), `timeline`, `by_event_type`, `by_agent`, `by_origin` e
+`treatments`.
 
-- **`attendance_rate` = concluídos / (concluídos + cancelados)**, em %. Pendentes ficam FORA do
-  denominador (ainda não aconteceram). Não recalcule com o total.
+- **`attended` / `no_show`** (15/09) são as marcas Compareceu/Faltou do compromisso
+  (`account_tasks.attendance`), um eixo próprio: **não mudam a situação** — compromisso "faltou"
+  continua `pending` até alguém concluir ou cancelar, igual a Agenda mostra.
+- **`attendance_rate` (regra de 15/09) = compareceram / (compareceram + faltaram)**, em %. Período em
+  que NINGUÉM marcou presença (dado anterior a 14/09, equipe que só conclui/cancela) cai na regra
+  antiga — concluídos / (concluídos + cancelados), pendentes FORA — e `attendance_basis` diz qual
+  valeu: `attendance` ou `status`. Não recalcule com o total; diga qual base valeu.
+- **`treatments`** (15/09) é um RETRATO DE HOJE dos tratamentos em sessões — ignora `since`/`until`,
+  `user_id` e `status`; só `event_type_id` recorta. Campos: `em_andamento`, `atrasados`, `concluidos`
+  (gravados + os que concluíram sem o status virar), `encerrados`, `sessoes_planejadas`,
+  `sessoes_usadas`, `percentual` (**só dos em andamento** — somar os concluídos puxaria para 100) e
+  `por_tipo[]` com os mesmos campos por tipo, ordenado pelos em andamento. "Usada" = compareceu OU
+  faltou (a falta consome). Ver `lionchat://docs/agenda-multiplas-unidades` §7.
 - A SITUAÇÃO vem da tarefa da Agenda (`account_tasks.status`), não de `bookings.status` — quem
   conclui/cancela pela Agenda deixa o booking parado em "confirmado". Ler `bookings_*` direto pra
   contar "concluídos" dá zero.

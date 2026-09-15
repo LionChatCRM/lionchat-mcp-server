@@ -914,6 +914,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       add_card_offer({offer_id, use_custom_value?, custom_value?, funnel_id?, card_source?}) — adiciona
         oferta (produto/servico) ao card; offer_id de offers_list; use_custom_value:true + custom_value
         grava valor personalizado, senao usa o valor cadastrado; total do card recalcula sozinho
+    Agenda (SO flow conversation, e SO em fluxo disparado por AGENDAMENTO):
+      set_booking_situation({situation: cancelled|completed|attended|no_show|confirmed}) — NOVO 14/09:
+        muda a situacao do agendamento QUE DISPAROU o fluxo (gatilho de agendamento do bloco Inicio ou fluxo
+        ligado na configuracao do tipo de agendamento). Disparado por outra coisa: NAO faz efeito e o passo fica
+        com ERRO visivel (nao ha como adivinhar o agendamento). Ja no estado pedido = PULADO sem escrita (sem
+        evento, sem laco). 'cancelled' cancela o AGENDAMENTO (desarma lembrete, mata o link de gerenciar).
+        Origem gravada = 'fluxo', ator = o proprio flow. Sem 'remarcado'/'adiado'/'nao confirmado': o bloco NAO
+        mexe em data.
     Sistema (SO flow conversation): send_webhook({url,headers?,body?}), start_flow({flow_id}
       — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save mas IGNORADO
       EM SILENCIO na execucao, e o fluxo para ali [2026-08-18]), deactivate_flow({}),
