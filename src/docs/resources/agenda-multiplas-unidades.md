@@ -166,7 +166,7 @@ e se está atrasada.
   `_show`, `_update` (`planned_sessions` nunca abaixo da maior sessão já marcada; `status`
   `closed`/`active`). O compromisso devolve `tratamento: {id, sessao, total, titulo}` quando pertence a
   um. Compromisso de agenda que o usuário não enxerga aparece na sessão como `oculta: true`.
-- O relatório de Agendamentos tem o bloco `treatments` (retrato de hoje, ver `reports-guide`).
+- O relatório de Agendamentos tem o bloco `treatments` (vale o período escolhido: programas, sessões do período e quem parou no meio — ver `reports-guide`).
 
 ---
 

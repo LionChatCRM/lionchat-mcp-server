@@ -924,3 +924,11 @@ administrador."* — a recusa é `before_action`, então NADA do resto do update
 Ao atualizar o próprio usuário: mande times e caixas à vontade; **não mande `role` nem
 `custom_role_id`** — se mandar, a chamada inteira falha e as outras alterações se perdem também.
 Para trocar o cargo de alguém, use a conta de OUTRO administrador.
+
+## Cargo personalizado: descrição CURTA (16/09/2026)
+
+Em `custom_roles_create` / `custom_roles_update`, a `description` é **uma frase de até 60 caracteres**
+(ex.: *"Tudo, menos conversas das caixas em que não foi adicionado."*). **Não liste as permissões
+na descrição** — a tela já as mostra na coluna "Permissões". Uma descrição de 180 caracteres
+escondeu o cargo recém-criado na lista de Funções personalizadas da conta 1 (a tela foi corrigida
+para cortar o texto com reticências, mas a descrição longa continua ilegível ali).

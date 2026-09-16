@@ -13930,7 +13930,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Descricao"
+    "description": "Descricao CURTA do cargo: uma frase de ate 60 caracteres (ex.: 'Tudo, menos conversas das caixas em que nao foi adicionado.'). NAO repetir as permissoes aqui — a tela ja mostra na coluna Permissoes. Texto longo e cortado com reticencias na lista de Funcoes personalizadas (16/09/2026)."
    },
    {
     "name": "permissions",
@@ -13986,7 +13986,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/custom_roles/{id}",
   "title": "Atualizar Role",
-  "description": "Atualiza um role personalizado. Atualiza campos do papel personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, permissions.",
+  "description": "Atualiza um role personalizado. Atualiza campos do papel personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, permissions.",
   "category": "Roles Personalizados",
   "params": [
    {
@@ -14008,7 +14008,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Nova descricao do cargo"
+    "description": "Descricao CURTA do cargo: uma frase de ate 60 caracteres (ex.: 'Tudo, menos conversas das caixas em que nao foi adicionado.'). NAO repetir as permissoes aqui — a tela ja mostra na coluna Permissoes. Texto longo e cortado com reticencias na lista de Funcoes personalizadas (16/09/2026)."
    },
    {
     "name": "permissions",
@@ -32561,7 +32561,7 @@
   "path": "/api/v2/accounts/{account_id}/booking_reports",
   "title": "Relatorio de Agendamentos",
   "category": "Relatorios",
-  "description": "[GET] A aba Relatorios > Agendamentos (2026-08-19). Unidade = o AGENDAMENTO (Booking nativo: link publico, IA e Agenda do painel — NAO e e-Clinica). Padrao de periodo: 30 dias pra TRAS e 30 pra FRENTE (agenda tem futuro). A SITUACAO vem da TAREFA da Agenda (account_tasks.status), nao de bookings.status — quem conclui/cancela pela Agenda deixa o booking parado em 'confirmado'; ler bookings direto pra contar concluidos da zero. attendance_rate (15/09) = attended / (attended + no_show), em %, pelas marcas Compareceu/Faltou; periodo SEM marca nenhuma cai na regra antiga concluidos / (concluidos + cancelados) — pendentes FORA do denominador (ainda nao aconteceram) — e attendance_basis diz qual valeu ('attendance' ou 'status'); nao recalcule com o total. snoozed (adiado) sai separado de pending. [15/09] totals traz tambem attended/no_show (marcas Compareceu/Faltou da tarefa — eixo proprio, NAO mexem no status nem na taxa) e a resposta ganha `treatments`: retrato de HOJE dos programas de sessoes (sem recorte de periodo, so o filtro event_type_id) — em_andamento, atrasados, concluidos, encerrados, sessoes_planejadas/sessoes_usadas/percentual (so dos em andamento) e por_tipo[]. Admin ou agente.",
+  "description": "[GET] A aba Relatorios > Agendamentos (2026-08-19). Unidade = o AGENDAMENTO (Booking nativo: link publico, IA e Agenda do painel — NAO e e-Clinica). Padrao de periodo: 30 dias pra TRAS e 30 pra FRENTE (agenda tem futuro). A SITUACAO vem da TAREFA da Agenda (account_tasks.status), nao de bookings.status — quem conclui/cancela pela Agenda deixa o booking parado em 'confirmado'; ler bookings direto pra contar concluidos da zero. attendance_rate (15/09) = attended / (attended + no_show), em %, pelas marcas Compareceu/Faltou; periodo SEM marca nenhuma cai na regra antiga concluidos / (concluidos + cancelados) — pendentes FORA do denominador (ainda nao aconteceram) — e attendance_basis diz qual valeu ('attendance' ou 'status'); nao recalcule com o total. snoozed (adiado) sai separado de pending. [15/09] totals traz tambem attended/no_show (marcas Compareceu/Faltou da tarefa — eixo proprio, NAO mexem no status nem na taxa) e a resposta ganha `treatments` (bloco Programas, refeito 15/09 a noite): o PERIODO since/until VALE; event_type_id recorta; user_id e status NAO. Programas: em_andamento e atrasados (medidos no FIM do periodo), comecaram/concluidos/encerrados (so se a data cair no periodo), sessoes_planejadas/sessoes_usadas/percentual (so dos em andamento). Sessoes do periodo: previstas = marcadas + nao_marcadas (nao_marcadas e PREVISAO), aconteceram, faltaram, taxa. Mais parados {programas, sessoes_restantes}, duracao {programas, dias_reais, dias_previstos}, linha[] {period, previstas, aconteceram, faltaram, aguardando (16/09), nao_marcadas} e por_tipo[] (mesmos campos + tipo). Sem valor em reais. Detalhe em lionchat://docs/reports-guide. Admin ou agente.",
   "params": [
    {
     "name": "since",
@@ -32606,7 +32606,7 @@
     "description": "day | week | month (agrupamento da timeline; default day)"
    }
   ],
-  "returns": "{period: {since, until, group_by}, totals: {total, pending, completed, cancelled, snoozed, attendance_rate}, timeline: [{period, count}], by_event_type, by_agent, by_origin}",
+  "returns": "{period: {since, until, group_by}, totals: {total, pending, completed, cancelled, snoozed, attended, no_show, attendance_rate, attendance_basis}, timeline: [{period, count}], by_event_type, by_agent, by_origin, treatments: {em_andamento, atrasados, comecaram, concluidos, encerrados, previstas, marcadas, aconteceram, faltaram, nao_marcadas, taxa, percentual, parados, duracao, linha, por_tipo}}",
   "common_use_cases": [
    "Quantos agendamentos foram marcados/concluidos/cancelados no mes",
    "Taxa de comparecimento por tipo de consulta ou por responsavel",

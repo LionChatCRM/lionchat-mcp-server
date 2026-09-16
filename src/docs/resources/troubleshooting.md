@@ -292,6 +292,20 @@ Desde 2026-09-02 há uma rede a mais: quando o WhatsApp recusa o endereço grava
 chegaram e guarda a correção. Interruptor `WAHA_SEND_PROVEN_ADDRESS` (Super Admin > App Config >
 WAHA). Não cobre campanha de WhatsApp QR nem convivência, que montam o endereço por conta própria.
 
+### "Balao vermelho no WhatsApp oficial com `(#131000) Something went wrong`"
+Erro GENERICO da Meta: sem subcodigo e sem motivo. **Nao e bloqueio, nao e pagamento, nao e limite e
+nao e defeito nosso** — a mensagem saiu daqui e a Meta recusou. Costuma ser uma janela de alguns
+minutos: medido em producao, a mesma mensagem para o mesmo contato foi entregue 15 minutos depois.
+
+Desde 2026-09-16 o sistema **tenta de novo sozinho** 4 vezes (1, 4, 10 e 20 minutos depois da
+recusa). O balao fica vermelho o tempo todo e so vira verde quando a Meta aceitar de verdade. A
+escada desiste se o atendente ja mandou por outra via (painel ou celular), se a janela de 24 h
+fechar, ou se as 4 tentativas acabarem. Interruptor `WHATSAPP_AUTO_RETRY_TRANSIENT` (Super Admin >
+App Config > WhatsApp oficial). Campanha fica de fora.
+
+Se o cliente perguntar: pedir para **esperar uns 10 a 15 minutos antes de clicar Reenviar** —
+reenviar na hora cai na mesma janela e falha de novo.
+
 ### "Cliente mandou um contato (vCard) e não apareceu nada"
 Corrigido em 2026-06-09: vCard agora vira anexo `file_type: "contact"` na mensagem (nome +
 telefone extraídos). Em versões antigas a mensagem era descartada.

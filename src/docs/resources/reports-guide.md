@@ -742,12 +742,25 @@ Resposta: `totals` (`total`, `pending`, `completed`, `cancelled`, `snoozed`, `at
   que NINGUÉM marcou presença (dado anterior a 14/09, equipe que só conclui/cancela) cai na regra
   antiga — concluídos / (concluídos + cancelados), pendentes FORA — e `attendance_basis` diz qual
   valeu: `attendance` ou `status`. Não recalcule com o total; diga qual base valeu.
-- **`treatments`** (15/09) é um RETRATO DE HOJE dos programas de sessões (na tela: "Programas de sessões") — ignora `since`/`until`,
-  `user_id` e `status`; só `event_type_id` recorta. Campos: `em_andamento`, `atrasados`, `concluidos`
-  (gravados + os que concluíram sem o status virar), `encerrados`, `sessoes_planejadas`,
-  `sessoes_usadas`, `percentual` (**só dos em andamento** — somar os concluídos puxaria para 100) e
-  `por_tipo[]` com os mesmos campos por tipo, ordenado pelos em andamento. "Usada" = compareceu OU
-  faltou (a falta consome). Ver `lionchat://docs/agenda-multiplas-unidades` §7.
+- **`treatments`** (refeito em 15/09 à noite) é o bloco "Programas" da tela. **O período
+  (`since`/`until`) VALE** — decisão do dono; `event_type_id` recorta; `user_id` e `status` NÃO recortam
+  (são da tarefa, não do programa). Três andares:
+  1. **Programas**: `em_andamento` (não tinha terminado no FIM do período), `atrasados` (medido no fim do
+     período, nunca em "hoje"), `comecaram`, `concluidos` e `encerrados` — esses três só contam se a data
+     cair DENTRO do período ("concluído" não tem data no banco: vale a data da última sessão usada).
+     `sessoes_planejadas`, `sessoes_usadas` e `percentual` são **só dos em andamento** (somar os concluídos
+     puxaria para 100).
+  2. **Sessões do período**: `previstas` = `marcadas` + `nao_marcadas`; `aconteceram`, `faltaram` e `taxa`
+     = aconteceram / (aconteceram + faltaram), em %. `nao_marcadas` é a sessão que o plano previa e
+     ninguém agendou — é PREVISÃO, não existe no banco.
+  3. **`parados`** `{programas, sessoes_restantes}`: em andamento sem nenhuma sessão futura marcada.
+  Vêm também `duracao` `{programas, dias_reais, dias_previstos}` (médias dos que concluíram no período;
+  `null` sem dado), `linha[]` e `por_tipo[]` (mesmos campos por `tipo`, ordenado pelos em andamento).
+  Cada ponto de `linha[]` traz `period`, `previstas`, `aconteceram`, `faltaram`, `aguardando` (marcada e
+  ainda sem Compareceu/Faltou — campo de 16/09) e `nao_marcadas`; as quatro últimas somam `previstas`. O
+  período inteiro vira ponto, com zero nos dias vazios; lista vazia = nenhum programa no período.
+  "Usada" = compareceu OU faltou (a falta consome). **Não há valor em reais** (o programa não guarda
+  preço). Ver `lionchat://docs/agenda-multiplas-unidades` §7.
 - A SITUAÇÃO vem da tarefa da Agenda (`account_tasks.status`), não de `bookings.status` — quem
   conclui/cancela pela Agenda deixa o booking parado em "confirmado". Ler `bookings_*` direto pra
   contar "concluídos" dá zero.
