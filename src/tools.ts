@@ -767,6 +767,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     vazio ('') = 60 (o que a tela exibe).
   Respostas invalidas alem de maxRetries -> handle "retries_exhausted" (distinto do timeout de silencio;
     se nao houver edge nele, cai no "timeout"; sem nenhum dos dois, encerra). maxRetries vazio/0 = 3.
+  maxRetries = QUANTAS VEZES o invalidMessage e enviado (desde 16/09/2026): com 1, a 1a resposta errada
+    recebe a mensagem e a 2a segue "retries_exhausted"; com 3, recebe 3 vezes e a 4a esgota.
   Handles validation='options': "option_{val}" por opcao + "timeout"
   Handles validation='varied_options': "option_{group_id}" por grupo (optionGroups) + "timeout"
   Handles outros: "success" + "timeout"

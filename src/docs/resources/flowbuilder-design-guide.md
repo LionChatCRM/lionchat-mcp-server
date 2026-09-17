@@ -288,7 +288,7 @@ No editor visual esses destinos só aparecem quando a validação bate (computed
 - `validation: 'options'` → `option_<valor>` para cada valor em `acceptedOptions` (ex: `option_1`, `option_2`, `option_sim`) + `timeout` + `retries_exhausted`
 - `validation: 'varied_options'` → `option_<group_id>` para cada grupo em `optionGroups` (ex: `option_sim`, `option_nao`) + `timeout` + `retries_exhausted`
 
-**`timeout` vs `retries_exhausted` (DISTINTOS):** `timeout` = cliente ficou em silencio (estourou `waitTime`). `retries_exhausted` = cliente respondeu, mas errou a validacao mais que `maxRetries` vezes. Ligue cada um ao caminho desejado. Se `retries_exhausted` nao tiver edge, ha fallback p/ o edge de `timeout`; sem nenhum dos dois, o flow encerra ao esgotar as tentativas.
+**`timeout` vs `retries_exhausted` (DISTINTOS):** `timeout` = cliente ficou em silencio (estourou `waitTime`). `retries_exhausted` = cliente respondeu, mas errou a validacao mais que `maxRetries` vezes (`maxRetries` = quantas vezes a `invalidMessage` e enviada; a resposta errada seguinte esgota — com `maxRetries: 1` o cliente recebe o erro uma vez e sai no 2o erro). Ligue cada um ao caminho desejado. Se `retries_exhausted` nao tiver edge, ha fallback p/ o edge de `timeout`; sem nenhum dos dois, o flow encerra ao esgotar as tentativas.
 
 **Timeout dispara de verdade — e SEM fio ENCERRA (desde 20/08/2026):** `waitTime` + `waitUnit`
 agendam o estouro. Com fio no handle `timeout`, o flow segue por ele. **Sem fio, a sessão é
