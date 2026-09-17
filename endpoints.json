@@ -8289,7 +8289,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/account_tasks",
   "title": "Listar Tarefas",
-  "description": "Lista tarefas com filtros avançados. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, per_page, task_type, status, user_id. Retorna meta (contadores) + payload (array de tarefa/agenda). Cada tarefa traz `tratamento` {id, sessao, total, titulo} quando e sessao de um tratamento em sessoes (15/09); nulo em compromisso comum.",
+  "description": "Lista tarefas com filtros avançados. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, per_page, task_type, status, user_id. Retorna meta (contadores) + payload (array de tarefa/agenda). Cada tarefa traz `tratamento` {id, sessao, total, titulo} quando e sessao de um tratamento em sessoes (15/09); nulo em compromisso comum. **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8560,7 +8560,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/account_tasks/{id}",
   "title": "Detalhe da Tarefa",
-  "description": "Retorna detalhes de uma tarefa. Retorna detalhes completos de UM tarefa/agenda específico pelo ID. Inclui campos relacionais quando aplicável. Cada tarefa traz `tratamento` {id, sessao, total, titulo} quando e sessao de um tratamento em sessoes (15/09); nulo em compromisso comum.",
+  "description": "Retorna detalhes de uma tarefa. Retorna detalhes completos de UM tarefa/agenda específico pelo ID. Inclui campos relacionais quando aplicável. Cada tarefa traz `tratamento` {id, sessao, total, titulo} quando e sessao de um tratamento em sessoes (15/09); nulo em compromisso comum. **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8584,7 +8584,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/account_tasks/{id}",
   "title": "Atualizar Tarefa",
-  "description": "Atualiza uma tarefa. Campos alterados em video_call/meeting disparam sync com Google Calendar. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, description, task_type, priority, scheduled_at, duration_minutes. **Tratamento em sessoes (15/09):** com tipo `sessions_enabled`, o agendamento pelo painel/API nasce como sessao do tratamento do contato (proxima a marcar; cheio = sessao extra ate 60; concluido = ciclo novo) e a tarefa devolve `tratamento` {id, sessao, total, titulo} (nulo em compromisso comum). `treatment.*` cria o plano; `agenda_treatment_id` + `treatment_session_number` marcam uma sessao pedida.",
+  "description": "Atualiza uma tarefa. Campos alterados em video_call/meeting disparam sync com Google Calendar. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, description, task_type, priority, scheduled_at, duration_minutes. **Tratamento em sessoes (15/09):** com tipo `sessions_enabled`, o agendamento pelo painel/API nasce como sessao do tratamento do contato (proxima a marcar; cheio = sessao extra ate 60; concluido = ciclo novo) e a tarefa devolve `tratamento` {id, sessao, total, titulo} (nulo em compromisso comum). `treatment.*` cria o plano; `agenda_treatment_id` + `treatment_session_number` marcam uma sessao pedida. **Compromisso de Booking (17/09):** tarefa com `booking_id` tem responsavel FIXO (o profissional do tipo de evento) — `assignee_ids` e IGNORADO (200, o resto da edicao vale). Para mudar quem atende, edite o tipo de evento. **Presenca nao conclui:** mandar `attendance` NAO muda `status`; nao conclua a tarefa so porque a presenca foi marcada (concluir compromisso de Booking encerra lembretes/pos-atendimento e dispara o gatilho de fluxo 'agendamento concluido'). A resposta traz `selo` com o rotulo resultante.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8690,7 +8690,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "IDs dos responsáveis"
+    "description": "IDs dos responsáveis. IGNORADO em compromisso nascido de Booking (`booking_id` presente): o responsavel e o profissional do tipo de evento"
    },
    {
     "name": "guest_emails",
@@ -8886,7 +8886,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/account_tasks/{id}/update_future",
   "title": "Atualizar Futuras",
-  "description": "Atualiza esta e todas as futuras instâncias de tarefa recorrente. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, scheduled_at.",
+  "description": "Atualiza esta e todas as futuras instâncias de tarefa recorrente. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, scheduled_at. **Compromisso de Booking (17/09):** tarefa com `booking_id` tem responsavel FIXO (o profissional do tipo de evento) — `assignee_ids` e IGNORADO (200, o resto da edicao vale). Para mudar quem atende, edite o tipo de evento. **Presenca nao conclui:** mandar `attendance` NAO muda `status`; nao conclua a tarefa so porque a presenca foi marcada (concluir compromisso de Booking encerra lembretes/pos-atendimento e dispara o gatilho de fluxo 'agendamento concluido'). A resposta traz `selo` com o rotulo resultante.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8966,7 +8966,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/account_tasks/my_day",
   "title": "Meu Dia",
-  "description": "Retorna tarefas agrupadas: atrasadas, hoje, amanhã, próximos 7 dias. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda).",
+  "description": "Retorna tarefas agrupadas: atrasadas, hoje, amanhã, próximos 7 dias. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda). **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -9020,7 +9020,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/tasks",
   "title": "Tarefas do Card",
-  "description": "Lista tarefas de todas as conversas vinculadas ao card (primária + linked). Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: scope, page. Retorna meta (contadores) + payload (array de tarefa/agenda).",
+  "description": "Lista tarefas de todas as conversas vinculadas ao card (primária + linked). Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: scope, page. Retorna meta (contadores) + payload (array de tarefa/agenda). **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -9062,7 +9062,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/next_task",
   "title": "Próxima Tarefa do Card",
-  "description": "Retorna a PROXIMA tarefa pendente ou adiada do card (a de menor scheduled_at), considerando a conversa principal e as vinculadas. Devolve UM OBJETO de tarefa — nao ha meta/payload nem paginacao — e `{}` (objeto vazio) quando nao ha nenhuma. Nao procure um array: procurar array aqui faz voce responder \"esse card nao tem proxima tarefa\" quando tem. ATENCAO: esta rota NAO filtra por privacidade de tarefa — pode devolver tarefa de OUTRO atendente, ao contrario do campo `next_task` que vem dentro do proprio card (esse so mostra tarefa de quem esta consultando).",
+  "description": "Retorna a PROXIMA tarefa pendente ou adiada do card (a de menor scheduled_at), considerando a conversa principal e as vinculadas. Devolve UM OBJETO de tarefa — nao ha meta/payload nem paginacao — e `{}` (objeto vazio) quando nao ha nenhuma. Nao procure um array: procurar array aqui faz voce responder \"esse card nao tem proxima tarefa\" quando tem. ATENCAO: esta rota NAO filtra por privacidade de tarefa — pode devolver tarefa de OUTRO atendente, ao contrario do campo `next_task` que vem dentro do proprio card (esse so mostra tarefa de quem esta consultando). **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -20969,7 +20969,8 @@
   "related_tools": [
    "lionchat_agent_availability_update",
    "lionchat_agent_availability_list_1",
-   "lionchat_agent_availability_list_2"
+   "lionchat_agent_availability_list_2",
+   "lionchat_agent_availability_day"
   ]
  },
  {
@@ -21032,7 +21033,8 @@
   "related_tools": [
    "lionchat_agent_availability_list",
    "lionchat_agent_availability_update",
-   "lionchat_agent_availability_list_2"
+   "lionchat_agent_availability_list_2",
+   "lionchat_agent_availability_day"
   ]
  },
  {
@@ -21060,7 +21062,67 @@
   "related_tools": [
    "lionchat_agent_availability_list",
    "lionchat_agent_availability_update",
-   "lionchat_agent_availability_list_1"
+   "lionchat_agent_availability_list_1",
+   "lionchat_agent_availability_day"
+  ]
+ },
+ {
+  "id": "lionchat_agent_availability_day",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agent_availability/day",
+  "title": "Ver Como Esta o Dia (expediente + horarios ocupados)",
+  "description": "Resumo de UM dia de ate 6 pessoas da conta, para escolher horario de um compromisso COMUM sem marcar no escuro: expediente de cada pessoa e os intervalos ja ocupados, tudo em 'HH:MM' do fuso pedido. E o mesmo dado do quadro 'Escolha o dia e veja os horarios' da janela Nova tarefa. PRIVACIDADE: o INTERVALO ocupado de qualquer pessoa da conta vem sempre (e o que permite marcar algo com um colega); `title`/`task_id` so vem para quem ja veria o compromisso no calendario (proprio/responsavel, agenda publica do dono, administrador) — compromisso PRIVADO de outra pessoa nunca vem com titulo (`title_visible: false`). Sem `user_ids` = o proprio usuario do token. Feriados do dia vem em `holidays` (filtrados por `agenda_id` quando informado). Para agendamento por BOOKING nao use esta: os horarios validos sao os de `lionchat_booking_event_types_slots` (respeitam duracao, intervalo e antecedencia do tipo de evento). `date` ausente ou invalida = 400.",
+  "category": "Disponibilidade",
+  "params": [
+   {
+    "name": "date",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "Dia no formato YYYY-MM-DD"
+   },
+   {
+    "name": "user_ids",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "query_name": "user_ids[]",
+    "description": "IDs das pessoas (ate 6, so gente DA CONTA). Vazio = o proprio usuario do token"
+   },
+   {
+    "name": "timezone",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fuso IANA em que os horarios devem voltar (ex.: America/Sao_Paulo). Invalido/ausente = fuso da conta"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "ID da agenda (unidade) — filtra os feriados por agenda"
+   },
+   {
+    "name": "excluding_task_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Ao REMARCAR: ID da propria tarefa, para ela nao contar como horario ocupado"
+   }
+  ],
+  "returns": "{ date, timezone, holidays: [{ name, all_day, start, end }], people: [{ user_id, name, color, working_hours: [{ start, end }], busy: [{ start, end, title_visible, title, task_id, readonly }] }] } — horarios em 'HH:MM' no fuso devolvido em `timezone`",
+  "common_use_cases": [
+   "Antes de criar uma tarefa/reuniao, ver se a pessoa esta livre naquele dia e em que horarios",
+   "Achar um horario em que dois ou mais colegas estao livres ao mesmo tempo",
+   "Ao remarcar, conferir o dia novo sem contar a propria tarefa como ocupada (excluding_task_id)"
+  ],
+  "related_tools": [
+   "lionchat_agent_availability_list",
+   "lionchat_agent_availability_list_1",
+   "lionchat_agent_availability_list_2",
+   "lionchat_tasks_create",
+   "lionchat_booking_event_types_slots"
   ]
  },
  {

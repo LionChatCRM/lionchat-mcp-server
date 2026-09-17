@@ -408,9 +408,16 @@ AccountTask (agenda interna)
 │   (painel|link|ia|sistema|fluxo) — QUEM agendou e por onde (14/09)
 ├── attendance (enum attended=0 / no_show=1, NULO = nada registrado — CARIMBO, não muda status)
 │   / attendance_by (polimórfico) / attendance_source — quem marcou Compareceu/Faltou (14/09)
+├── selo (SÓ LEITURA, calculado — 17/09): o rótulo ÚNICO que a tela mostra ao lado da tarefa, juntando
+│   `status` + `attendance` + remarcação: cancelled > no_show / attended > completed > snoozed >
+│   rescheduled > pending. `rescheduled` = data trocada pelo painel/fluxo/IA (`reschedule_source`) OU pelo
+│   cliente no link do agendamento. Para dizer "o que aconteceu com este compromisso", LEIA `selo` —
+│   `status: pending` sozinho NÃO significa "nada aconteceu" (a pessoa pode ter faltado)
 ├── agenda_treatment_id (FK → AgendaTreatment, nullify) / treatment_session_number (1..N) — a sessão
 │   que este compromisso é; índice único parcial por tratamento+número entre os NÃO cancelados (15/09)
-└── assignees (has_many → User, via account_task_assignments)
+└── assignees (has_many → User, via account_task_assignments). Compromisso NASCIDO DE BOOKING
+    (`booking_id` presente) tem responsável FIXO = o agente configurado no tipo de evento:
+    `assignee_ids` enviado no update é IGNORADO (200, o resto da edição vale — 17/09)
 
 AgendaTreatment (tratamento em sessões — tools `agenda_treatments_*`; tabela agenda_treatments; 15/09)
 ├── id (PK) / account_id (FK) / contact_id (FK) / booking_event_type_id (FK, nullify)

@@ -779,3 +779,24 @@ contato é uma por TELEFONE e guarda só o último paciente; com mãe e filho no
 olharia a agenda da pessoa errada e poderia concluir que a consulta foi desmarcada. Lembretes criados
 antes de 17/09 podem não ter `{{cliente_id}}`: use a ficha só como reserva
 (`{{ cliente_id | default: contact.custom_attribute.eclinica_cliente_id }}`).
+
+---
+
+## "Marquei Faltou (ou Compareceu) e a tarefa continua pendente" — 17/09/2026
+
+**Não é defeito.** Presença (`attendance`) e situação (`status`) são campos separados de propósito: marcar
+Faltou/Compareceu não conclui a tarefa. Concluir um compromisso de Booking encerra os lembretes e o
+pós-atendimento dele e dispara o gatilho de fluxo "agendamento concluído" — inclusive para quem faltou.
+
+- O que o painel mostra ao lado da tarefa é o campo **`selo`** (só leitura): `no_show`, `attended`,
+  `rescheduled`, `completed`, `snoozed`, `cancelled` ou `pending`. Use ele para descrever o compromisso.
+- A tarefa marcada com presença continua nas pendências até alguém clicar em Concluir (ou a API mandar
+  concluir). Só conclua se o usuário pedir.
+- Antes de 17/09 o painel mostrava "Pendente" (e "Atrasada" na ficha do contato) mesmo com Faltou marcado —
+  era só a etiqueta; o dado sempre esteve gravado certo.
+
+## "Troquei o responsável de um agendamento e ele não mudou" — 17/09/2026
+
+Compromisso nascido de Booking (`booking_id` presente) tem responsável fixo: o profissional do tipo de
+evento. `assignee_ids` no update é ignorado (a resposta é 200 e o resto da edição vale). Para mudar quem
+atende, edite o tipo de evento — ou cancele e marque de novo em outro Booking.
