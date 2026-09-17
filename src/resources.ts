@@ -59,6 +59,13 @@ export const RESOURCES: ResourceDef[] = [
     filename: 'conversation-flows.md',
   },
   {
+    name: 'Agenda — Unidades, Tipos e Google',
+    uri: 'lionchat://docs/agenda-multiplas-unidades',
+    description:
+      'Agenda por UNIDADE (matriz, filial, consultorio): o que agenda_id NULO significa, tipos de compromisso criados pela conta, Booking ligado a unidade, regras da pagina publica (cancelar/remarcar/confirmar presenca) e conexao Google UMA POR AGENDA. Leia antes de mexer em agenda, tipo de compromisso ou Booking.',
+    filename: 'agenda-multiplas-unidades.md',
+  },
+  {
     name: 'Kanban Detalhado',
     uri: 'lionchat://docs/kanban-deep-dive',
     description:

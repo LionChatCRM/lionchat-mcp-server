@@ -531,6 +531,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `start_flow` | `{ flow_id }` | Inicia outro fluxo. **NÃO encerra o fluxo de origem** (desde 31/08): se houver bloco ligado depois dele, o fluxo SEGUE normalmente. Sendo o último do desenho, o fluxo termina ali como sempre. |
 | `send_conversion` (novo 2026-09-01; `event_names` 2026-09-02; `messaging_event_names` 2026-09-10) | `{ destinations: ['meta'\|'ga4'\|'google_ads'], event_names: { meta?, google_ads?, ga4? }, messaging_event_names: { meta? }, event_name (reserva), value? }` | Manda o evento de conversão pro Meta (CAPI), Google Ads e/ou GA4 — o mesmo caminho do Funil, de dentro do fluxo. Aba Sistema (só flow `conversation`). Ver bloco próprio abaixo |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
+| `set_booking_situation` (novo 2026-09-14) | `{ situation: 'cancelled' \| 'completed' \| 'attended' \| 'no_show' \| 'confirmed' }` | Muda a situação do agendamento **que disparou o fluxo** (gatilho de agendamento do bloco Início, ou fluxo ligado na configuração do tipo de agendamento). Aba **Agenda** (só flow `conversation`, só com a Agenda ligada na conta). Disparado por outra coisa: **não faz efeito e o passo fica com erro visível** (não há como adivinhar o agendamento). Já no estado pedido = passo PULADO, sem escrita (sem evento, sem laço). `cancelled` cancela o **agendamento** (desarma lembretes, invalida o link de gerenciar). Origem gravada = `fluxo`, ator = o próprio flow. Sem `rescheduled`/`snoozed`: o bloco não mexe em data |
 | `update_attribute` | `{ attr_source: 'contact'\|'conversation'\|'card', attr_key, attr_value }` | Seta custom_attribute (ver abaixo) |
 | `assign_captain` (ou `assign_captain_assistant`) | `{ assistant_id }` | Atribui IA Captain |
 | `deactivate_captain` | `{}` | Tira a IA da conversa |
@@ -843,7 +844,7 @@ tela do cliente (a tela lê só `percent`).
 ### 2.11 `update_group` — Gestão de Grupos (WAHA apenas)
 
 Bloco "Gestão de Grupos". Faz **UMA operação por bloco** (não mais um formulário-só com nome/foto/descrição
-juntos) — a operação vai em `data.groupOperation`. São **17 operações**, agrupadas por tema:
+juntos) — a operação vai em `data.groupOperation`. São **18 operações**, agrupadas por tema:
 
 - **Grupo:** `create` (criar), `find_by_id` (buscar por id), `find_by_name` (buscar por nome), `update_subject`
   (mudar nome), `update_description` (mudar descrição), `update_picture` (mudar foto), `settings` (3
@@ -852,6 +853,10 @@ juntos) — a operação vai em `data.groupOperation`. São **17 operações**, 
 - **Admins:** `promote_admin` (promover a admin), `demote_admin` (rebaixar).
 - **Convite:** `get_invite` (pegar link/código de convite), `revoke_invite` (revogar), `send_invite` (mandar
   o convite por mensagem a um telefone).
+- **Mensagem no privado:** `send_private_message` (a 18ª, 16/09) — `groupPrivateTo` (obrig, telefone com código do
+  país, aceita `{{trigger.participant.phone}}`) + `messageItems`; manda no PRIVADO desse telefone, criando contato
+  e conversa para quem nunca conversou. Sem variável de resposta, sem `groupTargetId`, sem teto diário. É o jeito
+  de falar com quem acabou de entrar no grupo (o flow individual só roda para quem já tem conversa).
 - **Mensagem:** `send_message` (a 17ª, 08/08) — manda `messageItems` (MESMO contrato do bloco de mensagem:
   text/delay/attachment/audio/url_media; botões/template não fazem sentido em grupo) NA CONVERSA DO GRUPO
   (`groupTargetId` ou, vazio, o grupo da conversa atual; grupo inexistente = `error`). NÃO grava
@@ -1156,7 +1161,7 @@ Oferecidos no autocompletar (só quando o bloco Início tem o gatilho que os pre
 | `assignee_changed` | `{{trigger.assignee.name}}` (vazio = responsável removido) |
 | `team_changed` | `{{trigger.team.name}}` (vazio = equipe removida) |
 | `sla_missed` | `{{trigger.sla.policy_name}}`, `{{trigger.sla.type}}` (`frt`/`nrt`/`rt`) |
-| `group_participant_joined`, `group_participant_left` | `{{trigger.group.name}}`, `{{trigger.group.id}}` |
+| `group_participant_joined`, `group_participant_left` | `{{trigger.group.name}}`, `{{trigger.group.id}}`, `{{trigger.participant.phone}}`, `{{trigger.participant.name}}` (16/09 — quem entrou/saiu; nome só se já é contato) |
 
 Resolvem mas NÃO aparecem no seletor (produtor único — só o gatilho daquela integração preenche):
 `{{trigger.attribute.name}}`/`current_value` (atributo do contato entrou no valor), `{{trigger.form.name}}`/

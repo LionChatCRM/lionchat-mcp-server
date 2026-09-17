@@ -484,7 +484,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-10)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-16)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -585,6 +585,17 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Agenda — ADIAR conta como remarcado); completed = equipe concluiu na Agenda (exige a Agenda unificada
     ligada na conta). Excluir a tarefa, reabrir cancelada e desfazer conclusao NAO disparam; cancelamento
     vence remarcacao quando os dois mudam no mesmo save.
+    booking_treatment_completed / booking_treatment_late (NOVOS 2026-09-15 — os DOIS gatilhos do PROGRAMA de
+    sessoes; na tela o nome e "programa", na API o campo segue treatment). treatment_completed = a ULTIMA sessao
+    do pacote recebeu Compareceu ou Faltou, ou seja o programa fechou (nasce da PRESENCA, nao do status: concluir a
+    tarefa NAO conta; trocar a presenca depois NAO dispara de novo). treatment_late = varredura DIARIA (09:00 de
+    Brasilia) que cobra quando a proxima sessao ja passou da data prevista e nada esta marcado pra frente — UMA vez
+    por semana por sessao, e so em conta que tem um flow com esse gatilho. Os dois usam o MESMO painel de filtros do
+    booking_* (tipos + agente + criar conversa) e exigem a Agenda unificada. O assunto e a ULTIMA sessao existente:
+    programa sem nenhuma sessao marcada nao dispara o atraso (nao ha conversa a que se referir).
+    Alem de {{booking.*}}, os dois recebem {{programa.*}}: titulo, sessoes, usadas, restantes, percentual,
+    compareceu, faltou, proxima_sessao, proxima_prevista, dias_de_atraso, intervalo. {{programa.*}} NAO existe nos
+    outros booking_* (la o compromisso pode nem ser sessao de programa).
     Item: {key:'booking_created', config:{booking_event_type_ids:['44'], agent_ids:[], create_conversation:false}}
     — tudo opcional, vazio = todos: booking_event_type_ids = ids de tipo de agendamento (STRINGS — e o que
     a tela grava; o disparo compara por texto, entao numero ate funciona, mas escreva string), agent_ids =
@@ -621,6 +632,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     todos assinaram (documento final gerado) / alguem recusou / o prazo terminou sem todas as
     assinaturas. INERTES a evento de conversa (quem dispara e o SignatureEnvelopes::FlowTriggerDispatcher,
     a partir do proprio registro da prova). Item: {key:'signature_signed_signer', config:{document_ids:[]}}
+    signature_delivered (NOVO 2026-09-14 — o UNICO gatilho de contrato POR PESSOA): dispara uma vez
+    para CADA participante que recebeu o link, na conversa DELE. O signature_sent nasce de evento com
+    participante NULO e cai na conversa do CONTRATO — contrato mandado pra cinco pessoas rende UM fluxo
+    e quatro nunca recebem lembrete; e ESTE o gatilho de lembrete de assinatura. Sai TAMBEM no botao
+    Reenviar (o link saiu pra pessoa outra vez). Participante que recebe por E-MAIL nao tem conversa e
+    NAO dispara — de proposito nao cai pra conversa do contrato, senao o lembrete da testemunha iria
+    pro WhatsApp do titular com as variaveis da outra pessoa.
+    Item: {key:'signature_delivered', config:{document_ids:[]}}
     — document_ids = ids de MODELO de contrato (STRINGS; vazio = qualquer modelo). A sessao nasce na
     conversa da PESSOA do acontecimento (a testemunha tem a dela); contrato so por e-mail (sem conversa)
     nao dispara; o flow precisa estar ligado a caixa da conversa (ou a nenhuma). Sessao ativa do MESMO
@@ -657,7 +676,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     — os dois filtros se SOMAM (E logico), cada um vazio deixa passar: group_match/group_name filtra
     pelo NOME do grupo; group_ids (so via API/MCP, compara por digitos) mira grupos exatos. Vale nos 2
     tipos de flow: em flow de grupo roda na conversa do grupo; em flow individual roda na conversa da
-    PESSOA que entrou/saiu ('entrou no grupo -> manda no privado').
+    PESSOA que entrou/saiu — SO se ela JA tem conversa naquela caixa (o gatilho nunca cria conversa;
+    quem entra pela 1a vez, ex. por link de convite, e PULADO). Para falar com quem nunca conversou:
+    flow de GRUPO + update_group groupOperation 'send_private_message' (16/09).
   WEBHOOK EMBUTIDO (Webhook Universal): 1) criar flow; 2) POST /custom_webhook_integrations com
     {custom_webhook_integration:{flow_id}} (idempotente, retorna URL unica); 3) flows_update com
     item {key:'webhook_received', config:{integration_id}} no data.items do start. Remover o item
@@ -829,7 +850,18 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       Desde 20/08 as 4 condicoes kanban_* enxergam o card da conversa ATUAL ou o card cuja conversa de
       ORIGEM e a atual (card religado pra conversa mais nova) — antes "nao tem card" na conversa velha.
     sla_check (SO value, codigo fixo: frt_breached/frt_ok/nrt_breached/nrt_ok/rt_breached/rt_ok/has_sla/no_sla;
-      frt=primeira resp, nrt=proxima, rt=resolucao; _ok exige politica de SLA aplicada).
+      frt=primeira resp, nrt=proxima, rt=resolucao; _ok exige politica de SLA aplicada),
+    signature_status (NOVO 2026-09-14 — aba "Contrato" da tela; SO value, codigo fixo:
+      person_signed/person_not_signed/all_signed/pending/refused/expired/cancelled; escreva tambem
+      field:'_signature_status' e valueType:'signature_status'): RELE o contrato no BANCO na hora de
+      avaliar — as variaveis {{contrato.*}} sao RETRATO do disparo, e um fluxo que espera dias
+      responderia "nao assinou" pra quem JA assinou. Recorta o contrato que COMECOU o fluxo
+      (_trigger_context); sem contrato-gatilho responde FALSO, nunca verdadeiro por omissao. Regra sem
+      value cai no padrao person_signed em vez de ser pulada.
+      RECEITA DO LEMBRETE: UMA saida com logic:'and' e DUAS regras — person_not_signed + pending — e a
+      mensagem na saida cond_0. Sem a segunda regra, contrato cancelado, vencido ou recusado durante a
+      espera ainda cobra assinatura (a pessoa segue sem ter assinado, e a pergunta sobre a PESSOA
+      sozinha nao sabe que o contrato morreu).
   greater_than/less_than: atributo numero (valor numerico) OU temporais (novo 2026-07-21) —
     date (value ISO YYYY-MM-DD, compara por DIA), time (value "HH:MM", compara minutos-do-dia),
     datetime (value "YYYY-MM-DDTHH:MM", compara HORARIO DE PAREDE — ignora fuso/offset).
@@ -895,6 +927,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       add_card_offer({offer_id, use_custom_value?, custom_value?, funnel_id?, card_source?}) — adiciona
         oferta (produto/servico) ao card; offer_id de offers_list; use_custom_value:true + custom_value
         grava valor personalizado, senao usa o valor cadastrado; total do card recalcula sozinho
+    Agenda (SO flow conversation, e SO em fluxo disparado por AGENDAMENTO):
+      set_booking_situation({situation: cancelled|completed|attended|no_show|confirmed}) — NOVO 14/09:
+        muda a situacao do agendamento QUE DISPAROU o fluxo (gatilho de agendamento do bloco Inicio ou fluxo
+        ligado na configuracao do tipo de agendamento). Disparado por outra coisa: NAO faz efeito e o passo fica
+        com ERRO visivel (nao ha como adivinhar o agendamento). Ja no estado pedido = PULADO sem escrita (sem
+        evento, sem laco). 'cancelled' cancela o AGENDAMENTO (desarma lembrete, mata o link de gerenciar).
+        Origem gravada = 'fluxo', ator = o proprio flow. Sem 'remarcado'/'adiado'/'nao confirmado': o bloco NAO
+        mexe em data.
     Sistema (SO flow conversation): send_webhook({url,headers?,body?}), start_flow({flow_id}
       — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save mas IGNORADO
       EM SILENCIO na execucao, e o fluxo para ali [2026-08-18]), deactivate_flow({}),
@@ -1018,13 +1058,13 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Com pesos iguais os dois dao o mesmo resultado.
   Handles: o id de cada branch (mode branches); "success" (mode distribute_agents).
 
-▸ update_group (Gestao de Grupos WhatsApp — UMA operacao por bloco, 17 operacoes)
+▸ update_group (Gestao de Grupos WhatsApp — UMA operacao por bloco, 18 operacoes)
   Roda em fluxo de QUALQUER canal desde que a conta tenha caixa WhatsApp QR Code (Channel::Waha).
   Em flow de GRUPO o campo de caixa e opcional (vazio = caixa da conversa); em flow NAO-grupo
   data.groupInboxId e OBRIGATORIO (id de inbox Channel::Waha da conta — o save recusa caixa de outro tipo).
   data comum:
-    groupOperation: <uma das 17 abaixo>   // ausente/vazio = 'legacy' (comportamento antigo — NAO usar em node novo)
-    groupTargetId: "<id do grupo>"        // vazio = grupo da conversa; aceita '1203..@g.us', so digitos ou {{var}}. Ignorado nas TARGETLESS (create, find_by_name)
+    groupOperation: <uma das 18 abaixo>   // ausente/vazio = 'legacy' (comportamento antigo — NAO usar em node novo)
+    groupTargetId: "<id do grupo>"        // vazio = grupo da conversa; aceita '1203..@g.us', so digitos ou {{var}}. Ignorado nas TARGETLESS (create, find_by_name, send_private_message)
     groupInboxId: <id inbox QR Code>      // OBRIGATORIO em flow nao-grupo
     groupResponseVar: "grupo"             // nome da variavel de resposta (default 'grupo'); leia depois {{grupo.CAMPO}}
     groupInviteOnFailure: false           // NOVO 21/08, so create/add_participants — ver CONVITE AUTOMATICO
@@ -1050,7 +1090,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     send_invite       -> groupInviteTo(obrig, telefone), groupInviteMessage(opcional; {{link}} marca onde o link entra, sem o marcador vai no fim) -> id,invite_link,invite_sent_to
     settings          -> pelo menos UMA de: infoAdminOnly(bool), messagesAdminOnly(bool), membersCanAddNewMember(bool) -> id,settings_updated,settings_failed,settings_unsupported
                          DESDE 20/08 cada permissao e aplicada SOZINHA: settings_updated[] sempre vem; settings_failed[{setting,reason}] = falhou de verdade; settings_unsupported[] = o servidor WAHA nao tem o recurso (ex.: quem-pode-adicionar em servidor antigo). Sucesso SO se aplicou ao menos uma E nenhuma falhou; senao sai por "error" (codigo settings_failed ou settings_unsupported) com o que aplicou visivel na variavel
-    send_message      -> messageItems (MESMO contrato do node send_message: text/delay/attachment/audio/url_media...; botoes/template nao fazem sentido em grupo) + groupTargetId opcional -> manda os baloes NA CONVERSA DO GRUPO (vazio = grupo da conversa atual; grupo inexistente = "error"). NAO grava {{grupo.*}} (e a unica sem variavel de resposta). E a 17a operacao (08/08): serve pra "dei ganho no lead -> aviso o grupo da equipe" em fluxo de qualquer canal
+    send_message      -> messageItems (MESMO contrato do node send_message: text/delay/attachment/audio/url_media...; botoes/template nao fazem sentido em grupo) + groupTargetId opcional -> manda os baloes NA CONVERSA DO GRUPO (vazio = grupo da conversa atual; grupo inexistente = "error"). NAO grava {{grupo.*}} (com send_private_message, as unicas sem variavel de resposta). E a 17a operacao (08/08): serve pra "dei ganho no lead -> aviso o grupo da equipe" em fluxo de qualquer canal. Em flow de GRUPO a tela NAO oferece esta (o node send_message comum ja escreve no grupo)
+    send_private_message -> groupPrivateTo(obrig, telefone com codigo do pais; aceita {{var}}, ex. {{trigger.participant.phone}}; o motor tira nao-digitos e exige 10 a 15) + messageItems (mesmo contrato do send_message) -> manda os baloes no PRIVADO desse telefone pela caixa do bloco. Pessoa que nunca conversou: CRIA contato (nome provisorio = telefone, trocado pelo nome do WhatsApp quando ela responder) + conversa (initiated_by 'agent') — dispara os ouvintes de conversation_created. NAO grava {{grupo.*}}; sem groupTargetId [TARGETLESS]; sem teto diario (decisao do dono 16/09)  [risco de banimento: 1a mensagem de numero QR a desconhecido]. NOVO 16/09, pensado pra flow de GRUPO com gatilho group_participant_joined. LIMITE: o flow de grupo tem UMA sessao ativa por vez na conversa do grupo — quem entrar enquanto os baloes da pessoa anterior saem nao dispara; prefira mensagem de 1 balao
   ATENCAO settings: membersCanAddNewMember tem semantica INVERTIDA (true = TODOS podem adicionar);
     infoAdminOnly/messagesAdminOnly seguem o padrao (true = SO admin).
   CONVITE AUTOMATICO (NOVO 21/08, so create/add_participants): groupInviteOnFailure:true manda
@@ -1062,7 +1103,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     job reconfere se a pessoa ja entrou. invite_status = 'convite_enviado' (invited = lista) ou
     'sem_mensagem'. EFEITO COLATERAL: cada convite entregue vira contato + conversa NOVOS no painel e
     dispara os ouvintes de conversation_created (automacao, outros flows, webhook do cliente, Kanban).
-  Toda operacao (menos send_message) tambem devolve {{grupo.ok}} (bool) e {{grupo.error.message}}.
+  Toda operacao (menos send_message e send_private_message) tambem devolve {{grupo.ok}} (bool) e {{grupo.error.message}}.
   Handles: "success", "error" + "partial" em create/add_participants/remove_participants (a operacao
     rodou mas nem todo mundo entrou/saiu — listas not_added/not_removed dizem quem). "partial" sem fio
     segue pelo fio "success" (unica saida com esse fallback no motor).
@@ -1148,7 +1189,8 @@ trigger.* (variaveis do GATILHO que iniciou o flow — no autocomplete de TODO b
     card_won/card_lost: trigger.kanban.status (won/lost); label_added/label_removed: trigger.label.name;
     assignee_changed: trigger.assignee.name (vazio = responsavel removido); team_changed: trigger.team.name;
     sla_missed: trigger.sla.policy_name/type (frt/nrt/rt); group_participant_joined/left:
-    trigger.group.name/id. Resolvem mas ficam FORA do seletor (produtor unico): trigger.attribute.name/
+    trigger.group.name/id, trigger.participant.phone/name (16/09 — QUEM entrou/saiu, telefone com +;
+    nome so se a pessoa ja e contato; evento com varias pessoas = a 1a). Resolvem mas ficam FORA do seletor (produtor unico): trigger.attribute.name/
     current_value, trigger.form.name/milestone, trigger.payment.gateway/event/product/offer/method/status/
     amount, trigger.eclinica.event/unit/date/time/compromisso/idagenda, trigger.lead.form/page/ad/adset/
     campaign/platform, trigger.dtmf.key/campaign, trigger.reminder.date/time/compromisso/unit/days_before.

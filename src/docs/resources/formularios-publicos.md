@@ -232,8 +232,10 @@ renderiza e não dá erro.
 - **Lista de recusa no servidor** (o valor é pulado de forma visível, sem erro): `name`, `email`,
   `phone_number`, `identifier`, `card` e chaves começando com `captain_`, `eclinica_`, `origin_`,
   `lt_`, `booking_`, `waha_`, `whatsapp_`, `ctwa_`, `meta_lead_`.
-- Contato pré-existente recebe valor **só em campo vazio** — exceto o que ESTA resposta gravou e
-  ninguém mudou depois (correção via Voltar).
+- Contato pré-existente: **dado novo vence** (regra de 11/09) — nome, e-mail, documentos e atributos
+  são sobrescritos por resposta nova (mesmo valor não regrava). Só o **telefone** fica protegido
+  (endereço da conversa): preenche vazio ou corrige o que a própria resposta gravou. O que cada
+  resposta gravou fica em `written_attributes` (detalhe da resposta).
 
 **`options`** (do `choice`): `[{ "id": "abc123", "label": "Sim", "image": "" }]`.
 

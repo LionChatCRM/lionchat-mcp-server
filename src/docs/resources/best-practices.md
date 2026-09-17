@@ -397,7 +397,9 @@ oficial, com WABA) sai pra Meta como evento de MENSAGEM (`action_source: busines
 Meta só aceita isso num **dataset vinculado à WABA**, nunca no pixel do site (recusa 2804132). Até
 10/09 100% desses eventos caíam no plano B (saíam como site) sem ninguém ver. Regras pro MCP:
 
-- **Vincular a caixa primeiro:** `lionchat_inboxes_capi_dataset_link` (POST `/inboxes/{id}/capi_dataset`).
+- **Vincular a caixa primeiro:** normalmente NÃO é preciso — o vínculo é automático (na criação da caixa
+  e por varredura a cada 10 min). Se `capi_dataset_id` estiver vazio, `lionchat_inboxes_capi_dataset_link`
+  (POST `/inboxes/{id}/capi_dataset`) força na hora.
   Idempotente, vale para todos os números da mesma WABA, usa a chave da PRÓPRIA caixa (a do pixel não
   serve). O id fica em `provider_config.capi_dataset_id` (visível em `lionchat_inboxes_show` para admin).
   Sem o vínculo os eventos de anúncio saem como site com `fallback_reason: lionchat:dataset_nao_configurado`.
@@ -922,3 +924,11 @@ administrador."* — a recusa é `before_action`, então NADA do resto do update
 Ao atualizar o próprio usuário: mande times e caixas à vontade; **não mande `role` nem
 `custom_role_id`** — se mandar, a chamada inteira falha e as outras alterações se perdem também.
 Para trocar o cargo de alguém, use a conta de OUTRO administrador.
+
+## Cargo personalizado: descrição CURTA (16/09/2026)
+
+Em `custom_roles_create` / `custom_roles_update`, a `description` é **uma frase de até 60 caracteres**
+(ex.: *"Tudo, menos conversas das caixas em que não foi adicionado."*). **Não liste as permissões
+na descrição** — a tela já as mostra na coluna "Permissões". Uma descrição de 180 caracteres
+escondeu o cargo recém-criado na lista de Funções personalizadas da conta 1 (a tela foi corrigida
+para cortar o texto com reticências, mas a descrição longa continua ilegível ali).

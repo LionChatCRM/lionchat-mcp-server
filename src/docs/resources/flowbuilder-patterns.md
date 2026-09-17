@@ -597,7 +597,8 @@ Comuns a (quase) todas:
 | `add_participants` | `groupParticipants` (obrig — ex.: `["5511999999999@c.us"]` ou lista); opcional `groupInviteOnFailure` + `groupInviteMessage` | `added`, `not_added`, `added_count`, `not_added_count`, `no_whatsapp`, `invited`, `invite_status` |
 | `send_invite` | `groupInviteTo` (obrig — telefone de destino), `groupInviteMessage` (opc) | `invite_link` |
 | `settings` | pelo menos uma de `infoAdminOnly` / `messagesAdminOnly` / `membersCanAddNewMember` (booleans) | `settings_updated` (lista do que aplicou), `settings_failed` (`[{setting, reason}]`), `settings_unsupported` |
-| `send_message` | `messageItems` (mesmo contrato do bloco de mensagem: text/delay/attachment/audio/url_media) + `groupTargetId` opcional — manda os balões NA CONVERSA DO GRUPO (vazio = grupo da conversa atual). É a 17ª operação (08/08) | — (única sem variável de resposta) |
+| `send_message` | `messageItems` (mesmo contrato do bloco de mensagem: text/delay/attachment/audio/url_media) + `groupTargetId` opcional — manda os balões NA CONVERSA DO GRUPO (vazio = grupo da conversa atual). É a 17ª operação (08/08) | — (sem variável de resposta) |
+| `send_private_message` | `groupPrivateTo` (obrig — telefone com código do país; aceita `{{trigger.participant.phone}}`) + `messageItems` — manda os balões no PRIVADO desse telefone. Quem nunca conversou ganha contato + conversa (dispara os ouvintes de conversa criada). 18ª operação (16/09), sem teto diário | — (sem variável de resposta) |
 
 Os campos `added`/`not_added`/`no_whatsapp`/`invited`/`invite_status` do `create` e `groupInviteOnFailure` são
 de 21/08/2026 (entram com o próximo deploy do app depois de 21/08/2026).
@@ -619,6 +620,13 @@ as outras duas seguem aplicadas. Não prometa essa permissão ao cliente sem con
 `ends_with`, `does_not_contain`, `not_equal_to`) + `group_name`, e/ou `group_ids` (mira exata por id — casa por
 dígitos, aceita `1203...@g.us` ou só o número). Quando alguém entra, o `send_message` seguinte cai **no próprio
 grupo** (o grupo é a conversa do flow).
+
+**Quem entrou (16/09):** o gatilho entrega `{{trigger.participant.phone}}` (telefone com `+`) e
+`{{trigger.participant.name}}` (só quando a pessoa já é contato). Para falar **no privado** de quem entrou, use no
+flow de grupo um `update_group` com `groupOperation: "send_private_message"` e `groupPrivateTo:
+"{{trigger.participant.phone}}"`. **Não use flow individual para isso:** ele só roda para quem JÁ tem conversa
+naquela caixa — quem entra pela primeira vez (link de convite) é pulado. Limite conhecido: o flow de grupo atende
+uma entrada por vez; quem entrar enquanto os balões da pessoa anterior saem não recebe (prefira 1 balão).
 
 **Lembretes:**
 - **Teto de 20 participantes por execução** (`add_participants`/`create`) — trava ANTI-BANIMENTO, não performance.

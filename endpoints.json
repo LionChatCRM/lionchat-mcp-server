@@ -8289,7 +8289,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/account_tasks",
   "title": "Listar Tarefas",
-  "description": "Lista tarefas com filtros avançados. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, per_page, task_type, status, user_id. Retorna meta (contadores) + payload (array de tarefa/agenda).",
+  "description": "Lista tarefas com filtros avançados. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, per_page, task_type, status, user_id. Retorna meta (contadores) + payload (array de tarefa/agenda). Cada tarefa traz `tratamento` {id, sessao, total, titulo} quando e sessao de um tratamento em sessoes (15/09); nulo em compromisso comum.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8354,6 +8354,13 @@
     "location": "query",
     "required": false,
     "description": "Data fim"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
    }
   ],
   "returns": "LISTA PURA (array no topo, SEM embrulho meta/payload) — a resposta JA E a lista de tarefas da agenda. Cada tarefa traz todos os campos da tarefa (id, title, description, task_type, status, scheduled_at, completed, recurrence_*), mais assignees [{id, name, agenda_color}], assignee_ids, conversation_display_id, conversation_contact_name, contact_name/contact_phone/contact_email, meeting_url, calendar_color, is_readonly, is_private, guest_emails, attendee_rsvp e booking_id. Lista vazia = []. Com filtro de data (date_start/date_end) devolve TUDO do periodo sem paginar (teto de 10.000). Sem filtro de data, pagina por `page`/`per_page` — mas a resposta NAO traz numero de paginas nem total: pagina cheia sugere que ha mais.",
@@ -8372,7 +8379,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/account_tasks",
   "title": "Criar Tarefa",
-  "description": "Cria uma tarefa/compromisso. Obrigatorios: title, scheduled_at. Requer feature unified_agenda + LionLab PRO. Para task_type video_call ou meeting, o link do Google Meet é gerado automaticamente após ~5s (campo meeting_url). Reuniões com convidados NÃO suportam recorrência.",
+  "description": "Cria uma tarefa/compromisso. Obrigatorios: title, scheduled_at. Requer feature unified_agenda + LionLab PRO. Para task_type video_call ou meeting, o link do Google Meet é gerado automaticamente após ~5s (campo meeting_url). Reuniões com convidados NÃO suportam recorrência. **Tratamento em sessoes (15/09):** com tipo `sessions_enabled`, o agendamento pelo painel/API nasce como sessao do tratamento do contato (proxima a marcar; cheio = sessao extra ate 60; concluido = ciclo novo) e a tarefa devolve `tratamento` {id, sessao, total, titulo} (nulo em compromisso comum). `treatment.*` cria o plano; `agenda_treatment_id` + `treatment_session_number` marcam uma sessao pedida.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8493,6 +8500,48 @@
     "location": "body",
     "required": false,
     "description": "IGNORADO — não é consumido pelo endpoint"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o compromisso nasce. NULO = agenda principal, que e onde moram os compromissos de quem nao usa multiplas agendas. So aceita agenda que o usuario ENXERGA; agenda de outra conta e recusada."
+   },
+   {
+    "name": "treatment.sessions",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Modo booking, tipo com sessoes: quantidade de sessoes do programa NOVO (2 a 60). Sem isto vale o padrao do tipo. Validado antes da reserva (422)"
+   },
+   {
+    "name": "treatment.interval_value",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Modo booking: intervalo entre sessoes (1 a 365)"
+   },
+   {
+    "name": "treatment.interval_unit",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Modo booking: days, weeks ou months"
+   },
+   {
+    "name": "agenda_treatment_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "'Marcar proxima': ID do programa do CONTATO ao qual esta sessao pertence (programa de outra ficha = 422)"
+   },
+   {
+    "name": "treatment_session_number",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "'Marcar proxima': numero da sessao pedida (1..N); sessao ja marcada = 422 'Essa sessao ja foi marcada'"
    }
   ],
   "returns": "tarefa/agenda criado (com novo ID)",
@@ -8511,7 +8560,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/account_tasks/{id}",
   "title": "Detalhe da Tarefa",
-  "description": "Retorna detalhes de uma tarefa. Retorna detalhes completos de UM tarefa/agenda específico pelo ID. Inclui campos relacionais quando aplicável.",
+  "description": "Retorna detalhes de uma tarefa. Retorna detalhes completos de UM tarefa/agenda específico pelo ID. Inclui campos relacionais quando aplicável. Cada tarefa traz `tratamento` {id, sessao, total, titulo} quando e sessao de um tratamento em sessoes (15/09); nulo em compromisso comum.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8535,7 +8584,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/account_tasks/{id}",
   "title": "Atualizar Tarefa",
-  "description": "Atualiza uma tarefa. Campos alterados em video_call/meeting disparam sync com Google Calendar. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, description, task_type, priority, scheduled_at, duration_minutes.",
+  "description": "Atualiza uma tarefa. Campos alterados em video_call/meeting disparam sync com Google Calendar. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, description, task_type, priority, scheduled_at, duration_minutes. **Tratamento em sessoes (15/09):** com tipo `sessions_enabled`, o agendamento pelo painel/API nasce como sessao do tratamento do contato (proxima a marcar; cheio = sessao extra ate 60; concluido = ciclo novo) e a tarefa devolve `tratamento` {id, sessao, total, titulo} (nulo em compromisso comum). `treatment.*` cria o plano; `agenda_treatment_id` + `treatment_session_number` marcam uma sessao pedida.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8656,6 +8705,55 @@
     "location": "body",
     "required": false,
     "description": "Incluir email do contato como convidado"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o compromisso nasce. NULO = agenda principal, que e onde moram os compromissos de quem nao usa multiplas agendas. So aceita agenda que o usuario ENXERGA; agenda de outra conta e recusada."
+   },
+   {
+    "name": "attendance",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Presenca: attended (compareceu) ou no_show (faltou). E um CARIMBO, nao um status — nao substitui `status`, e marcar falta NAO devolve o horario para a agenda."
+   },
+   {
+    "name": "treatment.sessions",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Modo booking, tipo com sessoes: quantidade de sessoes do programa NOVO (2 a 60). Sem isto vale o padrao do tipo. Validado antes da reserva (422)"
+   },
+   {
+    "name": "treatment.interval_value",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Modo booking: intervalo entre sessoes (1 a 365)"
+   },
+   {
+    "name": "treatment.interval_unit",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Modo booking: days, weeks ou months"
+   },
+   {
+    "name": "agenda_treatment_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "'Marcar proxima': ID do programa do CONTATO ao qual esta sessao pertence (programa de outra ficha = 422)"
+   },
+   {
+    "name": "treatment_session_number",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "'Marcar proxima': numero da sessao pedida (1..N); sessao ja marcada = 422 'Essa sessao ja foi marcada'"
    }
   ],
   "returns": "tarefa/agenda atualizado",
@@ -8733,6 +8831,13 @@
     "location": "path",
     "required": true,
     "description": "ID"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o compromisso nasce. NULO = agenda principal, que e onde moram os compromissos de quem nao usa multiplas agendas. So aceita agenda que o usuario ENXERGA; agenda de outra conta e recusada."
    }
   ],
   "returns": "tarefa atualizada",
@@ -8804,6 +8909,20 @@
     "location": "body",
     "required": false,
     "description": "Data"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o compromisso nasce. NULO = agenda principal, que e onde moram os compromissos de quem nao usa multiplas agendas. So aceita agenda que o usuario ENXERGA; agenda de outra conta e recusada."
+   },
+   {
+    "name": "attendance",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Presenca: attended (compareceu) ou no_show (faltou). E um CARIMBO, nao um status — nao substitui `status`, e marcar falta NAO devolve o horario para a agenda."
    }
   ],
   "returns": "tarefa/agenda atualizado",
@@ -8849,7 +8968,15 @@
   "title": "Meu Dia",
   "description": "Retorna tarefas agrupadas: atrasadas, hoje, amanhã, próximos 7 dias. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda).",
   "category": "Agenda / Tarefas",
-  "params": [],
+  "params": [
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
+   }
+  ],
   "returns": "Objeto com QUATRO listas separadas, sem meta e sem payload: { overdue: [...], today: [...], tomorrow: [...], next_7_days: [...] }. Traz APENAS tarefas em aberto (status pendente ou adiada — concluida/cancelada nao aparece) e nao ocultas, ja filtradas pela permissao de quem chama (administrador ve todas; agente ve so as que criou ou em que e responsavel). Agrupamento pela data agendada: overdue = antes de hoje 00:00 (ordenado da mais recente para a mais antiga), today = hoje, tomorrow = amanha, next_7_days = ate 7 dias a frente. Cada item e a tarefa completa (serializacao do modelo AccountTask, ja com assignees/assignee_ids, completed, dados de recorrencia, conversation_display_id, nome/telefone/email do contato, meeting_url e links de booking). Sem paginacao (teto de 10 mil por grupo).",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
@@ -8868,7 +8995,15 @@
   "title": "Contagem Badge",
   "description": "Retorna contagem para badge de tarefas pendentes. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda).",
   "category": "Agenda / Tarefas",
-  "params": [],
+  "params": [
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
+   }
+  ],
   "returns": "Objeto simples, NAO e lista: { overdue_count, today_count }. `today_count` = quantas tarefas pendentes ou adiadas estao marcadas para HOJE. `overdue_count` vem SEMPRE 0 — de proposito, o contador do badge nao inclui atrasadas. Para ver as tarefas em si, use a listagem de tarefas.",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
@@ -9933,6 +10068,97 @@
     "location": "body",
     "required": false,
     "description": "Lembretes do agendamento (o bloco '1d antes do evento' da tela). Array de objetos: {id (obrigatorio para EDITAR o existente — sem id CRIA outro), offset_direction ('before'/'after'), offset_days, offset_hours, offset_minutes, message_body, blocks, active, position, _destroy}. IMPORTANTE: message_body E blocks[0].content precisam do MESMO texto — a tela le blocks e o envio usa message_body; gravar so um deixa a tela e a mensagem entregue diferentes. blocks = [{type:'text', content:'...'}]. Aceita variaveis {{titulo}}, {{data}}, {{horario}} e quebra de linha (\\n)."
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o agendamento feito por este Booking vai nascer. NULO = agenda principal, que e o que todo Booking de hoje herda."
+   },
+   {
+    "name": "allow_reschedule",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode remarcar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "allow_cancel",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode cancelar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "ask_attendance_confirmation",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Mostra o botao 'Sim, vou comparecer' na pagina publica. Padrao FALSE. Ligado, use a variavel {{link_confirmar}} na mensagem para entregar o link ao cliente."
+   },
+   {
+    "name": "reschedule_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para remarcar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "cancel_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para cancelar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "reschedule_max_advance_days",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ate quantos dias a frente o cliente pode remarcar. Vazio usa o max_advance_days do tipo."
+   },
+   {
+    "name": "max_reschedules",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Quantas vezes o mesmo agendamento pode ser remarcado. Vazio = sem teto."
+   },
+   {
+    "name": "manage_page_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}}. Variavel desconhecida sai CRUA para o cliente."
+   },
+   {
+    "name": "booking_event_type.sessions_enabled",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Programa de sessoes: este tipo e UMA sessao de um programa com varias (15/09; tratamento, mentoria, onboarding). Ligado, todo agendamento deste tipo nasce (ou engrossa) um tratamento do contato"
+   },
+   {
+    "name": "booking_event_type.sessions_default_count",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Quantidade padrao de sessoes (2 a 60; obrigatorio com sessions_enabled)"
+   },
+   {
+    "name": "booking_event_type.sessions_interval_value",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Intervalo padrao entre sessoes (1 a 365; obrigatorio com sessions_enabled)"
+   },
+   {
+    "name": "booking_event_type.sessions_interval_unit",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Unidade do intervalo: days, weeks ou months (obrigatorio com sessions_enabled)"
    }
   ],
   "returns": "tipo de evento criado (com novo ID)",
@@ -10038,6 +10264,97 @@
     "location": "body",
     "required": false,
     "description": "Lembretes do agendamento (o bloco '1d antes do evento' da tela). Array de objetos: {id (obrigatorio para EDITAR o existente — sem id CRIA outro), offset_direction ('before'/'after'), offset_days, offset_hours, offset_minutes, message_body, blocks, active, position, _destroy}. IMPORTANTE: message_body E blocks[0].content precisam do MESMO texto — a tela le blocks e o envio usa message_body; gravar so um deixa a tela e a mensagem entregue diferentes. blocks = [{type:'text', content:'...'}]. Aceita variaveis {{titulo}}, {{data}}, {{horario}} e quebra de linha (\\n)."
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o agendamento feito por este Booking vai nascer. NULO = agenda principal, que e o que todo Booking de hoje herda."
+   },
+   {
+    "name": "allow_reschedule",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode remarcar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "allow_cancel",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode cancelar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "ask_attendance_confirmation",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Mostra o botao 'Sim, vou comparecer' na pagina publica. Padrao FALSE. Ligado, use a variavel {{link_confirmar}} na mensagem para entregar o link ao cliente."
+   },
+   {
+    "name": "reschedule_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para remarcar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "cancel_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para cancelar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "reschedule_max_advance_days",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ate quantos dias a frente o cliente pode remarcar. Vazio usa o max_advance_days do tipo."
+   },
+   {
+    "name": "max_reschedules",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Quantas vezes o mesmo agendamento pode ser remarcado. Vazio = sem teto."
+   },
+   {
+    "name": "manage_page_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}}. Variavel desconhecida sai CRUA para o cliente."
+   },
+   {
+    "name": "booking_event_type.sessions_enabled",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Programa de sessoes: este tipo e UMA sessao de um programa com varias (15/09; tratamento, mentoria, onboarding). Ligado, todo agendamento deste tipo nasce (ou engrossa) um tratamento do contato"
+   },
+   {
+    "name": "booking_event_type.sessions_default_count",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Quantidade padrao de sessoes (2 a 60; obrigatorio com sessions_enabled)"
+   },
+   {
+    "name": "booking_event_type.sessions_interval_value",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Intervalo padrao entre sessoes (1 a 365; obrigatorio com sessions_enabled)"
+   },
+   {
+    "name": "booking_event_type.sessions_interval_unit",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Unidade do intervalo: days, weeks ou months (obrigatorio com sessions_enabled)"
    }
   ],
   "returns": "tipo de evento atualizado",
@@ -10653,6 +10970,69 @@
     "location": "body",
     "required": true,
     "description": "update, cancel ou backfill"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "AGENDA (unidade) em que o agendamento feito por este Booking vai nascer. NULO = agenda principal, que e o que todo Booking de hoje herda."
+   },
+   {
+    "name": "allow_reschedule",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode remarcar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "allow_cancel",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "O cliente pode cancelar pela pagina publica. Padrao true."
+   },
+   {
+    "name": "ask_attendance_confirmation",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Mostra o botao 'Sim, vou comparecer' na pagina publica. Padrao FALSE. Ligado, use a variavel {{link_confirmar}} na mensagem para entregar o link ao cliente."
+   },
+   {
+    "name": "reschedule_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para remarcar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "cancel_min_notice_hours",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Horas minimas de antecedencia para cancelar. Vazio/zero = sem limite."
+   },
+   {
+    "name": "reschedule_max_advance_days",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ate quantos dias a frente o cliente pode remarcar. Vazio usa o max_advance_days do tipo."
+   },
+   {
+    "name": "max_reschedules",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Quantas vezes o mesmo agendamento pode ser remarcado. Vazio = sem teto."
+   },
+   {
+    "name": "manage_page_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}}. Variavel desconhecida sai CRUA para o cliente."
    }
   ],
   "returns": "tipo de evento criado (com novo ID)",
@@ -13550,7 +13930,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Descricao"
+    "description": "Descricao CURTA do cargo: uma frase de ate 60 caracteres (ex.: 'Tudo, menos conversas das caixas em que nao foi adicionado.'). NAO repetir as permissoes aqui — a tela ja mostra na coluna Permissoes. Texto longo e cortado com reticencias na lista de Funcoes personalizadas (16/09/2026)."
    },
    {
     "name": "permissions",
@@ -13606,7 +13986,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/custom_roles/{id}",
   "title": "Atualizar Role",
-  "description": "Atualiza um role personalizado. Atualiza campos do papel personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, permissions.",
+  "description": "Atualiza um role personalizado. Atualiza campos do papel personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, permissions.",
   "category": "Roles Personalizados",
   "params": [
    {
@@ -13628,7 +14008,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Nova descricao do cargo"
+    "description": "Descricao CURTA do cargo: uma frase de ate 60 caracteres (ex.: 'Tudo, menos conversas das caixas em que nao foi adicionado.'). NAO repetir as permissoes aqui — a tela ja mostra na coluna Permissoes. Texto longo e cortado com reticencias na lista de Funcoes personalizadas (16/09/2026)."
    },
    {
     "name": "permissions",
@@ -32181,7 +32561,7 @@
   "path": "/api/v2/accounts/{account_id}/booking_reports",
   "title": "Relatorio de Agendamentos",
   "category": "Relatorios",
-  "description": "[GET] A aba Relatorios > Agendamentos (2026-08-19). Unidade = o AGENDAMENTO (Booking nativo: link publico, IA e Agenda do painel — NAO e e-Clinica). Padrao de periodo: 30 dias pra TRAS e 30 pra FRENTE (agenda tem futuro). A SITUACAO vem da TAREFA da Agenda (account_tasks.status), nao de bookings.status — quem conclui/cancela pela Agenda deixa o booking parado em 'confirmado'; ler bookings direto pra contar concluidos da zero. attendance_rate = concluidos / (concluidos + cancelados), em % — pendentes ficam FORA do denominador (ainda nao aconteceram); nao recalcule com o total. snoozed (adiado) sai separado de pending. Admin ou agente.",
+  "description": "[GET] A aba Relatorios > Agendamentos (2026-08-19). Unidade = o AGENDAMENTO (Booking nativo: link publico, IA e Agenda do painel — NAO e e-Clinica). Padrao de periodo: 30 dias pra TRAS e 30 pra FRENTE (agenda tem futuro). A SITUACAO vem da TAREFA da Agenda (account_tasks.status), nao de bookings.status — quem conclui/cancela pela Agenda deixa o booking parado em 'confirmado'; ler bookings direto pra contar concluidos da zero. attendance_rate (15/09) = attended / (attended + no_show), em %, pelas marcas Compareceu/Faltou; periodo SEM marca nenhuma cai na regra antiga concluidos / (concluidos + cancelados) — pendentes FORA do denominador (ainda nao aconteceram) — e attendance_basis diz qual valeu ('attendance' ou 'status'); nao recalcule com o total. snoozed (adiado) sai separado de pending. [15/09] totals traz tambem attended/no_show (marcas Compareceu/Faltou da tarefa — eixo proprio, NAO mexem no status nem na taxa) e a resposta ganha `treatments` (bloco Programas, refeito 15/09 a noite): o PERIODO since/until VALE; event_type_id recorta; user_id e status NAO. Programas: em_andamento e atrasados (medidos no FIM do periodo), comecaram/concluidos/encerrados (so se a data cair no periodo), sessoes_planejadas/sessoes_usadas/percentual (so dos em andamento). Sessoes do periodo: previstas = marcadas + nao_marcadas (nao_marcadas e PREVISAO), aconteceram, faltaram, taxa. Mais parados {programas, sessoes_restantes}, duracao {programas, dias_reais, dias_previstos}, linha[] {period, previstas, aconteceram, faltaram, aguardando (16/09), nao_marcadas} e por_tipo[] (mesmos campos + tipo). Sem valor em reais. Detalhe em lionchat://docs/reports-guide. Admin ou agente.",
   "params": [
    {
     "name": "since",
@@ -32226,7 +32606,7 @@
     "description": "day | week | month (agrupamento da timeline; default day)"
    }
   ],
-  "returns": "{period: {since, until, group_by}, totals: {total, pending, completed, cancelled, snoozed, attendance_rate}, timeline: [{period, count}], by_event_type, by_agent, by_origin}",
+  "returns": "{period: {since, until, group_by}, totals: {total, pending, completed, cancelled, snoozed, attended, no_show, attendance_rate, attendance_basis}, timeline: [{period, count}], by_event_type, by_agent, by_origin, treatments: {em_andamento, atrasados, comecaram, concluidos, encerrados, previstas, marcadas, aconteceram, faltaram, nao_marcadas, taxa, percentual, parados, duracao, linha, por_tipo}}",
   "common_use_cases": [
    "Quantos agendamentos foram marcados/concluidos/cancelados no mes",
    "Taxa de comparecimento por tipo de consulta ou por responsavel",
@@ -32726,7 +33106,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto), reminder_days (lembrete a cada N dias a quem nao assinou; 0 desliga; padrao 2)."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days."
    }
   ],
   "returns": "o modelo criado (id, name, kind, body, variables, roles_layout, progress)",
@@ -32788,7 +33168,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto), reminder_days (lembrete a cada N dias a quem nao assinou; 0 desliga; padrao 2)."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days."
    }
   ],
   "returns": "o modelo atualizado",
@@ -33102,5 +33482,650 @@
   "related_tools": [
    "lionchat_signature_envelopes_create"
   ]
+ },
+ {
+  "id": "lionchat_agendas_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agendas",
+  "title": "Listar agendas (unidades)",
+  "description": "Lista as AGENDAS da conta. Uma agenda e um LUGAR — uma unidade, uma filial, um consultorio —, nunca uma pessoa: tem fuso, cor, quem enxerga e conta Google proprios. Devolve so as que o usuario enxerga (admin ve todas). `meta` traz a cota: `liberada` (o recurso 'multiple_agendas' esta ligado na conta), `limite` (nulo = ilimitado), `usadas` e `pode_criar`. SEM o recurso a conta tem UMA agenda; compromissos com agenda_id nulo pertencem a ela. Cada agenda traz `google: { connected, email, state }` — a conta Google ligada a ela e o estado da sincronizacao (healthy / needs_reconnect / needs_calendar_selection / reactivatable; nulos sem conexao). [13/09]",
+  "category": "Agenda / Tarefas",
+  "params": []
+ },
+ {
+  "id": "lionchat_agendas_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agendas/{id}",
+  "title": "Ver agenda",
+  "description": "Detalhe de uma agenda (unidade): nome, fuso, cor, se e a principal e quem enxerga. Cada agenda traz `google: { connected, email, state }` — a conta Google ligada a ela e o estado da sincronizacao (healthy / needs_reconnect / needs_calendar_selection / reactivatable; nulos sem conexao). [13/09]",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da agenda"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_agendas_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/agendas",
+  "title": "Criar agenda (unidade)",
+  "description": "Cria uma agenda. SO ADMINISTRADOR. Exige o recurso 'multiple_agendas' ligado na conta (Super Admin) e respeita o numero de Extras Manuais — ZERO ali significa ILIMITADO. Sem o recurso, a conta fica com a agenda principal e a criacao e recusada.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome da unidade (ex.: Matriz, Consultorio Boa Vista). Obrigatorio, unico na conta."
+   },
+   {
+    "name": "timezone",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Fuso IANA (ex.: America/Sao_Paulo). VAZIO usa o fuso da conta. E o horario que aparece na tela e que vai escrito para o cliente."
+   },
+   {
+    "name": "color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor hex (#RRGGBB). Pinta o compromisso no calendario quando o tipo de Booking e o atendente nao tem cor propria."
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Agenda ativa. Padrao true."
+   },
+   {
+    "name": "position",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ordem na lista."
+   },
+   {
+    "name": "member_user_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs dos usuarios que enxergam. SUBSTITUI a lista inteira. Vazio em pessoas E equipes = todo mundo da conta enxerga."
+   },
+   {
+    "name": "member_team_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs das equipes que enxergam. SUBSTITUI a lista inteira. Quem entrar na equipe ganha acesso sozinho."
+   }
+  ]
+ },
+ {
+  "id": "lionchat_agendas_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/agendas/{id}",
+  "title": "Editar agenda",
+  "description": "Edita a agenda. SO ADMINISTRADOR. `member_user_ids`/`member_team_ids` SUBSTITUEM a lista inteira.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da agenda"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome da unidade (ex.: Matriz, Consultorio Boa Vista). Obrigatorio, unico na conta."
+   },
+   {
+    "name": "timezone",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Fuso IANA (ex.: America/Sao_Paulo). VAZIO usa o fuso da conta. E o horario que aparece na tela e que vai escrito para o cliente."
+   },
+   {
+    "name": "color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor hex (#RRGGBB). Pinta o compromisso no calendario quando o tipo de Booking e o atendente nao tem cor propria."
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Agenda ativa. Padrao true."
+   },
+   {
+    "name": "position",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ordem na lista."
+   },
+   {
+    "name": "member_user_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs dos usuarios que enxergam. SUBSTITUI a lista inteira. Vazio em pessoas E equipes = todo mundo da conta enxerga."
+   },
+   {
+    "name": "member_team_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs das equipes que enxergam. SUBSTITUI a lista inteira. Quem entrar na equipe ganha acesso sozinho."
+   }
+  ]
+ },
+ {
+  "id": "lionchat_agendas_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/agendas/{id}",
+  "title": "Excluir agenda",
+  "description": "Exclui a agenda. SO ADMINISTRADOR. A agenda PRINCIPAL nao pode ser excluida. Os compromissos dela NAO sao apagados — ficam sem agenda e passam a aparecer na principal.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da agenda"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_account_task_types_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/account_task_types",
+  "title": "Listar tipos de compromisso da conta",
+  "description": "Tipos de compromisso CRIADOS PELA EMPRESA, alem dos 7 de fabrica (task, follow_up, call, meeting, video_call, deadline, custom). Cada um tem `key` (o que fica gravado em account_tasks.task_type), `name` (o que aparece na tela) e `icon`. Leitura liberada a todos; criar/editar/excluir e so de administrador.",
+  "category": "Agenda / Tarefas",
+  "params": []
+ },
+ {
+  "id": "lionchat_account_task_types_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/account_task_types",
+  "title": "Criar tipo de compromisso",
+  "description": "Cria um tipo com o nome da empresa (ex.: Consulta, Ondas de Choque, Visita ao imovel). SO ADMINISTRADOR. A `key` e derivada do nome e NUNCA muda depois — renomear troca so o que aparece na tela, o historico fica inteiro. O nome nao pode gerar uma key de fabrica. O tipo fica disponivel na lista Tipo do Booking e no Novo compromisso.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome do tipo. Obrigatorio, unico na conta, ate 60 caracteres."
+   },
+   {
+    "name": "icon",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Icone. LISTA FECHADA — qualquer outro valor e RECUSADO (nome fora da lista vira icone invisivel na tela). Valores: i-lucide-calendar-check, i-lucide-stethoscope, i-lucide-syringe, i-lucide-heart-pulse, i-lucide-smile, i-lucide-sparkles, i-lucide-utensils, i-lucide-dumbbell, i-lucide-home, i-lucide-scale, i-lucide-wrench, i-lucide-graduation-cap"
+   },
+   {
+    "name": "color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor hex (#RRGGBB), opcional."
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Padrao true."
+   },
+   {
+    "name": "position",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ordem na lista."
+   }
+  ]
+ },
+ {
+  "id": "lionchat_account_task_types_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/account_task_types/{id}",
+  "title": "Editar tipo de compromisso",
+  "description": "Edita o tipo. SO ADMINISTRADOR. A `key` e IMUTAVEL: renomear muda so o nome exibido.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do tipo"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Novo nome."
+   },
+   {
+    "name": "icon",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Icone (lista fechada): i-lucide-calendar-check, i-lucide-stethoscope, i-lucide-syringe, i-lucide-heart-pulse, i-lucide-smile, i-lucide-sparkles, i-lucide-utensils, i-lucide-dumbbell, i-lucide-home, i-lucide-scale, i-lucide-wrench, i-lucide-graduation-cap"
+   },
+   {
+    "name": "color",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Cor hex."
+   },
+   {
+    "name": "active",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Ativo."
+   },
+   {
+    "name": "position",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Ordem."
+   }
+  ]
+ },
+ {
+  "id": "lionchat_account_task_types_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/account_task_types/{id}",
+  "title": "Excluir tipo de compromisso",
+  "description": "SO ADMINISTRADOR. Tipo EM USO nao e apagado: e DESATIVADO (some das listas de escolha, mas os compromissos antigos continuam com nome e icone). A resposta traz `deactivated: true` nesse caso. So o que nunca foi usado e apagado de vez.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do tipo"
+   }
+  ]
+ },
+ {
+  "id": "lionchat_agenda_treatments_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agenda_treatments",
+  "title": "Listar tratamentos em sessoes de um contato",
+  "description": "Programas de sessoes do CONTATO (ficha; na tela o nome e PROGRAMA — pode ser tratamento, mentoria, onboarding): cada um e N sessoes de um tipo de agendamento com `sessions_enabled`. Devolve o RESUMO pronto por tratamento: `planejadas`, `usadas` (compareceu + faltou), `percentual`, `compareceu`, `faltou`, `marcadas`, `concluido`, `cheio` (tudo marcado, nada usado), `atrasado`, `proxima` ({numero, prevista_em}), `intervalo` e `sessoes` (uma linha por sessao: `numero`, `situacao` a_marcar|marcada|compareceu|faltou, `prevista_em`, `data_passou`, `tarefa` {id, title, scheduled_at, status, attendance} ou null, `oculta` quando o compromisso e de agenda/privado que o usuario nao enxerga). Em andamento primeiro, depois concluidos e encerrados. O programa NASCE junto do agendamento (tasks_create no modo booking ou link publico) — nao existe create aqui. Exige a Agenda ligada na conta.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "ID do contato (obrigatorio)"
+   }
+  ],
+  "returns": "Array de resumos de tratamento (em andamento primeiro).",
+  "common_use_cases": [
+   "Ver quantas sessoes o paciente ja usou e qual e a proxima a marcar",
+   "Descobrir se o tratamento esta atrasado e a data prevista da proxima sessao",
+   "Conferir compareceu/faltou por sessao antes de ligar para o paciente"
+  ],
+  "related_tools": [
+   "lionchat_agenda_treatments_show",
+   "lionchat_agenda_treatments_update",
+   "lionchat_tasks_create",
+   "lionchat_booking_event_types_update"
+  ]
+ },
+ {
+  "id": "lionchat_agenda_treatments_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agenda_treatments/{id}",
+  "title": "Ver um tratamento em sessoes",
+  "description": "O resumo de UM programa (mesmo formato da listagem). 404 fora da conta.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do tratamento"
+   }
+  ],
+  "returns": "Resumo do tratamento.",
+  "common_use_cases": [
+   "Reler o tratamento depois de marcar ou desmarcar uma sessao"
+  ],
+  "related_tools": [
+   "lionchat_agenda_treatments_list",
+   "lionchat_agenda_treatments_update"
+  ]
+ },
+ {
+  "id": "lionchat_agenda_treatments_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/agenda_treatments/{id}",
+  "title": "Ajustar um tratamento em sessoes (quantidade, encerrar, reabrir)",
+  "description": "Muda a quantidade de sessoes (`planned_sessions`, 2..60, NUNCA abaixo da maior sessao ja marcada — 422 'Ha sessoes marcadas alem dessa quantidade') e encerra/reabre (`status`: `closed` grava motivo `manual`; `active` reabre). Reabrir com OUTRO tratamento em andamento do mesmo tipo para o contato e recusado com 422 ('Ja existe um programa em andamento deste tipo para este contato'). Programa encerrado por mesclagem de fichas (`close_reason: mesclagem`) fica so como historico. Qualquer usuario da conta pode ajustar. O ajuste roda sob a MESMA trava do agendamento (conta, contato, tipo).",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do tratamento"
+   },
+   {
+    "name": "agenda_treatment.planned_sessions",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Quantidade de sessoes (2 a 60; nunca abaixo da maior sessao marcada)"
+   },
+   {
+    "name": "agenda_treatment.status",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "`closed` para encerrar, `active` para reabrir"
+   }
+  ],
+  "returns": "Resumo do tratamento ja atualizado.",
+  "common_use_cases": [
+   "Aumentar de 5 para 8 sessoes o pacote de um paciente",
+   "Encerrar um tratamento abandonado",
+   "Reabrir um tratamento encerrado por engano"
+  ],
+  "related_tools": [
+   "lionchat_agenda_treatments_list",
+   "lionchat_agenda_treatments_show"
+  ]
+ },
+ {
+  "id": "lionchat_agenda_treatments_plano_sugerido",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agenda_treatments/{id}/plano_sugerido",
+  "title": "Programa: sugestao de datas para marcar todas",
+  "category": "Agenda / Tarefas",
+  "description": "[GET] (15/09) O que a tela de conferencia do \"Marcar todas as sessoes\" mostra ANTES de marcar nada. Devolve, por sessao que ainda falta: `numero`, `prevista_em` (a data pela regra do programa), `data`/`slot` sugeridos, `slots` (os horarios livres daquele dia) e `deslocada` (true = o dia previsto nao tinha vaga e a sugestao andou para a frente). Traz tambem `timezone` e `tipo` (dias da semana configurados e janela de antecedencia) para o calendario de vagas acender os dias certos. LEITURA PURA: nada e gravado. 422 quando o programa perdeu o tipo de agendamento. Exige a Agenda ligada na conta.",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do programa (agenda_treatment)"
+   }
+  ],
+  "returns": "{ timezone, tipo: {booking_availabilities, max_advance_days, available_from, available_until, duration_minutes}, sessoes: [{numero, prevista_em, data, slot, slots, deslocada}] }",
+  "common_use_cases": [
+   "Mostrar as datas sugeridas antes de marcar todas as sessoes que faltam",
+   "Saber quais sessoes nao tem vaga na janela de procura (data nula)"
+  ],
+  "related_tools": [
+   "lionchat_agenda_treatments_marcar_todas",
+   "lionchat_agenda_treatments_show",
+   "lionchat_booking_event_types_slots"
+  ]
+ },
+ {
+  "id": "lionchat_agenda_treatments_marcar_todas",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/agenda_treatments/{id}/marcar_todas",
+  "title": "Programa: marcar varias sessoes de uma vez",
+  "category": "Agenda / Tarefas",
+  "description": "[POST] (15/09) Marca de uma vez as sessoes confirmadas do programa. Body: `sessoes: [{numero, date, slot}]` — o numero da sessao, o dia (YYYY-MM-DD) e o horario (HH:MM). NAO e transacao unica de proposito: cada sessao e uma reserva DE VERDADE (cria a tarefa, dispara confirmacao, lembrete e Google como qualquer agendamento), entao uma falha no meio NAO desfaz as que ja entraram na agenda — a resposta e 200 com `marcadas` e `falhas: [{numero, erro}]`. ATENCAO: com confirmacao ligada no tipo, o cliente recebe UMA mensagem por sessao. Teto de 60 sessoes por chamada. 422 se o programa estiver encerrado/concluido ou sem tipo de agendamento. Sessao que ja tem compromisso vivo volta em `falhas` ('Essa sessao ja foi marcada').",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do programa (agenda_treatment)"
+   },
+   {
+    "name": "sessoes",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Lista [{numero, date, slot}] — use o `plano_sugerido` para montar"
+   }
+  ],
+  "returns": "{ marcadas: [numeros], falhas: [{numero, erro}], tratamento: resumo atualizado }",
+  "common_use_cases": [
+   "Marcar todas as sessoes que faltam num pacote de fisioterapia/mentoria/onboarding",
+   "Reagendar em lote as sessoes que ainda nao aconteceram"
+  ],
+  "related_tools": [
+   "lionchat_agenda_treatments_plano_sugerido",
+   "lionchat_tasks_create",
+   "lionchat_agenda_treatments_update"
+  ]
+ },
+ {
+  "id": "lionchat_agenda_holidays_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agenda_holidays",
+  "title": "Listar feriados da agenda",
+  "description": "Feriados cadastrados pela conta (aparecem como faixa na Agenda; NAO bloqueiam horario — decisao do dono 14/09). COM `from`/`to` devolve o periodo pedido (passado inclusive); SEM periodo devolve so os que ainda estao por vir, do mais proximo ao mais distante. Cada item: `id`, `name`, `date`, `start_time`, `end_time`, `all_agendas`, `dia_inteiro`, `agenda_ids`, `agenda_names`. Leitura liberada a todos.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "from",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Inicio do periodo (YYYY-MM-DD) — junto com `to`"
+   },
+   {
+    "name": "to",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim do periodo (YYYY-MM-DD) — junto com `from`"
+   }
+  ],
+  "returns": "Array de feriados.",
+  "common_use_cases": [
+   "Ver os feriados do mes antes de sugerir horario",
+   "Conferir se um feriado vale para todas as agendas ou so para uma unidade"
+  ],
+  "related_tools": [
+   "lionchat_agenda_holidays_create",
+   "lionchat_agenda_holidays_update",
+   "lionchat_agenda_holidays_destroy",
+   "lionchat_agendas_list"
+  ]
+ },
+ {
+  "id": "lionchat_agenda_holidays_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/agenda_holidays",
+  "title": "Cadastrar feriado da agenda",
+  "description": "Cria um feriado. SO ADMINISTRADOR. Ou vale para TODAS as agendas (`all_agendas: true`) ou aponta agendas especificas (`agenda_ids`, so ids DESTA conta) — sem uma coisa nem outra e recusado com 422 (feriado que nao vale para ninguem). Sem `start_time`/`end_time` e dia inteiro.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "agenda_holiday.name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome do feriado"
+   },
+   {
+    "name": "agenda_holiday.date",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Data (YYYY-MM-DD)"
+   },
+   {
+    "name": "agenda_holiday.start_time",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Hora inicial (HH:MM) — vazio = dia inteiro"
+   },
+   {
+    "name": "agenda_holiday.end_time",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Hora final (HH:MM)"
+   },
+   {
+    "name": "agenda_holiday.all_agendas",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Vale para todas as agendas (unidades) da conta"
+   },
+   {
+    "name": "agenda_holiday.agenda_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs das agendas em que vale (ignorado com all_agendas)"
+   }
+  ],
+  "returns": "Feriado criado (201).",
+  "common_use_cases": [
+   "Cadastrar o feriado municipal so da unidade da filial",
+   "Marcar o recesso de fim de ano para todas as agendas"
+  ],
+  "related_tools": [
+   "lionchat_agenda_holidays_list",
+   "lionchat_agenda_holidays_update",
+   "lionchat_agendas_list"
+  ]
+ },
+ {
+  "id": "lionchat_agenda_holidays_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/agenda_holidays/{id}",
+  "title": "Editar feriado da agenda",
+  "description": "Edita nome, data, horario e alcance (todas as agendas ou lista de agendas). SO ADMINISTRADOR. Mesma regra do create: sem alcance nenhum e recusado com 422.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do feriado"
+   },
+   {
+    "name": "agenda_holiday.name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome"
+   },
+   {
+    "name": "agenda_holiday.date",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Data (YYYY-MM-DD)"
+   },
+   {
+    "name": "agenda_holiday.start_time",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Hora inicial (HH:MM)"
+   },
+   {
+    "name": "agenda_holiday.end_time",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Hora final (HH:MM)"
+   },
+   {
+    "name": "agenda_holiday.all_agendas",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Vale para todas as agendas"
+   },
+   {
+    "name": "agenda_holiday.agenda_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs das agendas em que vale"
+   }
+  ],
+  "returns": "Feriado atualizado.",
+  "common_use_cases": [
+   "Trocar a data de um feriado cadastrado errado",
+   "Estender um feriado da matriz para todas as unidades"
+  ],
+  "related_tools": [
+   "lionchat_agenda_holidays_list",
+   "lionchat_agenda_holidays_create"
+  ]
+ },
+ {
+  "id": "lionchat_agenda_holidays_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/agenda_holidays/{id}",
+  "title": "Excluir feriado da agenda",
+  "description": "Apaga o feriado. SO ADMINISTRADOR.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do feriado"
+   }
+  ],
+  "returns": "200 sem corpo.",
+  "common_use_cases": [
+   "Remover um feriado cadastrado por engano"
+  ],
+  "related_tools": [
+   "lionchat_agenda_holidays_list"
+  ]
+ },
+ {
+  "id": "lionchat_google_calendar_agendas",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/google_calendar/agendas",
+  "title": "Google Calendar por agenda (unidade)",
+  "description": "Uma linha por AGENDA com o estado do Google de cada uma: `connected`, `state`, `calendar_id`, `connected_by`. A conexao Google e UMA POR AGENDA — cada unidade liga a conta Google dela, inclusive a mesma pessoa com contas diferentes. SO ADMINISTRADOR. Conta sem agendas devolve uma linha com agenda_id nulo (a principal).",
+  "category": "Integracoes / Google Calendar",
+  "params": []
  }
 ]
