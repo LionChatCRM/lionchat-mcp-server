@@ -722,3 +722,30 @@ sai. Confira `last_incoming_message_at` na conversa: vazio ou antigo = janela fe
 Desde 02/09 a mensagem que chega ADOTA essa conversa (não abre outra). Se um fluxo/automação/IA
 dependia do gatilho **"conversa criada"** para acordar nesse caso, ele não roda mais na adoção —
 troque para **"Conversa reaberta"**.
+
+## "A mensagem aparece como 'Mensagem de tipo não suportado'" — 17/09/2026
+
+O que significa depende do canal.
+
+**WhatsApp oficial (Cloud API).** A Meta entrega a mensagem com `type: unsupported` e o erro 131051,
+e **não manda o conteúdo em caso nenhum** — nem texto, nem o vínculo com a mensagem original. O que
+ela manda é o SUBTIPO (`unsupported.type`), e desde 17/09 o aviso na conversa diz o que era: "Convite
+para entrar em um grupo", "Mensagem com botões", "Menu de opções", "Enquete", "Foto ou vídeo de
+visualização única", "O contato apagou uma mensagem", "O contato editou uma mensagem". Quando a
+própria Meta não sabe (`unknown`, a maioria dos casos) o texto continua sendo
+"Mensagem de tipo não suportado.".
+
+Consequência prática: nessa caixa **não existe API que recupere o conteúdo**. Se o cliente perguntar
+o que a pessoa mandou, a resposta honesta é o tipo, não o conteúdo. Não prometa recuperar.
+
+**WhatsApp QR Code.** Aqui o conteúdo chega inteiro e desde 17/09 aparece como mensagem normal:
+convite de grupo (com nome do grupo e link), disparo de marketing de outra empresa (texto + botões,
+cada um como `[Botão: X]`), menu em lista, enquete, pergunta de canal, cartão de cobrança, e a
+RESPOSTA do cliente a um menu de botões — que antes sumia inteira. Se ainda aparecer o aviso curto
+("Enquete", "Convite para entrar em um grupo") é porque aquele formato específico não tem leitor
+ainda; o texto diz o tipo.
+
+**Mensagens que continuam invisíveis, de propósito:** avisos internos do WhatsApp (chave de
+criptografia de grupo, aviso de protocolo, cabeçalho de álbum). Não são mensagem de ninguém. O
+cabeçalho de álbum some porque as fotos chegam logo em seguida como mensagens próprias — se o
+cliente reclamar que "faltou uma mensagem antes das fotos", era isso.

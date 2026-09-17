@@ -15592,6 +15592,75 @@
   ]
  },
  {
+  "id": "lionchat_inboxes_waha_groups_list_3",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/join_info",
+  "title": "Ver Grupo de um Convite (antes de entrar)",
+  "description": "SO LEITURA: pergunta ao WhatsApp que grupo e um codigo de convite, sem entrar. Use SEMPRE antes de lionchat_inboxes_waha_groups_create_6 para confirmar com a pessoa em qual grupo ela vai entrar. Aceita o codigo cru, o link inteiro (https://chat.whatsapp.com/CODIGO) ou o link no meio de um texto. So funciona em caixa de WhatsApp QR Code (Channel::Waha).",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "code",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "Codigo do convite, o link completo, ou um texto que contenha o link"
+   }
+  ],
+  "returns": "{ data: { JID, Name, ParticipantCount, OwnerPN, IsJoinApprovalRequired, Suspended, GroupCreated } } — formato cru do motor, em PascalCase. 422 quando o link nao e de convite de grupo.",
+  "common_use_cases": [
+   "Confirmar o nome e o tamanho do grupo antes de entrar",
+   "Saber se a entrada no grupo precisa de aprovacao de administrador",
+   "Validar um link de convite recebido numa conversa"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_list",
+   "lionchat_inboxes_waha_groups_show",
+   "lionchat_inboxes_waha_groups_create_5"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_create_6",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/join",
+  "title": "Entrar no Grupo por Convite",
+  "description": "Faz o numero conectado ENTRAR num grupo WhatsApp usando um codigo de convite, como participante comum. Acao que muda o WhatsApp do cliente: confirme antes com lionchat_inboxes_waha_groups_list_3. Recusa com 422 e reason 'groups_disabled' quando a caixa esta com 'Aceitar grupos' desligado — sem essa chave as mensagens do grupo nunca chegariam ao painel. So funciona em caixa de WhatsApp QR Code (Channel::Waha).",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "code",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Codigo do convite, o link completo, ou um texto que contenha o link"
+   }
+  ],
+  "returns": "{ success: true, data: { id: '...@g.us' } }. 422 com reason 'groups_disabled' se a caixa nao aceita grupos; 422 se o link nao e de convite.",
+  "common_use_cases": [
+   "Entrar num grupo a partir de um convite recebido na conversa",
+   "Entrar num grupo usando um link colado pelo cliente"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_list_3",
+   "lionchat_inboxes_waha_groups_list",
+   "lionchat_inboxes_waha_groups_show"
+  ]
+ },
+ {
   "id": "lionchat_inboxes_whatsapp_templates_list",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates",
@@ -26007,6 +26076,20 @@
     "location": "body",
     "required": false,
     "description": "Atributos extras (ex: { mark_as_seen: false } no WhatsApp oficial)"
+   },
+   {
+    "name": "out_of_office_enabled",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Liga/desliga a mensagem de ausencia da caixa (fora do horario de atendimento)"
+   },
+   {
+    "name": "out_of_office_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto da mensagem de ausencia"
    }
   ],
   "returns": "{ inbox }",
@@ -31482,13 +31565,6 @@
     "description": "Token do webhook da Greenn (valida a assinatura do que chega)"
    },
    {
-    "name": "inbox_id",
-    "type": "integer",
-    "location": "body",
-    "required": false,
-    "description": "Caixa onde a conversa do comprador é aberta"
-   },
-   {
     "name": "active",
     "type": "boolean",
     "location": "body",
@@ -31574,13 +31650,6 @@
     "location": "body",
     "required": false,
     "description": "Token do webhook da Greenn (valida a assinatura do que chega)"
-   },
-   {
-    "name": "inbox_id",
-    "type": "integer",
-    "location": "body",
-    "required": false,
-    "description": "Caixa onde a conversa do comprador é aberta"
    },
    {
     "name": "active",
