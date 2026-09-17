@@ -606,6 +606,21 @@ da consulta) — em vez de herdar sempre o horário da consulta. Há ainda um fi
 ("Só quando") por atributo `eclinica_*` do contato. Nada disso é editável pelo MCP: só pelo painel.
 Pra auditar o que foi/será disparado, use `lionchat_eclinica_reminder_history_list`.
 
+**Um aviso por CONSULTA (desde 2026-09-17).** A regra antiga "um lembrete por dia" saiu: paciente com duas
+consultas no mesmo dia — ou duas pessoas no mesmo celular (mãe e filho) — recebe um lembrete para CADA
+consulta, cada um com o seu nome, horário, profissional e link. Eles não saem juntos: sai o da consulta
+mais cedo e, ~10 minutos depois (na rodada seguinte), o da próxima. No histórico
+(`lionchat_eclinica_reminder_history_list`) isso aparece assim: o que espera a vez fica `pending` com
+`fire_at` no passado por alguns minutos (normal); `skip_reason = outra_consulta_no_mesmo_dia` só existe em
+linhas ANTIGAS (até 17/09); e `fail_reason = fluxo_ainda_em_andamento_com_este_contato` significa que o
+fluxo do aviso anterior ainda estava em andamento com aquele contato (típico de fluxo que aguarda o
+paciente clicar num botão) — pode ser reenviado com `lionchat_eclinica_reminder_history_reprocess`.
+O fluxo do lembrete recebe também `{{cliente_id}}` (código do paciente DAQUELA consulta na e-Clínica) e
+`{{agendatipo}}`; na automação, `{{agendamento.cliente_id}}` e `{{agendamento.agendatipo}}`. Ao consultar a
+agenda do paciente dentro do fluxo, use `{{cliente_id}}` do lembrete — a ficha do contato é uma por
+TELEFONE e guarda só o último paciente. Quem quiser "só um lembrete por dia" monta no próprio fluxo
+(condição num atributo da conversa com `{{data_consulta}}` + ação que grava o dia depois de enviar).
+
 ## Relatórios e Métricas
 
 ```

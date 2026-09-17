@@ -25594,7 +25594,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}/reminder_history",
   "title": "Histórico dos Lembretes e-Clínica",
-  "description": "Lista os disparos de lembrete agendados da integração e-Clínica (novo 23/07) — responde 'o lembrete do paciente X saiu?'. Cada item traz status (pending aguardando | fired enviado | cancelled | skipped pulado + skip_reason | failed falhou + fail_reason), datas (created_at recebido, fire_at agendado, fired_at disparado, data_consulta), flow_name, contact_name, compromisso e unidade. Somente administrador. [2026-07-25] O historico cobre os tres tipos de lembrete: consulta (conta a partir da data da consulta), laboratorio/medicacao (conta a partir da data prevista do laboratorio) e vencimento de cobranca (conta a partir do vencimento). O horario de cada disparo vem da 'Hora do disparo' configurada na linha do lembrete.",
+  "description": "Lista os disparos de lembrete agendados da integração e-Clínica (novo 23/07) — responde 'o lembrete do paciente X saiu?'. Cada item traz status (pending aguardando | fired enviado | cancelled | skipped pulado + skip_reason | failed falhou + fail_reason), datas (created_at recebido, fire_at agendado, fired_at disparado, data_consulta), flow_name, contact_name, compromisso e unidade. Somente administrador. [2026-07-25] O historico cobre os tres tipos de lembrete: consulta (conta a partir da data da consulta), laboratorio/medicacao (conta a partir da data prevista do laboratorio) e vencimento de cobranca (conta a partir do vencimento). O horario de cada disparo vem da 'Hora do disparo' configurada na linha do lembrete. [2026-09-17] Um lembrete por CONSULTA: paciente com duas consultas no mesmo dia (ou duas pessoas no mesmo celular) recebe um lembrete para cada uma, com ~10 minutos entre eles — o que espera a vez aparece como pending com fire_at ja no passado por alguns minutos (normal, nao e erro). fail_reason = fluxo_ainda_em_andamento_com_este_contato: o fluxo do aviso anterior ainda rodava com o contato (tipico de fluxo que aguarda o paciente clicar num botao); pode ser reprocessado. fail_reason = nao_disparou: causa mais comum e contato sem telefone. skip_reason = outra_consulta_no_mesmo_dia so existe em linhas antigas (regra removida em 17/09).",
   "category": "Integracoes",
   "params": [
    {
@@ -25672,7 +25672,8 @@
   "common_use_cases": [
    "Verificar se o lembrete de consulta de um paciente foi enviado",
    "Listar lembretes que falharam para reprocessar",
-   "Auditar os disparos agendados de um período"
+   "Auditar os disparos agendados de um período",
+   "Explicar por que um paciente com duas consultas no mesmo dia recebeu (ou ainda nao recebeu) o segundo lembrete"
   ],
   "related_tools": [
    "lionchat_eclinica_integrations_list",
@@ -25684,7 +25685,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}/reminder_history/{firing_id}/reprocess",
   "title": "Reprocessar Lembrete e-Clínica Falhado",
-  "description": "Reprocessa UM lembrete com status failed (novo 23/07): volta para pending e dispara de novo. Só funciona em lembrete FALHADO — status diferente retorna 422; corrida (dois cliques) retorna 409. Somente administrador.",
+  "description": "Reprocessa UM lembrete com status failed (novo 23/07): volta para pending e dispara de novo. Só funciona em lembrete FALHADO — status diferente retorna 422; corrida (dois cliques) retorna 409. Somente administrador. [2026-09-17] Serve tambem para o lembrete que falhou com fail_reason = fluxo_ainda_em_andamento_com_este_contato (o fluxo do aviso anterior ainda estava em andamento): se o paciente ja respondeu o primeiro aviso, o segundo sai; se ainda nao, falha de novo sem enviar mensagem. NAO usar em lembrete pending com horario passado ha poucos minutos — ele esta so esperando a vez e sai sozinho.",
   "category": "Integracoes",
   "params": [
    {

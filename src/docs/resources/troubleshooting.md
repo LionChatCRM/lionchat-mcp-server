@@ -749,3 +749,33 @@ ainda; o texto diz o tipo.
 criptografia de grupo, aviso de protocolo, cabeçalho de álbum). Não são mensagem de ninguém. O
 cabeçalho de álbum some porque as fotos chegam logo em seguida como mensagens próprias — se o
 cliente reclamar que "faltou uma mensagem antes das fotos", era isso.
+
+## "O paciente tem duas consultas no dia e recebeu um lembrete só" (e-Clínica) — 17/09/2026
+
+**Como é desde 17/09:** um lembrete por CONSULTA. Duas consultas no mesmo dia, ou duas pessoas no mesmo
+celular (mãe e filho), recebem um lembrete para cada consulta — cada um com o nome do paciente, o
+horário, o profissional e o link daquela consulta. A regra antiga ("um lembrete por dia", de 09/09)
+saiu do sistema; linhas antigas do histórico com `skip_reason = outra_consulta_no_mesmo_dia` são dela.
+
+**Eles não saem juntos.** Sai o da consulta mais cedo e, ~10 minutos depois, o da seguinte (três
+consultas = três rodadas). Ao consultar `lionchat_eclinica_reminder_history_list`:
+- `pending` com `fire_at` já no passado, há poucos minutos, e um irmão do mesmo contato/dia `fired` =
+  está esperando a vez. **Normal — não reprocessar, não reportar como erro.**
+- `failed` com `fail_reason = fluxo_ainda_em_andamento_com_este_contato` = o fluxo do aviso anterior
+  ainda estava rodando com aquele contato. É o esperado quando o fluxo do lembrete **aguarda o paciente
+  clicar num botão**: o segundo aviso só consegue sair depois que ele responder o primeiro. Pode ser
+  reenviado com `lionchat_eclinica_reminder_history_reprocess` (se o paciente ainda não respondeu, falha
+  de novo — sem mensagem e sem custo).
+- `failed` com `fail_reason = nao_disparou` continua sendo outra coisa; a causa mais comum é o contato
+  **sem telefone** (o cadastro do paciente na e-Clínica está sem celular, ou com número incompleto).
+
+**O cliente quer só um lembrete por dia?** Não é mais regra do sistema: monta-se no próprio fluxo do
+lembrete — condição comparando um atributo da conversa com `{{data_consulta}}` (se igual, encerra) e,
+depois do envio, ação que grava `{{data_consulta}}` nesse atributo.
+
+**Fluxo de lembrete que consulta a agenda do paciente:** use `{{cliente_id}}` (vem no próprio lembrete,
+é o paciente DAQUELA consulta) e não `contact.custom_attribute.eclinica_cliente_id` — a ficha do
+contato é uma por TELEFONE e guarda só o último paciente; com mãe e filho no mesmo celular o fluxo
+olharia a agenda da pessoa errada e poderia concluir que a consulta foi desmarcada. Lembretes criados
+antes de 17/09 podem não ter `{{cliente_id}}`: use a ficha só como reserva
+(`{{ cliente_id | default: contact.custom_attribute.eclinica_cliente_id }}`).
