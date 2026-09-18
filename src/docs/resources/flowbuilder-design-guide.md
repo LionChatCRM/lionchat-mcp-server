@@ -385,6 +385,25 @@ só pra destravar, ela pode sair.
 | `pagetrack_visited` / `pagetrack_event` | LionTrack |
 | `sla_check` | status do SLA da conversa (usa `value` = código fixo; ver abaixo) |
 
+**CAIXA DA CONVERSA e TIPO DE CAIXA (novo 17/09/2026):** duas condições da aba Conversas que perguntam
+ONDE a conversa está. Nasceram para o **Fluxo de Ações** (que roda em qualquer caixa), mas valem em
+qualquer tipo de flow. Não têm operador novo: só `equal` e `not_equal`, e o valor vai numa **LISTA**
+(`values`) — com lista, `equal` significa "é ALGUMA destas" e `not_equal` "não é NENHUMA destas".
+
+- **Caixa da conversa:** `{ "id": 1, "field": "{{inbox.id}}", "operator": "equal", "value": "", "values": ["342", "204"], "valueType": "inbox" }`
+  — cada item de `values` é o **id da caixa como STRING**.
+- **Tipo de caixa:** `{ "id": 1, "field": "{{inbox.channel_type}}", "operator": "equal", "value": "", "values": ["Channel::Waha"], "valueType": "channel_type" }`
+  — cada item é o **nome técnico do canal**: `Channel::Waha` (WhatsApp QR Code), `Channel::Whatsapp`
+  (WhatsApp API Oficial), `Channel::WebWidget`, `Channel::Api`, `Channel::Email`,
+  `Channel::FacebookPage` (Facebook/Instagram), `Channel::TwilioSms`, `Channel::Sms`,
+  `Channel::Telegram`, `Channel::Line`.
+
+O `valueType` é OBRIGATÓRIO nas duas: é ele que faz a tela abrir o seletor certo (lista de caixas /
+lista de tipos). Sem ele a regra roda no motor e a tela não desenha campo nenhum para ela. Gravar o
+valor em `value` em vez de `values` é a mesma família do defeito de 02/09 descrito abaixo: o motor
+compara certo e a tela abre o seletor VAZIO. `{{inbox.name}}` existe como variável mas **não** é
+condição: comparar por nome quebra quando o cliente renomeia a caixa.
+
 > **ATENÇÃO — onde o VALOR vai (defeito real de 02/09/2026, conta 137):** no nó **Condição**, uma regra de atributo
 > (`valueType: "attr_config"`) com operador `equal`, `not_equal`, `contains` ou `not_contains` guarda o valor em
 > **`values: ["..."]` (lista)** e deixa `value: ""`. A TELA lê SÓ a lista: regra gravada com `value: "paid_ad"` e

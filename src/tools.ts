@@ -484,11 +484,11 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-16)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-17)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
-═══ DOIS TIPOS DE FLOW (e o modo do conversation) ═══
+═══ TRES TIPOS DE FLOW (e o modo do conversation) ═══
 - conversation (default): dispara por evento de inbox. Criar via lionchat_flows_create.
   conversation_mode: 'individual' (1-a-1, default) ou 'group' (grupo WhatsApp). IMUTAVEL apos criar.
   O node update_group (Gestao de Grupos, 17 operacoes) roda em fluxo de QUALQUER modo/canal desde que a
@@ -501,6 +501,19 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   send_message, note (SEM wait, wait_response, update_group). No action de ai_tool NAO use keys da
   aba Sistema (send_webhook/start_flow/send_conversion). Vincular ao assistente: POST /flow_tools/{id}/assistants.
   Testar: POST /flow_tools/{id}/run.
+- action (Fluxo de Acoes, 17/09/2026): NAO pertence a caixa nenhuma e roda em QUALQUER conversa de
+  QUALQUER caixa — inclusive grupo. So executa acoes: NAO pode ter send_message, wait_response,
+  update_group nem end (a validacao recusa o save inteiro com "contains node types not allowed in
+  action flow"). Nodes permitidos: start, action, condition, wait, randomizer, api, ai,
+  set_variable, note. Criar via lionchat_flows_create com flow_type:'action', SEM inbox_ids e SEM
+  conversation_mode (o backend fixa 'individual'). Aceita os MESMOS gatilhos do conversation e roda
+  LADO A LADO com ele (nao entra no aviso de conflito de gatilho). Use quando a regra vale pra
+  empresa toda e nao depende da caixa (ex.: etiqueta 'urgente' -> atribui equipe de suporte).
+  Se precisa FALAR com a pessoa, o tipo e conversation.
+  AINDA NAO FUNCIONA: disparar flow 'action' por webhook de integracao (gateways de pagamento,
+  Webhook Universal, Meta Lead, e-Clinica) nem por gatilho de FORMULARIO — esses caminhos criam a
+  conversa usando a CAIXA do flow, que este tipo nao tem, e ele e descartado (no_inbox_linked).
+  Nao prometa isso ao cliente.
   Aviso de espera (10/09/2026): enquanto a ferramenta roda, o cliente recebe "So um momento, estou
   verificando isso pra voce...". Cada ferramenta escolhe o SEU no node start: data.toolWaitMessageEnabled
   (false desliga; AUSENTE = ligado — so um false de verdade desliga, "" ou lixo mantem ligado) e
@@ -836,6 +849,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       IANA ex. America/Sao_Paulo; outside_business_hours HERDA days/start_hour/end_hour/timezone da
       business_hours ANTERIOR no array — pode deixar ausentes que o backend preenche),
     can_reply/can_reply_closed, conversation_has_agent/no_agent,
+    CAIXA DA CONVERSA [17/09/2026]: field '{{inbox.id}}' com operator equal/not_equal e values
+      [id da caixa] — a condicao "Caixa da conversa" da tela. TIPO DE CAIXA: field
+      '{{inbox.channel_type}}' com values ['Channel::Waha'|'Channel::Whatsapp'|'Channel::Api'|
+      'Channel::Telegram'|'Channel::Email'|'Channel::WebWidget'|...] (valor TECNICO; a tela mostra
+      o rotulo). As duas nasceram pro Fluxo de Acoes, que roda em todas as caixas e precisa
+      perguntar onde esta antes de agir — mas valem em qualquer tipo de flow. valueType e
+      OBRIGATORIO: 'inbox' na primeira e 'channel_type' na segunda — e ele que faz a tela abrir o
+      seletor certo; sem ele a regra roda no motor e a tela nao desenha campo nenhum pra ela.
     conversation_no_team (NOVO 2026-08-15: conversa SEM equipe atribuida — e o preset "Sem equipe"
       da tela; operador dedicado, sem value), conversation_has_ai_agent/conversation_no_ai_agent
       (IA ativa/inativa na conversa; not_ai_agent = sinonimo de no_ai_agent),
@@ -937,9 +958,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         evento, sem laco). 'cancelled' cancela o AGENDAMENTO (desarma lembrete, mata o link de gerenciar).
         Origem gravada = 'fluxo', ator = o proprio flow. Sem 'remarcado'/'adiado'/'nao confirmado': o bloco NAO
         mexe em data.
-    Sistema (SO flow conversation): send_webhook({url,headers?,body?}), start_flow({flow_id}
+    Sistema (SO flow conversation e flow action): send_webhook({url,headers?,body?}), start_flow({flow_id}
       — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save mas IGNORADO
-      EM SILENCIO na execucao, e o fluxo para ali [2026-08-18]), deactivate_flow({}),
+      EM SILENCIO na execucao, e o fluxo para ali [2026-08-18].
+      CAIXA TEM QUE BATER [17/09/2026]: se o flow-alvo e do tipo conversation e NAO esta ligado a
+      caixa da conversa, a execucao e RECUSADA e o passo fica com ERRO no historico
+      (inbox_mismatch) — antes rodava no lugar errado em silencio. Flow-alvo do tipo 'action' e
+      SEMPRE aceito, de qualquer origem, porque nao pertence a caixa nenhuma.
+      Flow de IA (ai_tool) nunca pode ser alvo), deactivate_flow({}),
       send_conversion({destinations:['meta'|'ga4'|'google_ads'], event_names:{meta?,google_ads?,ga4?},
         messaging_event_names:{meta?}, event_name, value?}) — NOVO 01/09, evento POR DESTINO desde 02/09,
         evento de ANUNCIO DE WHATSAPP desde 10/09: manda o evento de conversao pro
@@ -1145,6 +1171,8 @@ conversation.id — JA E o numero que aparece no app (o motor devolve o display_
   conversation.display_id e so um APELIDO, aceito desde 29/07, que devolve o mesmo numero — antes
   disso resolvia VAZIO, e todo link de conversa montado por flow saiu quebrado.
 conversation.status, conversation.team_id, conversation.custom_attribute.X
+inbox.id, inbox.name, inbox.channel_type (o TIPO do canal: Channel::Waha, Channel::Whatsapp,
+  Channel::Api...; NOVO 17/09/2026 — usado pela condicao "Tipo de caixa")
 conversation.label (SINGULAR — etiquetas da conversa em texto separado por virgula).
   {{conversation.labels}} NAO EXISTE: some do texto sem erro nenhum.
 agent.* = o RESPONSAVEL da conversa: agent.name, agent.first_name, agent.last_name,
