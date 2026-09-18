@@ -722,3 +722,81 @@ sai. Confira `last_incoming_message_at` na conversa: vazio ou antigo = janela fe
 Desde 02/09 a mensagem que chega ADOTA essa conversa (não abre outra). Se um fluxo/automação/IA
 dependia do gatilho **"conversa criada"** para acordar nesse caso, ele não roda mais na adoção —
 troque para **"Conversa reaberta"**.
+
+## "A mensagem aparece como 'Mensagem de tipo não suportado'" — 17/09/2026
+
+O que significa depende do canal.
+
+**WhatsApp oficial (Cloud API).** A Meta entrega a mensagem com `type: unsupported` e o erro 131051,
+e **não manda o conteúdo em caso nenhum** — nem texto, nem o vínculo com a mensagem original. O que
+ela manda é o SUBTIPO (`unsupported.type`), e desde 17/09 o aviso na conversa diz o que era: "Convite
+para entrar em um grupo", "Mensagem com botões", "Menu de opções", "Enquete", "Foto ou vídeo de
+visualização única", "O contato apagou uma mensagem", "O contato editou uma mensagem". Quando a
+própria Meta não sabe (`unknown`, a maioria dos casos) o texto continua sendo
+"Mensagem de tipo não suportado.".
+
+Consequência prática: nessa caixa **não existe API que recupere o conteúdo**. Se o cliente perguntar
+o que a pessoa mandou, a resposta honesta é o tipo, não o conteúdo. Não prometa recuperar.
+
+**WhatsApp QR Code.** Aqui o conteúdo chega inteiro e desde 17/09 aparece como mensagem normal:
+convite de grupo (com nome do grupo e link), disparo de marketing de outra empresa (texto + botões,
+cada um como `[Botão: X]`), menu em lista, enquete, pergunta de canal, cartão de cobrança, e a
+RESPOSTA do cliente a um menu de botões — que antes sumia inteira. Se ainda aparecer o aviso curto
+("Enquete", "Convite para entrar em um grupo") é porque aquele formato específico não tem leitor
+ainda; o texto diz o tipo.
+
+**Mensagens que continuam invisíveis, de propósito:** avisos internos do WhatsApp (chave de
+criptografia de grupo, aviso de protocolo, cabeçalho de álbum). Não são mensagem de ninguém. O
+cabeçalho de álbum some porque as fotos chegam logo em seguida como mensagens próprias — se o
+cliente reclamar que "faltou uma mensagem antes das fotos", era isso.
+
+## "O paciente tem duas consultas no dia e recebeu um lembrete só" (e-Clínica) — 17/09/2026
+
+**Como é desde 17/09:** um lembrete por CONSULTA. Duas consultas no mesmo dia, ou duas pessoas no mesmo
+celular (mãe e filho), recebem um lembrete para cada consulta — cada um com o nome do paciente, o
+horário, o profissional e o link daquela consulta. A regra antiga ("um lembrete por dia", de 09/09)
+saiu do sistema; linhas antigas do histórico com `skip_reason = outra_consulta_no_mesmo_dia` são dela.
+
+**Eles não saem juntos.** Sai o da consulta mais cedo e, ~10 minutos depois, o da seguinte (três
+consultas = três rodadas). Ao consultar `lionchat_eclinica_reminder_history_list`:
+- `pending` com `fire_at` já no passado, há poucos minutos, e um irmão do mesmo contato/dia `fired` =
+  está esperando a vez. **Normal — não reprocessar, não reportar como erro.**
+- `failed` com `fail_reason = fluxo_ainda_em_andamento_com_este_contato` = o fluxo do aviso anterior
+  ainda estava rodando com aquele contato. É o esperado quando o fluxo do lembrete **aguarda o paciente
+  clicar num botão**: o segundo aviso só consegue sair depois que ele responder o primeiro. Pode ser
+  reenviado com `lionchat_eclinica_reminder_history_reprocess` (se o paciente ainda não respondeu, falha
+  de novo — sem mensagem e sem custo).
+- `failed` com `fail_reason = nao_disparou` continua sendo outra coisa; a causa mais comum é o contato
+  **sem telefone** (o cadastro do paciente na e-Clínica está sem celular, ou com número incompleto).
+
+**O cliente quer só um lembrete por dia?** Não é mais regra do sistema: monta-se no próprio fluxo do
+lembrete — condição comparando um atributo da conversa com `{{data_consulta}}` (se igual, encerra) e,
+depois do envio, ação que grava `{{data_consulta}}` nesse atributo.
+
+**Fluxo de lembrete que consulta a agenda do paciente:** use `{{cliente_id}}` (vem no próprio lembrete,
+é o paciente DAQUELA consulta) e não `contact.custom_attribute.eclinica_cliente_id` — a ficha do
+contato é uma por TELEFONE e guarda só o último paciente; com mãe e filho no mesmo celular o fluxo
+olharia a agenda da pessoa errada e poderia concluir que a consulta foi desmarcada. Lembretes criados
+antes de 17/09 podem não ter `{{cliente_id}}`: use a ficha só como reserva
+(`{{ cliente_id | default: contact.custom_attribute.eclinica_cliente_id }}`).
+
+---
+
+## "Marquei Faltou (ou Compareceu) e a tarefa continua pendente" — 17/09/2026
+
+**Não é defeito.** Presença (`attendance`) e situação (`status`) são campos separados de propósito: marcar
+Faltou/Compareceu não conclui a tarefa. Concluir um compromisso de Booking encerra os lembretes e o
+pós-atendimento dele e dispara o gatilho de fluxo "agendamento concluído" — inclusive para quem faltou.
+
+- O que o painel mostra ao lado da tarefa é o campo **`selo`** (só leitura): `no_show`, `attended`,
+  `rescheduled`, `completed`, `snoozed`, `cancelled` ou `pending`. Use ele para descrever o compromisso.
+- A tarefa marcada com presença continua nas pendências até alguém clicar em Concluir (ou a API mandar
+  concluir). Só conclua se o usuário pedir.
+- Antes de 17/09 o painel mostrava "Pendente" (e "Atrasada" na ficha do contato) mesmo com Faltou marcado —
+  era só a etiqueta; o dado sempre esteve gravado certo.
+
+## "Troquei o responsável de um agendamento e ele não mudou" — 17/09/2026
+
+Compromisso nascido de Booking (`booking_id` presente) tem responsável fixo: o profissional do tipo de
+evento. `assignee_ids` no update é ignorado (a resposta é 200 e o resto da edição vale). Para mudar quem
+atende, edite o tipo de evento — ou cancele e marque de novo em outro Booking.

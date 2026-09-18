@@ -932,3 +932,22 @@ Em `custom_roles_create` / `custom_roles_update`, a `description` é **uma frase
 na descrição** — a tela já as mostra na coluna "Permissões". Uma descrição de 180 caracteres
 escondeu o cargo recém-criado na lista de Funções personalizadas da conta 1 (a tela foi corrigida
 para cortar o texto com reticências, mas a descrição longa continua ilegível ali).
+
+## Entrar num grupo por convite (17/09/2026)
+
+Só em caixa de WhatsApp QR Code (`Channel::Waha`). São DUAS tools e a ordem importa.
+
+1. `lionchat_inboxes_waha_groups_list_3` (join_info) — SÓ LEITURA: diz qual é o grupo (`Name`,
+   `ParticipantCount`, `IsJoinApprovalRequired`). **Chame sempre primeiro** e confirme com a pessoa
+   em qual grupo ela vai entrar. Entrar é ação que muda o WhatsApp do cliente.
+2. `lionchat_inboxes_waha_groups_create_6` (join) — entra, como participante comum.
+
+As duas aceitam o código cru, o link inteiro (`https://chat.whatsapp.com/CODIGO`) ou um texto com o
+link no meio — não precisa extrair o código antes.
+
+**Recusa esperada:** 422 com `reason: groups_disabled` quando a caixa está com "Aceitar grupos"
+desligado. Não insista nem tente contornar: sem essa chave o WhatsApp nem entrega as mensagens do
+grupo, então o número entraria num grupo que nunca apareceria no painel. O caminho é o cliente ligar
+a opção nas configurações da caixa e tentar de novo.
+
+A resposta do join_info vem no formato cru do motor, em PascalCase (`Name`, não `name`).

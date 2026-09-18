@@ -97,6 +97,31 @@ Variável desconhecida **sai crua** para o cliente ("Olá {{name}}, ...").
 horário** para a agenda — decisão do dono. Não use `attendance` para deduzir se o compromisso está
 ativo; para isso existe `status`.
 
+Marcar Compareceu/Faltou também **não conclui a tarefa**: ela segue `pending` (e contando nas
+pendências) até alguém concluir. É de propósito — concluir um compromisso de Booking encerra os lembretes
+e as mensagens pós-atendimento dele e dispara o gatilho de fluxo "agendamento concluído". **Nunca conclua
+a tarefa só porque a presença foi marcada.**
+
+Para responder "o que aconteceu com este compromisso?" use o campo **`selo`** da tarefa (17/09), que já
+junta os dois eixos e a remarcação: `cancelled` > `no_show` / `attended` > `completed` > `snoozed` >
+`rescheduled` > `pending`. É o mesmo rótulo que o painel mostra ao lado da tarefa (Faltou, Compareceu,
+Remarcada...). É só de leitura.
+
+### Responsável de compromisso de Booking é FIXO
+
+O compromisso marcado por um tipo de evento (Booking) cai SEMPRE na agenda do profissional configurado
+nele. Na criação, `assignee_ids` nunca valeu; desde 17/09 também é **ignorado na edição**
+(`lionchat_tasks_update` / `_update_1`): a resposta é 200, o resto da edição vale e o responsável continua
+o mesmo. Para mudar quem atende, altere o profissional do tipo de evento (`booking_event_types_update`).
+
+### Ver como está o dia antes de marcar
+
+`lionchat_agent_availability_day` (17/09) devolve UM dia de até 6 pessoas: o expediente de cada uma e os
+intervalos já ocupados, em "HH:MM" do fuso pedido. O intervalo ocupado de qualquer pessoa da conta vem
+sempre (é o que permite marcar com um colega); o título do compromisso só vem para quem já o veria no
+calendário, e compromisso privado de outra pessoa nunca vem com título. Para Booking, os horários válidos
+continuam sendo os de `booking_event_types_slots` — essa ferramenta é para compromisso COMUM.
+
 ---
 
 ## 5. Google Calendar é UMA CONEXÃO POR AGENDA

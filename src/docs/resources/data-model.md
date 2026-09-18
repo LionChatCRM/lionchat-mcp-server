@@ -408,9 +408,16 @@ AccountTask (agenda interna)
 │   (painel|link|ia|sistema|fluxo) — QUEM agendou e por onde (14/09)
 ├── attendance (enum attended=0 / no_show=1, NULO = nada registrado — CARIMBO, não muda status)
 │   / attendance_by (polimórfico) / attendance_source — quem marcou Compareceu/Faltou (14/09)
+├── selo (SÓ LEITURA, calculado — 17/09): o rótulo ÚNICO que a tela mostra ao lado da tarefa, juntando
+│   `status` + `attendance` + remarcação: cancelled > no_show / attended > completed > snoozed >
+│   rescheduled > pending. `rescheduled` = data trocada pelo painel/fluxo/IA (`reschedule_source`) OU pelo
+│   cliente no link do agendamento. Para dizer "o que aconteceu com este compromisso", LEIA `selo` —
+│   `status: pending` sozinho NÃO significa "nada aconteceu" (a pessoa pode ter faltado)
 ├── agenda_treatment_id (FK → AgendaTreatment, nullify) / treatment_session_number (1..N) — a sessão
 │   que este compromisso é; índice único parcial por tratamento+número entre os NÃO cancelados (15/09)
-└── assignees (has_many → User, via account_task_assignments)
+└── assignees (has_many → User, via account_task_assignments). Compromisso NASCIDO DE BOOKING
+    (`booking_id` presente) tem responsável FIXO = o agente configurado no tipo de evento:
+    `assignee_ids` enviado no update é IGNORADO (200, o resto da edição vale — 17/09)
 
 AgendaTreatment (tratamento em sessões — tools `agenda_treatments_*`; tabela agenda_treatments; 15/09)
 ├── id (PK) / account_id (FK) / contact_id (FK) / booking_event_type_id (FK, nullify)
@@ -605,6 +612,21 @@ evento** que decide de qual data a contagem parte: `agendamento` (data da consul
 da consulta) — em vez de herdar sempre o horário da consulta. Há ainda um filtro opcional
 ("Só quando") por atributo `eclinica_*` do contato. Nada disso é editável pelo MCP: só pelo painel.
 Pra auditar o que foi/será disparado, use `lionchat_eclinica_reminder_history_list`.
+
+**Um aviso por CONSULTA (desde 2026-09-17).** A regra antiga "um lembrete por dia" saiu: paciente com duas
+consultas no mesmo dia — ou duas pessoas no mesmo celular (mãe e filho) — recebe um lembrete para CADA
+consulta, cada um com o seu nome, horário, profissional e link. Eles não saem juntos: sai o da consulta
+mais cedo e, ~10 minutos depois (na rodada seguinte), o da próxima. No histórico
+(`lionchat_eclinica_reminder_history_list`) isso aparece assim: o que espera a vez fica `pending` com
+`fire_at` no passado por alguns minutos (normal); `skip_reason = outra_consulta_no_mesmo_dia` só existe em
+linhas ANTIGAS (até 17/09); e `fail_reason = fluxo_ainda_em_andamento_com_este_contato` significa que o
+fluxo do aviso anterior ainda estava em andamento com aquele contato (típico de fluxo que aguarda o
+paciente clicar num botão) — pode ser reenviado com `lionchat_eclinica_reminder_history_reprocess`.
+O fluxo do lembrete recebe também `{{cliente_id}}` (código do paciente DAQUELA consulta na e-Clínica) e
+`{{agendatipo}}`; na automação, `{{agendamento.cliente_id}}` e `{{agendamento.agendatipo}}`. Ao consultar a
+agenda do paciente dentro do fluxo, use `{{cliente_id}}` do lembrete — a ficha do contato é uma por
+TELEFONE e guarda só o último paciente. Quem quiser "só um lembrete por dia" monta no próprio fluxo
+(condição num atributo da conversa com `{{data_consulta}}` + ação que grava o dia depois de enviar).
 
 ## Relatórios e Métricas
 

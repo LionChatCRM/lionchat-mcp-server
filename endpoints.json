@@ -7862,7 +7862,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/macros",
   "title": "Criar Macro",
-  "description": "Cria uma nova macro com ações. Obrigatórios: name, actions (visibility: personal ou global). As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422. CARDÁPIO (10/09/2026, 40 ações — os action_params seguem os MESMOS formatos das automações, ver conversation-flows.md 'Acoes de automacao'): send_message, add_private_note, send_canned_response ([id] — na MACRO a mensagem sai assinada pelo EXECUTOR; na automação sai como robô), send_attachment, send_email_transcript, send_email_to_team, send_webhook_event, add_label/remove_label (etiqueta da CONVERSA), add_contact_label/remove_contact_label ([titulos] — etiqueta do CONTATO), assign_agent, assign_team, remove_assigned_team, distribute_agents ([agent_ids] — rodízio de verdade, nunca sorteio), change_status, change_priority, open_conversation/pending_conversation/resolve_conversation, snooze_conversation ([] = até a próxima resposta, ou ['until_tomorrow'] etc.), mute_conversation, mark_unread ([]), add_sla ([sla_policy_id]), assign_captain_assistant ([id] ou [{assistant_id, proactive}]), deactivate_captain ([]), send_signature_document, update_contact_attribute/update_conversation_attribute ([{attribute_key, value}] — chave PROTEGIDA é recusada na execução e fica só no log: prefixos waha_whatsapp_/whatsapp_/origin_/ctwa_/meta_lead_/lt_ e atributos de sistema como utm_*/gclid), update_card_attribute ([{funnel_id, attribute_key, value}]), add_card_checklist ([{funnel_id, checklist_template_ids}]), add_card_offer ([{funnel_id, offer_ids}]), e as 7 de Kanban: create_kanban_item, move_kanban_item_to_stage, assign_agent_to_kanban_item, add_note_to_kanban_item, start_kanban_item_timer, stop_kanban_item_timer, set_kanban_item_status (todas exigem card já existente no funil informado, exceto create). send_conversion ([{destinations, event_names, value}] — Meta CAPI/GA4/Google Ads com trigger_type 'macro') só pode ser SALVO por administrador ou cargo com marketing_integrations_manage: para os demais, 422 com o motivo; EXECUTAR segue liberado; teto de 50 conversões por execução (o excedente é pulado com log e as outras ações rodam). Fora do cardápio: send_whatsapp_template.",
+  "description": "Cria uma nova macro com ações. Obrigatórios: name, actions (visibility: personal ou global). As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422. CARDÁPIO (17/09/2026, 41 ações — os action_params seguem os MESMOS formatos das automações, ver conversation-flows.md 'Acoes de automacao'): send_message, add_private_note, send_canned_response ([id] — na MACRO a mensagem sai assinada pelo EXECUTOR; na automação sai como robô), send_attachment, send_email_transcript, send_email_to_team, send_webhook_event, add_label/remove_label (etiqueta da CONVERSA), add_contact_label/remove_contact_label ([titulos] — etiqueta do CONTATO), assign_agent, assign_team, remove_assigned_team, distribute_agents ([agent_ids] — rodízio de verdade, nunca sorteio), change_status, change_priority, open_conversation/pending_conversation/resolve_conversation, snooze_conversation ([] = até a próxima resposta, ou ['until_tomorrow'] etc.), mute_conversation, mark_unread ([]), add_sla ([sla_policy_id]), assign_captain_assistant ([id] ou [{assistant_id, proactive}]), deactivate_captain ([]), send_signature_document, update_contact_attribute/update_conversation_attribute ([{attribute_key, value}] — chave PROTEGIDA é recusada na execução e fica só no log: prefixos waha_whatsapp_/whatsapp_/origin_/ctwa_/meta_lead_/lt_ e atributos de sistema como utm_*/gclid), update_card_attribute ([{funnel_id, attribute_key, value}]), add_card_checklist ([{funnel_id, checklist_template_ids}]), add_card_offer ([{funnel_id, offer_ids}]), e as 7 de Kanban: create_kanban_item, move_kanban_item_to_stage, assign_agent_to_kanban_item, add_note_to_kanban_item, start_kanban_item_timer, stop_kanban_item_timer, set_kanban_item_status (todas exigem card já existente no funil informado, exceto create). send_conversion ([{destinations, event_names, value}] — Meta CAPI/GA4/Google Ads com trigger_type 'macro') só pode ser SALVO por administrador ou cargo com marketing_integrations_manage: para os demais, 422 com o motivo; EXECUTAR segue liberado; teto de 50 conversões por execução (o excedente é pulado com log e as outras ações rodam). Fora do cardápio: send_whatsapp_template. start_flow ([flow_id] — dispara um FLOW DE ACOES (flow_type 'action') na conversa; 17/09/2026). SO flow de acoes entra aqui: a macro roda em qualquer conversa e nao filtra caixa, entao um flow de MENSAGEM apontado aqui rodaria numa caixa que nao e dele. Flow inexistente, desligado ou de outro tipo e ignorado em silencio.",
   "category": "Macros",
   "params": [
    {
@@ -7884,7 +7884,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Array de {action_name, action_params[]} — 40 nomes aceitos, listados na descrição da tool; formatos iguais aos das automações"
+    "description": "Array de {action_name, action_params[]} — 41 nomes aceitos, listados na descrição da tool; formatos iguais aos das automações"
    }
   ],
   "returns": "macro criado (com novo ID)",
@@ -7924,7 +7924,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/macros/{id}",
   "title": "Atualizar Macro",
-  "description": "Atualiza macro. PATCH parcial: só campos enviados são alterados (name, actions, visibility). As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado retorna 422. CARDÁPIO (10/09/2026, 40 ações — os action_params seguem os MESMOS formatos das automações, ver conversation-flows.md 'Acoes de automacao'): send_message, add_private_note, send_canned_response ([id] — na MACRO a mensagem sai assinada pelo EXECUTOR; na automação sai como robô), send_attachment, send_email_transcript, send_email_to_team, send_webhook_event, add_label/remove_label (etiqueta da CONVERSA), add_contact_label/remove_contact_label ([titulos] — etiqueta do CONTATO), assign_agent, assign_team, remove_assigned_team, distribute_agents ([agent_ids] — rodízio de verdade, nunca sorteio), change_status, change_priority, open_conversation/pending_conversation/resolve_conversation, snooze_conversation ([] = até a próxima resposta, ou ['until_tomorrow'] etc.), mute_conversation, mark_unread ([]), add_sla ([sla_policy_id]), assign_captain_assistant ([id] ou [{assistant_id, proactive}]), deactivate_captain ([]), send_signature_document, update_contact_attribute/update_conversation_attribute ([{attribute_key, value}] — chave PROTEGIDA é recusada na execução e fica só no log: prefixos waha_whatsapp_/whatsapp_/origin_/ctwa_/meta_lead_/lt_ e atributos de sistema como utm_*/gclid), update_card_attribute ([{funnel_id, attribute_key, value}]), add_card_checklist ([{funnel_id, checklist_template_ids}]), add_card_offer ([{funnel_id, offer_ids}]), e as 7 de Kanban: create_kanban_item, move_kanban_item_to_stage, assign_agent_to_kanban_item, add_note_to_kanban_item, start_kanban_item_timer, stop_kanban_item_timer, set_kanban_item_status (todas exigem card já existente no funil informado, exceto create). send_conversion ([{destinations, event_names, value}] — Meta CAPI/GA4/Google Ads com trigger_type 'macro') só pode ser SALVO por administrador ou cargo com marketing_integrations_manage: para os demais, 422 com o motivo; EXECUTAR segue liberado; teto de 50 conversões por execução (o excedente é pulado com log e as outras ações rodam). Fora do cardápio: send_whatsapp_template.",
+  "description": "Atualiza macro. PATCH parcial: só campos enviados são alterados (name, actions, visibility). As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado retorna 422. CARDÁPIO (17/09/2026, 41 ações — os action_params seguem os MESMOS formatos das automações, ver conversation-flows.md 'Acoes de automacao'): send_message, add_private_note, send_canned_response ([id] — na MACRO a mensagem sai assinada pelo EXECUTOR; na automação sai como robô), send_attachment, send_email_transcript, send_email_to_team, send_webhook_event, add_label/remove_label (etiqueta da CONVERSA), add_contact_label/remove_contact_label ([titulos] — etiqueta do CONTATO), assign_agent, assign_team, remove_assigned_team, distribute_agents ([agent_ids] — rodízio de verdade, nunca sorteio), change_status, change_priority, open_conversation/pending_conversation/resolve_conversation, snooze_conversation ([] = até a próxima resposta, ou ['until_tomorrow'] etc.), mute_conversation, mark_unread ([]), add_sla ([sla_policy_id]), assign_captain_assistant ([id] ou [{assistant_id, proactive}]), deactivate_captain ([]), send_signature_document, update_contact_attribute/update_conversation_attribute ([{attribute_key, value}] — chave PROTEGIDA é recusada na execução e fica só no log: prefixos waha_whatsapp_/whatsapp_/origin_/ctwa_/meta_lead_/lt_ e atributos de sistema como utm_*/gclid), update_card_attribute ([{funnel_id, attribute_key, value}]), add_card_checklist ([{funnel_id, checklist_template_ids}]), add_card_offer ([{funnel_id, offer_ids}]), e as 7 de Kanban: create_kanban_item, move_kanban_item_to_stage, assign_agent_to_kanban_item, add_note_to_kanban_item, start_kanban_item_timer, stop_kanban_item_timer, set_kanban_item_status (todas exigem card já existente no funil informado, exceto create). send_conversion ([{destinations, event_names, value}] — Meta CAPI/GA4/Google Ads com trigger_type 'macro') só pode ser SALVO por administrador ou cargo com marketing_integrations_manage: para os demais, 422 com o motivo; EXECUTAR segue liberado; teto de 50 conversões por execução (o excedente é pulado com log e as outras ações rodam). Fora do cardápio: send_whatsapp_template. start_flow ([flow_id] — dispara um FLOW DE ACOES (flow_type 'action') na conversa; 17/09/2026). SO flow de acoes entra aqui: a macro roda em qualquer conversa e nao filtra caixa, entao um flow de MENSAGEM apontado aqui rodaria numa caixa que nao e dele. Flow inexistente, desligado ou de outro tipo e ignorado em silencio.",
   "category": "Macros",
   "params": [
    {
@@ -7946,7 +7946,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de {action_name, action_params[]} — 40 nomes aceitos, listados na descrição da tool; formatos iguais aos das automações"
+    "description": "Array de {action_name, action_params[]} — 41 nomes aceitos, listados na descrição da tool; formatos iguais aos das automações"
    },
    {
     "name": "visibility",
@@ -8289,7 +8289,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/account_tasks",
   "title": "Listar Tarefas",
-  "description": "Lista tarefas com filtros avançados. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, per_page, task_type, status, user_id. Retorna meta (contadores) + payload (array de tarefa/agenda). Cada tarefa traz `tratamento` {id, sessao, total, titulo} quando e sessao de um tratamento em sessoes (15/09); nulo em compromisso comum.",
+  "description": "Lista tarefas com filtros avançados. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, per_page, task_type, status, user_id. Retorna meta (contadores) + payload (array de tarefa/agenda). Cada tarefa traz `tratamento` {id, sessao, total, titulo} quando e sessao de um tratamento em sessoes (15/09); nulo em compromisso comum. **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8560,7 +8560,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/account_tasks/{id}",
   "title": "Detalhe da Tarefa",
-  "description": "Retorna detalhes de uma tarefa. Retorna detalhes completos de UM tarefa/agenda específico pelo ID. Inclui campos relacionais quando aplicável. Cada tarefa traz `tratamento` {id, sessao, total, titulo} quando e sessao de um tratamento em sessoes (15/09); nulo em compromisso comum.",
+  "description": "Retorna detalhes de uma tarefa. Retorna detalhes completos de UM tarefa/agenda específico pelo ID. Inclui campos relacionais quando aplicável. Cada tarefa traz `tratamento` {id, sessao, total, titulo} quando e sessao de um tratamento em sessoes (15/09); nulo em compromisso comum. **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8584,7 +8584,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/account_tasks/{id}",
   "title": "Atualizar Tarefa",
-  "description": "Atualiza uma tarefa. Campos alterados em video_call/meeting disparam sync com Google Calendar. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, description, task_type, priority, scheduled_at, duration_minutes. **Tratamento em sessoes (15/09):** com tipo `sessions_enabled`, o agendamento pelo painel/API nasce como sessao do tratamento do contato (proxima a marcar; cheio = sessao extra ate 60; concluido = ciclo novo) e a tarefa devolve `tratamento` {id, sessao, total, titulo} (nulo em compromisso comum). `treatment.*` cria o plano; `agenda_treatment_id` + `treatment_session_number` marcam uma sessao pedida.",
+  "description": "Atualiza uma tarefa. Campos alterados em video_call/meeting disparam sync com Google Calendar. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, description, task_type, priority, scheduled_at, duration_minutes. **Tratamento em sessoes (15/09):** com tipo `sessions_enabled`, o agendamento pelo painel/API nasce como sessao do tratamento do contato (proxima a marcar; cheio = sessao extra ate 60; concluido = ciclo novo) e a tarefa devolve `tratamento` {id, sessao, total, titulo} (nulo em compromisso comum). `treatment.*` cria o plano; `agenda_treatment_id` + `treatment_session_number` marcam uma sessao pedida. **Compromisso de Booking (17/09):** tarefa com `booking_id` tem responsavel FIXO (o profissional do tipo de evento) — `assignee_ids` e IGNORADO (200, o resto da edicao vale). Para mudar quem atende, edite o tipo de evento. **Presenca nao conclui:** mandar `attendance` NAO muda `status`; nao conclua a tarefa so porque a presenca foi marcada (concluir compromisso de Booking encerra lembretes/pos-atendimento e dispara o gatilho de fluxo 'agendamento concluido'). A resposta traz `selo` com o rotulo resultante.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8690,7 +8690,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "IDs dos responsáveis"
+    "description": "IDs dos responsáveis. IGNORADO em compromisso nascido de Booking (`booking_id` presente): o responsavel e o profissional do tipo de evento"
    },
    {
     "name": "guest_emails",
@@ -8886,7 +8886,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/account_tasks/{id}/update_future",
   "title": "Atualizar Futuras",
-  "description": "Atualiza esta e todas as futuras instâncias de tarefa recorrente. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, scheduled_at.",
+  "description": "Atualiza esta e todas as futuras instâncias de tarefa recorrente. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, scheduled_at. **Compromisso de Booking (17/09):** tarefa com `booking_id` tem responsavel FIXO (o profissional do tipo de evento) — `assignee_ids` e IGNORADO (200, o resto da edicao vale). Para mudar quem atende, edite o tipo de evento. **Presenca nao conclui:** mandar `attendance` NAO muda `status`; nao conclua a tarefa so porque a presenca foi marcada (concluir compromisso de Booking encerra lembretes/pos-atendimento e dispara o gatilho de fluxo 'agendamento concluido'). A resposta traz `selo` com o rotulo resultante.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8966,7 +8966,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/account_tasks/my_day",
   "title": "Meu Dia",
-  "description": "Retorna tarefas agrupadas: atrasadas, hoje, amanhã, próximos 7 dias. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda).",
+  "description": "Retorna tarefas agrupadas: atrasadas, hoje, amanhã, próximos 7 dias. Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de tarefa/agenda). **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -9020,7 +9020,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/tasks",
   "title": "Tarefas do Card",
-  "description": "Lista tarefas de todas as conversas vinculadas ao card (primária + linked). Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: scope, page. Retorna meta (contadores) + payload (array de tarefa/agenda).",
+  "description": "Lista tarefas de todas as conversas vinculadas ao card (primária + linked). Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: scope, page. Retorna meta (contadores) + payload (array de tarefa/agenda). **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -9062,7 +9062,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/next_task",
   "title": "Próxima Tarefa do Card",
-  "description": "Retorna a PROXIMA tarefa pendente ou adiada do card (a de menor scheduled_at), considerando a conversa principal e as vinculadas. Devolve UM OBJETO de tarefa — nao ha meta/payload nem paginacao — e `{}` (objeto vazio) quando nao ha nenhuma. Nao procure um array: procurar array aqui faz voce responder \"esse card nao tem proxima tarefa\" quando tem. ATENCAO: esta rota NAO filtra por privacidade de tarefa — pode devolver tarefa de OUTRO atendente, ao contrario do campo `next_task` que vem dentro do proprio card (esse so mostra tarefa de quem esta consultando).",
+  "description": "Retorna a PROXIMA tarefa pendente ou adiada do card (a de menor scheduled_at), considerando a conversa principal e as vinculadas. Devolve UM OBJETO de tarefa — nao ha meta/payload nem paginacao — e `{}` (objeto vazio) quando nao ha nenhuma. Nao procure um array: procurar array aqui faz voce responder \"esse card nao tem proxima tarefa\" quando tem. ATENCAO: esta rota NAO filtra por privacidade de tarefa — pode devolver tarefa de OUTRO atendente, ao contrario do campo `next_task` que vem dentro do proprio card (esse so mostra tarefa de quem esta consultando). **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -9730,7 +9730,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/flows",
   "title": "Criar Flow",
-  "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. conversation_mode: 'individual' (default) | 'group'. Sticky note (type 'note'): data usa title+body+color(yellow|teal|blue|violet|pink|orange|slate)+width+height — NUNCA 'content'. ORGANIZAÇÃO: preencha tags ao criar (reutilizando as tags já existentes nos flows da conta — veja flows_list) pra manter a lista organizada. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas). REGRAS 18/08: acao start_flow com flow_id do PROPRIO flow e aceita no save mas IGNORADA EM SILENCIO na execucao (o fluxo para ali) — aponte sempre pra OUTRO flow. Condicoes: preencha operator E field juntos (tabela dos pares no resource flowbuilder-patterns), senao a regra roda certa e aparece errada na tela do cliente. NOVIDADES 01/09/2026 no schema (lionchat_flows_schema_reference): acao send_conversion (Meta/Google Ads/GA4 de dentro do fluxo) e condicao por origem/campanha (attr_config de conversa com origin_kind=paid_ad etc.). NOVIDADES 02/09/2026: (1) send_conversion ganhou event_names — UM evento por destino ({meta, google_ads, ga4}); event_name virou reserva (grave os dois); Google Ads so aceita nome do conversion_action_map. (2) preset 'Origem do lead' (attrScope 'lead_origin', attr_key origin_platform; valores: plataforma ou 'custom:<slug>'). (3) REGRA DE VALOR na condicao de atributo: equal/not_equal/contains/not_contains gravam em values:[...] (LISTA) com value:'' — value solo abre VAZIO na tela do cliente. Ver lionchat_flows_schema_reference.",
+  "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. conversation_mode: 'individual' (default) | 'group'. Sticky note (type 'note'): data usa title+body+color(yellow|teal|blue|violet|pink|orange|slate)+width+height — NUNCA 'content'. ORGANIZAÇÃO: preencha tags ao criar (reutilizando as tags já existentes nos flows da conta — veja flows_list) pra manter a lista organizada. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas). REGRAS 18/08: acao start_flow com flow_id do PROPRIO flow e aceita no save mas IGNORADA EM SILENCIO na execucao (o fluxo para ali) — aponte sempre pra OUTRO flow. Condicoes: preencha operator E field juntos (tabela dos pares no resource flowbuilder-patterns), senao a regra roda certa e aparece errada na tela do cliente. NOVIDADES 01/09/2026 no schema (lionchat_flows_schema_reference): acao send_conversion (Meta/Google Ads/GA4 de dentro do fluxo) e condicao por origem/campanha (attr_config de conversa com origin_kind=paid_ad etc.). NOVIDADES 02/09/2026: (1) send_conversion ganhou event_names — UM evento por destino ({meta, google_ads, ga4}); event_name virou reserva (grave os dois); Google Ads so aceita nome do conversion_action_map. (2) preset 'Origem do lead' (attrScope 'lead_origin', attr_key origin_platform; valores: plataforma ou 'custom:<slug>'). (3) REGRA DE VALOR na condicao de atributo: equal/not_equal/contains/not_contains gravam em values:[...] (LISTA) com value:'' — value solo abre VAZIO na tela do cliente. Ver lionchat_flows_schema_reference. TIPO DE FLUXO (17/09/2026): o parametro flow_type aceita 'conversation' (padrao) ou 'action' (Fluxo de Acoes). O de ACOES nao fica ligado a caixa nenhuma, roda em QUALQUER conversa de QUALQUER caixa e SO executa acoes — NAO pode ter os blocos send_message, wait_response nem update_group (a validacao recusa o save inteiro), nao aceita inbox_ids e ignora conversation_mode. Use pra regra que vale na empresa toda e nao depende da caixa (ex.: etiqueta 'urgente' -> atribui equipe de suporte). Se precisa FALAR com a pessoa, o tipo e 'conversation'. Pra ferramenta da IA continue usando lionchat_flow_tools_create.",
   "category": "Flows",
   "params": [
    {
@@ -9751,8 +9751,8 @@
     "name": "channel_type",
     "type": "string",
     "location": "body",
-    "required": true,
-    "description": "Tipo de canal (ex: Channel::Waha, Channel::WebWidget, Channel::Whatsapp)"
+    "required": false,
+    "description": "Tipo de canal (ex: Channel::Waha, Channel::WebWidget, Channel::Whatsapp). Obrigatorio no fluxo de conversa; NAO se aplica ao flow_type 'action', que roda em todas as caixas."
    },
    {
     "name": "conversation_mode",
@@ -9766,7 +9766,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "IDs das caixas de entrada a vincular"
+    "description": "IDs das caixas de entrada a vincular. NAO use com flow_type 'action' — a validacao recusa caixa nesse tipo (ele roda em todas)."
    },
    {
     "name": "flow_data",
@@ -9781,6 +9781,13 @@
     "location": "body",
     "required": false,
     "description": "Tags livres do flow para organização (array de strings; máx 20 tags, cada uma até 50 caracteres; duplicadas por maiúscula/minúscula são unificadas). A lista de flows na tela filtra por Status/Tipo/Caixa/Tags no navegador — não há filtro por query param no index."
+   },
+   {
+    "name": "flow_type",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "'conversation' (padrao) ou 'action' (Fluxo de Acoes). IMUTAVEL apos criar. No 'action' NAO mande inbox_ids nem channel_type (ele roda em todas as caixas) e nem conversation_mode (o backend fixa 'individual'); e o flow_data NAO pode conter send_message, wait_response, update_group ou end. Ferramenta da IA ('ai_tool') tem tool propria: lionchat_flow_tools_create."
    }
   ],
   "returns": "flow criado (com novo ID)",
@@ -15592,6 +15599,75 @@
   ]
  },
  {
+  "id": "lionchat_inboxes_waha_groups_list_3",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/join_info",
+  "title": "Ver Grupo de um Convite (antes de entrar)",
+  "description": "SO LEITURA: pergunta ao WhatsApp que grupo e um codigo de convite, sem entrar. Use SEMPRE antes de lionchat_inboxes_waha_groups_create_6 para confirmar com a pessoa em qual grupo ela vai entrar. Aceita o codigo cru, o link inteiro (https://chat.whatsapp.com/CODIGO) ou o link no meio de um texto. So funciona em caixa de WhatsApp QR Code (Channel::Waha).",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "code",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "Codigo do convite, o link completo, ou um texto que contenha o link"
+   }
+  ],
+  "returns": "{ data: { JID, Name, ParticipantCount, OwnerPN, IsJoinApprovalRequired, Suspended, GroupCreated } } — formato cru do motor, em PascalCase. 422 quando o link nao e de convite de grupo.",
+  "common_use_cases": [
+   "Confirmar o nome e o tamanho do grupo antes de entrar",
+   "Saber se a entrada no grupo precisa de aprovacao de administrador",
+   "Validar um link de convite recebido numa conversa"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_list",
+   "lionchat_inboxes_waha_groups_show",
+   "lionchat_inboxes_waha_groups_create_5"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_create_6",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/join",
+  "title": "Entrar no Grupo por Convite",
+  "description": "Faz o numero conectado ENTRAR num grupo WhatsApp usando um codigo de convite, como participante comum. Acao que muda o WhatsApp do cliente: confirme antes com lionchat_inboxes_waha_groups_list_3. Recusa com 422 e reason 'groups_disabled' quando a caixa esta com 'Aceitar grupos' desligado — sem essa chave as mensagens do grupo nunca chegariam ao painel. So funciona em caixa de WhatsApp QR Code (Channel::Waha).",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "code",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Codigo do convite, o link completo, ou um texto que contenha o link"
+   }
+  ],
+  "returns": "{ success: true, data: { id: '...@g.us' } }. 422 com reason 'groups_disabled' se a caixa nao aceita grupos; 422 se o link nao e de convite.",
+  "common_use_cases": [
+   "Entrar num grupo a partir de um convite recebido na conversa",
+   "Entrar num grupo usando um link colado pelo cliente"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_list_3",
+   "lionchat_inboxes_waha_groups_list",
+   "lionchat_inboxes_waha_groups_show"
+  ]
+ },
+ {
   "id": "lionchat_inboxes_whatsapp_templates_list",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates",
@@ -20900,7 +20976,8 @@
   "related_tools": [
    "lionchat_agent_availability_update",
    "lionchat_agent_availability_list_1",
-   "lionchat_agent_availability_list_2"
+   "lionchat_agent_availability_list_2",
+   "lionchat_agent_availability_day"
   ]
  },
  {
@@ -20963,7 +21040,8 @@
   "related_tools": [
    "lionchat_agent_availability_list",
    "lionchat_agent_availability_update",
-   "lionchat_agent_availability_list_2"
+   "lionchat_agent_availability_list_2",
+   "lionchat_agent_availability_day"
   ]
  },
  {
@@ -20991,7 +21069,67 @@
   "related_tools": [
    "lionchat_agent_availability_list",
    "lionchat_agent_availability_update",
-   "lionchat_agent_availability_list_1"
+   "lionchat_agent_availability_list_1",
+   "lionchat_agent_availability_day"
+  ]
+ },
+ {
+  "id": "lionchat_agent_availability_day",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agent_availability/day",
+  "title": "Ver Como Esta o Dia (expediente + horarios ocupados)",
+  "description": "Resumo de UM dia de ate 6 pessoas da conta, para escolher horario de um compromisso COMUM sem marcar no escuro: expediente de cada pessoa e os intervalos ja ocupados, tudo em 'HH:MM' do fuso pedido. E o mesmo dado do quadro 'Escolha o dia e veja os horarios' da janela Nova tarefa. PRIVACIDADE: o INTERVALO ocupado de qualquer pessoa da conta vem sempre (e o que permite marcar algo com um colega); `title`/`task_id` so vem para quem ja veria o compromisso no calendario (proprio/responsavel, agenda publica do dono, administrador) — compromisso PRIVADO de outra pessoa nunca vem com titulo (`title_visible: false`). Sem `user_ids` = o proprio usuario do token. Feriados do dia vem em `holidays` (filtrados por `agenda_id` quando informado). Para agendamento por BOOKING nao use esta: os horarios validos sao os de `lionchat_booking_event_types_slots` (respeitam duracao, intervalo e antecedencia do tipo de evento). `date` ausente ou invalida = 400.",
+  "category": "Disponibilidade",
+  "params": [
+   {
+    "name": "date",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "Dia no formato YYYY-MM-DD"
+   },
+   {
+    "name": "user_ids",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "query_name": "user_ids[]",
+    "description": "IDs das pessoas (ate 6, so gente DA CONTA). Vazio = o proprio usuario do token"
+   },
+   {
+    "name": "timezone",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fuso IANA em que os horarios devem voltar (ex.: America/Sao_Paulo). Invalido/ausente = fuso da conta"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "ID da agenda (unidade) — filtra os feriados por agenda"
+   },
+   {
+    "name": "excluding_task_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Ao REMARCAR: ID da propria tarefa, para ela nao contar como horario ocupado"
+   }
+  ],
+  "returns": "{ date, timezone, holidays: [{ name, all_day, start, end }], people: [{ user_id, name, color, working_hours: [{ start, end }], busy: [{ start, end, title_visible, title, task_id, readonly }] }] } — horarios em 'HH:MM' no fuso devolvido em `timezone`",
+  "common_use_cases": [
+   "Antes de criar uma tarefa/reuniao, ver se a pessoa esta livre naquele dia e em que horarios",
+   "Achar um horario em que dois ou mais colegas estao livres ao mesmo tempo",
+   "Ao remarcar, conferir o dia novo sem contar a propria tarefa como ocupada (excluding_task_id)"
+  ],
+  "related_tools": [
+   "lionchat_agent_availability_list",
+   "lionchat_agent_availability_list_1",
+   "lionchat_agent_availability_list_2",
+   "lionchat_tasks_create",
+   "lionchat_booking_event_types_slots"
   ]
  },
  {
@@ -25525,7 +25663,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}/reminder_history",
   "title": "Histórico dos Lembretes e-Clínica",
-  "description": "Lista os disparos de lembrete agendados da integração e-Clínica (novo 23/07) — responde 'o lembrete do paciente X saiu?'. Cada item traz status (pending aguardando | fired enviado | cancelled | skipped pulado + skip_reason | failed falhou + fail_reason), datas (created_at recebido, fire_at agendado, fired_at disparado, data_consulta), flow_name, contact_name, compromisso e unidade. Somente administrador. [2026-07-25] O historico cobre os tres tipos de lembrete: consulta (conta a partir da data da consulta), laboratorio/medicacao (conta a partir da data prevista do laboratorio) e vencimento de cobranca (conta a partir do vencimento). O horario de cada disparo vem da 'Hora do disparo' configurada na linha do lembrete.",
+  "description": "Lista os disparos de lembrete agendados da integração e-Clínica (novo 23/07) — responde 'o lembrete do paciente X saiu?'. Cada item traz status (pending aguardando | fired enviado | cancelled | skipped pulado + skip_reason | failed falhou + fail_reason), datas (created_at recebido, fire_at agendado, fired_at disparado, data_consulta), flow_name, contact_name, compromisso e unidade. Somente administrador. [2026-07-25] O historico cobre os tres tipos de lembrete: consulta (conta a partir da data da consulta), laboratorio/medicacao (conta a partir da data prevista do laboratorio) e vencimento de cobranca (conta a partir do vencimento). O horario de cada disparo vem da 'Hora do disparo' configurada na linha do lembrete. [2026-09-17] Um lembrete por CONSULTA: paciente com duas consultas no mesmo dia (ou duas pessoas no mesmo celular) recebe um lembrete para cada uma, com ~10 minutos entre eles — o que espera a vez aparece como pending com fire_at ja no passado por alguns minutos (normal, nao e erro). fail_reason = fluxo_ainda_em_andamento_com_este_contato: o fluxo do aviso anterior ainda rodava com o contato (tipico de fluxo que aguarda o paciente clicar num botao); pode ser reprocessado. fail_reason = nao_disparou: causa mais comum e contato sem telefone. skip_reason = outra_consulta_no_mesmo_dia so existe em linhas antigas (regra removida em 17/09).",
   "category": "Integracoes",
   "params": [
    {
@@ -25603,7 +25741,8 @@
   "common_use_cases": [
    "Verificar se o lembrete de consulta de um paciente foi enviado",
    "Listar lembretes que falharam para reprocessar",
-   "Auditar os disparos agendados de um período"
+   "Auditar os disparos agendados de um período",
+   "Explicar por que um paciente com duas consultas no mesmo dia recebeu (ou ainda nao recebeu) o segundo lembrete"
   ],
   "related_tools": [
    "lionchat_eclinica_integrations_list",
@@ -25615,7 +25754,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}/reminder_history/{firing_id}/reprocess",
   "title": "Reprocessar Lembrete e-Clínica Falhado",
-  "description": "Reprocessa UM lembrete com status failed (novo 23/07): volta para pending e dispara de novo. Só funciona em lembrete FALHADO — status diferente retorna 422; corrida (dois cliques) retorna 409. Somente administrador.",
+  "description": "Reprocessa UM lembrete com status failed (novo 23/07): volta para pending e dispara de novo. Só funciona em lembrete FALHADO — status diferente retorna 422; corrida (dois cliques) retorna 409. Somente administrador. [2026-09-17] Serve tambem para o lembrete que falhou com fail_reason = fluxo_ainda_em_andamento_com_este_contato (o fluxo do aviso anterior ainda estava em andamento): se o paciente ja respondeu o primeiro aviso, o segundo sai; se ainda nao, falha de novo sem enviar mensagem. NAO usar em lembrete pending com horario passado ha poucos minutos — ele esta so esperando a vez e sai sozinho.",
   "category": "Integracoes",
   "params": [
    {
@@ -26007,6 +26146,20 @@
     "location": "body",
     "required": false,
     "description": "Atributos extras (ex: { mark_as_seen: false } no WhatsApp oficial)"
+   },
+   {
+    "name": "out_of_office_enabled",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Liga/desliga a mensagem de ausencia da caixa (fora do horario de atendimento)"
+   },
+   {
+    "name": "out_of_office_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto da mensagem de ausencia"
    }
   ],
   "returns": "{ inbox }",
@@ -31482,13 +31635,6 @@
     "description": "Token do webhook da Greenn (valida a assinatura do que chega)"
    },
    {
-    "name": "inbox_id",
-    "type": "integer",
-    "location": "body",
-    "required": false,
-    "description": "Caixa onde a conversa do comprador é aberta"
-   },
-   {
     "name": "active",
     "type": "boolean",
     "location": "body",
@@ -31574,13 +31720,6 @@
     "location": "body",
     "required": false,
     "description": "Token do webhook da Greenn (valida a assinatura do que chega)"
-   },
-   {
-    "name": "inbox_id",
-    "type": "integer",
-    "location": "body",
-    "required": false,
-    "description": "Caixa onde a conversa do comprador é aberta"
    },
    {
     "name": "active",
