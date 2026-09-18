@@ -16,7 +16,7 @@ Container de etapas. Conta pode ter vários funis (ex: "Vendas", "Pós-venda", "
 | `archived` | Boolean — funis arquivados não aparecem na UI ativa |
 | `active` | Boolean — controla se aceita movimentação |
 | `settings` | jsonb — config customizada (ex: cores, automações) |
-| `settings.agents` | agentes do funil. Grave `[{"id": <id do agente>}]` (ids de `lionchat_agents_list`); o sistema completa nome, e-mail, cargo e foto — é o que o editor do funil, o card e a conversa mostram. Agente de outra conta fica sem nome e sem acesso. `settings` é substituído INTEIRO no update: leia o funil antes e reenvie goals+agents+teams+automations. |
+| `settings.agents` | agentes do funil. Grave `[{"id": <id do agente>}]` — cada item é um OBJETO, nunca número solto (ids de `lionchat_agents_list`); o sistema completa nome, e-mail, cargo e foto — é o que o editor do funil, o card e a conversa mostram. Agente de outra conta fica sem nome e sem acesso. `settings` é substituído INTEIRO no update: leia o funil antes e reenvie goals+agents+teams+automations. |
 
 ### Stages (Etapas) — dentro de `funnel.stages`
 
@@ -115,7 +115,7 @@ Se mandar `{"win_reasons": [...]}` direto (sem o wrapper `kanban_config`) → **
 | Atributo que aparece em TODO card | `kanban_config.global_custom_attributes` | ❌ custom_attribute de conversation |
 | Atributo só de um contato (CPF, endereço) | `custom_attribute_definitions` model=contact_attribute | ❌ kanban_config |
 | Atributo só de uma conversa (motivo, tag interna) | `custom_attribute_definitions` model=conversation_attribute | ❌ kanban_config |
-| Atributo só de um card | `kanban_item.custom_attributes` (jsonb direto no card) | — |
+| Valor de um campo num card (aparece na aba Campos) | `item_details.custom_attributes` — LISTA `[{name, type, value}]`, com o campo definido em `kanban_config.global_custom_attributes` | ❌ `kanban_item.custom_attributes` (coluna que nenhuma tela mostra) |
 
 ### KanbanItem (Card)
 Um card individual dentro de uma etapa.
@@ -131,7 +131,7 @@ Um card individual dentro de uma etapa.
 | `origin_conversation_display_id` | Conversa em que o card NASCEU (só preenchida se o vínculo já foi movido). É o que o relatório de origem de lead usa, pra uma venda não mudar de mês nem de anúncio quando o card anda. |
 | `linked_conversations` | jsonb array `[{display_id: 123}, {display_id: 456}]` — múltiplas conversas |
 | `item_details` | jsonb (ver abaixo) |
-| `custom_attributes` | jsonb — campos custom (igual contatos) |
+| `custom_attributes` | jsonb (coluna própria) — **NÃO aparece na aba Campos, no filtro do quadro nem na busca**. Os campos visíveis do card moram em `item_details.custom_attributes` (ver abaixo) |
 | `assigned_agents` | jsonb array de agentes responsáveis |
 | `activities` | jsonb array — log de atividades |
 | `checklist` | **O que fica guardado:** jsonb array de tarefas do card (item: `text`/`completed`/`position` + `group_id`/`group_name` opcionais para agrupar). **O que a API devolve é OUTRA coisa** — ver o aviso logo abaixo |
@@ -173,13 +173,31 @@ Um card individual dentro de uma etapa.
   "offers": [
     {"id": 12, "title": "Pro 12 meses", "value": 4800}
   ],
-  "custom_attributes": {
-    "origem_lead": "Facebook Ads"
-  }
+  "custom_attributes": [
+    {"name": "Origem do Lead", "type": "string", "value": "Facebook Ads"}
+  ]
 }
 ```
 
-**`value`** é onde fica o valor monetário do negócio (usado em pipelines).
+**`value`** é onde fica o valor monetário do negócio (usado em pipelines). Sempre NÚMERO — texto quebra a
+soma das colunas.
+
+**`custom_attributes` é uma LISTA, nunca um objeto `{chave: valor}`** (conferido no código em 18/09/2026).
+Cada item é `{name, type, value}` e só aparece na aba Campos se `name` **e** `type` baterem exatamente com
+um campo de `kanban_config.global_custom_attributes` (leia com `lionchat_kanban_config_list`).
+
+Como gravar pelo `lionchat_kanban_items_update` (`kanban_item.item_details`):
+- O `item_details` é MESCLADO só no 1º nível: cada chave enviada **troca a chave inteira** no card. Por isso
+  a lista `custom_attributes` enviada **substitui a lista toda** — leia o card com `lionchat_kanban_items_show`
+  e reenvie TODOS os campos, com o alterado.
+- Mandar objeto (`{"origem_lead": "Facebook Ads"}`) no lugar da lista **APAGA todos os campos do card**: o
+  servidor só aceita itens `{name, type, value}` e o objeto vira vazio.
+- Lista fechada de chaves do `item_details` (outras são descartadas em silêncio): title, description, status,
+  reason, win_reason, loss_reason, attributed_to, duplicated_from_id, priority, value, currency,
+  custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at,
+  conversation_id, automations, notes.
+- Para mudar UM campo sem reenviar a lista, as ações de automação/macro `update_card_attribute`
+  (`[{funnel_id, attribute_key: "<nome do campo>", value}]`) mexem só naquela entrada.
 
 ### assigned_agents
 
@@ -198,6 +216,10 @@ Um card individual dentro de uma etapa.
 ```
 
 Múltiplos agentes podem ter o mesmo card. `source` pode ser `manual`, `automation`, `inherited_from_conversation`.
+
+**Para GRAVAR** (`kanban_items_create`/`_update`, `kanban_item.assigned_agents`) o formato é outro: LISTA de
+NÚMEROS — `[5, 12]`. O sistema completa nome, e-mail e foto. A lista enviada **substitui** a atual (mande
+todos que devem ficar). Objetos `{id, ...}` são ignorados em silêncio e a lista não muda.
 
 **Agente do card vira participante das conversas (2026-06):** atribuir um agente a um card do Kanban
 (via `kanban_agents` ou ao vincular uma conversa) agora também o adiciona como PARTICIPANTE de todas
@@ -535,33 +557,44 @@ Use para: ações cross-cutting que envolvem conversa/contato/label, ou regras c
 
 Cada card pode receber atributos custom de 3 origens diferentes. **A escolha do lugar muda completamente o resultado:**
 
-### 1. `kanban_item.custom_attributes` (jsonb direto no card)
+### 1. `item_details.custom_attributes` (o VALOR de cada campo, dentro do card)
 
 ```json
-{
-  "origem_lead": "Google Ads",
-  "campanha": "Black Friday 2026",
-  "score": 85
-}
+[
+  {"name": "Origem do Lead", "type": "string", "value": "Google Ads"},
+  {"name": "Score", "type": "number", "value": 85}
+]
 ```
 
-- Vai direto no card via `kanban_items_update`
-- Só aparece NESSE card específico
-- Sem typing/validação — qualquer chave/valor
-- Use para: campos específicos de um card, importação rápida sem cadastro prévio
+- É o que a aba **Campos** do card mostra e edita (e o que o filtro do quadro, a busca e o fluxo leem)
+- LISTA de `{name, type, value}`; `name` + `type` precisam bater com um campo do item 2 abaixo, senão o
+  valor fica gravado e **não aparece**
+- Grava via `kanban_items_update` em `kanban_item.item_details.custom_attributes` — a lista enviada
+  **substitui a inteira** (leia o card antes e reenvie tudo). Objeto `{chave: valor}` no lugar da lista
+  **apaga** os campos do card
+- Um campo só, sem reenviar a lista: ação `update_card_attribute` da automação/macro
+
+> **NÃO confundir com a coluna `kanban_item.custom_attributes`** (objeto `{chave: valor}` direto no card):
+> nenhuma tela a mostra — nem a aba Campos, nem o filtro, nem a busca. Só a ação "Alterar atributo do card"
+> do FlowBuilder e a leitura do fluxo a usam. Para o cliente ver o dado, use a lista acima.
 
 ### 2. `kanban_config.global_custom_attributes` (atributos globais do Kanban)
 
 ```json
 [
-  {"name": "Origem do Lead", "type": "list", "is_list": true, "list_values": ["Google", "Meta", "Indicação"]},
+  {"name": "Origem do Lead", "type": "string", "is_list": true, "list_values": ["Google", "Meta", "Indicação"]},
   {"name": "Score", "type": "number", "is_list": false}
 ]
 ```
 
-- Definido no `kanban_config` da conta
-- Aparece em TODOS os cards de TODOS os funis (na sidebar do card)
-- Com tipo (`text`, `number`, `date`, `list`, `boolean`)
+- Definido no `kanban_config` da conta (`lionchat_kanban_config_update`) — é a DEFINIÇÃO; o valor de cada
+  card mora no item 1
+- Aparece em TODOS os cards de TODOS os funis (aba Campos do card)
+- Tipos que a tela cria: `string` (texto), `number`, `date`, `boolean`; lista de opções = `is_list: true` +
+  `list_values`
+- A lista enviada **substitui a inteira** — campo que não vier some da aba de todos os cards. Leia antes com
+  `lionchat_kanban_config_list`
+- **Não confundir com `funnel.global_custom_attributes`** (coluna do funil): nenhuma tela lê aquele campo
 - Use para: atributos que TODO card precisa ter
 
 ### 3. `custom_attribute_definitions` (atributos globais de contato/conversa)

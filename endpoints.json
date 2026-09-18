@@ -209,7 +209,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Atributos customizados"
+    "description": "Objeto {chave: valor} (chave = attribute_key de lionchat_custom_attributes_list, modelo contato). Por tipo: texto; numero como numero; data 'AAAA-MM-DD' (data-hora ISO com fuso; hora 'HH:MM'); lista = EXATAMENTE uma das opcoes cadastradas (outro valor aparece como 'Fora da lista'); sim/nao = true/false. NUNCA grave waha_whatsapp_lid, waha_whatsapp_jid nem waha_whatsapp_chat_id (endereco interno de envio do WhatsApp — escrever quebra a entrega). Ex.: {\"cpf\": \"123.456.789-00\", \"data_nascimento\": \"1990-05-17\", \"plano\": \"Premium\"}."
    },
    {
     "name": "avatar_url",
@@ -326,7 +326,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Atributos"
+    "description": "Objeto {chave: valor} (chave = attribute_key de lionchat_custom_attributes_list, modelo contato). Por tipo: texto; numero como numero; data 'AAAA-MM-DD' (data-hora ISO com fuso; hora 'HH:MM'); lista = EXATAMENTE uma das opcoes cadastradas (outro valor aparece como 'Fora da lista'); sim/nao = true/false. NUNCA grave waha_whatsapp_lid, waha_whatsapp_jid nem waha_whatsapp_chat_id (endereco interno de envio do WhatsApp — escrever quebra a entrega). Ex.: {\"cpf\": \"123.456.789-00\", \"data_nascimento\": \"1990-05-17\", \"plano\": \"Premium\"}. O update SOMA: so as chaves enviadas mudam, as demais ficam."
    },
    {
     "name": "avatar",
@@ -1593,7 +1593,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/conversations/{id}/custom_attributes",
   "title": "Custom Attributes",
-  "description": "Atualiza atributos customizados da conversa. Obrigatorios: id, custom_attributes.",
+  "description": "Atualiza atributos customizados da conversa. Obrigatorios: id, custom_attributes. O custom_attributes enviado SUBSTITUI o conjunto da conversa (menos captain_*): leia antes com lionchat_conversations_show e reenvie tudo — mandar so a chave nova apaga clique do anuncio, gclid e origem.",
   "category": "Conversas",
   "params": [
    {
@@ -1608,7 +1608,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Objeto com atributos"
+    "description": "Objeto {chave: valor} dos atributos da CONVERSA. ATENCAO: SUBSTITUI o conjunto inteiro — so os campos internos da IA (captain_*) sobrevivem; tudo que nao vier no envio e APAGADO, inclusive a origem do lead (utm_*, gclid, ctwa_*, origin_*). Leia antes com lionchat_conversations_show e reenvie TODOS os campos com o alterado. Ex.: {\"utm_source\": \"google\", \"motivo_contato\": \"orcamento\"}. Por tipo: data 'AAAA-MM-DD', numero como numero, lista = uma das opcoes cadastradas, sim/nao true/false."
    }
   ],
   "returns": "conversa atualizada",
@@ -2461,21 +2461,21 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Etapas do kanban. Objeto com uma chave (slug) por etapa: {\"novo_lead\": {\"name\": \"Novo Lead\", \"color\": \"#3B82F6\", \"position\": 1, \"description\": \"opcional\"}}. position define a ordem das colunas."
+    "description": "Etapas do kanban. Objeto com uma chave (slug) por etapa, e CADA ETAPA E UM OBJETO com name TEXTO: {\"novo_lead\": {\"name\": \"Novo Lead\", \"color\": \"#3B82F6\", \"position\": 1, \"description\": \"opcional\"}}. position define a ordem das colunas. Etapa como texto, numero ou null derruba a lista de funis e o Kanban da conta."
    },
    {
     "name": "funnel.settings",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id, enabled, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value (id da etapa p/ stage_moved; status p/ status_change; vazio p/ card_created), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (ex.: move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations)."
+    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id, enabled, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value (id da etapa p/ stage_moved; status p/ status_change; vazio p/ card_created), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (ex.: move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations)."
    },
    {
     "name": "funnel.global_custom_attributes",
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Atributos globais"
+    "description": "LISTA de objetos [{name, type, is_list, list_values:[]}]. Ex.: [{\"name\": \"Origem\", \"type\": \"string\", \"is_list\": true, \"list_values\": [\"Google\", \"Meta\"]}]. ATENCAO: este campo do FUNIL nao aparece em tela nenhuma. Os campos da aba Campos do card sao os da CONTA: grave-os com lionchat_kanban_config_update (kanban_config.global_custom_attributes)."
    }
   ],
   "returns": "funil criado (com novo ID)",
@@ -2653,14 +2653,14 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Etapas do kanban. Objeto com uma chave (slug) por etapa: {\"novo_lead\": {\"name\": \"Novo Lead\", \"color\": \"#3B82F6\", \"position\": 1, \"description\": \"opcional\"}}. position define a ordem das colunas."
+    "description": "Etapas do kanban. Objeto com uma chave (slug) por etapa, e CADA ETAPA E UM OBJETO com name TEXTO: {\"novo_lead\": {\"name\": \"Novo Lead\", \"color\": \"#3B82F6\", \"position\": 1, \"description\": \"opcional\"}}. position define a ordem das colunas. Etapa como texto, numero ou null derruba a lista de funis e o Kanban da conta. No update o objeto SUBSTITUI as etapas: etapa que nao vier e REMOVIDA (recusado com 422 STAGE_HAS_ITEMS se tiver cards) — leia com lionchat_funnels_show e reenvie todas."
    },
    {
     "name": "funnel.settings",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id (formato 'automation_<timestamp_ms>'), enabled: true, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value SEMPRE preenchido ('card_created' literal p/ card_created; chave da etapa de destino no hash funnel.stages p/ stage_moved; 'won'|'lost' p/ status_change), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; update_checklist->{checklist_updates:[{checklist_item_id,completed,text}]}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. Regras: trigger_value vazio ou enabled=false fazem a UI descartar a automacao no proximo salvar do usuario; stage_moved + move_to_stage nunca executa (anti-loop); notify_team hoje so registra em log (nao notifica ninguem); update_checklist nao aparece na UI (so via API). ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations)."
+    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id (formato 'automation_<timestamp_ms>'), enabled: true, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value SEMPRE preenchido ('card_created' literal p/ card_created; chave da etapa de destino no hash funnel.stages p/ stage_moved; 'won'|'lost' p/ status_change), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; update_checklist->{checklist_updates:[{checklist_item_id,completed,text}]}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. Regras: trigger_value vazio ou enabled=false fazem a UI descartar a automacao no proximo salvar do usuario; stage_moved + move_to_stage nunca executa (anti-loop); notify_team hoje so registra em log (nao notifica ninguem); update_checklist nao aparece na UI (so via API). ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations)."
    }
   ],
   "returns": "funil atualizado Inclui resolved_agents: [{id, name, avatar_url, via: 'agent'|'team'}] — quem efetivamente participa do funil (2026-07-21).",
@@ -3176,14 +3176,14 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de IDs de agentes"
+    "description": "LISTA de NUMEROS (ids de lionchat_agents_list). Ex.: [5, 12]. O sistema completa nome, e-mail e foto. Objetos {id, ...} sao IGNORADOS em silencio (a lista nao muda)."
    },
    {
     "name": "kanban_item.custom_attributes",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Atributos customizados"
+    "description": "Coluna propria do card, objeto {chave: valor}. NAO aparece na aba Campos, no filtro do quadro nem na busca — para campo visivel use kanban_item.item_details.custom_attributes (LISTA [{name, type, value}], ver lionchat_kanban_items_update). Enviada, SUBSTITUI o objeto inteiro."
    },
    {
     "name": "kanban_item.timer_started_at",
@@ -3274,21 +3274,21 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Detalhes completos do item"
+    "description": "Objeto com os detalhes do card. MESCLA SO NO 1o NIVEL: cada chave enviada troca a chave inteira no card; as nao enviadas ficam. Lista FECHADA (outras chaves sao descartadas em silencio): title, description, status, reason, win_reason, loss_reason, attributed_to, duplicated_from_id, priority, value (NUMERO; texto de numero como \"1500.5\" e convertido, \"R$ 1.500,00\" e recusado com 422), currency, custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at, conversation_id, automations, notes. custom_attributes = campos da aba Campos do card: LISTA [{name, type, value}] onde name+type batem EXATAMENTE com a definicao da CONTA (lionchat_kanban_config_list -> global_custom_attributes). Ex.: [{\"name\": \"Origem do Lead\", \"type\": \"string\", \"value\": \"Google\"}]. A lista e TROCADA inteira: leia o card com lionchat_kanban_items_show e reenvie TODOS os campos. Objeto {chave: valor} no lugar da lista APAGA todos os campos do card. notes e offers tambem sao listas trocadas inteiras."
    },
    {
     "name": "kanban_item.assigned_agents",
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de IDs de agentes"
+    "description": "LISTA de NUMEROS (ids de lionchat_agents_list). Ex.: [5, 12]. O sistema completa nome, e-mail e foto. Objetos {id, ...} sao IGNORADOS em silencio (a lista nao muda). SUBSTITUI a lista inteira de responsaveis: mande todos que devem ficar."
    },
    {
     "name": "kanban_item.custom_attributes",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Atributos customizados"
+    "description": "Coluna propria do card, objeto {chave: valor}. NAO aparece na aba Campos, no filtro do quadro nem na busca — para campo visivel use kanban_item.item_details.custom_attributes (LISTA [{name, type, value}], ver lionchat_kanban_items_update). Enviada, SUBSTITUI o objeto inteiro."
    },
    {
     "name": "kanban_item.timer_started_at",
@@ -3984,7 +3984,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/import",
   "title": "Importar Items",
-  "description": "Importa cards em massa (job async). REGRA DO DDI (18/08): telefone sem codigo do pais e considerado invalido e o card e criado SEM contato e SEM conversa, EM SILENCIO (diferente do import de contatos, que da erro na linha). Oriente a planilha a vir com DDI.",
+  "description": "Importa cards em massa (job async). REGRA DO DDI (18/08): telefone sem codigo do pais e considerado invalido e o card e criado SEM contato e SEM conversa, EM SILENCIO (diferente do import de contatos, que da erro na linha). Oriente a planilha a vir com DDI. PARAMETROS CONFERIDOS (18/09/2026): o servidor le `mappings` (plural) e exige `inbox_id` — o antigo `mapping` era ignorado. Opcionais da API (fora deste conector): default_stage_id, stage_mappings (texto JSON {\"<valor da planilha>\": \"<id da etapa>\"}), auto_create_stages ('true'), agent_mode ('mapping' | 'round_robin'), agent_mappings (texto JSON {\"<valor da planilha>\": <id do agente>}). VIA MCP NAO RODA: exige upload do arquivo — oriente o usuario a importar pela tela do Kanban.",
   "category": "Itens",
   "params": [
    {
@@ -4002,11 +4002,18 @@
     "description": "ID do funil"
    },
    {
-    "name": "mapping",
-    "type": "object",
+    "name": "inbox_id",
+    "type": "integer",
     "location": "body",
     "required": true,
-    "description": "Mapeamento de colunas"
+    "description": "OBRIGATORIO — caixa de entrada (desta conta) onde nascem o contato e a conversa de cada card. Sem ela: 400."
+   },
+   {
+    "name": "mappings",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "TEXTO JSON (o envio e multipart por causa do arquivo; objeto solto nao e lido) no formato {\"<coluna da planilha>\": \"<destino>\"}. Destinos aceitos: item_details.title, item_details.description, item_details.customer_name, item_details.customer_email, item_details.customer_phone, funnel_stage (nome ou id da etapa) e assigned_agents (so vale junto com agent_mode 'mapping' + agent_mappings). Ex.: '{\"Nome\":\"item_details.title\",\"Telefone\":\"item_details.customer_phone\",\"Etapa\":\"funnel_stage\"}'. Coluna com destino fora da lista e ignorada em silencio."
    }
   ],
   "returns": "status do import (assincrono)",
@@ -4333,14 +4340,14 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de strings com diretrizes de resposta"
+    "description": "LISTA de TEXTOS — cada item uma frase: [\"Responda em ate 3 frases\", \"Chame o cliente pelo primeiro nome\"]. Objeto ou lista de objetos NAO serve (o texto chega errado ao prompt)."
    },
    {
     "name": "guardrails",
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de strings com guardrails (proibicoes)"
+    "description": "LISTA de TEXTOS (proibicoes) — cada item uma frase: [\"Nunca informe precos\", \"Nao prometa prazo de entrega\"]. Objeto ou lista de objetos NAO serve (o texto chega errado ao prompt)."
    },
    {
     "name": "config.model",
@@ -4558,14 +4565,14 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de strings com diretrizes de resposta"
+    "description": "LISTA de TEXTOS — cada item uma frase: [\"Responda em ate 3 frases\", \"Chame o cliente pelo primeiro nome\"]. Objeto ou lista de objetos NAO serve (o texto chega errado ao prompt). No update SUBSTITUI a lista inteira: leia com lionchat_captain_assistants_show e reenvie todas."
    },
    {
     "name": "guardrails",
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de strings com guardrails (proibicoes)"
+    "description": "LISTA de TEXTOS (proibicoes) — cada item uma frase: [\"Nunca informe precos\", \"Nao prometa prazo de entrega\"]. Objeto ou lista de objetos NAO serve (o texto chega errado ao prompt). No update SUBSTITUI a lista inteira: leia com lionchat_captain_assistants_show e reenvie todas."
    },
    {
     "name": "config.model",
@@ -6800,7 +6807,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Tipo de autenticacao (none, bearer, basic, etc)"
+    "description": "none | bearer | basic | api_key (formato de auth_config em cada um: ver auth_config)"
    },
    {
     "name": "enabled",
@@ -6814,14 +6821,14 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao de autenticacao (credenciais conforme auth_type)"
+    "description": "Credenciais conforme auth_type, objeto: bearer {\"token\": \"...\"}; basic {\"username\": \"...\", \"password\": \"...\"}; api_key {\"name\": \"X-Api-Key\", \"key\": \"...\", \"location\": \"header\"} — location PRECISA ser 'header' (sem ele, ou com outro valor, a chave NAO e enviada); none = {}. token/password/key aceitam variavel {{ account.custom_attribute.CHAVE }}."
    },
    {
     "name": "param_schema",
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de {name, type, description, required} descrevendo os parametros da tool"
+    "description": "LISTA de objetos, cada item {name, type, description, required}: type = string | integer | number | boolean (outro = 422); description OBRIGATORIA (sem ela = 422 — e o que a IA le para preencher o parametro); required true/false. Ex.: [{\"name\": \"cpf\", \"type\": \"string\", \"description\": \"CPF do cliente, so numeros\", \"required\": true}]."
    }
   ],
   "returns": "assistente AI criado (com novo ID)",
@@ -6927,7 +6934,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Tipo de autenticacao (none, bearer, basic, etc)"
+    "description": "none | bearer | basic | api_key (formato de auth_config em cada um: ver auth_config)"
    },
    {
     "name": "enabled",
@@ -6941,14 +6948,14 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao de autenticacao (credenciais conforme auth_type)"
+    "description": "Credenciais conforme auth_type, objeto: bearer {\"token\": \"...\"}; basic {\"username\": \"...\", \"password\": \"...\"}; api_key {\"name\": \"X-Api-Key\", \"key\": \"...\", \"location\": \"header\"} — location PRECISA ser 'header' (sem ele, ou com outro valor, a chave NAO e enviada); none = {}. token/password/key aceitam variavel {{ account.custom_attribute.CHAVE }}. SUBSTITUI o objeto inteiro: mande tudo de novo."
    },
    {
     "name": "param_schema",
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de {name, type, description, required} descrevendo os parametros da tool"
+    "description": "LISTA de objetos, cada item {name, type, description, required}: type = string | integer | number | boolean (outro = 422); description OBRIGATORIA (sem ela = 422 — e o que a IA le para preencher o parametro); required true/false. Ex.: [{\"name\": \"cpf\", \"type\": \"string\", \"description\": \"CPF do cliente, so numeros\", \"required\": true}]. SUBSTITUI a lista inteira."
    }
   ],
   "returns": "assistente AI atualizado",
@@ -7884,7 +7891,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Array de {action_name, action_params[]} — 41 nomes aceitos, listados na descrição da tool; formatos iguais aos das automações"
+    "description": "LISTA de objetos {action_name, action_params} — 41 nomes aceitos, listados na descricao da tool; formatos iguais aos das automacoes. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao')."
    }
   ],
   "returns": "macro criado (com novo ID)",
@@ -7946,7 +7953,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Array de {action_name, action_params[]} — 41 nomes aceitos, listados na descrição da tool; formatos iguais aos das automações"
+    "description": "LISTA de objetos {action_name, action_params} — 41 nomes aceitos, listados na descricao da tool; formatos iguais aos das automacoes. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao'). No update a lista SUBSTITUI a anterior: mande TODAS as acoes."
    },
    {
     "name": "visibility",
@@ -9730,7 +9737,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/flows",
   "title": "Criar Flow",
-  "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. conversation_mode: 'individual' (default) | 'group'. Sticky note (type 'note'): data usa title+body+color(yellow|teal|blue|violet|pink|orange|slate)+width+height — NUNCA 'content'. ORGANIZAÇÃO: preencha tags ao criar (reutilizando as tags já existentes nos flows da conta — veja flows_list) pra manter a lista organizada. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas). REGRAS 18/08: acao start_flow com flow_id do PROPRIO flow e aceita no save mas IGNORADA EM SILENCIO na execucao (o fluxo para ali) — aponte sempre pra OUTRO flow. Condicoes: preencha operator E field juntos (tabela dos pares no resource flowbuilder-patterns), senao a regra roda certa e aparece errada na tela do cliente. NOVIDADES 01/09/2026 no schema (lionchat_flows_schema_reference): acao send_conversion (Meta/Google Ads/GA4 de dentro do fluxo) e condicao por origem/campanha (attr_config de conversa com origin_kind=paid_ad etc.). NOVIDADES 02/09/2026: (1) send_conversion ganhou event_names — UM evento por destino ({meta, google_ads, ga4}); event_name virou reserva (grave os dois); Google Ads so aceita nome do conversion_action_map. (2) preset 'Origem do lead' (attrScope 'lead_origin', attr_key origin_platform; valores: plataforma ou 'custom:<slug>'). (3) REGRA DE VALOR na condicao de atributo: equal/not_equal/contains/not_contains gravam em values:[...] (LISTA) com value:'' — value solo abre VAZIO na tela do cliente. Ver lionchat_flows_schema_reference. TIPO DE FLUXO (17/09/2026): o parametro flow_type aceita 'conversation' (padrao) ou 'action' (Fluxo de Acoes). O de ACOES nao fica ligado a caixa nenhuma, roda em QUALQUER conversa de QUALQUER caixa e SO executa acoes — NAO pode ter os blocos send_message, wait_response nem update_group (a validacao recusa o save inteiro), nao aceita inbox_ids e ignora conversation_mode. Use pra regra que vale na empresa toda e nao depende da caixa (ex.: etiqueta 'urgente' -> atribui equipe de suporte). Se precisa FALAR com a pessoa, o tipo e 'conversation'. Pra ferramenta da IA continue usando lionchat_flow_tools_create.",
+  "description": "Cria um flow (FlowBuilder) na conta. Requer Admin. flow_data segue formato Vue Flow {nodes:[], edges:[]}. NODE SCHEMA — start: {label, items:[...]} — os GATILHOS moram em data.items (NUNCA data.triggers), cada item um OBJETO {key, config}. Ex.: {key:'message_received', config:{keywords:['oi','orcamento'], match_type:'contains'}}. config.keywords e LISTA de textos (texto solto quebra o despacho de TODA mensagem da caixa); listas de id vao como LISTA DE TEXTOS — team_ids:['3'], agent_ids:['70'], funnel_ids:['31'] (numero puro [3] nunca casa); label_names:['vip']. nodes e edges sao LISTAS de objetos; exit_conditions (irmao de nodes, no flow_data) e LISTA de {type, value}. send_message: {label, messageItems:[{id, type:'text', content}]} handles: success/no_response/error. wait_response: {label, waitTime, waitUnit:'minutes'|'seconds', validation:'any'|'options'|'regex', acceptedOptions:['1','2'] (se options), regexPattern (se regex), invalidMessage, maxRetries:3, saveTo:'variable'|'contact_name'|'contact_email'|'contact_phone'|'contact_attr'|'conversation_attr'|'', saveVariable, saveAttrKey} — quando validation='options' os handles ficam 'option_{val}' + 'timeout'; senão 'success' + 'timeout' — NUNCA precisa de condition node depois. condition: {label, conditions:[{id, label, field, operator, value}]} handles = 'cond_0','cond_1',... (INDICE no array, NAO o id) + 'default'. action: {label, items:[{key, config:{...}}]} keys comuns assign_team({team_id}), assign_agent({agent_id}), add_label({labels:['slug',...]}), remove_label({labels}), change_status({status}), change_priority({priority}), mute_conversation({}), add_private_note({content}), create_kanban_item({funnel_id, funnel_stage,...}), move_kanban_stage({funnel_id, funnel_stage}), deactivate_flow({}), assign_captain({assistant_id}). api: {label, method, url, headers:[{key,value}], body, apiResponseVar}. set_variable: {label, variables:[{name, value}]}. wait: {label, waitTime, waitUnit}. EDGE SCHEMA: {id, source, target, sourceHandle (opcional, OBRIGATORIO casar com handle exposto pelo node source), type:'deletable', animated:true}. ERROS COMUNS QUE DEVEM SER EVITADOS: (1) action usa items[].config NAO items[].params; (2) send_message usa messageItems NAO items; (3) wait_response com validation='options' NAO precisa de condition node — use sourceHandle='option_X' diretamente; (4) sourceHandle inventado tipo 'c1','c2' nao funciona — sempre usar o handle real; (5) inbox_ids precisa vir aninhado em {flow:{inbox_ids:[]}} no PUT bruto, mas no MCP basta inbox_ids no nivel raiz. Cria novo flow. Obrigatórios: name, channel_type. Valida unicidade quando aplicável. Retorna o flow criado com ID atribuído. POSITIONING (CRITICO): cada node DEVE ter position:{x,y}. Sem isso, todos empilham no canvas no (0,0). Regra basica de layout: start em {x:50,y:300}, espaco horizontal +320 entre nodes sequenciais, ramificacoes em +/-150 vertical. ANTES DE GERAR JSON consulte o resource lionchat://docs/flowbuilder-design-guide (schema completo de cada tipo de node, handles expostos, erros comuns, checklist) e lionchat://docs/flowbuilder-patterns (10 templates prontos pra adaptar). BRAINSTORMING: se faltou info critica (canal, gatilho, conteudo), use o prompt create_flow_brainstorm como banco de perguntas sugeridas — pergunte SO o que falta, sem checklist forcado. APOS GERAR: rode o checklist da secao 6 do design guide antes de submeter (1 node start, todo node com id unico + position + data, todo edge com sourceHandle valido). NUNCA invente sourceHandle (no condition use cond_0/cond_1/default, no wait_response options use option_X, no AI intent use intent_<opcao>). IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. conversation_mode: 'individual' (default) | 'group'. Sticky note (type 'note'): data usa title+body+color(yellow|teal|blue|violet|pink|orange|slate)+width+height — NUNCA 'content'. ORGANIZAÇÃO: preencha tags ao criar (reutilizando as tags já existentes nos flows da conta — veja flows_list) pra manter a lista organizada. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas). REGRAS 18/08: acao start_flow com flow_id do PROPRIO flow e aceita no save mas IGNORADA EM SILENCIO na execucao (o fluxo para ali) — aponte sempre pra OUTRO flow. Condicoes: preencha operator E field juntos (tabela dos pares no resource flowbuilder-patterns), senao a regra roda certa e aparece errada na tela do cliente. NOVIDADES 01/09/2026 no schema (lionchat_flows_schema_reference): acao send_conversion (Meta/Google Ads/GA4 de dentro do fluxo) e condicao por origem/campanha (attr_config de conversa com origin_kind=paid_ad etc.). NOVIDADES 02/09/2026: (1) send_conversion ganhou event_names — UM evento por destino ({meta, google_ads, ga4}); event_name virou reserva (grave os dois); Google Ads so aceita nome do conversion_action_map. (2) preset 'Origem do lead' (attrScope 'lead_origin', attr_key origin_platform; valores: plataforma ou 'custom:<slug>'). (3) REGRA DE VALOR na condicao de atributo: equal/not_equal/contains/not_contains gravam em values:[...] (LISTA) com value:'' — value solo abre VAZIO na tela do cliente. Ver lionchat_flows_schema_reference. TIPO DE FLUXO (17/09/2026): o parametro flow_type aceita 'conversation' (padrao) ou 'action' (Fluxo de Acoes). O de ACOES nao fica ligado a caixa nenhuma, roda em QUALQUER conversa de QUALQUER caixa e SO executa acoes — NAO pode ter os blocos send_message, wait_response nem update_group (a validacao recusa o save inteiro), nao aceita inbox_ids e ignora conversation_mode. Use pra regra que vale na empresa toda e nao depende da caixa (ex.: etiqueta 'urgente' -> atribui equipe de suporte). Se precisa FALAR com a pessoa, o tipo e 'conversation'. Pra ferramenta da IA continue usando lionchat_flow_tools_create.",
   "category": "Flows",
   "params": [
    {
@@ -9773,7 +9780,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Estrutura {nodes:[], edges:[]} em formato Vue Flow. CONSULTE A DESCRICAO DO TOOL para schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable, wait). Cada node tem campo 'data' com formato especifico por tipo. Edges precisam ter sourceHandle correto (ex: 'option_1', 'success', 'timeout', 'no_response')."
+    "description": "Objeto {nodes:[...], edges:[...], exit_conditions:[...]} em formato Vue Flow — nodes e edges sao LISTAS de objetos. Bloco Inicio: data.items = [{key, config}] (ex.: {\"key\": \"message_received\", \"config\": {\"keywords\": [\"oi\"], \"match_type\": \"contains\"}}); keywords e team_ids/agent_ids/funnel_ids sao LISTAS (ids como texto: [\"3\"]). exit_conditions = LISTA de {type, value}. Cada node tem 'data' com formato proprio (ver descricao da ferramenta e lionchat_flows_schema_reference). Edges precisam de sourceHandle real (ex: 'option_1', 'success', 'timeout', 'no_response')."
    },
    {
     "name": "tags",
@@ -9832,7 +9839,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/flows/{id}",
   "title": "Atualizar Flow",
-  "description": "Atualiza nome, descricao, caixas de entrada ou dados dos blocos. Mesmo schema de flow_data do tool lionchat_flows_create — consulte a descricao daquele tool para o schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable) e dos edges. RECAP RAPIDO: action items[].config (nao params); send_message messageItems (nao items); wait_response validation='options' gera handles 'option_X' (dispensa condition node); edges sourceHandle DEVE casar com handle real do node source. Atualiza campos do flow existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, inbox_ids, flow_data. IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas). REGRAS 18/08: acao start_flow com flow_id do PROPRIO flow e aceita no save mas IGNORADA EM SILENCIO na execucao (o fluxo para ali) — aponte sempre pra OUTRO flow. Condicoes: preencha operator E field juntos (tabela dos pares no resource flowbuilder-patterns), senao a regra roda certa e aparece errada na tela do cliente. NOVIDADES 01/09/2026 no schema (lionchat_flows_schema_reference): acao send_conversion (Meta/Google Ads/GA4 de dentro do fluxo) e condicao por origem/campanha (attr_config de conversa com origin_kind=paid_ad etc.). NOVIDADES 02/09/2026: (1) send_conversion ganhou event_names — UM evento por destino ({meta, google_ads, ga4}); event_name virou reserva (grave os dois); Google Ads so aceita nome do conversion_action_map. (2) preset 'Origem do lead' (attrScope 'lead_origin', attr_key origin_platform; valores: plataforma ou 'custom:<slug>'). (3) REGRA DE VALOR na condicao de atributo: equal/not_equal/contains/not_contains gravam em values:[...] (LISTA) com value:'' — value solo abre VAZIO na tela do cliente. Ver lionchat_flows_schema_reference.",
+  "description": "Atualiza nome, descricao, caixas de entrada ou dados dos blocos. Mesmo schema de flow_data do tool lionchat_flows_create — consulte a descricao daquele tool para o schema completo dos nodes (start, send_message, wait_response, condition, action, api, set_variable) e dos edges. RECAP RAPIDO: start: {label, items:[...]} — os GATILHOS moram em data.items (NUNCA data.triggers), cada item um OBJETO {key, config}. Ex.: {key:'message_received', config:{keywords:['oi','orcamento'], match_type:'contains'}}. config.keywords e LISTA de textos (texto solto quebra o despacho de TODA mensagem da caixa); listas de id vao como LISTA DE TEXTOS — team_ids:['3'], agent_ids:['70'], funnel_ids:['31'] (numero puro [3] nunca casa); label_names:['vip']. nodes e edges sao LISTAS de objetos; exit_conditions (irmao de nodes, no flow_data) e LISTA de {type, value}. flow_data enviado SUBSTITUI o desenho inteiro (nodes + edges + exit_conditions): leia com lionchat_flows_show e reenvie COMPLETO. action items[].config (nao params); send_message messageItems (nao items); wait_response validation='options' gera handles 'option_X' (dispensa condition node); edges sourceHandle DEVE casar com handle real do node source. Atualiza campos do flow existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, inbox_ids, flow_data. IMPORTANTE: chame lionchat_flows_schema_reference antes pra ver o schema COMPLETO e atualizado (nodes end/ai/note, etiqueta conversa vs contato, webhook embutido, timeout, anti-loop). Pra ferramentas da IA (ai_tool) use lionchat_flow_tools_create. STICKY NOTE: o texto da nota (type note) vai em data.title + data.body — content/label/text deixam a nota EM BRANCO na tela; nunca crie nota sem body. LAYOUT: espace os nodes (colunas a >=320px no x, ramos a >=180px no y; notas AO LADO/ACIMA do trecho, nunca sobre nodes ou linhas). REGRAS 18/08: acao start_flow com flow_id do PROPRIO flow e aceita no save mas IGNORADA EM SILENCIO na execucao (o fluxo para ali) — aponte sempre pra OUTRO flow. Condicoes: preencha operator E field juntos (tabela dos pares no resource flowbuilder-patterns), senao a regra roda certa e aparece errada na tela do cliente. NOVIDADES 01/09/2026 no schema (lionchat_flows_schema_reference): acao send_conversion (Meta/Google Ads/GA4 de dentro do fluxo) e condicao por origem/campanha (attr_config de conversa com origin_kind=paid_ad etc.). NOVIDADES 02/09/2026: (1) send_conversion ganhou event_names — UM evento por destino ({meta, google_ads, ga4}); event_name virou reserva (grave os dois); Google Ads so aceita nome do conversion_action_map. (2) preset 'Origem do lead' (attrScope 'lead_origin', attr_key origin_platform; valores: plataforma ou 'custom:<slug>'). (3) REGRA DE VALOR na condicao de atributo: equal/not_equal/contains/not_contains gravam em values:[...] (LISTA) com value:'' — value solo abre VAZIO na tela do cliente. Ver lionchat_flows_schema_reference.",
   "category": "Flows",
   "params": [
    {
@@ -9868,7 +9875,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Estrutura {nodes:[], edges:[]} em formato Vue Flow. Ver descricao do tool lionchat_flows_create para schema dos nodes."
+    "description": "Objeto {nodes:[...], edges:[...], exit_conditions:[...]} em formato Vue Flow — nodes e edges sao LISTAS de objetos. Bloco Inicio: data.items = [{key, config}] (ex.: {\"key\": \"message_received\", \"config\": {\"keywords\": [\"oi\"], \"match_type\": \"contains\"}}); keywords e team_ids/agent_ids/funnel_ids sao LISTAS (ids como texto: [\"3\"]). exit_conditions = LISTA de {type, value}. Cada node tem 'data' com formato proprio (ver descricao da ferramenta e lionchat_flows_schema_reference). Edges precisam de sourceHandle real (ex: 'option_1', 'success', 'timeout', 'no_response'). SUBSTITUI o desenho inteiro: leia com lionchat_flows_show e reenvie nodes + edges + exit_conditions completos."
    },
    {
     "name": "tags",
@@ -10046,7 +10053,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Janelas de disponibilidade"
+    "description": "LISTA de janelas, cada item um OBJETO {day_of_week, start_time, end_time}: day_of_week inteiro 0..6 (0 = domingo, 1 = segunda ... 6 = sabado); start_time/end_time 'HH:MM' 24h, inicio multiplo de 5 min e antes do fim; varios blocos no mesmo dia pode, sem sobrepor. Ex.: [{\"day_of_week\": 1, \"start_time\": \"09:00\", \"end_time\": \"12:00\"}, {\"day_of_week\": 1, \"start_time\": \"14:00\", \"end_time\": \"18:00\"}]. Para EDITAR ou REMOVER uma janela existente mande o id dela (e _destroy: true para remover) — item sem id CRIA outra."
    },
    {
     "name": "slug",
@@ -10598,7 +10605,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. [{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'."
+    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. [{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao')."
    },
    {
     "name": "active",
@@ -10696,7 +10703,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'."
+    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao')."
    }
   ],
   "returns": "regra de automação atualizado",
@@ -11207,7 +11214,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Wrapper com { name, filter_type (conversation ou contact), query }"
+    "description": "Wrapper {name, filter_type, query}. filter_type: 'conversation' ou 'contact'. query = {\"payload\": [{\"attribute_key\": \"status\", \"filter_operator\": \"equal_to\", \"values\": [\"open\"], \"query_operator\": \"and\"}, {\"attribute_key\": \"assignee_id\", \"filter_operator\": \"equal_to\", \"values\": [5], \"query_operator\": null}], \"sort_by\": \"...\"} — payload e LISTA de condicoes (mesmo formato de lionchat_conversations_filter / lionchat_contacts_filter); values e SEMPRE lista; query_operator liga a condicao com a SEGUINTE e a ULTIMA vai null. sort_by e opcional (so pasta de conversa)."
    }
   ],
   "returns": "filtro personalizado criado (com novo ID)",
@@ -11271,7 +11278,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Wrapper com { name, filter_type, query }"
+    "description": "Wrapper {name, filter_type, query}. filter_type: 'conversation' ou 'contact'. query = {\"payload\": [{\"attribute_key\": \"status\", \"filter_operator\": \"equal_to\", \"values\": [\"open\"], \"query_operator\": \"and\"}, {\"attribute_key\": \"assignee_id\", \"filter_operator\": \"equal_to\", \"values\": [5], \"query_operator\": null}], \"sort_by\": \"...\"} — payload e LISTA de condicoes (mesmo formato de lionchat_conversations_filter / lionchat_contacts_filter); values e SEMPRE lista; query_operator liga a condicao com a SEGUINTE e a ULTIMA vai null. sort_by e opcional (so pasta de conversa). No update, query SUBSTITUI inteira: mande as condicoes E o sort_by (leia antes com lionchat_custom_filters_show)."
    }
   ],
   "returns": "filtro personalizado atualizado",
@@ -12173,7 +12180,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Atributos"
+    "description": "Objeto {chave: valor} (chave = attribute_key de lionchat_custom_attributes_list, modelo contato). Por tipo: texto; numero como numero; data 'AAAA-MM-DD' (data-hora ISO com fuso; hora 'HH:MM'); lista = EXATAMENTE uma das opcoes cadastradas (outro valor aparece como 'Fora da lista'); sim/nao = true/false. NUNCA grave waha_whatsapp_lid, waha_whatsapp_jid nem waha_whatsapp_chat_id (endereco interno de envio do WhatsApp — escrever quebra a entrega). Ex.: {\"cpf\": \"123.456.789-00\", \"data_nascimento\": \"1990-05-17\", \"plano\": \"Premium\"}. So vale se o contato for NOVO: se ja existir contato com o mesmo identifier/e-mail/telefone, os atributos NAO sao gravados."
    }
   ],
   "returns": "contato criado (com novo ID)",
@@ -15764,7 +15771,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Componentes do template"
+    "description": "LISTA de componentes no formato da Meta, cada item um OBJETO com type: HEADER {type, format: TEXT|IMAGE|VIDEO|DOCUMENT, text, example}; BODY {type, text, example: {body_text: [[...]]}} (obrigatorio); FOOTER {type, text}; BUTTONS {type, buttons: [{type: QUICK_REPLY|URL|PHONE_NUMBER, text, url, phone_number, example}]}. Ex.: [{\"type\": \"BODY\", \"text\": \"Ola {{1}}, seu pedido saiu.\", \"example\": {\"body_text\": [[\"Maria\"]]}}]. Variavel {{N}} no corpo exige example. Exemplos completos no resource best-practices (templates)."
    },
    {
     "name": "variable_mapping",
@@ -15868,7 +15875,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates/{id}",
   "title": "Atualizar Template WhatsApp",
-  "description": "Atualiza um template de WhatsApp. SOMENTE Channel::Whatsapp Cloud.",
+  "description": "Atualiza um template de WhatsApp. SOMENTE Channel::Whatsapp Cloud. REENVIA o modelo a Meta (status volta para revisao). Para mudar SO o variable_mapping de um modelo aprovado, use lionchat_inboxes_whatsapp_templates_update.",
   "category": "Templates WhatsApp",
   "params": [
    {
@@ -15890,7 +15897,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Componentes atualizados"
+    "description": "LISTA de componentes no formato da Meta, cada item um OBJETO com type: HEADER {type, format: TEXT|IMAGE|VIDEO|DOCUMENT, text, example}; BODY {type, text, example: {body_text: [[...]]}} (obrigatorio); FOOTER {type, text}; BUTTONS {type, buttons: [{type: QUICK_REPLY|URL|PHONE_NUMBER, text, url, phone_number, example}]}. Ex.: [{\"type\": \"BODY\", \"text\": \"Ola {{1}}, seu pedido saiu.\", \"example\": {\"body_text\": [[\"Maria\"]]}}]. Variavel {{N}} no corpo exige example. Exemplos completos no resource best-practices (templates). ATENCAO: esta ferramenta REENVIA o modelo a Meta — o status volta para revisao. Para mudar SO o apontamento das variaveis use lionchat_inboxes_whatsapp_templates_update (nao passa pela Meta)."
    },
    {
     "name": "variable_mapping",
@@ -17064,14 +17071,14 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de campos do payload para campos internos (dentro de custom_webhook_integration). Suporta caminhos com indice de array (messages.0.content) — mapeamento POSICIONAL; limites: profundidade 5, 10 itens/array, 500 chaves"
+    "description": "Mapeamento de campos do payload para campos internos (dentro de custom_webhook_integration). Suporta caminhos com indice de array (messages.0.content) — mapeamento POSICIONAL; limites: profundidade 5, 10 itens/array, 500 chaves FORMATO: {\"<caminho no payload>\": \"<destino>\"} — caminho com ponto (cliente.telefone, messages.0.content); destino SEMPRE texto: contact_name, contact_email, contact_phone, contact_company, contact_city, contact_attr_<chave>, conversation_attr_<chave>, cadastral_<campo> (ex.: cadastral_cpf), social_<rede>. Dois caminhos pro mesmo destino sao concatenados; destino fora da lista e ignorado. Ex.: {\"cliente.nome\": \"contact_name\", \"cliente.telefone\": \"contact_phone\"}."
    },
    {
     "name": "event_automation_mapping",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<valor do campo de evento (event_field) no payload>\": {\"automation_id\": 12, \"flow_id\": null}}, ou {\"__all__\": {...}} para qualquer evento (o __all__ vence os demais). Cada valor e um OBJETO."
    },
    {
     "name": "sample_payload",
@@ -17176,14 +17183,14 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de campos do payload para campos internos (dentro de custom_webhook_integration)"
+    "description": "Mapeamento de campos do payload para campos internos (dentro de custom_webhook_integration) FORMATO: {\"<caminho no payload>\": \"<destino>\"} — caminho com ponto (cliente.telefone, messages.0.content); destino SEMPRE texto: contact_name, contact_email, contact_phone, contact_company, contact_city, contact_attr_<chave>, conversation_attr_<chave>, cadastral_<campo> (ex.: cadastral_cpf), social_<rede>. Dois caminhos pro mesmo destino sao concatenados; destino fora da lista e ignorado. Ex.: {\"cliente.nome\": \"contact_name\", \"cliente.telefone\": \"contact_phone\"}. SUBSTITUI o mapa inteiro."
    },
    {
     "name": "event_automation_mapping",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao a disparar (dentro de custom_webhook_integration). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<valor do campo de evento (event_field) no payload>\": {\"automation_id\": 12, \"flow_id\": null}}, ou {\"__all__\": {...}} para qualquer evento (o __all__ vence os demais). Cada valor e um OBJETO. SUBSTITUI o mapa inteiro: leia com a ferramenta show e reenvie tudo."
    },
    {
     "name": "sample_payload",
@@ -17378,7 +17385,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de guru_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de guru_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"approved\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Guru (maiuscula/minuscula tanto faz): transacao: approved, waiting_payment, abandoned, refused, canceled, expired, refunded, chargeback, pix_generated, boleto_printed, in_analysis, recovery, trial; assinatura: active, trial, past_due, unpaid, canceled, expired; ingresso: invited, confirmed, checked_in, canceled. Ids de automacao/fluxo de outra conta = 400."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -17483,7 +17490,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de guru_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de guru_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"approved\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Guru (maiuscula/minuscula tanto faz): transacao: approved, waiting_payment, abandoned, refused, canceled, expired, refunded, chargeback, pix_generated, boleto_printed, in_analysis, recovery, trial; assinatura: active, trial, past_due, unpaid, canceled, expired; ingresso: invited, confirmed, checked_in, canceled. Ids de automacao/fluxo de outra conta = 400. SUBSTITUI o mapa inteiro: leia com a ferramenta show e reenvie todos os eventos."
    }
   ],
   "returns": "webhook atualizado",
@@ -17692,7 +17699,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"PURCHASE_APPROVED\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Hotmart (maiuscula/minuscula tanto faz): PURCHASE_APPROVED, PURCHASE_COMPLETE, PURCHASE_BILLET_PRINTED, PURCHASE_CANCELED, PURCHASE_REFUNDED, PURCHASE_CHARGEBACK, PURCHASE_EXPIRED, PURCHASE_DELAYED, PURCHASE_PROTEST, SUBSCRIPTION_CANCELLATION, SWITCH_PLAN, UPDATE_SUBSCRIPTION_CHARGE_DATE, CLUB_FIRST_ACCESS, CLUB_MODULE_COMPLETED, PURCHASE_OUT_OF_SHOPPING_CART. Ids de automacao/fluxo de outra conta = 400."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -17790,7 +17797,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de hotmart_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"PURCHASE_APPROVED\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Hotmart (maiuscula/minuscula tanto faz): PURCHASE_APPROVED, PURCHASE_COMPLETE, PURCHASE_BILLET_PRINTED, PURCHASE_CANCELED, PURCHASE_REFUNDED, PURCHASE_CHARGEBACK, PURCHASE_EXPIRED, PURCHASE_DELAYED, PURCHASE_PROTEST, SUBSCRIPTION_CANCELLATION, SWITCH_PLAN, UPDATE_SUBSCRIPTION_CHARGE_DATE, CLUB_FIRST_ACCESS, CLUB_MODULE_COMPLETED, PURCHASE_OUT_OF_SHOPPING_CART. Ids de automacao/fluxo de outra conta = 400. SUBSTITUI o mapa inteiro: leia com a ferramenta show e reenvie todos os eventos."
    }
   ],
   "returns": "webhook atualizado",
@@ -17999,7 +18006,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"compra_aprovada\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Kiwify (maiuscula/minuscula tanto faz): compra_aprovada, compra_recusada, compra_reembolsada, chargeback, boleto_gerado, pix_gerado, carrinho_abandonado, subscription_renewed, subscription_canceled, subscription_late. Ids de automacao/fluxo de outra conta = 400."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -18097,7 +18104,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de kiwify_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"compra_aprovada\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Kiwify (maiuscula/minuscula tanto faz): compra_aprovada, compra_recusada, compra_reembolsada, chargeback, boleto_gerado, pix_gerado, carrinho_abandonado, subscription_renewed, subscription_canceled, subscription_late. Ids de automacao/fluxo de outra conta = 400. SUBSTITUI o mapa inteiro: leia com a ferramenta show e reenvie todos os eventos."
    }
   ],
   "returns": "webhook atualizado",
@@ -18306,7 +18313,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"authorized\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Ticto (maiuscula/minuscula tanto faz): authorized, refused, refunded, chargeback, claimed, close, waiting_payment, bank_slip_created, bank_slip_delayed, pix_created, pix_expired, abandoned_cart, trial, trial_started, trial_ended, subscription_canceled, subscription_delayed, all_charges_paid, card_exchanged, extended, uncanceled. Ids de automacao/fluxo de outra conta = 400."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -18404,7 +18411,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de ticto_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"authorized\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Ticto (maiuscula/minuscula tanto faz): authorized, refused, refunded, chargeback, claimed, close, waiting_payment, bank_slip_created, bank_slip_delayed, pix_created, pix_expired, abandoned_cart, trial, trial_started, trial_ended, subscription_canceled, subscription_delayed, all_charges_paid, card_exchanged, extended, uncanceled. Ids de automacao/fluxo de outra conta = 400. SUBSTITUI o mapa inteiro: leia com a ferramenta show e reenvie todos os eventos."
    }
   ],
   "returns": "webhook atualizado",
@@ -18613,7 +18620,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"myeduzz.invoice_paid\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Eduzz (maiuscula/minuscula tanto faz): myeduzz.invoice_paid, myeduzz.invoice_canceled, myeduzz.invoice_refunded, myeduzz.invoice_waiting_refund, myeduzz.invoice_refused, myeduzz.invoice_expired, myeduzz.invoice_overdue, myeduzz.invoice_opened, myeduzz.invoice_waiting_payment, myeduzz.invoice_scheduled, sun.cart_abandonment, myeduzz.contract_created, myeduzz.contract_updated, myeduzz.contract_card_attempted. Ids de automacao/fluxo de outra conta = 400."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -18711,7 +18718,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de eduzz_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"myeduzz.invoice_paid\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Eduzz (maiuscula/minuscula tanto faz): myeduzz.invoice_paid, myeduzz.invoice_canceled, myeduzz.invoice_refunded, myeduzz.invoice_waiting_refund, myeduzz.invoice_refused, myeduzz.invoice_expired, myeduzz.invoice_overdue, myeduzz.invoice_opened, myeduzz.invoice_waiting_payment, myeduzz.invoice_scheduled, sun.cart_abandonment, myeduzz.contract_created, myeduzz.contract_updated, myeduzz.contract_card_attempted. Ids de automacao/fluxo de outra conta = 400. SUBSTITUI o mapa inteiro: leia com a ferramenta show e reenvie todos os eventos."
    }
   ],
   "returns": "webhook atualizado",
@@ -18920,7 +18927,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"2\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Monetizze (maiuscula/minuscula tanto faz): codigo do evento como TEXTO — '1' aguardando pagamento, '2' compra aprovada, '3' cancelada, '4' reembolsada, '5' bloqueada, '6' completa, '7' carrinho abandonado, '101' assinatura ativa, '102' inadimplente, '103' cancelada, '104' aguardando pagamento. Ids de automacao/fluxo de outra conta = 400."
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -19018,7 +19025,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal."
+    "description": "Mapeamento de evento para automacao (dentro de monetizze_webhook). ATENCAO (26/08/2026): conversation_attribute_keys foi REMOVIDA do produto — o backend ignora a chave se gravada. Atributo de conversa mapeado existe so no Meta Lead e no mapeamento de campos (field_mapping) do Webhook Universal. FORMATO: {\"<evento>\": {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO; first_purchase_only e booleano de verdade (true/false, texto 'true' nao vale) e pula renovacoes. Ex.: {\"2\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": true}}. Eventos do Monetizze (maiuscula/minuscula tanto faz): codigo do evento como TEXTO — '1' aguardando pagamento, '2' compra aprovada, '3' cancelada, '4' reembolsada, '5' bloqueada, '6' completa, '7' carrinho abandonado, '101' assinatura ativa, '102' inadimplente, '103' cancelada, '104' aguardando pagamento. Ids de automacao/fluxo de outra conta = 400. SUBSTITUI o mapa inteiro: leia com a ferramenta show e reenvie todos os eventos."
    }
   ],
   "returns": "webhook atualizado",
@@ -19318,14 +19325,14 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de campos (singular), dentro de form. Destino tambem pode ser conversation_attr_<chave> (2026-08-21): o atributo vai pra CONVERSA que a automacao/fluxo mapeado abrir pro lead (sem automacao/fluxo nao nasce conversa e o valor e descartado). Chaves reservadas (imported_from, type, in_reply_to...) sao recusadas; valor convertido pelo TIPO do atributo."
+    "description": "Mapeamento de campos (singular), dentro de form. Destino tambem pode ser conversation_attr_<chave> (2026-08-21): o atributo vai pra CONVERSA que a automacao/fluxo mapeado abrir pro lead (sem automacao/fluxo nao nasce conversa e o valor e descartado). Chaves reservadas (imported_from, type, in_reply_to...) sao recusadas; valor convertido pelo TIPO do atributo. FORMATO: {\"<campo do lead>\": \"<destino>\"}, destino SEMPRE texto: contact_name, contact_email, contact_phone, contact_company, contact_city, contact_attr_<chave>, conversation_attr_<chave>, cadastral_<campo> (ex.: cadastral_cpf), social_<rede>. Ex.: {\"full_name\": \"contact_name\", \"phone_number\": \"contact_phone\", \"cidade\": \"contact_attr_cidade\"}. Destino fora da lista e ignorado. SUBSTITUI o mapa inteiro: leia com lionchat_meta_lead_show e reenvie tudo."
    },
    {
     "name": "event_automation_mapping",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapeamento de automacao de eventos, dentro de form"
+    "description": "Objeto com UMA chave fixa \"__all__\" (vale para todo lead do formulario), dentro de form: {\"__all__\": {\"automation_id\": 12, \"flow_id\": null}} — ou flow_id no lugar. O valor e um OBJETO: numero solto ({\"__all__\": 12}) NAO dispara nada. Ids precisam ser desta conta. SUBSTITUI o objeto inteiro."
    }
   ],
   "returns": "integração Meta Lead atualizado",
@@ -19507,7 +19514,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Atributos personalizados globais dos cards. Formato: [{name, type, is_list, list_values:[]}]"
+    "description": "LISTA de objetos [{name, type, is_list, list_values:[]}] — sao OS campos da aba Campos de todo card. Tipos que a tela cria: string (texto), number, date, boolean; is_list true + list_values = opcoes. Ex.: [{\"name\": \"Origem do Lead\", \"type\": \"string\", \"is_list\": true, \"list_values\": [\"Google\", \"Meta\"]}]. O valor de cada card mora em item_details.custom_attributes e casa por name+type."
    },
    {
     "name": "kanban_config.config",
@@ -19591,7 +19598,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Atributos personalizados globais dos cards. Formato: [{name, type, is_list, list_values:[]}]"
+    "description": "LISTA de objetos [{name, type, is_list, list_values:[]}] — sao OS campos da aba Campos de todo card. Tipos que a tela cria: string (texto), number, date, boolean; is_list true + list_values = opcoes. Ex.: [{\"name\": \"Origem do Lead\", \"type\": \"string\", \"is_list\": true, \"list_values\": [\"Google\", \"Meta\"]}]. O valor de cada card mora em item_details.custom_attributes e casa por name+type. SUBSTITUI a lista inteira: leia com lionchat_kanban_config_list e reenvie todos os campos (campo removido some da aba de todos os cards)."
    },
    {
     "name": "kanban_config.config",
@@ -21899,7 +21906,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: []} (responsavel atual OU time da conversa). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga. OBRIGATORIO em campanha one-off. Use exatamente as MESMAS secoes que voce passou em lionchat_campaigns_estimate_audience — estimar com um tipo e criar com outro entrega um publico diferente do numero que voce mostrou."
+    "description": "LISTA de objetos — cada secao e um OBJETO com type: [{\"type\": \"Label\", \"id\": 12}, {\"type\": \"ContactAttribute\", \"key\": \"plano\", \"operator\": \"eq\", \"value\": \"Premium\"}]; uma secao unica mandada como objeto vira lista de um; texto ou numero no lugar da lista e RECUSADO (422). Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: []} (responsavel atual OU time da conversa). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga. OBRIGATORIO em campanha one-off. Use exatamente as MESMAS secoes que voce passou em lionchat_campaigns_estimate_audience — estimar com um tipo e criar com outro entrega um publico diferente do numero que voce mostrou."
    },
    {
     "name": "audience_mode",
@@ -21948,7 +21955,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Regras da campanha (hash aberto). Carrega: 'audience_mode' ('sum'|'all', combinacao das secoes de publico) e 'exclusion' (array no MESMO formato do audience — publico a negativar/excluir do disparo). Ex.: {\"audience_mode\":\"sum\",\"exclusion\":[{\"type\":\"ContactLabel\",\"id\":12}]}. audience_mode top-level so vale no estimate_audience; ao criar/editar ele PRECISA ir aqui dentro. A `exclusion` usa o MESMO formato e os MESMOS 7 tipos do audience, inclusive o `operator` nas secoes de atributo."
+    "description": "Regras da campanha (hash aberto). Carrega: 'audience_mode' ('sum'|'all', combinacao das secoes de publico) e 'exclusion' (array no MESMO formato do audience — publico a negativar/excluir do disparo). Ex.: {\"audience_mode\":\"sum\",\"exclusion\":[{\"type\":\"ContactLabel\",\"id\":12}]}. audience_mode top-level so vale no estimate_audience; ao criar/editar ele PRECISA ir aqui dentro. A `exclusion` usa o MESMO formato e os MESMOS 7 tipos do audience, inclusive o `operator` nas secoes de atributo. A exclusion e LISTA de objetos (objeto unico vira lista de um; texto e recusado com 422)."
    },
    {
     "name": "template_params",
@@ -22034,7 +22041,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: []} (responsavel atual OU time da conversa). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga. OBRIGATORIO em campanha one-off. Use exatamente as MESMAS secoes que voce passou em lionchat_campaigns_estimate_audience — estimar com um tipo e criar com outro entrega um publico diferente do numero que voce mostrou."
+    "description": "LISTA de objetos — cada secao e um OBJETO com type: [{\"type\": \"Label\", \"id\": 12}, {\"type\": \"ContactAttribute\", \"key\": \"plano\", \"operator\": \"eq\", \"value\": \"Premium\"}]; uma secao unica mandada como objeto vira lista de um; texto ou numero no lugar da lista e RECUSADO (422). Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: []} (responsavel atual OU time da conversa). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga. OBRIGATORIO em campanha one-off. Use exatamente as MESMAS secoes que voce passou em lionchat_campaigns_estimate_audience — estimar com um tipo e criar com outro entrega um publico diferente do numero que voce mostrou. No update a lista SUBSTITUI o publico anterior: mande todas as secoes."
    },
    {
     "name": "audience_mode",
@@ -22132,7 +22139,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: []} (responsavel atual OU time da conversa). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga."
+    "description": "LISTA de objetos — cada secao e um OBJETO com type: [{\"type\": \"Label\", \"id\": 12}, {\"type\": \"ContactAttribute\", \"key\": \"plano\", \"operator\": \"eq\", \"value\": \"Premium\"}]; nunca numero solto nem objeto unico (objeto no lugar da lista nao e lido como publico). Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: []} (responsavel atual OU time da conversa). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga."
    },
    {
     "name": "audience_mode",
@@ -22153,7 +22160,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Publico a EXCLUIR/negativar antes de estimar (mesmo formato do 'audience': lista de secoes por tipo). O contador desconta quem cair na exclusao. Tipos aceitos iguais aos do audience (Label, Funnel, ConversationAttribute, ContactLabel, ContactAttribute, CardAttribute, AgentTeam). As secoes de atributo aceitam o mesmo `operator` do audience (eq, neq, contains, not_contains, starts_with, present, blank)."
+    "description": "LISTA de objetos (mesmo formato do audience, ex.: [{\"type\": \"ContactLabel\", \"id\": 12}]). Publico a EXCLUIR/negativar antes de estimar (mesmo formato do 'audience': lista de secoes por tipo). O contador desconta quem cair na exclusao. Tipos aceitos iguais aos do audience (Label, Funnel, ConversationAttribute, ContactLabel, ContactAttribute, CardAttribute, AgentTeam). As secoes de atributo aceitam o mesmo `operator` do audience (eq, neq, contains, not_contains, starts_with, present, blank)."
    }
   ],
   "returns": "{ estimated_count: <int>, limit_info: { tier, cap, used_24h, remaining, will_send_now, batches_preview: [{date, count}] } } — NAO existe o campo `count`. `limit_info` so vem preenchido quando se manda `inbox_id` de caixa WhatsApp OFICIAL (Cloud): `cap` = teto de contatos NOVOS por dia que a Meta libera, `used_24h` = quanto ja foi usado nas ultimas 24h, `remaining` = o que sobra hoje, `will_send_now` = quanto sai agora e `batches_preview` = o cronograma dia a dia do restante. Em caixa QR Code/SMS, ou sem inbox_id, `tier`/`cap`/`used_24h`/`remaining` vem NULOS, `batches_preview` vem VAZIO e `will_send_now` e a lista inteira — nulo NAO significa \"sem limite\". Sempre mostre o teto do dia junto com o numero, senao voce promete 5.000 disparos num numero que so fala com 2.000.",
@@ -24388,7 +24395,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapa { evento: conversion_action_id }"
+    "description": "Mapa {<evento>: '<recurso COMPLETO da acao de conversao>'}. O VALOR e o recurso inteiro, nunca so o numero: 'customers/<customer_id sem hifen>/conversionActions/<id da acao>'. Ex.: {\"Lead\": \"customers/1234567890/conversionActions/987654321\", \"Purchase\": \"customers/1234567890/conversionActions/987654322\"}. Pegue o valor pronto no campo resource_name de lionchat_google_ads_integrations_list_conversion_actions. O valor vai CRU pro Google: numero solto e recusado la, e 10 recusas travam a integracao por 1h. Eventos da tela: Lead, Purchase, Contact, CompleteRegistration, Subscribe, Schedule (a acao send_conversion do fluxo so aceita nome que esteja neste mapa). O update SUBSTITUI o mapa inteiro: leia antes com lionchat_google_ads_integrations_show e reenvie TODOS os eventos."
    }
   ],
   "returns": "{ id, ... }",
@@ -24525,7 +24532,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapa de eventos personalizados"
+    "description": "Mapa {<evento>: {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO so com essas 3 chaves (outra chave ou valor que nao seja objeto = 422). Ex.: {\"pagamento_confirmado\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": false}}. Eventos: cobranca_criada, vencimento_7d, vencimento_3d, vencimento_1d, vencimento_hoje, vencido, vencido_3d, vencido_7d, vencido_15d, vencido_30d, pagamento_confirmado, pagamento_parcial, cancelado, renegociado. ACHADO 18/09 (lendo o codigo, nao conferido no banco): o disparo compara o mapa com o STATUS da parcela, e nao com o nome do evento — o mapeamento pode nao acionar nada; confira em lionchat_conta_azul_integrations_events antes de prometer ao cliente."
    }
   ],
   "returns": "{ id, status: 'pending' } (201)",
@@ -24563,7 +24570,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Novo mapa de eventos"
+    "description": "Mapa {<evento>: {automation_id, flow_id, first_purchase_only}} — cada valor e um OBJETO so com essas 3 chaves (outra chave ou valor que nao seja objeto = 422). Ex.: {\"pagamento_confirmado\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": false}}. Eventos: cobranca_criada, vencimento_7d, vencimento_3d, vencimento_1d, vencimento_hoje, vencido, vencido_3d, vencido_7d, vencido_15d, vencido_30d, pagamento_confirmado, pagamento_parcial, cancelado, renegociado. ACHADO 18/09 (lendo o codigo, nao conferido no banco): o disparo compara o mapa com o STATUS da parcela, e nao com o nome do evento — o mapeamento pode nao acionar nada; confira em lionchat_conta_azul_integrations_events antes de prometer ao cliente. O update SUBSTITUI o mapa inteiro: leia com lionchat_conta_azul_integrations_show e reenvie tudo."
    }
   ],
   "returns": "{ id, ... }",
@@ -24784,14 +24791,14 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Categorias: receivables, payables, sales, purchase_orders, contracts, clients, fiscal"
+    "description": "LISTA de textos. Valores aceitos (em portugues): recebimentos, pagamentos, vendas, os, contratos, clientes, fiscais. Ex.: [\"recebimentos\", \"vendas\"]. Outro valor (ex.: receivables, sales) = 422."
    },
    {
     "name": "event_mapping",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Mapa de eventos"
+    "description": "Mapa AGRUPADO POR CATEGORIA: {<categoria>: {<evento>: {automation_id, flow_id, first_purchase_only}}}. Ex.: {\"recebimentos\": {\"pagamento_confirmado\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": false}}}. Cada valor e um OBJETO so com essas 3 chaves (outra chave, categoria fora da lista ou valor que nao seja objeto = 422). Eventos por categoria — recebimentos: cobranca_criada, boleto_gerado, pix_gerado, vencimento_3d, vencimento_1d, pagamento_confirmado, cobranca_vencida, cobranca_cancelada; pagamentos: despesa_criada, despesa_paga, despesa_vencida, despesa_cancelada; vendas: pedido_criado, pedido_faturado, pedido_cancelado, pedido_etapa_alterada; os: os_criada, os_faturada, os_concluida, os_cancelada; contratos: contrato_criado, contrato_faturado, contrato_cancelado; clientes: cliente_cadastrado, fornecedor_cadastrado; fiscais: nfe_autorizada, nfe_cancelada, nfse_emitida, nfse_cancelada. ACHADO 18/09 (lendo o codigo, em conserto): o disparo procura o mapa pelo STATUS do titulo, e nao por categoria+evento — hoje este mapeamento pode nao acionar nada; confira em lionchat_omie_integrations_events antes de prometer o disparo ao cliente."
    }
   ],
   "returns": "{ id, status } (201)",
@@ -24843,14 +24850,14 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Novas categorias"
+    "description": "LISTA de textos. Valores aceitos (em portugues): recebimentos, pagamentos, vendas, os, contratos, clientes, fiscais. Ex.: [\"recebimentos\", \"vendas\"]. Outro valor (ex.: receivables, sales) = 422. SUBSTITUI a lista inteira — para ligar/desligar UMA categoria use lionchat_omie_integrations_toggle_category."
    },
    {
     "name": "event_mapping",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Novo mapa"
+    "description": "Mapa AGRUPADO POR CATEGORIA: {<categoria>: {<evento>: {automation_id, flow_id, first_purchase_only}}}. Ex.: {\"recebimentos\": {\"pagamento_confirmado\": {\"automation_id\": 12, \"flow_id\": null, \"first_purchase_only\": false}}}. Cada valor e um OBJETO so com essas 3 chaves (outra chave, categoria fora da lista ou valor que nao seja objeto = 422). Eventos por categoria — recebimentos: cobranca_criada, boleto_gerado, pix_gerado, vencimento_3d, vencimento_1d, pagamento_confirmado, cobranca_vencida, cobranca_cancelada; pagamentos: despesa_criada, despesa_paga, despesa_vencida, despesa_cancelada; vendas: pedido_criado, pedido_faturado, pedido_cancelado, pedido_etapa_alterada; os: os_criada, os_faturada, os_concluida, os_cancelada; contratos: contrato_criado, contrato_faturado, contrato_cancelado; clientes: cliente_cadastrado, fornecedor_cadastrado; fiscais: nfe_autorizada, nfe_cancelada, nfse_emitida, nfse_cancelada. ACHADO 18/09 (lendo o codigo, em conserto): o disparo procura o mapa pelo STATUS do titulo, e nao por categoria+evento — hoje este mapeamento pode nao acionar nada; confira em lionchat_omie_integrations_events antes de prometer o disparo ao cliente. O update SUBSTITUI o mapa inteiro: leia com lionchat_omie_integrations_show e reenvie tudo."
    }
   ],
   "returns": "{ id, ... }",
@@ -24945,7 +24952,7 @@
     "type": "string",
     "location": "body",
     "required": true,
-    "description": "receivables | payables | sales | purchase_orders | contracts | clients | fiscal"
+    "description": "recebimentos | pagamentos | vendas | os | contratos | clientes | fiscais (em portugues; outro valor = 422)"
    },
    {
     "name": "enabled",
@@ -25602,7 +25609,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Novas settings"
+    "description": "Objeto de configuracao do app. ATENCAO: SUBSTITUI o objeto inteiro — mandar so api_key APAGA fallback_api_keys e as demais chaves. Leia antes com lionchat_integrations_hooks_show e reenvie tudo. OpenAI: {\"api_key\": \"sk-...\", \"fallback_api_keys\": [\"sk-...\"]} (chaves revalidadas ao trocar)."
    },
    {
     "name": "status",
@@ -25646,7 +25653,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations",
   "title": "Listar Integração e-Clínica",
-  "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). O mapeamento evento→flow É EDITÁVEL via MCP desde 31/08/2026 — use lionchat_eclinica_integrations_update (ele SUBSTITUI o mapeamento inteiro: leia aqui primeiro e devolva completo). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes SAO editaveis via MCP desde 31/08/2026 — use lionchat_eclinica_integrations_update (ele SUBSTITUI a lista inteira: leia aqui primeiro e devolva completa). Cada unidade em units[] traz tambem settings {} (18/08). O atributo eclinica_cor (cor da agenda, hex com #) virou campo fresco dos lembretes: filtravel por filter_field e disponivel como variavel {{cor}}. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` alem do `flow_id` — pelo menos um dos dois (422 sem nenhum); com os DOIS preenchidos a AUTOMACAO vence no disparo. A automacao precisa ser da propria conta (422 senao). ALERTA de regra de negocio ao configurar: o caminho por automacao RODA AS ACOES SEM AVALIAR AS CONDICOES da automacao, e paciente com duas consultas no dia recebe DOIS lembretes (o caminho por fluxo descarta o segundo) — avise o cliente antes de trocar fluxo por automacao.",
+  "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). O mapeamento evento→flow É EDITÁVEL via MCP desde 31/08/2026 — use lionchat_eclinica_integrations_update (ele SUBSTITUI o mapeamento inteiro: leia aqui primeiro e devolva completo). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes SAO editaveis via MCP desde 31/08/2026 — use lionchat_eclinica_integrations_update (ele SUBSTITUI a lista inteira: leia aqui primeiro e devolva completa). Cada unidade em units[] traz tambem settings {} (18/08). O atributo eclinica_cor (cor da agenda, hex com #) virou campo fresco dos lembretes: filtravel por filter_field e disponivel como variavel {{cor}}. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` alem do `flow_id` — pelo menos um dos dois (422 sem nenhum); com os DOIS preenchidos a AUTOMACAO vence no disparo. A automacao precisa ser da propria conta (422 senao). ALERTA de regra de negocio ao configurar: o caminho por automacao RODA AS ACOES SEM AVALIAR AS CONDICOES da automacao. Desde 17/09/2026 os DOIS caminhos (fluxo e automacao) mandam um aviso POR CONSULTA: paciente com duas consultas no dia (ou dois pacientes no mesmo celular) recebe um aviso para cada uma, ~10 min um do outro (fila por contato). Quem quer so um por dia monta no FLUXO (condicao num atributo com {{data_consulta}}); na automacao nao da, porque as condicoes dela nao sao avaliadas — avise o cliente antes de trocar fluxo por automacao.",
   "category": "Integracoes",
   "params": [],
   "returns": "200 {payload: {eclinica_integrations: [...]}}",
@@ -26095,7 +26102,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/inboxes/{id}",
   "title": "Atualizar Caixa de Entrada",
-  "description": "Atualiza configurações da caixa (nome, saudação, atribuição automática, atributos extras). MUDANÇA DE CONFIG — confirme com o usuário antes. additional_attributes.mark_as_seen (bool, default true, SÓ WhatsApp oficial, 2026-06-11): envia o visto/check azul quando o agente abre a conversa — desligar em coexistência app+API. ATENÇÃO: enviar additional_attributes substitui o objeto; para WAHA prefira não mexer nesse campo (config sensível). Email (sincronizacao de mao dupla, admin, via objeto channel): two_way_sync_enabled, sync_sent, sync_deletions, sync_read, delete_strategy. CAIXA OFICIAL CRIADA A MAO (26/08): channel.provider_config aceita phone_number_id, business_account_id e api_key — mas o objeto SUBSTITUI o salvo: SEMPRE mande o provider_config INTEIRO (leia o atual antes e reenvie tudo com o campo alterado), senao webhook_verify_token e a marca source sao APAGADOS em silencio e a caixa para de receber. Os 3 campos sao validados JUNTOS na Meta a cada gravacao (422 'Invalid Credentials' = algum dos tres errado ou chave vencida). O telefone da caixa e somente leitura.",
+  "description": "Atualiza configurações da caixa (nome, saudação, atribuição automática, atributos extras). MUDANÇA DE CONFIG — confirme com o usuário antes. channel.additional_attributes.mark_as_seen (bool, default true, WhatsApp oficial, 2026-06-11): envia o visto/check azul quando o agente abre a conversa — desligar em coexistência app+API. channel.additional_attributes SOMA no 1o nivel nas caixas de WhatsApp/Instagram/Facebook/TikTok (troca inteiro so na caixa de API); no QR Code mande SO as chaves da tela (accept_*, reject_calls, reject_calls_message, mark_as_seen) com true/false de verdade — o resto e interno do sistema. Email (sincronizacao de mao dupla, admin, via objeto channel): two_way_sync_enabled, sync_sent, sync_deletions, sync_read, delete_strategy. CAIXA OFICIAL CRIADA A MAO (26/08): channel.provider_config aceita phone_number_id, business_account_id e api_key — mas o objeto SUBSTITUI o salvo: SEMPRE mande o provider_config INTEIRO (leia o atual antes e reenvie tudo com o campo alterado), senao webhook_verify_token e a marca source sao APAGADOS em silencio e a caixa para de receber. Os 3 campos sao validados JUNTOS na Meta a cada gravacao (422 'Invalid Credentials' = algum dos tres errado ou chave vencida). O telefone da caixa e somente leitura.",
   "category": "Caixas de Entrada",
   "params": [
    {
@@ -26141,11 +26148,11 @@
     "description": "Bloco de configuracao da Distribuicao Automatica da propria caixa (29/07/2026): { assign_offline_agents (bool — distribuir tambem para quem esta offline), fair_distribution_limit (int — quantas conversas o robo entrega a cada atendente por janela), fair_distribution_window (int — tamanho da janela em SEGUNDOS) }. ATENCAO: o envio SUBSTITUI o bloco INTEIRO — reenvie as chaves que ja existem, senao elas somem. Chave fora dessas 3 e DESCARTADA em silencio (responde 200 e nada muda). Aqui `fair_distribution_limit: 0` E aceito e significa SEM FREIO (na Politica de Atribuicao o 0 e recusado). So vale quando a caixa NAO tem politica vinculada — com politica, este bloco e ignorado e a secao some da tela da caixa."
    },
    {
-    "name": "additional_attributes",
+    "name": "channel.additional_attributes",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Atributos extras (ex: { mark_as_seen: false } no WhatsApp oficial)"
+    "description": "Atributos extras do CANAL — vai DENTRO de channel (o nome antigo additional_attributes, fora de channel, era descartado pelo servidor). Nas caixas WhatsApp (QR Code e oficial), Instagram, Facebook e TikTok a gravacao SOMA no 1o nivel: so as chaves enviadas mudam. Na caixa de API o objeto e TROCADO inteiro. QR Code: so estas chaves sao da tela — accept_status, accept_groups, accept_channels, accept_broadcast, reject_calls, mark_as_seen (true/false de verdade, nunca \"false\" em texto) e reject_calls_message (texto); o resto (sessao, importacao, proxy, migracao, coex) e interno do sistema e NAO deve ser mandado. WhatsApp oficial: mark_as_seen (bool). Ex.: {\"accept_groups\": true, \"reject_calls\": false}."
    },
    {
     "name": "out_of_office_enabled",
@@ -27286,10 +27293,10 @@
    },
    {
     "name": "reassignments",
-    "type": "object",
+    "type": "array",
     "location": "body",
     "required": false,
-    "description": "Destino dos cards por funil pra cada agente removido (shape da prévia)"
+    "description": "LISTA de objetos — cada item e um OBJETO {agent_id, funnel_id, target_agent_id}, um por (agente removido x funil). Ex.: [{\"agent_id\": 12, \"funnel_id\": 31, \"target_agent_id\": 5}]. Monte a partir de lionchat_team_members_kanban_reassignment_preview: para cada agente e cada funil da previa, escolha target_agent_id entre os eligible_targets. Funil com has_target=false dispensa item (os cards ficam sem dono). Destino ausente ou fora dos eligible_targets = 422 'reassignment_failed' e NADA e aplicado. Objeto unico no lugar da lista nao funciona."
    }
   ],
   "returns": "200 com o time atualizado | 422 { error: 'reassignment_failed', reason } (atômico — nada muda)",
@@ -32563,7 +32570,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}",
   "title": "Detalhes da Integração e-Clínica",
-  "description": "SÓ LEITURA, somente administrador. A integração e-Clínica da conta (1 por conta; o id precisa ser o dela — 404 caso contrário) com status, saúde, mapeamento de eventos, lembretes, webhook_url e as UNIDADES (filiais) com status/token-por-variável/webhook próprio. Mesmo conteúdo de lionchat_eclinica_integrations_list, que já resolve o id. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` alem do `flow_id` — pelo menos um dos dois (422 sem nenhum); com os DOIS preenchidos a AUTOMACAO vence no disparo. A automacao precisa ser da propria conta (422 senao). ALERTA de regra de negocio ao configurar: o caminho por automacao RODA AS ACOES SEM AVALIAR AS CONDICOES da automacao, e paciente com duas consultas no dia recebe DOIS lembretes (o caminho por fluxo descarta o segundo) — avise o cliente antes de trocar fluxo por automacao.",
+  "description": "SÓ LEITURA, somente administrador. A integração e-Clínica da conta (1 por conta; o id precisa ser o dela — 404 caso contrário) com status, saúde, mapeamento de eventos, lembretes, webhook_url e as UNIDADES (filiais) com status/token-por-variável/webhook próprio. Mesmo conteúdo de lionchat_eclinica_integrations_list, que já resolve o id. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` alem do `flow_id` — pelo menos um dos dois (422 sem nenhum); com os DOIS preenchidos a AUTOMACAO vence no disparo. A automacao precisa ser da propria conta (422 senao). ALERTA de regra de negocio ao configurar: o caminho por automacao RODA AS ACOES SEM AVALIAR AS CONDICOES da automacao. Desde 17/09/2026 os DOIS caminhos (fluxo e automacao) mandam um aviso POR CONSULTA: paciente com duas consultas no dia (ou dois pacientes no mesmo celular) recebe um aviso para cada uma, ~10 min um do outro (fila por contato). Quem quer so um por dia monta no FLUXO (condicao num atributo com {{data_consulta}}); na automacao nao da, porque as condicoes dela nao sao avaliadas — avise o cliente antes de trocar fluxo por automacao.",
   "category": "Integracoes",
   "params": [
    {
@@ -32587,7 +32594,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}",
   "title": "Configurar Integração e-Clínica (mapeamento de eventos e lembretes)",
-  "description": "AÇÃO DE ESCRITA, somente administrador. Configura a integração e-Clínica: o MAPEAMENTO evento→automação/fluxo (event_mapping) e os LEMBRETES automáticos (reminder_config). Até 31/08/2026 os dois só existiam na tela — este comando fecha a lacuna.\n\nSUBSTITUIÇÃO TOTAL — LEIA ANTES DE GRAVAR: os dois campos SUBSTITUEM o conteúdo inteiro, NÃO mesclam (o backend faz update! direto no jsonb). Mandar event_mapping com um evento só APAGA todos os outros mapeamentos do cliente; o mesmo vale pra reminder_config. SEMPRE chame lionchat_eclinica_integrations_show ANTES, pegue o objeto atual, altere só o que precisa e devolva o objeto COMPLETO.\n\nevent_mapping: objeto {tipo_do_evento: {automation_id, flow_id}} — pode deixar um dos dois nulo. Tipos aceitos: cliente_novo, cliente_alteracao, agendamento_novo, agendamento_alterado, agendamento_atendido, agendamento_desmarcado, agendamento_transferido, falta, pagamento, cliente_baixa_pagamento, cliente_inclusao_pagamento, controle_laboratorio_novo, controle_laboratorio_alterado, agendamento_aguardando, odontograma_aprovado, cliente_alteracao_pagamento (NOVO 01/09 — a cobrança foi EDITADA: mesmos campos da inclusão e o lembrete de vencimento é MOVIDO, não duplicado; dispara a cada edição, então não sirva para avisar \"nova cobrança\"), procedimento_finalizado (NOVO 31/08 — um procedimento do plano de tratamento foi concluído; dispara UMA VEZ POR PROCEDIMENTO e grava eclinica_procedimento_id/_dente/_valor/_finalizado_em/_profissional no contato, então o fluxo ligado aqui precisa filtrar pelo número do procedimento). odontograma_finalizado (NOVO 01/09 — o plano de tratamento INTEIRO foi concluido; nao confundir com procedimento_finalizado, que e UM item do plano; grava eclinica_odontograma_finalizado_em e nao mexe na data de aprovacao), inclusao_procedimento (NOVO 01/09 — um procedimento foi ACRESCENTADO ao plano, ainda nao executado: serve para aviso de orcamento, NAO e gatilho de orientacao pos-procedimento; grava eclinica_procedimento_incluido_id/_dente/_valor, nunca nos campos do finalizado). Tipo fora da lista = 422; flow_id e automation_id precisam ser da PRÓPRIA conta = 422 senão.\n\nreminder_config: array de {days_before (inteiro >= 0), event_type ('agendamento' padrão | 'controle_laboratorio_novo' | 'cliente_inclusao_pagamento'), flow_id e/ou automation_id (pelo menos um dos dois; com os dois a AUTOMAÇÃO vence), label, dispatch_time (OBRIGATÓRIA — 'HH:MM' fixo ou fórmula Liquid), filter_field/filter_operator/filter_value (opcional; filter_field precisa começar com eclinica_, operadores contains/equal/not_equal)}. Duas linhas com a MESMA régua = 422.\n\nALERTA de regra de negócio: isto muda, na hora e em produção, o que o paciente recebe. E no lembrete por automação as AÇÕES rodam SEM avaliar as CONDIÇÕES da automação — paciente com duas consultas no dia recebe DOIS lembretes (o caminho por fluxo descarta o segundo).",
+  "description": "AÇÃO DE ESCRITA, somente administrador. Configura a integração e-Clínica: o MAPEAMENTO evento→automação/fluxo (event_mapping) e os LEMBRETES automáticos (reminder_config). Até 31/08/2026 os dois só existiam na tela — este comando fecha a lacuna.\n\nSUBSTITUIÇÃO TOTAL — LEIA ANTES DE GRAVAR: os dois campos SUBSTITUEM o conteúdo inteiro, NÃO mesclam (o backend faz update! direto no jsonb). Mandar event_mapping com um evento só APAGA todos os outros mapeamentos do cliente; o mesmo vale pra reminder_config. SEMPRE chame lionchat_eclinica_integrations_show ANTES, pegue o objeto atual, altere só o que precisa e devolva o objeto COMPLETO.\n\nevent_mapping: objeto {tipo_do_evento: {automation_id, flow_id}} — pode deixar um dos dois nulo. Tipos aceitos: cliente_novo, cliente_alteracao, agendamento_novo, agendamento_alterado, agendamento_atendido, agendamento_desmarcado, agendamento_transferido, falta, pagamento, cliente_baixa_pagamento, cliente_inclusao_pagamento, controle_laboratorio_novo, controle_laboratorio_alterado, agendamento_aguardando, odontograma_aprovado, cliente_alteracao_pagamento (NOVO 01/09 — a cobrança foi EDITADA: mesmos campos da inclusão e o lembrete de vencimento é MOVIDO, não duplicado; dispara a cada edição, então não sirva para avisar \"nova cobrança\"), procedimento_finalizado (NOVO 31/08 — um procedimento do plano de tratamento foi concluído; dispara UMA VEZ POR PROCEDIMENTO e grava eclinica_procedimento_id/_dente/_valor/_finalizado_em/_profissional no contato, então o fluxo ligado aqui precisa filtrar pelo número do procedimento). odontograma_finalizado (NOVO 01/09 — o plano de tratamento INTEIRO foi concluido; nao confundir com procedimento_finalizado, que e UM item do plano; grava eclinica_odontograma_finalizado_em e nao mexe na data de aprovacao), inclusao_procedimento (NOVO 01/09 — um procedimento foi ACRESCENTADO ao plano, ainda nao executado: serve para aviso de orcamento, NAO e gatilho de orientacao pos-procedimento; grava eclinica_procedimento_incluido_id/_dente/_valor, nunca nos campos do finalizado). Tipo fora da lista = 422; flow_id e automation_id precisam ser da PRÓPRIA conta = 422 senão.\n\nreminder_config: array de {days_before (inteiro >= 0), event_type ('agendamento' padrão | 'controle_laboratorio_novo' | 'cliente_inclusao_pagamento'), flow_id e/ou automation_id (pelo menos um dos dois; com os dois a AUTOMAÇÃO vence), label, dispatch_time (OBRIGATÓRIA — 'HH:MM' fixo ou fórmula Liquid), filter_field/filter_operator/filter_value (opcional; filter_field precisa começar com eclinica_, operadores contains/equal/not_equal)}. Duas linhas com a MESMA régua = 422.\n\nALERTA de regra de negócio: isto muda, na hora e em produção, o que o paciente recebe. E no lembrete por automação as AÇÕES rodam SEM avaliar as CONDIÇÕES da automação. Desde 17/09/2026 os DOIS caminhos (fluxo e automacao) mandam um aviso POR CONSULTA: paciente com duas consultas no dia (ou dois pacientes no mesmo celular) recebe um aviso para cada uma, ~10 min um do outro (fila por contato). Quem quer so um por dia monta no FLUXO (condicao num atributo com {{data_consulta}}); na automacao nao da, porque as condicoes dela nao sao avaliadas.",
   "category": "Integracoes",
   "params": [
    {
@@ -33245,7 +33252,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false."
    }
   ],
   "returns": "o modelo criado (id, name, kind, body, variables, roles_layout, progress)",
@@ -33307,7 +33314,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false."
    }
   ],
   "returns": "o modelo atualizado",

@@ -215,7 +215,8 @@ Funnel
 ├── name
 ├── stages (jsonb: hash com slug_etapa => { name, color, position, description, checklist_templates })
 ├── settings (jsonb: { agents: [], goals: [], automations: [{trigger_type, action, action_config, enabled}] })
-├── global_custom_attributes (jsonb array)
+├── global_custom_attributes (jsonb array — NENHUMA tela lê este campo do funil; os campos da aba do card
+│     são os do KanbanConfig acima)
 ├── meta_events_config (jsonb: won/lost/stages → Meta Pixel/CAPI events; cada bloco: enabled, name,
 │     is_standard, value_strategy, value_fixed, currency, messaging_name — este último é o evento de
 │     ANÚNCIO DE WHATSAPP, tri-estado: ausente = automático, '' = não enviar, um dos 14 nomes da Meta;
@@ -241,9 +242,10 @@ KanbanItem
 ├── stage_entered_at (datetime)
 ├── position (int, ordem dentro da etapa)
 ├── conversation_display_id (FK opcional → Conversation.display_id)
-├── item_details (jsonb)
-├── custom_attributes (jsonb)
-├── assigned_agents (jsonb array)
+├── item_details (jsonb — os campos da aba Campos ficam em item_details.custom_attributes, LISTA de
+│     {name, type, value}; nunca objeto {chave: valor})
+├── custom_attributes (jsonb — coluna que NENHUMA tela mostra; nao confundir com a lista acima)
+├── assigned_agents (jsonb array — para gravar: lista de NUMEROS [5, 12])
 ├── linked_conversations (jsonb array de { display_id })
 ├── checklist (jsonb array de itens — NAO e tabela separada; ver abaixo)
 ├── activities (jsonb)

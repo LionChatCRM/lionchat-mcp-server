@@ -414,7 +414,7 @@ mandar). Detalhes em `lionchat://docs/best-practices`.
 |---|---|---|
 | Motivo de Ganho/Perda do card | `kanban_config.win_reasons` / `loss_reasons` | ❌ NÃO |
 | Atributo em TODO card | `kanban_config.global_custom_attributes` | só se não couber acima |
-| Atributo de UM card específico | `kanban_item.custom_attributes` (jsonb direto) | já é nativo, não precisa definition |
+| Valor de um campo em UM card | `item_details.custom_attributes` — LISTA `[{name, type, value}]` casando com o campo de `kanban_config.global_custom_attributes` | a coluna `kanban_item.custom_attributes` NÃO aparece em tela nenhuma — não use pra dado que o cliente precisa ver |
 | CPF, RG, CNPJ, endereço, data nasc., gênero do cliente | mecanismo NATIVO cadastral: `PATCH /contacts/{id}/cadastral` (`update_cadastral`) | ❌ NÃO (tem nativo) |
 | Tag pro contato (residencial, empresarial) | `labels` | ✅ SIM via Label |
 | Etapa do funil | `funnel.stages` | ❌ NÃO |
