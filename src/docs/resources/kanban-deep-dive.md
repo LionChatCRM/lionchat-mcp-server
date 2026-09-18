@@ -16,6 +16,7 @@ Container de etapas. Conta pode ter vários funis (ex: "Vendas", "Pós-venda", "
 | `archived` | Boolean — funis arquivados não aparecem na UI ativa |
 | `active` | Boolean — controla se aceita movimentação |
 | `settings` | jsonb — config customizada (ex: cores, automações) |
+| `settings.agents` | agentes do funil. Grave `[{"id": <id do agente>}]` (ids de `lionchat_agents_list`); o sistema completa nome, e-mail, cargo e foto — é o que o editor do funil, o card e a conversa mostram. Agente de outra conta fica sem nome e sem acesso. `settings` é substituído INTEIRO no update: leia o funil antes e reenvie goals+agents+teams+automations. |
 
 ### Stages (Etapas) — dentro de `funnel.stages`
 
