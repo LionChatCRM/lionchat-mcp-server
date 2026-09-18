@@ -1025,17 +1025,43 @@ de conexão e viram bola de neve visual. Ao gerar `position`:
 
 ---
 
-## 2-B. Dois tipos de flow: `conversation` vs `ai_tool`
+## 2-B. Três tipos de flow: `conversation`, `ai_tool` e `action`
 
 O campo `flow_type` (definido na criação, IMUTÁVEL depois) decide a natureza do flow:
 
-| | `conversation` (default) | `ai_tool` |
-|---|---|---|
-| Como dispara | Por evento de inbox (trigger no node `start`) | Invocado pelo AI Agente (Captain) como ferramenta |
-| Inboxes | usa `inbox_ids` | **PROIBIDO** ter inboxes (validação barra) |
-| Campos extra | — | `tool_name` (snake_case, `[a-z][a-z0-9_]`, max 50) + `tool_description` (max 500) OBRIGATÓRIOS |
-| Retorno | manda mensagens | retorna dado estruturado ao LLM via node `end` |
-| Nodes permitidos | todos | `start`, `end`, `api`, `condition`, `set_variable`, `ai`, `note`, `randomizer`, `action`, `send_message` |
+| | `conversation` (default) | `ai_tool` | `action` (17/09/2026) |
+|---|---|---|---|
+| Como dispara | Por evento de inbox (trigger no node `start`) | Invocado pelo AI Agente (Captain) como ferramenta | Pelo MESMO trigger do `conversation`, mas em QUALQUER inbox |
+| Inboxes | usa `inbox_ids` | **PROIBIDO** ter inboxes (validação barra) | **PROIBIDO** ter inboxes (roda em todas) |
+| Campos extra | — | `tool_name` (snake_case, `[a-z][a-z0-9_]`, max 50) + `tool_description` (max 500) OBRIGATÓRIOS | — |
+| Retorno | manda mensagens | retorna dado estruturado ao LLM via node `end` | **não manda mensagem nenhuma** |
+| Nodes permitidos | todos | `start`, `end`, `api`, `condition`, `set_variable`, `ai`, `note`, `randomizer`, `action`, `send_message` | todos MENOS `send_message`, `wait_response`, `update_group` e `end` |
+
+**`action` (na tela: "Fluxo de Ações")** é para regra que vale na empresa inteira e não depende da
+caixa: "conversa que receber a etiqueta urgente vai pra equipe de suporte", "card que entrar na
+etapa Fechado grava a data no contato". Antes exigia repetir o mesmo flow em cada inbox.
+
+Criar: `flows_create` com `flow_type: 'action'`, SEM `inbox_ids` e SEM `conversation_mode`
+(o backend fixa `individual`; mandar `group` é ignorado). Aceita os MESMOS gatilhos do
+`conversation` no node `start` e usa o mesmo `flow_data`. Roda LADO A LADO com os flows de mensagem
+(não entra no aviso de conflito de gatilho) e vale também em conversa de grupo.
+
+**NUNCA** pôr `send_message` / `wait_response` / `update_group` num flow `action` — a validação
+recusa o save inteiro com `contains node types not allowed in action flow`. Se o cliente precisa
+falar com a pessoa, o flow é `conversation`.
+
+Três regras que andam com o tipo `action` (17/09/2026):
+- **`start_flow` (bloco Ações > Sistema)**: o flow de ações pode ser alvo a partir de QUALQUER flow,
+  sem casar caixa. Já um flow `conversation` alvo que NÃO atenda a caixa da conversa é RECUSADO em
+  runtime (passo com erro `inbox_mismatch` no histórico) — antes rodava no lugar errado em silêncio.
+- **Macro**: a ação `start_flow` da macro (`macros_*`) aceita **só** `flow_type: 'action'`.
+- **Condições**: `{{inbox.id}}` e `{{inbox.channel_type}}` (novo) dão "Caixa da conversa" e "Tipo de
+  caixa" na aba Conversas — como o flow de ações roda em todas as caixas, é assim que ele pergunta
+  onde está antes de agir. `channel_type` grava o valor técnico (`Channel::Waha` etc.).
+- **AINDA NÃO FUNCIONA**: disparar flow `action` por webhook de integração (gateways de pagamento,
+  Webhook Universal, Meta Lead, e-Clínica) ou por gatilho de formulário. Esses caminhos criam a
+  conversa usando a CAIXA do flow, e o flow de ações não tem caixa — ele é selecionado e descartado
+  (`no_inbox_linked` no log). Não prometa isso ao cliente até a decisão de produto.
 | Aviso de espera (10/09/2026) | — | enquanto a ferramenta roda, o cliente recebe "Só um momento, estou verificando isso pra você...". Cada ferramenta escolhe o seu no node `start`: `data.toolWaitMessageEnabled` (`false` desliga; AUSENTE = ligado — só um `false` de verdade desliga, `""` ou lixo mantém ligado) e `data.toolWaitMessageText` (texto próprio, até 1000 caracteres; vazio = frase padrão). Vive no `flow_data` e viaja no snapshot de versão; ferramenta já existente não muda de comportamento |
 
 Se o cliente pediu "uma ferramenta que a IA usa pra consultar X / calcular Y", é `ai_tool`. Se pediu "quando chega mensagem, faça Z", é `conversation`. Na dúvida, `conversation`.
@@ -1055,10 +1081,11 @@ no fim de uma cadeia automação→flow→automação, suspeite desse limite —
 
 Todo flow `conversation` tem um `conversation_mode`: `individual` (default — conversa 1-a-1) ou `group`
 (grupo de WhatsApp). Definido na CRIAÇÃO e **IMUTÁVEL depois** (não dá pra converter um no outro; pra trocar,
-crie outro flow). Não confundir com `flow_type` — um flow `ai_tool` não tem `conversation_mode`.
+crie outro flow). Não confundir com `flow_type` — um flow `ai_tool` não tem `conversation_mode`, e no
+`action` ele é fixado em `individual` (o campo não se aplica: o flow de ações roda nos dois).
 
-Na tela o usuário vê isso como TRÊS opções ao criar: "Mensagem" (= `conversation` + `individual`),
-"Grupo" (= `conversation` + `group`) e "IA Agente" (= `ai_tool`).
+Na tela o usuário escolhe o TIPO (Conversa / IA Agente / Ações) e, só no tipo Conversa, o modo
+(Mensagens individuais / Grupos WhatsApp).
 
 **A diferença entre individual e grupo é quais nodes/abas ficam disponíveis:**
 
