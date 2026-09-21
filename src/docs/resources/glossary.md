@@ -388,13 +388,15 @@ mandar). Detalhes em `lionchat://docs/best-practices`.
 
 **Onde fica armazenado:** `kanban_config.win_reasons` e `kanban_config.loss_reasons` (jsonb arrays na tabela `kanban_configs`).
 
-**Formato:** array de objetos `{id, title}`:
+**Formato:** array de objetos `{id, title}`, com `id` em **texto estável** (nunca número) — detalhes e erros 422 em
+`lionchat://docs/api-conventions` → "Estrutura interna das listas":
 ```json
 "win_reasons": [
   {"id": "wr-1", "title": "Preço competitivo"},
   {"id": "wr-2", "title": "Indicação forte"}
 ]
 ```
+**No card:** `item_details.loss_reason` / `win_reason` guardam o `id` (texto) do motivo escolhido; `reason`, o título.
 
 **Endpoint:** `PUT /api/v1/accounts/{id}/kanban_config` com body wrapped:
 ```json

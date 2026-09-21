@@ -66,8 +66,8 @@ Stages NÃO são tabela separada. São armazenadas como jsonb dentro do Funnel:
 
 | Campo | Tipo | O que guarda |
 |---|---|---|
-| `win_reasons` | jsonb array | **Motivos de Ganho** — `[{id, title}]`. Aparecem como dropdown quando o vendedor marca "Ganho" num card. NATIVO. NÃO usar custom_attribute. |
-| `loss_reasons` | jsonb array | **Motivos de Perda** — mesma estrutura. Aparece ao marcar "Descartado". |
+| `win_reasons` | jsonb array | **Motivos de Ganho** — `[{id, title}]`, `id` em **texto estável** (nunca número). Aparecem como dropdown quando o vendedor marca "Ganho" num card. NATIVO. NÃO usar custom_attribute. |
+| `loss_reasons` | jsonb array | **Motivos de Perda** — mesma estrutura e mesma regra do `id`. Aparece ao marcar "Descartado". |
 | `checklist_templates` | jsonb array | Templates de checklist reusáveis — `[{id, name, items: [{id, text}]}]`. Aplicados manualmente ou via automação `apply_checklist_template`. |
 | `global_custom_attributes` | jsonb array | Atributos globais que aparecem em TODOS os cards de TODOS os funis — `[{name, type, is_list, list_values}]`. |
 | `config` | jsonb hash | Configurações gerais (title, default_view, auto_assignment, support_email, dragbar_enabled, etc) |
@@ -83,7 +83,8 @@ Stages NÃO são tabela separada. São armazenadas como jsonb dentro do Funnel:
 | DELETE | `/api/v1/accounts/{id}/kanban_config` | Remove (não afeta cards/funis) |
 | POST | `/api/v1/accounts/{id}/kanban_config/test_webhook` | Dispara payload de teste |
 
-**GOTCHA — body precisa estar wrapped:**
+**Body raiz ou com o envelope `kanban_config` — os dois funcionam** (conferido 21/09: `{"loss_reasons": [...]}` na
+raiz grava e recusa normalmente). Exemplo com envelope:
 
 ```json
 PUT /api/v1/accounts/43/kanban_config
@@ -101,7 +102,11 @@ PUT /api/v1/accounts/43/kanban_config
 }
 ```
 
-Se mandar `{"win_reasons": [...]}` direto (sem o wrapper `kanban_config`) → **HTTP 500 silencioso**. Strong params do Rails exige `params.require(:kanban_config)`.
+**Regras dos motivos** (servidor, desde 21/09): `id` em texto estável — número é convertido (`7` → `"7"`), mas mande
+texto; a lista SUBSTITUI a atual, então reenvie os MESMOS `id` dos motivos que já existem (trocar o `id` tira o nome
+dos cards já marcados); lista de textos soltos, motivo sem `id`/`title` ou `id` repetido → **422** com o formato
+(antes, a lista de textos APAGAVA os motivos em silêncio). No card: `item_details.loss_reason`/`win_reason` = o `id`
+(texto) + `reason` = o título. Detalhes em `lionchat://docs/api-conventions` → "Estrutura interna das listas".
 
 **`win_reasons` e `loss_reasons` aceitam array de OBJETOS `{id, title}`, NÃO strings simples.** Strings causam 500. O `id` é qualquer string única (UUID ou slug curto tipo `wr-1`).
 

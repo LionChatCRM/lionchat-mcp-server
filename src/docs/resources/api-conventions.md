@@ -73,7 +73,25 @@ Praticamente nunca — exceto se você está testando legacy/curl e quer ser exp
 }
 ```
 
-Strings simples (`"win_reasons": ["motivo"]`) causam erro de serialização.
+Regras (conferidas no servidor desde 21/09):
+
+- O `id` é **texto estável** (`"wr-1"`, `"perda-preco"`) — **nunca número**. Número é convertido para texto
+  (`7` vira `"7"`), mas o certo é já mandar texto. Motivo cadastrado com `id` numérico derrubava o relatório do
+  funil (conta 137, 21/09).
+- Como a lista **substitui** a atual, **reenvie os mesmos `id`** dos motivos que já existem. Trocar o `id` de um
+  motivo faz os cards já marcados com ele perderem o nome no relatório.
+- Recusado com **422** (mensagem diz o formato): lista de textos soltos (`["motivo"]` — antes APAGAVA os motivos da
+  conta em silêncio), motivo sem `id`, motivo sem `title`, `id` repetido. O servidor **não inventa** `id`.
+- Lista vazia (`[]`) limpa os motivos.
+
+**Marcar o card com o motivo** (`PATCH /kanban_items/{id}`, `item_details` mescla no 1º nível):
+
+```json
+{ "item_details": { "status": "lost", "loss_reason": "perda-preco", "reason": "Preço alto" } }
+```
+
+`loss_reason`/`win_reason` = o `id` (texto) de um motivo cadastrado; `reason` = o título. Motivo livre (fora da
+lista): `loss_reason` nulo e o texto em `reason`.
 
 ## Restrições de formato em campos comuns
 

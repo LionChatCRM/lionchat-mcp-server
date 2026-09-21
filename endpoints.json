@@ -3274,7 +3274,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Objeto com os detalhes do card. MESCLA SO NO 1o NIVEL: cada chave enviada troca a chave inteira no card; as nao enviadas ficam. Lista FECHADA (outras chaves sao descartadas em silencio): title, description, status, reason, win_reason, loss_reason, attributed_to, duplicated_from_id, priority, value (NUMERO; texto de numero como \"1500.5\" e convertido, \"R$ 1.500,00\" e recusado com 422), currency, custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at, conversation_id, automations, notes. custom_attributes = campos da aba Campos do card: LISTA [{name, type, value}] onde name+type batem EXATAMENTE com a definicao da CONTA (lionchat_kanban_config_list -> global_custom_attributes). Ex.: [{\"name\": \"Origem do Lead\", \"type\": \"string\", \"value\": \"Google\"}]. A lista e TROCADA inteira: leia o card com lionchat_kanban_items_show e reenvie TODOS os campos. Objeto {chave: valor} no lugar da lista APAGA todos os campos do card. notes e offers tambem sao listas trocadas inteiras."
+    "description": "Objeto com os detalhes do card. MESCLA SO NO 1o NIVEL: cada chave enviada troca a chave inteira no card; as nao enviadas ficam. Lista FECHADA (outras chaves sao descartadas em silencio): title, description, status, reason, win_reason, loss_reason, attributed_to, duplicated_from_id, priority, value (NUMERO; texto de numero como \"1500.5\" e convertido, \"R$ 1.500,00\" e recusado com 422), currency, custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at, conversation_id, automations, notes. custom_attributes = campos da aba Campos do card: LISTA [{name, type, value}] onde name+type batem EXATAMENTE com a definicao da CONTA (lionchat_kanban_config_list -> global_custom_attributes). Ex.: [{\"name\": \"Origem do Lead\", \"type\": \"string\", \"value\": \"Google\"}]. A lista e TROCADA inteira: leia o card com lionchat_kanban_items_show e reenvie TODOS os campos. Objeto {chave: valor} no lugar da lista APAGA todos os campos do card. notes e offers tambem sao listas trocadas inteiras. Motivo de ganho/perda: status \"won\"/\"lost\" + win_reason/loss_reason = o id (TEXTO) de um motivo de kanban_config.win_reasons/loss_reasons + reason = o titulo dele. Motivo livre (fora da lista): win_reason/loss_reason nulo e o texto em reason. Ex.: {\"status\": \"lost\", \"loss_reason\": \"perda-preco\", \"reason\": \"Preco alto\"}."
    },
    {
     "name": "kanban_item.assigned_agents",
@@ -19500,14 +19500,14 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Motivos de ganho do funil. Formato: [{id, title}]"
+    "description": "Motivos de ganho (valem para TODOS os funis da conta). Formato: [{\"id\": \"ganho-indicacao\", \"title\": \"Indicacao\"}]. O id e TEXTO estavel (ex.: \"ganho-indicacao\"), nunca numero — numero e convertido para texto, mas mande texto. A lista SUBSTITUI a atual: leia antes com lionchat_kanban_config_list e reenvie os MESMOS id dos motivos que ja existem (trocar o id tira o nome dos cards ja marcados com ele). Recusado com 422: lista de textos soltos ([\"Preco\"]), motivo sem id, motivo sem title, id repetido. O servidor nao inventa id. [] limpa a lista."
    },
    {
     "name": "kanban_config.loss_reasons",
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Motivos de perda do funil. Formato: [{id, title}]"
+    "description": "Motivos de perda (valem para TODOS os funis da conta). Formato: [{\"id\": \"perda-preco\", \"title\": \"Preco alto\"}]. O id e TEXTO estavel (ex.: \"perda-preco\"), nunca numero — numero e convertido para texto, mas mande texto. A lista SUBSTITUI a atual: leia antes com lionchat_kanban_config_list e reenvie os MESMOS id dos motivos que ja existem (trocar o id tira o nome dos cards ja marcados com ele). Recusado com 422: lista de textos soltos ([\"Preco\"]), motivo sem id, motivo sem title, id repetido. O servidor nao inventa id. [] limpa a lista."
    },
    {
     "name": "kanban_config.global_custom_attributes",
@@ -19584,14 +19584,14 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Motivos de ganho do funil. Formato: [{id, title}]"
+    "description": "Motivos de ganho (valem para TODOS os funis da conta). Formato: [{\"id\": \"ganho-indicacao\", \"title\": \"Indicacao\"}]. O id e TEXTO estavel (ex.: \"ganho-indicacao\"), nunca numero — numero e convertido para texto, mas mande texto. A lista SUBSTITUI a atual: leia antes com lionchat_kanban_config_list e reenvie os MESMOS id dos motivos que ja existem (trocar o id tira o nome dos cards ja marcados com ele). Recusado com 422: lista de textos soltos ([\"Preco\"]), motivo sem id, motivo sem title, id repetido. O servidor nao inventa id. [] limpa a lista."
    },
    {
     "name": "kanban_config.loss_reasons",
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Motivos de perda do funil. Formato: [{id, title}]"
+    "description": "Motivos de perda (valem para TODOS os funis da conta). Formato: [{\"id\": \"perda-preco\", \"title\": \"Preco alto\"}]. O id e TEXTO estavel (ex.: \"perda-preco\"), nunca numero — numero e convertido para texto, mas mande texto. A lista SUBSTITUI a atual: leia antes com lionchat_kanban_config_list e reenvie os MESMOS id dos motivos que ja existem (trocar o id tira o nome dos cards ja marcados com ele). Recusado com 422: lista de textos soltos ([\"Preco\"]), motivo sem id, motivo sem title, id repetido. O servidor nao inventa id. [] limpa a lista."
    },
    {
     "name": "kanban_config.global_custom_attributes",

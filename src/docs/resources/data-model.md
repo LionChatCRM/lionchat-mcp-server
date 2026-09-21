@@ -494,7 +494,7 @@ daquele tipo no calendário; vazio = cor do agente. A tarefa devolve `booking_co
 
 ## e-Clínicas (Efficient) — integração de clínicas
 
-17 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica
+19 eventos de webhook, cada um mapeável a automação OU flow na tela Integrações > e-Clínica
 (o mapeamento e os lembretes passaram a ser editáveis por MCP em 31/08/2026, com
 `lionchat_eclinica_integrations_update` — ele **SUBSTITUI** o objeto inteiro, então leia com
 `_show` e devolva completo, senão apaga o resto):
@@ -504,7 +504,10 @@ daquele tipo no calendário; vazio = cor do agente. A tarefa devolve `booking_co
 `cliente_inclusao_pagamento`, `controle_laboratorio_novo`, `controle_laboratorio_alterado`,
 `agendamento_aguardando`, `odontograma_aprovado`, `procedimento_finalizado`,
 `cliente_alteracao_pagamento`, `odontograma_finalizado`, `inclusao_procedimento`
-(capturados ao vivo, não documentados pelo e-Clínica).
+(capturados ao vivo, não documentados pelo e-Clínica) +
+`agendamento_confirmado_link` e `agendamento_cancelado_link` (18/09/2026 — o PACIENTE confirmando/
+cancelando pelo link do portal, ecli.co; confirmado processa como `agendamento_alterado`, mantendo o
+lembrete; cancelado processa EXATAMENTE como `agendamento_desmarcado`, cancelando o lembrete).
 
 O recurso `eclinica_integration` da conta passou a ser ligado e desligado pelo PRÓPRIO cadastro da
 integração (10/09/2026, `auto_managed`): sumiu do Super Admin e não há passo manual — os blocos de

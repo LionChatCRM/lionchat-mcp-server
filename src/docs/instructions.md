@@ -170,7 +170,11 @@ Detalhes completos em `lionchat://docs/api-conventions` → "Wrapper de body".
 ### Regras de formato silenciosas
 
 - **Label.title**: kebab-case ou snake_case, **SEM espaço**. `"Lead Emive"` ❌ → `"lead-emive"` ✅
-- **win_reasons / loss_reasons**: array de `{id, title}`, NÃO strings
+- **win_reasons / loss_reasons**: array de `{id, title}`, NÃO strings. O `id` é **TEXTO estável** (`"perda-preco"`),
+  nunca número. A lista SUBSTITUI a atual: leia antes e reenvie os MESMOS `id` (trocar o `id` tira o nome dos
+  cards já marcados). Motivo sem `id`/`title`, `id` repetido ou lista de textos → recusado com 422
+- **motivo no card**: `item_details.status` `"lost"`/`"won"` + `loss_reason`/`win_reason` = o `id` (texto) de um
+  motivo cadastrado + `reason` = o título. Motivo livre: `loss_reason` nulo e o texto em `reason`
 - **linked_conversations**: array de `{display_id: N}`, NÃO inteiros direto
 - **phone**: E.164 (`+5511...`), sem espaços/parênteses
 - **funnel.stages** keys: snake_case slug; cada etapa é OBJETO com `name` texto
