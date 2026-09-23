@@ -172,10 +172,13 @@ valores desta lista:
 | Econômicos / rápidos | `gpt-4.1-nano`, `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-5.4-nano`, `gpt-5.4-mini` |
 | Intermediários | `gpt-4o`, `gpt-4.1`, `gpt-5-mini`, `gpt-5.4` |
 | Raciocínio | `o3-mini`, `o4-mini` |
-| Premium | `gpt-5`, `gpt-5.2`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `o1`, `o3` |
+| Premium | `gpt-5`, `gpt-5.2`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-6-sol`, `o1`, `o3` |
+| Custo-benefício (nova geração) | `gpt-6-luna` — US$ 0,10/0,50 por 1M tokens, raciocínio, sem temperatura; liberado em 23/09/2026 |
 
 **`GPT-5.2 Pro` não existe.** O valor válido é `gpt-5.2`, sem "Pro".
 
+> **Família `gpt-6` (`gpt-6-luna`, `gpt-6-sol`) — LIBERADA em 23/09/2026**, pelo mesmo trilho do `gpt-5.6`: sem temperatura e fora do bloco de IA do Formulário de Lead. `gpt-6-astra` NÃO está disponível.
+>
 > **Família `gpt-5.6` (`gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`) — LIBERADA em 09/2026.**
 > Foi removida em 29/07/2026 porque recusa function tools no canal antigo da OpenAI e deixava a IA MUDA.
 > Desde 09/2026 o servidor fala com esses três pela porta `/v1/responses` (só para eles — nenhum outro
@@ -189,6 +192,34 @@ valores desta lista:
 > antigo com modelo fora da lista continua salvando os outros campos; só a troca é recusada.
 > Desde 29/07 o erro vira uma **nota privada em português** na conversa (`llm_request_rejected`) — é o
 > primeiro lugar a olhar quando "a IA parou de responder logo depois de mexerem nas configurações".
+
+## Ligação por IA — as 8 chaves da aba Ligação (2026-09)
+
+O agente pode conduzir ligação por voz. Tudo mora em `config` do assistente (`captain_assistants_update`):
+
+| Chave | O que é |
+|---|---|
+| `config.call_enabled` | liga a ligação neste agente. Sem ela as outras não têm efeito |
+| `config.voice_provider` | `openai` ou `elevenlabs` |
+| `config.voice_id` | a voz. Catálogo em `captain_voices_list` |
+| `config.call_engine` | só na OpenAI: `realtime` (padrão) ou `gptlive` |
+| `config.call_delegation_model` | só no `gptlive`: quem PENSA durante a ligação (padrão `gpt-6-luna`) |
+| `config.call_style` | como ela fala ao telefone, até 1200 caracteres |
+| `config.call_script` | roteiro padrão, até 4000 caracteres |
+| `config.call_tools` | LISTA DE TEXTOS: `enviar_mensagem`, `view_booking_option`, `view_agenda`, `check_agent_availability` |
+
+**`voice_provider` e `voice_id` são COMPARTILHADOS com o áudio da IA no WhatsApp.** Trocar por aqui troca
+nos dois lugares. E **nunca** gravar outro valor em `voice_provider`: o sintetizador só conhece esses dois
+e qualquer outro deixa a IA muda no WhatsApp, sem erro.
+
+**Os dois motores (2026-09-23).** No `realtime` um modelo só faz tudo, e a linha fica MUDA enquanto a IA
+consulta a agenda. No `gptlive` a voz fala enquanto um modelo de texto pensa, então ela avisa que vai
+checar e segue conversando. O motor troca o catálogo de vozes: mande `engine=gptlive` no
+`captain_voices_list` para receber a lista certa (ela inclui `marin` e `cedar`, as duas naturais de
+telefone, e exclui `fable`/`nova`/`onyx`, que esse motor recusa).
+
+**`config.call_delegation_model` é independente do `config.model`.** Um cuida da ligação, o outro do
+texto no WhatsApp, e é assim de propósito: no telefone um modelo pesado deixa a conversa lenta.
 
 ## Follow-up automático multi-etapa (2026-06)
 

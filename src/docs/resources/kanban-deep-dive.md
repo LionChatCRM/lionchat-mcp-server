@@ -360,6 +360,9 @@ Endpoint: `GET /api/v2/kanban/items/counts` retorna contagem + soma por etapa.
 Funis agora têm visibilidade por usuário. Um funil é visível pra alguém quando:
 - é admin da conta, OU
 - tem permissão `kanban_view`/`kanban_manage` (custom role), OU
+- tem `funnel_manage` (21/09): quem pode criar/editar/arquivar qualquer funil passou a **enxergar** qualquer funil
+  na lista — antes editava pela API um funil restrito que não aparecia em `funnels_list`. Só o FUNIL: os cards do
+  funil restrito seguem a régua de card, OU
 - o funil está aberto a todos, OU
 - a pessoa participa do funil (está em `settings.agents`, OU é membro de um TIME em `settings.teams` — novo 2026-07-21, membros resolvidos ao vivo — ou tem card atribuído)
 
@@ -370,6 +373,10 @@ Funis agora têm visibilidade por usuário. Um funil é visível pra alguém qua
   `can_edit`, `can_move`, `can_delete`, `can_assign` (booleans)
 - `kanban_items_move` sem permissão → **403** com mensagem traduzida (antes dava 500/sucesso falso)
 - Cards embutidos na tela da conversa também respeitam a visibilidade
+- **Aviso em tempo real do card (21/09):** `kanban_item.created/updated` deixou de ir para a conta inteira — vai só
+  para quem VÊ aquele card (mesma régua acima) + administradores. Quem perde a visão (card passou a outro
+  responsável, mudou de funil) recebe `kanban_item.deleted` com só `{id, funnel_id}`. Integração que escuta o
+  WebSocket com token de usuário restrito recebe menos eventos que antes; com token de administrador, nada muda.
 
 **Pro MCP:** antes de tentar mover/editar card, confira os campos `can_*` do show — se `can_move`
 é false, explique ao usuário que ele não tem acesso àquele funil em vez de tentar mesmo assim.

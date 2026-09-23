@@ -141,11 +141,54 @@ Google dela — inclusive a **mesma pessoa** com contas Google diferentes, uma p
 
 - Agenda **sem** pessoas e **sem** equipes: todo mundo da conta enxerga.
 - Marcando pessoas e/ou equipes: só elas. Quem entrar na equipe ganha acesso sozinho.
-- **Administrador enxerga todas**, sempre.
+- **Administrador enxerga todas**, sempre. Desde 21/09, **quem tem a caixinha `agenda_manage`** ("Gerenciar
+  agenda da equipe") também enxerga todas — é a função da secretária.
 - `member_user_ids` e `member_team_ids` **substituem a lista inteira** (idioma do `InboxMember`).
+
+### `agenda_manage`: a caixinha da secretária (21/09)
+
+Permissão de função personalizada (`custom_roles.permissions`). Quem a tem, **sem ser administrador**:
+- vê a agenda e os compromissos de TODA a conta (`tasks_list` deixa de recortar por pessoa);
+- cria, edita, remarca, cancela e exclui compromisso de qualquer pessoa;
+- marca pelo `booking_event_type` de qualquer pessoa (`tasks_create` com `booking_event_type_id` de outro);
+- cria/edita/apaga `booking_event_types` de outra pessoa (inclusive mandando `user_id` de outro no create);
+- lê e ajusta a disponibilidade de outra pessoa (`agent_availability_*`) e abre o painel de Agentes.
+
+**NÃO** permite criar/editar/apagar AGENDA (unidade): `agendas_create/update/destroy` seguem só administrador —
+agenda é recurso do plano, com limite. Sem a caixinha, o atendente vê só a própria agenda e a de quem ligou
+`agenda_public` no perfil, e não mexe na dos outros.
 
 A listagem de compromissos já vem recortada pelas agendas que o usuário enxerga, **mesmo sem mandar
 `agenda_id`**. Ler ou editar compromisso de uma agenda que a pessoa não enxerga devolve 404.
+
+**Quem não enxerga NENHUMA agenda não vê compromisso nenhum** (21/09). Antes, "lista de agendas
+visíveis vazia" abria em vez de fechar: o recorte tratava igual dois estados opostos — *a conta não
+tem agenda nenhuma* (aí não há o que recortar, devolve tudo) e *a conta tem agendas e esta pessoa não
+foi posta em nenhuma* (aí ela não pode ver nada). Medido: atendente fora das duas agendas da conta
+enxergava todos os compromissos.
+
+## 6.1. Toda conta tem a agenda "Principal" (21/09)
+
+Antes, a agenda de uma conta era **implícita**: não havia linha no banco e todo compromisso nascia com
+`agenda_id` NULO. A aba Agendas abria dizendo "Nenhuma agenda ainda" numa conta que **tinha** agenda —
+e não havia onde escolher quem a enxerga.
+
+Hoje `Agenda.garantir_padrao!` (chamada no `index`) materializa essa agenda como **Principal**, marcada
+`is_default`, com o fuso da conta. Vale para **toda conta, com ou sem o recurso de múltiplas agendas**:
+quem tem uma agenda só pode editá-la e escolher equipes/pessoas — só não pode **criar outra**, o que
+continua barrado por `Agendas::Quota` (motivo `feature_off`, que é avaliado ANTES do número).
+
+**NEVER CHANGE / GOTCHAS**
+- A condição é "não existe agenda **PADRÃO**", nunca "não existe agenda": enquanto o defeito do
+  `is_default` esteve no ar, quem criou agenda ficou **sem padrão** e com os compromissos antigos
+  invisíveis. Perguntar só por "existe agenda?" deixaria essas contas quebradas para sempre.
+- **Não promover** uma agenda existente a padrão: ela é um LUGAR que o cliente nomeou (uma filial), e
+  herdar os compromissos da agenda de antes jogaria o histórico inteiro dentro da filial errada.
+- A Principal nasce **sem membros** — lista vazia é visível a todos, então ninguém perde acesso no
+  deploy.
+- Criar agenda: a pergunta "é a primeira?" tem que ir ao **banco** (`exists?`) e **antes** do `.new`.
+  `conta.agendas.new(...)` ACRESCENTA o registro não salvo à coleção em memória, então o `.empty?`
+  que existia ali respondia sempre `false` e `is_default` **nunca** era marcado.
 
 ---
 
