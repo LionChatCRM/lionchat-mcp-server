@@ -193,33 +193,46 @@ valores desta lista:
 > Desde 29/07 o erro vira uma **nota privada em português** na conversa (`llm_request_rejected`) — é o
 > primeiro lugar a olhar quando "a IA parou de responder logo depois de mexerem nas configurações".
 
-## Ligação por IA — as 8 chaves da aba Ligação (2026-09)
+## Ligação por IA — Agentes de ligação (2026-09-24)
 
-O agente pode conduzir ligação por voz. Tudo mora em `config` do assistente (`captain_assistants_update`):
+A ligação por voz **saiu do agente de texto**. Desde 24/09 ela mora em **Agentes de ligação**, uma área
+própria: cada agente de ligação tem um objetivo e **não ocupa vaga de IA do plano**. As chaves antigas
+`config.call_*` do `captain_assistants_update` **não existem mais** — mandar elas não tem efeito.
 
-| Chave | O que é |
+| Ferramenta | Para quê |
 |---|---|
-| `config.call_enabled` | liga a ligação neste agente. Sem ela as outras não têm efeito |
-| `config.voice_provider` | `openai` ou `elevenlabs` |
-| `config.voice_id` | a voz. Catálogo em `captain_voices_list` |
-| `config.call_engine` | só na OpenAI: `realtime` (padrão) ou `gptlive` |
-| `config.call_delegation_model` | só no `gptlive`: quem PENSA durante a ligação (padrão `gpt-6-luna`) |
-| `config.call_style` | como ela fala ao telefone, até 1200 caracteres |
-| `config.call_script` | roteiro padrão, até 4000 caracteres |
-| `config.call_tools` | LISTA DE TEXTOS: `enviar_mensagem`, `view_booking_option`, `view_agenda`, `check_agent_availability` |
+| `captain_call_agents_list` | lista os agentes de ligação e `meta.dial_inboxes` (caixas que podem ligar) |
+| `captain_call_agents_create` / `_update` / `_duplicate` / `_destroy` | cadastro |
+| `captain_call_test_phones_list` / `_create` / `_destroy` | números autorizados a receber ligação de teste |
+| `captain_call_agents_test_call` | **liga de verdade** para um número de teste cadastrado |
+| `captain_call_agents_test_call_status` | tocando / atendeu / não atendeu, e em qual conversa ficou |
 
-**`voice_provider` e `voice_id` são COMPARTILHADOS com o áudio da IA no WhatsApp.** Trocar por aqui troca
-nos dois lugares. E **nunca** gravar outro valor em `voice_provider`: o sintetizador só conhece esses dois
-e qualquer outro deixa a IA muda no WhatsApp, sem erro.
+Campos do agente de ligação: `name`, `objective` (roteiro, até 4000), `first_message` (até 400), `style`
+(jeito de falar, até 1200), `voice_provider` (`openai` padrão ou `elevenlabs`), `engine` (`gptlive` padrão
+ou `realtime`, só na OpenAI), `voice_id`, `elevenlabs_agent_id` (obrigatório na ElevenLabs),
+`max_duration_seconds` (30 a 600, padrão 180) e **`captain_assistant_id`**.
 
-**Os dois motores (2026-09-23).** No `realtime` um modelo só faz tudo, e a linha fica MUDA enquanto a IA
-consulta a agenda. No `gptlive` a voz fala enquanto um modelo de texto pensa, então ela avisa que vai
-checar e segue conversando. O motor troca o catálogo de vozes: mande `engine=gptlive` no
-`captain_voices_list` para receber a lista certa (ela inclui `marin` e `cedar`, as duas naturais de
-telefone, e exclui `fable`/`nova`/`onyx`, que esse motor recusa).
+**Como a ligação trabalha (GPT-Live).** A voz conversa e **só consulta** agenda (horários livres, agenda do
+atendente, quem está trabalhando). Quando o cliente pede algo que precisa ser FEITO — mandar link,
+endereço ou proposta pelo WhatsApp, mover o card, anotar — a voz **repassa** ao agente de texto de
+`captain_assistant_id`, diz "já pedi, vai chegar no seu WhatsApp" e **segue a conversa** (nunca diz "já
+mandei"). O agente de texto executa na conversa daquele contato, com as ferramentas e a configuração
+DELE, e decide se escreve ao cliente. Regras fixas desse pedido: roda mesmo com atendente humano na
+conversa ou com a IA pausada; não liga a IA na conversa nem mexe na IA que já estava lá; não passa para
+humano, não encerra, não transfere e não agenda retorno (fluxos rodam completos); no máximo 3 pedidos
+por ligação; caixa oficial fora da janela de 24h faz as ações mas não escreve.
+Sem `captain_assistant_id` (ou no motor `realtime`/ElevenLabs), a voz **só conversa**.
 
-**`config.call_delegation_model` é independente do `config.model`.** Um cuida da ligação, o outro do
-texto no WhatsApp, e é assim de propósito: no telefone um modelo pesado deixa a conversa lenta.
+**Voz.** É **própria** do agente de ligação — não mexe na voz do áudio da IA no WhatsApp
+(`config.voice_provider`/`config.voice_id` do agente de texto continuam sendo só do WhatsApp). No GPT-Live
+use `captain_voices_list` com `engine=gptlive`: aceita alloy, ash, ballad, coral, echo, sage, shimmer, verse,
+**marin** e **cedar** (as duas mais naturais de telefone); voz fora disso cai na marin.
+
+**Ligação de teste.** Só para número **cadastrado** em `captain_call_test_phones` (o telefone nunca vai no
+corpo, só o id). Cria contato e conversa de verdade, pode disparar automações de "conversa criada" e fica
+gravada. Limite de 10 por hora na conta. Precisa da Ligação com IA liberada na conta e da linha da caixa
+conectada; recusa volta 422 com o motivo em `message`. Depois que a ligação termina, a transcrição do
+próprio fornecedor aparece no card da ligação.
 
 ## Follow-up automático multi-etapa (2026-06)
 

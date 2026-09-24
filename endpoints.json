@@ -4715,60 +4715,18 @@
     "description": "Condicoes para a IA NAO fazer follow-up (ate 3). Array de objetos, ex.: {type, operator, attribute, value, labels:[]}."
    },
    {
-    "name": "config.call_enabled",
-    "type": "boolean",
-    "location": "body",
-    "required": false,
-    "description": "Esta IA pode conduzir ligacao por voz (aba Ligacao). Sem isso as demais chaves de ligacao nao tem efeito."
-   },
-   {
     "name": "config.voice_provider",
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Fornecedor da voz: 'openai' ou 'elevenlabs'. CHAVE COMPARTILHADA com o audio da IA no WhatsApp — trocar aqui troca nos dois lugares. NUNCA gravar outro valor aqui."
+    "description": "Fornecedor da voz do AUDIO que a IA manda no WhatsApp: 'openai' ou 'elevenlabs'. A ligacao por IA NAO usa mais esta chave — ela mora no agente de ligacao (lionchat_captain_call_agents_update)."
    },
    {
     "name": "config.voice_id",
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Voz usada na ligacao. Catalogo em GET /captain/voices (mande engine=gptlive quando o motor for o GPT-Live: ele recusa fable/nova/onyx e oferece marin e cedar)."
-   },
-   {
-    "name": "config.call_engine",
-    "type": "string",
-    "location": "body",
-    "required": false,
-    "description": "Motor da ligacao quando o fornecedor e a OpenAI: 'realtime' (padrao, um modelo so; a linha fica muda enquanto a IA consulta algo) ou 'gptlive' (a voz fala enquanto um modelo de texto pensa). Ignorado na ElevenLabs."
-   },
-   {
-    "name": "config.call_delegation_model",
-    "type": "string",
-    "location": "body",
-    "required": false,
-    "description": "Modelo que PENSA durante a ligacao no motor gptlive (padrao gpt-6-luna, o mais rapido). E independente do config.model, que cuida do texto no WhatsApp. Valor fora da lista de modelos aceitos cai no padrao."
-   },
-   {
-    "name": "config.call_style",
-    "type": "string",
-    "location": "body",
-    "required": false,
-    "description": "Como ela fala ao telefone (tom, ritmo). Ate 1200 caracteres."
-   },
-   {
-    "name": "config.call_script",
-    "type": "string",
-    "location": "body",
-    "required": false,
-    "description": "Roteiro padrao da ligacao (objetivo e primeira frase). Ate 4000 caracteres."
-   },
-   {
-    "name": "config.call_tools",
-    "type": "array",
-    "location": "body",
-    "required": false,
-    "description": "LISTA de TEXTOS com o que ela pode fazer AO VIVO na ligacao: enviar_mensagem, view_booking_option, view_agenda, check_agent_availability. Lista de textos soltos e o formato certo aqui."
+    "description": "Voz do AUDIO que a IA manda no WhatsApp (catalogo em lionchat_captain_voices_list, sem engine). A voz da LIGACAO mora no agente de ligacao."
    }
   ],
   "returns": "assistente AI atualizado",
@@ -28462,6 +28420,450 @@
    "lionchat_captain_assistants_create_5",
    "lionchat_captain_assistants_update_4",
    "lionchat_captain_liquid_variables_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_agents_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/call_agents",
+  "title": "Listar Agentes de Ligacao",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Devolve tambem meta.dial_inboxes: as caixas que podem fazer ligacao (LionCalls ligada).",
+  "category": "Assistentes",
+  "params": [],
+  "returns": "{ payload: [agente de ligacao], meta: { dial_inboxes: [{id, name}] } }",
+  "common_use_cases": [
+   "Ver agentes de ligacao configurados",
+   "Descobrir qual caixa pode ligar"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_agents_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/call_agents/{id}",
+  "title": "Ver Agente de Ligacao",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do agente de ligacao"
+   }
+  ],
+  "returns": "agente de ligacao { id, name, objective, first_message, style, voice_provider, engine, voice_id, elevenlabs_agent_id, max_duration_seconds, captain_assistant_id, captain_assistant_name }",
+  "common_use_cases": [
+   "Conferir a configuracao antes de editar"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_agents_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/call_agents",
+  "title": "Criar Agente de Ligacao",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Campos em body (pode mandar solto ou dentro de call_agent). Durante a ligacao a voz so CONSULTA agenda e REPASSA pedidos; quem executa e o agente de texto de captain_assistant_id.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome do agente de ligacao (ex.: \"Pesquisa de satisfacao\"). Obrigatorio na criacao. Ate 120 caracteres."
+   },
+   {
+    "name": "objective",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Objetivo e roteiro da ligacao: o que ela deve conversar. Ate 4000 caracteres."
+   },
+   {
+    "name": "first_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Primeira frase quando atendem (ex.: \"Oi, tudo bem? Aqui e a Ana...\"). Ate 400 caracteres."
+   },
+   {
+    "name": "style",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Jeito de falar ao telefone (tom, ritmo, sotaque). Ate 1200 caracteres."
+   },
+   {
+    "name": "voice_provider",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Fornecedor da voz: 'openai' (padrao) ou 'elevenlabs'. E PROPRIO do agente de ligacao — nao mexe na voz do audio da IA no WhatsApp."
+   },
+   {
+    "name": "engine",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "So na OpenAI: 'gptlive' (padrao; a voz fala enquanto consulta, e o UNICO motor com consultas de agenda e pedidos ao agente de texto) ou 'realtime' (so conversa)."
+   },
+   {
+    "name": "voice_id",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Voz. Catalogo em lionchat_captain_voices_list (engine=gptlive para o GPT-Live: aceita alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, cedar; voz fora disso cai na marin)."
+   },
+   {
+    "name": "elevenlabs_agent_id",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Obrigatorio quando voice_provider=elevenlabs: id do agente criado na ElevenLabs."
+   },
+   {
+    "name": "max_duration_seconds",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Duracao maxima da ligacao, 30 a 600 segundos (padrao 180)."
+   },
+   {
+    "name": "captain_assistant_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Agente de TEXTO que EXECUTA durante a ligacao o que o cliente pedir (mandar link no WhatsApp, mover card, anotar), com as ferramentas e a configuracao DELE. Sem ele a voz so conversa. Tem de ser desta conta (422 se nao for)."
+   }
+  ],
+  "returns": "agente de ligacao criado",
+  "common_use_cases": [
+   "Criar uma ligacao de pesquisa",
+   "Criar confirmacao de consulta por voz"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_agents_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/captain/call_agents/{id}",
+  "title": "Atualizar Agente de Ligacao",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Edicao parcial.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do agente de ligacao"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome do agente de ligacao (ex.: \"Pesquisa de satisfacao\"). Obrigatorio na criacao. Ate 120 caracteres."
+   },
+   {
+    "name": "objective",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Objetivo e roteiro da ligacao: o que ela deve conversar. Ate 4000 caracteres."
+   },
+   {
+    "name": "first_message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Primeira frase quando atendem (ex.: \"Oi, tudo bem? Aqui e a Ana...\"). Ate 400 caracteres."
+   },
+   {
+    "name": "style",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Jeito de falar ao telefone (tom, ritmo, sotaque). Ate 1200 caracteres."
+   },
+   {
+    "name": "voice_provider",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Fornecedor da voz: 'openai' (padrao) ou 'elevenlabs'. E PROPRIO do agente de ligacao — nao mexe na voz do audio da IA no WhatsApp."
+   },
+   {
+    "name": "engine",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "So na OpenAI: 'gptlive' (padrao; a voz fala enquanto consulta, e o UNICO motor com consultas de agenda e pedidos ao agente de texto) ou 'realtime' (so conversa)."
+   },
+   {
+    "name": "voice_id",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Voz. Catalogo em lionchat_captain_voices_list (engine=gptlive para o GPT-Live: aceita alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, cedar; voz fora disso cai na marin)."
+   },
+   {
+    "name": "elevenlabs_agent_id",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Obrigatorio quando voice_provider=elevenlabs: id do agente criado na ElevenLabs."
+   },
+   {
+    "name": "max_duration_seconds",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Duracao maxima da ligacao, 30 a 600 segundos (padrao 180)."
+   },
+   {
+    "name": "captain_assistant_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Agente de TEXTO que EXECUTA durante a ligacao o que o cliente pedir (mandar link no WhatsApp, mover card, anotar), com as ferramentas e a configuracao DELE. Sem ele a voz so conversa. Tem de ser desta conta (422 se nao for)."
+   }
+  ],
+  "returns": "agente de ligacao atualizado",
+  "common_use_cases": [
+   "Trocar roteiro, voz ou o agente de texto que executa"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_agents_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/captain/call_agents/{id}",
+  "title": "Excluir Agente de Ligacao",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do agente de ligacao"
+   }
+  ],
+  "returns": "204 sem corpo",
+  "common_use_cases": [
+   "Remover agente de ligacao que nao e mais usado"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_agents_duplicate",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/call_agents/{id}/duplicate",
+  "title": "Duplicar Agente de Ligacao",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Cria uma copia com \"(cópia)\" no nome.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do agente de ligacao"
+   }
+  ],
+  "returns": "a copia criada",
+  "common_use_cases": [
+   "Criar variacao de um agente de ligacao"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_agents_test_call",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/call_agents/{id}/test_call",
+  "title": "Ligar de Teste",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. LIGA DE VERDADE para um numero de teste CADASTRADO (lionchat_captain_call_test_phones_list) — o telefone nunca vai no corpo, so o id do numero. Cria contato e conversa reais, pode disparar automacoes de \"conversa criada\" e fica gravada. Limite: 10 por hora na conta. Exige a Ligacao com IA liberada na conta e a linha da caixa conectada; recusa volta 422 com o motivo em message.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do agente de ligacao"
+   },
+   {
+    "name": "test_phone_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do numero de teste cadastrado"
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "Caixa que faz a ligacao (uma de meta.dial_inboxes)"
+   }
+  ],
+  "returns": "{ call_id, call_log_id } — acompanhar com lionchat_captain_call_agents_test_call_status",
+  "common_use_cases": [
+   "Testar o agente de ligacao no proprio celular"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_agents_test_call_status",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/call_agents/{id}/test_call_status",
+  "title": "Andamento da Ligacao de Teste",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do agente de ligacao"
+   },
+   {
+    "name": "call_log_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "call_log_id devolvido por lionchat_captain_call_agents_test_call"
+   }
+  ],
+  "returns": "{ status: initiated|ringing|active|answered|no_answer|failed|canceled, conversation_display_id, duration_seconds, finished }",
+  "common_use_cases": [
+   "Saber se a ligacao de teste foi atendida e em qual conversa ficou"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_test_phones_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/call_test_phones",
+  "title": "Listar Numeros de Teste de Ligacao",
+  "description": "Numeros autorizados a receber \"Ligar de teste\" dos agentes de ligacao. Exige Admin ou captain_manage.",
+  "category": "Assistentes",
+  "params": [],
+  "returns": "{ payload: [{id, phone, label}] }",
+  "common_use_cases": [
+   "Ver para quem a ligacao de teste pode ligar"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_test_phones_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/call_test_phones",
+  "title": "Cadastrar Numero de Teste de Ligacao",
+  "description": "Autoriza um numero a receber ligacao de teste. Telefone com DDI (10 a 15 digitos); repetido na conta volta 422.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "phone",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Telefone com DDI, ex. +5511999998888"
+   },
+   {
+    "name": "label",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome de quem atende (ate 80 caracteres)"
+   }
+  ],
+  "returns": "numero cadastrado { id, phone, label }",
+  "common_use_cases": [
+   "Cadastrar o proprio celular para testar"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_test_phones_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/captain/call_test_phones/{id}",
+  "title": "Remover Numero de Teste de Ligacao",
+  "description": "Remove um numero de teste.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do numero de teste"
+   }
+  ],
+  "returns": "204 sem corpo",
+  "common_use_cases": [
+   "Tirar um numero da lista de teste"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_list",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call",
+   "lionchat_captain_call_test_phones_list"
   ]
  },
  {
