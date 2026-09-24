@@ -27713,6 +27713,150 @@
   ]
  },
  {
+  "id": "lionchat_kanban_sales_reconciliation_preview",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_items/sales_reconciliation/preview",
+  "title": "Conferir planilha de vendas",
+  "description": "CONFERE uma planilha de vendas contra os cards de um funil e NAO GRAVA NADA. Devolve, linha a linha, o que aconteceria: completar um card aberto, so atualizar o valor de um card ja ganho, criar card pra quem nao tem, conferir a mao (card marcado como perdido) ou erro da linha. SEMPRE chame isto antes de `lionchat_kanban_sales_reconciliation_apply` e mostre o resumo pra pessoa confirmar. O MCP NAO sobe arquivo: mande as linhas da planilha em `rows` (lista de objetos). Se a pessoa anexar uma planilha na conversa, LEIA o arquivo e monte as linhas voce mesmo. Quem prefere a tela usa Kanban > botao azul + > Importar vendas. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do funil onde os cards vivem"
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "Caixa de entrada usada pra criar contato e conversa de quem ainda nao tem card"
+   },
+   {
+    "name": "rows",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Linhas da planilha. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id."
+   }
+  ],
+  "returns": "{ total, erros, conversoes, conversao_ligada, pos_venda, automacoes_de_ganho, responsavel, contagem: { completa, ja_ganho, cria, conferir, erro }, linhas: [...] } — nada e gravado.",
+  "common_use_cases": [
+   "Conferir a planilha do financeiro antes de aplicar",
+   "Saber quantas vendas viram conversao e quantos cards de pos-venda nascem",
+   "Achar as linhas com telefone sem codigo do pais"
+  ],
+  "related_tools": [
+   "lionchat_kanban_sales_reconciliation_apply",
+   "lionchat_kanban_sales_reconciliation_status",
+   "lionchat_funnels_list"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_sales_reconciliation_apply",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_items/sales_reconciliation/apply",
+  "title": "Aplicar planilha de vendas",
+  "description": "APLICA a planilha de vendas: grava o valor no card e marca o GANHO com a DATA DA VENDA (nao com a data de hoje), pra o relatorio de faturamento contar a venda no mes certo. Card aberto e completado; card ja ganho recebe SO o valor (a data do ganho dele nao muda); card marcado como perdido nao e tocado. Roda em segundo plano — acompanhe com `lionchat_kanban_sales_reconciliation_status`. Rodar a mesma planilha duas vezes nao dobra valor nem cria card repetido. ATENCAO: `criar_sem_card: true` abre uma CONVERSA nova por card criado, e conversa nova aciona o que a conta tiver em 'Conversa criada' (automacao, fluxo, notificacao) — avise a pessoa antes de ligar isso numa planilha grande. O MCP NAO sobe arquivo: mande as linhas da planilha em `rows` (lista de objetos). Se a pessoa anexar uma planilha na conversa, LEIA o arquivo e monte as linhas voce mesmo. Quem prefere a tela usa Kanban > botao azul + > Importar vendas. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do funil onde os cards vivem"
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "Caixa de entrada usada pra criar contato e conversa de quem ainda nao tem card"
+   },
+   {
+    "name": "rows",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Linhas da planilha. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id."
+   },
+   {
+    "name": "criar_sem_card",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Cria card (ja ganho) pra quem nao tem nenhum no funil. Padrao: false"
+   },
+   {
+    "name": "stage",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Etapa onde o card novo nasce. Padrao: a primeira etapa do funil"
+   }
+  ],
+  "returns": "{ run_id, status: 'queued', total } — o trabalho roda em segundo plano",
+  "common_use_cases": [
+   "Fechar o mes com a planilha do financeiro",
+   "Corrigir cards que o vendedor esqueceu de marcar como ganho",
+   "Trazer o valor real da venda pro relatorio"
+  ],
+  "related_tools": [
+   "lionchat_kanban_sales_reconciliation_preview",
+   "lionchat_kanban_sales_reconciliation_status"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_sales_reconciliation_status",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/kanban_items/sales_reconciliation/status/{run_id}",
+  "title": "Andamento da planilha de vendas",
+  "description": "Acompanha a aplicacao de uma planilha de vendas ja enviada. O run_id vem de `lionchat_kanban_sales_reconciliation_apply`. Consulte de tempos em tempos ate o status virar 'completed' ou 'failed'. O registro vive 7 dias.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "run_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "Codigo da rodada, devolvido pela aplicacao"
+   }
+  ],
+  "returns": "{ status, total, completados, valor_atualizado, criados, sem_mudanca, pulados, erros } — 'sem_mudanca' e a linha cujo card ja estava com aquele valor",
+  "common_use_cases": [
+   "Saber se a planilha terminou de ser aplicada",
+   "Contar quantos cards foram completados e quantos foram criados"
+  ],
+  "related_tools": [
+   "lionchat_kanban_sales_reconciliation_apply",
+   "lionchat_kanban_sales_reconciliation_preview"
+  ]
+ },
+ {
   "id": "lionchat_search_kanban_items",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/kanban_items",

@@ -653,3 +653,66 @@ Cada card pode receber atributos custom de 3 origens diferentes. **A escolha do 
 1. Algum card sem `item_details.value`?
 2. Cards arquivados estão sendo contados?
 3. Etapas "ganho"/"perdido" estão incluídas no cálculo?
+
+## Conciliação de vendas — "Importar vendas" (2026-09-24)
+
+O problema que ela resolve: **vendedor não marca a venda certa no card**. Aí o relatório de faturamento
+mente — ou porque o card ficou aberto, ou porque o valor do card não é o valor que o cliente pagou.
+
+A planilha do financeiro (ou de outro sistema) entra e:
+
+| Situação do card no funil | O que acontece |
+|---|---|
+| Card **aberto** (mais antigo, se houver vários) | Grava o valor e marca **ganho com a DATA DA VENDA** |
+| Card **já ganho** | Atualiza **só o valor**; a data do ganho dele **não muda** |
+| Card marcado como **perdido** | **Não é tocado** — vai pra conferência humana |
+| **Sem card nenhum** | Cria card já ganho (só se `criar_sem_card: true`) |
+| Linha com telefone sem DDI, valor ilegível ou data no futuro | Vira **erro da linha**, com motivo |
+
+### Ferramentas
+
+1. `lionchat_kanban_sales_reconciliation_preview` — **confere e não grava nada**. Chame SEMPRE antes.
+2. `lionchat_kanban_sales_reconciliation_apply` — aplica em segundo plano, devolve `run_id`.
+3. `lionchat_kanban_sales_reconciliation_status` — acompanha até `completed`/`failed`.
+
+O MCP **não sobe arquivo**: as linhas vão em `rows` (lista de objetos). Se a pessoa anexar uma planilha
+na conversa, LEIA o arquivo, monte as linhas em JSON e chame a ferramenta — não peça pra ela converter.
+Quem tem CSV/Excel e prefere a tela usa Kanban > botão azul **+** > **Importar vendas**, que lê o
+arquivo, aponta as colunas e ainda oferece uma planilha de exemplo pra baixar.
+
+### Formato de cada linha de `rows`
+
+| Campo | Obrigatório | Como mandar |
+|---|---|---|
+| `phone` | sim | Com o código do país: `5511999887766` |
+| `value` | sim | `1500`, `"1500,00"`, `"R$ 1.500,00"` ou `"1,500.00"` |
+| `sale_date` | sim | `"01/08/2026"` ou `"2026-08-01"` — o dia em que a venda aconteceu |
+| `name` | não | Nome do cliente (usado no título do card novo) |
+| `email` | não | |
+| `agent` | não | Nome ou e-mail do vendedor |
+| `order_id` | não | Número do pedido, guardado no card |
+
+### O que você PRECISA saber antes de aplicar
+
+- **O telefone tem que vir com o código do país** (`5511999887766`). O sistema **não** completa o 55 —
+  linha sem DDI é recusada com motivo. Celular antigo sem o nono dígito é encontrado do mesmo jeito.
+- **A data da venda é o ponto da funcionalidade.** É ela que faz a venda contar no mês certo do
+  relatório. Sem data, a linha é recusada — nunca vira "hoje" em silêncio.
+- **A conciliação não dispara conversão por conta própria.** Quem dispara é o caminho normal do ganho
+  (Meta/GA4/Google Ads), e só nos funis com o evento de Ganho configurado. Por isso rodar a mesma
+  planilha duas vezes não reenvia conversão: o identificador do evento de ganho é estável.
+- **Rodar a mesma planilha duas vezes é seguro**: card já com aquele valor volta como `sem_mudanca` e
+  nem é gravado.
+- **`criar_sem_card: true` abre uma CONVERSA nova por card criado**, e conversa nova acorda o que a conta
+  tiver em "Conversa criada" (automação, fluxo, notificação). Avise a pessoa antes de ligar isso numa
+  planilha grande.
+- **Automação de funil que duplica o card no ganho continua rodando** (é um dos dois motores de
+  automação, ver a seção acima). A conferência conta quantos cards de pós-venda vão nascer.
+- **O vendedor da planilha só entra em card SEM responsável** — nunca troca quem já está lá.
+- **Porta:** administrador ou cargo com "importar e exportar cards".
+
+### Diagnóstico: "a venda entrou no mês errado"
+
+Olhe `item_details.status_changed_at` do card: ele é comparado como **texto** contra a janela do
+relatório, e tem que terminar em `Z`. `2026-08-01T03:00:00Z` é 1º de agosto em Brasília; gravar
+`2026-08-01T00:00:00Z` joga a venda pra julho.
