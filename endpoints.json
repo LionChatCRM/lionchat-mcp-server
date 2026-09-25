@@ -11714,7 +11714,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/companies",
   "title": "Criar Empresa",
-  "description": "Cria uma empresa. Body exige wrapper company. Aceita name, domain, description, avatar. NAO aceita custom_attributes. ENTERPRISE-only. Empresa so nasce assim (manual): o sistema nao cria empresa pelo dominio do e-mail dos contatos.",
+  "description": "Cria uma empresa. Body exige wrapper company. Aceita name, domain, description, avatar e additional_attributes (cadastro). NAO aceita custom_attributes. ENTERPRISE-only. Empresa so nasce assim (manual): o sistema nao cria empresa pelo dominio do e-mail dos contatos. Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava so digitos), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado).",
   "category": "Empresas",
   "params": [
    {
@@ -11722,7 +11722,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Wrapper com { name, domain, description, avatar }"
+    "description": "Wrapper com { name, domain, description, avatar, additional_attributes: { legal_name, cnpj, phone, email, address: {...}, social_profiles: {...} } }"
    }
   ],
   "returns": "empresa criado (com novo ID)",
@@ -11767,7 +11767,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/companies/{id}",
   "title": "Atualizar Empresa",
-  "description": "Atualiza dados da empresa. Atualiza campos do empresa existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, domain.",
+  "description": "Atualiza dados da empresa. Suporta atualizacao parcial (PATCH) — so campos enviados sao alterados. Campos suportados: name, domain, description, avatar e additional_attributes (cadastro). Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava so digitos), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado).",
   "category": "Empresas",
   "params": [
    {
@@ -11782,7 +11782,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Wrapper com { name, domain, description, avatar }"
+    "description": "Wrapper com { name, domain, description, avatar, additional_attributes: { legal_name, cnpj, phone, email, address: {...}, social_profiles: {...} } }"
    }
   ],
   "returns": "empresa atualizado",

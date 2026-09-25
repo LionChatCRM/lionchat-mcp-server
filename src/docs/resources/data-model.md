@@ -153,6 +153,7 @@ Company
 ├── description
 ├── contacts_count
 ├── avatar (foto)
+├── additional_attributes (jsonb: legal_name, cnpj, phone, email, address{...}, social_profiles{...}; 2026-09-25)
 └── last_activity_at (ultima vez que um contato da empresa teve atividade; 2026-09-25)
 
 AttributeChange (histórico de alterações de atributo — 2026-09-11)
@@ -196,7 +197,11 @@ filtradas pelo que o usuario pode ver), os documentos de todos os contatos (`lio
 so leitura, cada item com `contacts[]` — o mesmo arquivo mandado a varios contatos vem UMA vez) e os compromissos
 (`lionchat_companies_tasks_list`). Contratos dos contatos: `lionchat_signature_envelopes_list` com `company_id`.
 Anotacao da empresa: `lionchat_companies_notes_create` / `_update` / `_destroy` (`{note:{content}}`; qualquer
-atendente). Excluir empresa: so administrador; os contatos ficam, so deixam de estar na empresa (as anotacoes da
+atendente). Cadastro da empresa (25/09): `lionchat_companies_create`/`_update` aceitam
+`additional_attributes` com `legal_name`, `cnpj` (validado; grava so digitos), `phone`, `email`,
+`address{cep,street,number,complement,neighborhood,city,state,country}` e
+`social_profiles{linkedin,facebook,instagram,telegram,tiktok,twitter,github}`. MESCLA: mande so o que muda;
+valor vazio apaga aquela chave. Excluir empresa: so administrador; os contatos ficam, so deixam de estar na empresa (as anotacoes da
 empresa vao junto).
 
 **Dados cadastrais (`additional_attributes.cadastral`):** CPF, CNPJ, RG, passaporte, nascimento,
