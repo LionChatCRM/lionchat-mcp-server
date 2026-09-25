@@ -149,7 +149,11 @@ Company
 ├── id (PK)
 ├── account_id (FK)
 ├── name
-└── domain
+├── domain
+├── description
+├── contacts_count
+├── avatar (foto)
+└── last_activity_at (ultima vez que um contato da empresa teve atividade; 2026-09-25)
 
 AttributeChange (histórico de alterações de atributo — 2026-09-11)
 ├── id (PK)
@@ -173,8 +177,19 @@ não gera; chaves protegidas (rastreio `utm_*`/`gclid`, `waha_*`, `eclinica_*`, 
 nascimento e documentos vêm mascarados (`masked: true`) para quem não é administrador. Retenção 180 dias.
 
 **`additional_attributes` vs `custom_attributes` no Contato:**
-- `additional_attributes` (jsonb): campos do sistema porém **EDITÁVEIS via API** (`permitted_params` permite `additional_attributes: {}`). Guarda chaves padrão como `city`, `company`, `country_code` — que são as chaves filtráveis em `lib/filters/filter_keys.yml` (tipo `additional_attributes`). NÃO é não-editável.
+- `additional_attributes` (jsonb): campos do sistema porém **EDITÁVEIS via API** (`permitted_params` permite `additional_attributes: {}`). Guarda chaves padrão como `city`, `company_name` (o campo "Empresa" da ficha), `job_title` (o "Cargo", 2026-09-25) e `country_code`. NÃO é não-editável.
 - `custom_attributes` (jsonb): dado de negócio livre, definido pelo cliente via Atributos Customizados.
+
+**Empresas (2026-09-25):** o contato pode estar ligado a UMA empresa (`company_id`). Ligar/tirar:
+`lionchat_contacts_update` com `company_id` (empresa da mesma conta; vazio/null tira; se a chave nao for
+enviada nada muda) ou `lionchat_companies_contacts_create` / `_destroy`. Regra do texto
+`additional_attributes.company_name`: escolher a empresa faz ele virar o nome da empresa; tirar so apaga se
+ele ainda era o nome dela; o vinculo AUTOMATICO pelo e-mail (dominio de empresa, conta com a funcao ligada)
+NAO mexe no texto; renomear a empresa so troca nos contatos que ainda tinham o nome antigo. O cargo da
+pessoa na empresa e `additional_attributes.job_title`. A pagina da empresa junta os contatos
+(`lionchat_companies_contacts_list`), as anotacoes deles (`lionchat_companies_notes_list`) e as conversas
+(`lionchat_companies_conversations_list`, filtradas pelo que o usuario pode ver). Excluir empresa: so
+administrador; os contatos ficam, so deixam de estar na empresa.
 
 **Dados cadastrais (`additional_attributes.cadastral`):** CPF, CNPJ, RG, passaporte, nascimento,
 gênero, estado civil, profissão e endereço completo moram em `additional_attributes->cadastral`.

@@ -173,7 +173,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts",
   "title": "Criar Contato",
-  "description": "Cria um contato. Nenhum campo e estritamente obrigatorio (recomendado phone_number ou email). Aceita name, email, phone_number, identifier, additional_attributes, custom_attributes, blocked. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): phone_number ja cadastrado em outro contato da conta = 422 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe.\n\nSE VOLTAR 422 com attributes:['phone_number']: o contato JA EXISTE — na forma exata OU na outra forma do nono digito. Nao tente criar de novo trocando a forma do numero (a recusa protege contra ficha em dobro): busque com lionchat_contacts_search e use contacts_update. Case os 'attributes' da resposta, nunca o texto da mensagem (ela sai no idioma padrao da instalacao, em ingles).",
+  "description": "Cria um contato. Nenhum campo e estritamente obrigatorio (recomendado phone_number ou email). Aceita name, email, phone_number, identifier, additional_attributes, custom_attributes, blocked. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): phone_number ja cadastrado em outro contato da conta = 422 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe.\n\nSE VOLTAR 422 com attributes:['phone_number']: o contato JA EXISTE — na forma exata OU na outra forma do nono digito. Nao tente criar de novo trocando a forma do numero (a recusa protege contra ficha em dobro): busque com lionchat_contacts_search e use contacts_update. Case os 'attributes' da resposta, nunca o texto da mensagem (ela sai no idioma padrao da instalacao, em ingles). EMPRESA (2026-09-25): aceita company_id (ver param); o contato devolve company_id. Cargo da pessoa = additional_attributes.job_title.",
   "category": "Contatos",
   "params": [
    {
@@ -231,6 +231,13 @@
     "location": "body",
     "required": false,
     "description": "ID da sessão"
+   },
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Empresa da mesma conta a ligar ao contato (null/vazio tira da empresa; sem a chave nada muda). Escolher a empresa faz additional_attributes.company_name virar o nome dela. Empresa de outra conta = 404."
    }
   ],
   "returns": "contato criado (com novo ID)",
@@ -283,7 +290,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/contacts/{id}",
   "title": "Atualizar Contato",
-  "description": "Atualiza um contato. Aceita name, email, phone_number, identifier, custom_attributes, additional_attributes, blocked, avatar/avatar_url. NUNCA sobrescreva phone_number/email ja preenchido sem confirmacao. TELEFONE UNICO POR CONTA (trava no banco desde 01/09/2026): trocar phone_number para um numero que ja e de outro contato da conta = 422 'phone_number has already been taken'.",
+  "description": "Atualiza um contato. Aceita name, email, phone_number, identifier, custom_attributes, additional_attributes, blocked, avatar/avatar_url. NUNCA sobrescreva phone_number/email ja preenchido sem confirmacao. TELEFONE UNICO POR CONTA (trava no banco desde 01/09/2026): trocar phone_number para um numero que ja e de outro contato da conta = 422 'phone_number has already been taken'. EMPRESA (2026-09-25): aceita company_id (ver param); o contato devolve company_id. Cargo da pessoa = additional_attributes.job_title.",
   "category": "Contatos",
   "params": [
    {
@@ -348,6 +355,13 @@
     "location": "body",
     "required": false,
     "description": "Bloquear contato"
+   },
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Empresa da mesma conta a ligar ao contato (null/vazio tira da empresa; sem a chave nada muda). Escolher a empresa faz additional_attributes.company_name virar o nome dela. Empresa de outra conta = 404."
    }
   ],
   "returns": "contato atualizado",
@@ -11668,7 +11682,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/companies",
   "title": "Listar Empresas",
-  "description": "Lista as empresas da conta. meta usa total_count/page.",
+  "description": "Lista as empresas da conta. meta usa total_count/page. Cada empresa traz last_activity_at (ultima atividade dos contatos dela; null = nunca). Excluir empresa (lionchat_companies_destroy) e so para administrador e NAO apaga os contatos.",
   "category": "Empresas",
   "params": [
    {
@@ -11683,7 +11697,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Ordenação: name, domain, created_at, contacts_count"
+    "description": "Ordenacao: name, domain, created_at, contacts_count, last_activity_at (prefixo - = decrescente, ex. -last_activity_at)"
    }
   ],
   "returns": "meta (contadores globais) + payload (array de empresas)",
@@ -11741,7 +11755,11 @@
    "Verificar estado atual antes de uma ação",
    "Mostrar perfil ou ficha de empresa"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_companies_contacts_list",
+   "lionchat_companies_conversations_list",
+   "lionchat_companies_notes_list"
+  ]
  },
  {
   "id": "lionchat_companies_update",
@@ -11850,6 +11868,182 @@
    "Verificar se já existe antes de criar"
   ],
   "related_tools": []
+ },
+ {
+  "id": "lionchat_companies_contacts_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/contacts",
+  "title": "Contatos da Empresa",
+  "description": "Lista os contatos ligados a UMA empresa, 25 por pagina, ordenados por nome. meta usa count/current_page. Cada contato traz company_id e additional_attributes (company_name = texto 'Empresa', job_title = cargo).",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Pagina (padrao: 1)"
+   }
+  ],
+  "returns": "meta {count, current_page} + payload (array de contatos)",
+  "common_use_cases": [
+   "Ver quem trabalha numa empresa",
+   "Conferir cargo das pessoas de um cliente"
+  ],
+  "related_tools": [
+   "lionchat_companies_show",
+   "lionchat_companies_contacts_create",
+   "lionchat_companies_contacts_destroy"
+  ]
+ },
+ {
+  "id": "lionchat_companies_contacts_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/contacts",
+  "title": "Colocar Contato na Empresa",
+  "description": "Liga um contato da conta a esta empresa (se ele estava em outra, MOVE). O texto additional_attributes.company_name do contato passa a ser o nome da empresa. Para achar o contato use lionchat_contacts_search. Contato de outra conta = 404.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do contato a colocar na empresa"
+   }
+  ],
+  "returns": "payload (contato atualizado)",
+  "common_use_cases": [
+   "Organizar contatos por cliente",
+   "Corrigir a empresa de um contato"
+  ],
+  "related_tools": [
+   "lionchat_contacts_search",
+   "lionchat_companies_contacts_list",
+   "lionchat_contacts_update"
+  ]
+ },
+ {
+  "id": "lionchat_companies_contacts_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/contacts/{contact_id}",
+  "title": "Tirar Contato da Empresa",
+  "description": "Tira o contato da empresa (o contato NAO e excluido). O texto company_name so e apagado se ainda era exatamente o nome da empresa.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contato"
+   }
+  ],
+  "returns": "200 OK",
+  "common_use_cases": [
+   "Pessoa saiu da empresa",
+   "Contato ligado errado pelo dominio do e-mail"
+  ],
+  "related_tools": [
+   "lionchat_companies_contacts_list"
+  ]
+ },
+ {
+  "id": "lionchat_companies_notes_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/notes",
+  "title": "Anotacoes da Empresa",
+  "description": "Ultimas 20 anotacoes feitas nos contatos da empresa, juntas. Cada item traz content, user, created_at e contact {id, name, thumbnail}. So leitura: para criar anotacao use a do contato.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   }
+  ],
+  "returns": "payload (array de anotacoes com contact)",
+  "common_use_cases": [
+   "Resumo do relacionamento com um cliente",
+   "Preparar reuniao com a empresa"
+  ],
+  "related_tools": [
+   "lionchat_contacts_notes_show",
+   "lionchat_companies_conversations_list"
+  ]
+ },
+ {
+  "id": "lionchat_companies_conversations_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/conversations",
+  "title": "Conversas da Empresa",
+  "description": "Ultimas 20 conversas dos contatos da empresa, da mais recente para a mais antiga, filtradas pelo que o usuario do token pode ver (mesma regra da lista de conversas).",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   }
+  ],
+  "returns": "payload (array de conversas)",
+  "common_use_cases": [
+   "Historico de atendimento de um cliente",
+   "Ver se alguem da empresa falou recentemente"
+  ],
+  "related_tools": [
+   "lionchat_companies_notes_list",
+   "lionchat_conversations_show"
+  ]
+ },
+ {
+  "id": "lionchat_companies_avatar_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/companies/{id}/avatar",
+  "title": "Tirar Foto da Empresa",
+  "description": "Remove a foto da empresa. Para trocar a foto, envie avatar (arquivo) no lionchat_companies_update.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   }
+  ],
+  "returns": "payload (empresa)",
+  "common_use_cases": [
+   "Foto errada puxada do site da empresa"
+  ],
+  "related_tools": [
+   "lionchat_companies_update"
+  ]
  },
  {
   "id": "lionchat_offers_list",
