@@ -170,10 +170,29 @@ Detalhes completos em `lionchat://docs/api-conventions` → "Wrapper de body".
 ### Regras de formato silenciosas
 
 - **Label.title**: kebab-case ou snake_case, **SEM espaço**. `"Lead Emive"` ❌ → `"lead-emive"` ✅
-- **win_reasons / loss_reasons**: array de `{id, title}`, NÃO strings
+- **win_reasons / loss_reasons**: array de `{id, title}`, NÃO strings. O `id` é **TEXTO estável** (`"perda-preco"`),
+  nunca número. A lista SUBSTITUI a atual: leia antes e reenvie os MESMOS `id` (trocar o `id` tira o nome dos
+  cards já marcados). Motivo sem `id`/`title`, `id` repetido ou lista de textos → recusado com 422
+- **motivo no card**: `item_details.status` `"lost"`/`"won"` + `loss_reason`/`win_reason` = o `id` (texto) de um
+  motivo cadastrado + `reason` = o título. Motivo livre: `loss_reason` nulo e o texto em `reason`
 - **linked_conversations**: array de `{display_id: N}`, NÃO inteiros direto
 - **phone**: E.164 (`+5511...`), sem espaços/parênteses
-- **funnel.stages** keys: snake_case slug
+- **funnel.stages** keys: snake_case slug; cada etapa é OBJETO com `name` texto
+- **Lista de objetos é lista de objetos**: onde o formato pede `[{id: 5}]`, número solto (`[5]`) ou objeto
+  único no lugar da lista quebra a leitura — às vezes a tela da conta inteira (incidente 18/09, funil).
+
+### Gravação: TROCA inteira × SOMA (conferido no código em 18/09/2026)
+
+Muitos campos objeto/lista são **trocados inteiros** no update: o que não vier no envio é APAGADO. Nesses,
+**leia antes** (show) e **reenvie tudo** com o item alterado. A descrição de cada ferramenta diz qual é qual.
+
+| TROCA inteira (leia e reenvie tudo) | SOMA (só as chaves enviadas mudam) |
+|---|---|
+| `custom_attributes` da CONVERSA (`conversations_create_3` — só `captain_*` sobrevive; apaga utm/gclid/ctwa/origin) | `custom_attributes` do CONTATO (`contacts_update`) |
+| card: cada chave de `item_details` (a lista `custom_attributes` do card, `offers`, `notes`), `assigned_agents`, coluna `custom_attributes` | `item_details` do card no 1º nível (chave não enviada fica) |
+| `funnel.settings`, `funnel.stages` (etapa ausente = removida), `kanban_config.global_custom_attributes` | `channel.additional_attributes` da caixa WhatsApp/Instagram/Facebook/TikTok |
+| `flow_data` do fluxo, `actions` de macro/automação, `query` de filtro salvo, `audience` de campanha | `roles_layout` do modelo de contrato |
+| `settings` de integração (hooks), mapas de evento de gateway/Omie/Conta Azul/Meta Lead/Google Ads | |
 
 ### Native first
 

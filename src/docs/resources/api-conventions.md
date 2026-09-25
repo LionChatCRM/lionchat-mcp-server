@@ -73,7 +73,61 @@ Praticamente nunca — exceto se você está testando legacy/curl e quer ser exp
 }
 ```
 
-Strings simples (`"win_reasons": ["motivo"]`) causam erro de serialização.
+Regras (conferidas no servidor desde 21/09):
+
+- O `id` é **texto estável** (`"wr-1"`, `"perda-preco"`) — **nunca número**. Número é convertido para texto
+  (`7` vira `"7"`), mas o certo é já mandar texto. Motivo cadastrado com `id` numérico derrubava o relatório do
+  funil (conta 137, 21/09).
+- Como a lista **substitui** a atual, **reenvie os mesmos `id`** dos motivos que já existem. Trocar o `id` de um
+  motivo faz os cards já marcados com ele perderem o nome no relatório.
+- Recusado com **422** (mensagem diz o formato): lista de textos soltos (`["motivo"]` — antes APAGAVA os motivos da
+  conta em silêncio), motivo sem `id`, motivo sem `title`, `id` repetido. O servidor **não inventa** `id`.
+- Lista vazia (`[]`) limpa os motivos.
+
+**Marcar o card com o motivo** (`PATCH /kanban_items/{id}`, `item_details` mescla no 1º nível):
+
+```json
+{ "item_details": { "status": "lost", "loss_reason": "perda-preco", "reason": "Preço alto" } }
+```
+
+`loss_reason`/`win_reason` = o `id` (texto) de um motivo cadastrado; `reason` = o título. Motivo livre (fora da
+lista): `loss_reason` nulo e o texto em `reason`.
+
+### Outras listas de OBJETOS — formato conferido no servidor (desde 21/09)
+
+Estes campos são **listas de objetos**. Mandar lista de textos/números soltos, lista misturada (alguns objetos e
+alguns textos) ou um objeto solto no lugar da lista é recusado com **422**, e a mensagem mostra o formato certo.
+Antes o servidor aceitava, gravava **lista vazia** e respondia 200 — ou seja, apagava a configuração do cliente.
+
+| Ferramenta | Campo | Formato |
+|---|---|---|
+| `custom_dashboards_create/update` | `widgets` | `[{"widget_type": "conversations_timeseries", "metric": "conversations", ...}]`; dentro de cada bloco, `columns` também é lista de objetos |
+| `kanban_config_update` | `global_custom_attributes` | `[{"name": "Origem", "type": "text"}]` (`list_values` é lista de textos) |
+| `kanban_config_update` | `checklist_templates` | `[{"name": "Onboarding", "items": [{"text": "Ligar"}]}]` — `items` é lista de objetos |
+| `funnels_create/update` | `global_custom_attributes` | igual ao do Kanban |
+| `booking_event_types_create/update` | `confirmation_blocks` e `follow_up_schedules_attributes[].blocks` | `[{"type": "text", "content": "Olá"}]` |
+| `inboxes_update` | `csat_config.survey_rules` | **objeto** `{"operator": "contains", "values": ["vip"]}` — `values` é lista de textos |
+
+Continua valendo: a lista **substitui** a anterior (leia com GET e reenvie inteira) e `[]` limpa.
+Recebeu 422 de formato? **Não repita a mesma chamada**: leia a mensagem, corrija o formato e mande de novo.
+
+### Recusa por PERMISSÃO (401) — o que mudou em 21/09
+
+O servidor responde **401** (não 403) quando o usuário do token não tem a permissão. Não retente; explique ao usuário.
+
+- **Fluxos** (`flows_create/update/destroy/toggle`, duplicar, fixar teste, testar nó): só **administrador** ou cargo com
+  **Gerenciar FlowBuilder**. `flows_list` e `flows_show` seguem abertos. "Gerenciar Regras de Automação" **não** libera fluxo.
+- **Respostas de formulário** (`lead_forms_responses_list/show`, `lead_forms_stats`, `lead_forms_test_run`): administrador ou
+  **Gerenciar Formulários**. As respostas de UM contato continuam em `contacts_form_entries_list`.
+- **Mesclar contatos** (`contacts_create_4` — "Mesclar Contatos", `POST actions/contact_merge`): administrador ou **Gerenciar contatos**
+  (mesclar apaga uma das fichas).
+- **Configuração do Kanban** (`kanban_config_update`): motivos de ganho/perda = qualquer usuário; campos do card, checklists e
+  `config` = administrador ou **Gerenciar Funis**; webhook e liga/desliga = só administrador. A recusa lista as chaves barradas.
+- **Card do Kanban**: `kanban_items_show/update` e os arquivos do card devolvem **404** para card que o usuário não enxerga no
+  quadro. Cargo sem opção de Kanban só edita o card dele ou o sem responsável.
+- **Tipo de agendamento** (`booking_event_types_update/destroy`): só o dono do link ou administrador.
+- **Relatório do Kanban** (`kanban_items` reports): traz `metrics.visibilityScope` — `partial` significa "só os cards que ESTE
+  usuário vê". Diga isso ao usuário antes de apresentar o número como total da conta.
 
 ## Restrições de formato em campos comuns
 
@@ -282,7 +336,7 @@ Vale pra automações, filtro avançado de conversas/contatos e busca "+ Filtro"
 | Código | Significado | O que fazer |
 |---|---|---|
 | `400` Bad Request | Parâmetros mal formados | Confira sintaxe |
-| `401` Unauthorized | Token inválido ou expirado | Reporte ao usuário (não retente) |
+| `401` Unauthorized | Token inválido/expirado **ou usuário sem a permissão** (o LionChat recusa permissão com 401, não 403) | Reporte ao usuário (não retente) |
 | `403` Forbidden | Sem permissão (papel insuficiente) | Reporte (não retente) |
 | `404` Not Found | Recurso não existe (ou de outra conta) | Confira ID |
 | `422` Unprocessable Entity | Validação falhou | Leia mensagem, corrija |

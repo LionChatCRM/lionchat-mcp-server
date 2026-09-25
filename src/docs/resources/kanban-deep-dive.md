@@ -16,6 +16,7 @@ Container de etapas. Conta pode ter vários funis (ex: "Vendas", "Pós-venda", "
 | `archived` | Boolean — funis arquivados não aparecem na UI ativa |
 | `active` | Boolean — controla se aceita movimentação |
 | `settings` | jsonb — config customizada (ex: cores, automações) |
+| `settings.agents` | agentes do funil. Grave `[{"id": <id do agente>}]` — cada item é um OBJETO, nunca número solto (ids de `lionchat_agents_list`); o sistema completa nome, e-mail, cargo e foto — é o que o editor do funil, o card e a conversa mostram. Agente de outra conta fica sem nome e sem acesso. `settings` é substituído INTEIRO no update: leia o funil antes e reenvie goals+agents+teams+automations. |
 
 ### Stages (Etapas) — dentro de `funnel.stages`
 
@@ -65,8 +66,8 @@ Stages NÃO são tabela separada. São armazenadas como jsonb dentro do Funnel:
 
 | Campo | Tipo | O que guarda |
 |---|---|---|
-| `win_reasons` | jsonb array | **Motivos de Ganho** — `[{id, title}]`. Aparecem como dropdown quando o vendedor marca "Ganho" num card. NATIVO. NÃO usar custom_attribute. |
-| `loss_reasons` | jsonb array | **Motivos de Perda** — mesma estrutura. Aparece ao marcar "Descartado". |
+| `win_reasons` | jsonb array | **Motivos de Ganho** — `[{id, title}]`, `id` em **texto estável** (nunca número). Aparecem como dropdown quando o vendedor marca "Ganho" num card. NATIVO. NÃO usar custom_attribute. |
+| `loss_reasons` | jsonb array | **Motivos de Perda** — mesma estrutura e mesma regra do `id`. Aparece ao marcar "Descartado". |
 | `checklist_templates` | jsonb array | Templates de checklist reusáveis — `[{id, name, items: [{id, text}]}]`. Aplicados manualmente ou via automação `apply_checklist_template`. |
 | `global_custom_attributes` | jsonb array | Atributos globais que aparecem em TODOS os cards de TODOS os funis — `[{name, type, is_list, list_values}]`. |
 | `config` | jsonb hash | Configurações gerais (title, default_view, auto_assignment, support_email, dragbar_enabled, etc) |
@@ -82,7 +83,8 @@ Stages NÃO são tabela separada. São armazenadas como jsonb dentro do Funnel:
 | DELETE | `/api/v1/accounts/{id}/kanban_config` | Remove (não afeta cards/funis) |
 | POST | `/api/v1/accounts/{id}/kanban_config/test_webhook` | Dispara payload de teste |
 
-**GOTCHA — body precisa estar wrapped:**
+**Body raiz ou com o envelope `kanban_config` — os dois funcionam** (conferido 21/09: `{"loss_reasons": [...]}` na
+raiz grava e recusa normalmente). Exemplo com envelope:
 
 ```json
 PUT /api/v1/accounts/43/kanban_config
@@ -100,7 +102,11 @@ PUT /api/v1/accounts/43/kanban_config
 }
 ```
 
-Se mandar `{"win_reasons": [...]}` direto (sem o wrapper `kanban_config`) → **HTTP 500 silencioso**. Strong params do Rails exige `params.require(:kanban_config)`.
+**Regras dos motivos** (servidor, desde 21/09): `id` em texto estável — número é convertido (`7` → `"7"`), mas mande
+texto; a lista SUBSTITUI a atual, então reenvie os MESMOS `id` dos motivos que já existem (trocar o `id` tira o nome
+dos cards já marcados); lista de textos soltos, motivo sem `id`/`title` ou `id` repetido → **422** com o formato
+(antes, a lista de textos APAGAVA os motivos em silêncio). No card: `item_details.loss_reason`/`win_reason` = o `id`
+(texto) + `reason` = o título. Detalhes em `lionchat://docs/api-conventions` → "Estrutura interna das listas".
 
 **`win_reasons` e `loss_reasons` aceitam array de OBJETOS `{id, title}`, NÃO strings simples.** Strings causam 500. O `id` é qualquer string única (UUID ou slug curto tipo `wr-1`).
 
@@ -114,7 +120,7 @@ Se mandar `{"win_reasons": [...]}` direto (sem o wrapper `kanban_config`) → **
 | Atributo que aparece em TODO card | `kanban_config.global_custom_attributes` | ❌ custom_attribute de conversation |
 | Atributo só de um contato (CPF, endereço) | `custom_attribute_definitions` model=contact_attribute | ❌ kanban_config |
 | Atributo só de uma conversa (motivo, tag interna) | `custom_attribute_definitions` model=conversation_attribute | ❌ kanban_config |
-| Atributo só de um card | `kanban_item.custom_attributes` (jsonb direto no card) | — |
+| Valor de um campo num card (aparece na aba Campos) | `item_details.custom_attributes` — LISTA `[{name, type, value}]`, com o campo definido em `kanban_config.global_custom_attributes` | ❌ `kanban_item.custom_attributes` (coluna que nenhuma tela mostra) |
 
 ### KanbanItem (Card)
 Um card individual dentro de uma etapa.
@@ -130,7 +136,7 @@ Um card individual dentro de uma etapa.
 | `origin_conversation_display_id` | Conversa em que o card NASCEU (só preenchida se o vínculo já foi movido). É o que o relatório de origem de lead usa, pra uma venda não mudar de mês nem de anúncio quando o card anda. |
 | `linked_conversations` | jsonb array `[{display_id: 123}, {display_id: 456}]` — múltiplas conversas |
 | `item_details` | jsonb (ver abaixo) |
-| `custom_attributes` | jsonb — campos custom (igual contatos) |
+| `custom_attributes` | jsonb (coluna própria) — **NÃO aparece na aba Campos, no filtro do quadro nem na busca**. Os campos visíveis do card moram em `item_details.custom_attributes` (ver abaixo) |
 | `assigned_agents` | jsonb array de agentes responsáveis |
 | `activities` | jsonb array — log de atividades |
 | `checklist` | **O que fica guardado:** jsonb array de tarefas do card (item: `text`/`completed`/`position` + `group_id`/`group_name` opcionais para agrupar). **O que a API devolve é OUTRA coisa** — ver o aviso logo abaixo |
@@ -172,13 +178,31 @@ Um card individual dentro de uma etapa.
   "offers": [
     {"id": 12, "title": "Pro 12 meses", "value": 4800}
   ],
-  "custom_attributes": {
-    "origem_lead": "Facebook Ads"
-  }
+  "custom_attributes": [
+    {"name": "Origem do Lead", "type": "string", "value": "Facebook Ads"}
+  ]
 }
 ```
 
-**`value`** é onde fica o valor monetário do negócio (usado em pipelines).
+**`value`** é onde fica o valor monetário do negócio (usado em pipelines). Sempre NÚMERO — texto quebra a
+soma das colunas.
+
+**`custom_attributes` é uma LISTA, nunca um objeto `{chave: valor}`** (conferido no código em 18/09/2026).
+Cada item é `{name, type, value}` e só aparece na aba Campos se `name` **e** `type` baterem exatamente com
+um campo de `kanban_config.global_custom_attributes` (leia com `lionchat_kanban_config_list`).
+
+Como gravar pelo `lionchat_kanban_items_update` (`kanban_item.item_details`):
+- O `item_details` é MESCLADO só no 1º nível: cada chave enviada **troca a chave inteira** no card. Por isso
+  a lista `custom_attributes` enviada **substitui a lista toda** — leia o card com `lionchat_kanban_items_show`
+  e reenvie TODOS os campos, com o alterado.
+- Mandar objeto (`{"origem_lead": "Facebook Ads"}`) no lugar da lista **APAGA todos os campos do card**: o
+  servidor só aceita itens `{name, type, value}` e o objeto vira vazio.
+- Lista fechada de chaves do `item_details` (outras são descartadas em silêncio): title, description, status,
+  reason, win_reason, loss_reason, attributed_to, duplicated_from_id, priority, value, currency,
+  custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at,
+  conversation_id, automations, notes.
+- Para mudar UM campo sem reenviar a lista, as ações de automação/macro `update_card_attribute`
+  (`[{funnel_id, attribute_key: "<nome do campo>", value}]`) mexem só naquela entrada.
 
 ### assigned_agents
 
@@ -197,6 +221,10 @@ Um card individual dentro de uma etapa.
 ```
 
 Múltiplos agentes podem ter o mesmo card. `source` pode ser `manual`, `automation`, `inherited_from_conversation`.
+
+**Para GRAVAR** (`kanban_items_create`/`_update`, `kanban_item.assigned_agents`) o formato é outro: LISTA de
+NÚMEROS — `[5, 12]`. O sistema completa nome, e-mail e foto. A lista enviada **substitui** a atual (mande
+todos que devem ficar). Objetos `{id, ...}` são ignorados em silêncio e a lista não muda.
 
 **Agente do card vira participante das conversas (2026-06):** atribuir um agente a um card do Kanban
 (via `kanban_agents` ou ao vincular uma conversa) agora também o adiciona como PARTICIPANTE de todas
@@ -332,6 +360,9 @@ Endpoint: `GET /api/v2/kanban/items/counts` retorna contagem + soma por etapa.
 Funis agora têm visibilidade por usuário. Um funil é visível pra alguém quando:
 - é admin da conta, OU
 - tem permissão `kanban_view`/`kanban_manage` (custom role), OU
+- tem `funnel_manage` (21/09): quem pode criar/editar/arquivar qualquer funil passou a **enxergar** qualquer funil
+  na lista — antes editava pela API um funil restrito que não aparecia em `funnels_list`. Só o FUNIL: os cards do
+  funil restrito seguem a régua de card, OU
 - o funil está aberto a todos, OU
 - a pessoa participa do funil (está em `settings.agents`, OU é membro de um TIME em `settings.teams` — novo 2026-07-21, membros resolvidos ao vivo — ou tem card atribuído)
 
@@ -342,6 +373,10 @@ Funis agora têm visibilidade por usuário. Um funil é visível pra alguém qua
   `can_edit`, `can_move`, `can_delete`, `can_assign` (booleans)
 - `kanban_items_move` sem permissão → **403** com mensagem traduzida (antes dava 500/sucesso falso)
 - Cards embutidos na tela da conversa também respeitam a visibilidade
+- **Aviso em tempo real do card (21/09):** `kanban_item.created/updated` deixou de ir para a conta inteira — vai só
+  para quem VÊ aquele card (mesma régua acima) + administradores. Quem perde a visão (card passou a outro
+  responsável, mudou de funil) recebe `kanban_item.deleted` com só `{id, funnel_id}`. Integração que escuta o
+  WebSocket com token de usuário restrito recebe menos eventos que antes; com token de administrador, nada muda.
 
 **Pro MCP:** antes de tentar mover/editar card, confira os campos `can_*` do show — se `can_move`
 é false, explique ao usuário que ele não tem acesso àquele funil em vez de tentar mesmo assim.
@@ -534,33 +569,44 @@ Use para: ações cross-cutting que envolvem conversa/contato/label, ou regras c
 
 Cada card pode receber atributos custom de 3 origens diferentes. **A escolha do lugar muda completamente o resultado:**
 
-### 1. `kanban_item.custom_attributes` (jsonb direto no card)
+### 1. `item_details.custom_attributes` (o VALOR de cada campo, dentro do card)
 
 ```json
-{
-  "origem_lead": "Google Ads",
-  "campanha": "Black Friday 2026",
-  "score": 85
-}
+[
+  {"name": "Origem do Lead", "type": "string", "value": "Google Ads"},
+  {"name": "Score", "type": "number", "value": 85}
+]
 ```
 
-- Vai direto no card via `kanban_items_update`
-- Só aparece NESSE card específico
-- Sem typing/validação — qualquer chave/valor
-- Use para: campos específicos de um card, importação rápida sem cadastro prévio
+- É o que a aba **Campos** do card mostra e edita (e o que o filtro do quadro, a busca e o fluxo leem)
+- LISTA de `{name, type, value}`; `name` + `type` precisam bater com um campo do item 2 abaixo, senão o
+  valor fica gravado e **não aparece**
+- Grava via `kanban_items_update` em `kanban_item.item_details.custom_attributes` — a lista enviada
+  **substitui a inteira** (leia o card antes e reenvie tudo). Objeto `{chave: valor}` no lugar da lista
+  **apaga** os campos do card
+- Um campo só, sem reenviar a lista: ação `update_card_attribute` da automação/macro
+
+> **NÃO confundir com a coluna `kanban_item.custom_attributes`** (objeto `{chave: valor}` direto no card):
+> nenhuma tela a mostra — nem a aba Campos, nem o filtro, nem a busca. Só a ação "Alterar atributo do card"
+> do FlowBuilder e a leitura do fluxo a usam. Para o cliente ver o dado, use a lista acima.
 
 ### 2. `kanban_config.global_custom_attributes` (atributos globais do Kanban)
 
 ```json
 [
-  {"name": "Origem do Lead", "type": "list", "is_list": true, "list_values": ["Google", "Meta", "Indicação"]},
+  {"name": "Origem do Lead", "type": "string", "is_list": true, "list_values": ["Google", "Meta", "Indicação"]},
   {"name": "Score", "type": "number", "is_list": false}
 ]
 ```
 
-- Definido no `kanban_config` da conta
-- Aparece em TODOS os cards de TODOS os funis (na sidebar do card)
-- Com tipo (`text`, `number`, `date`, `list`, `boolean`)
+- Definido no `kanban_config` da conta (`lionchat_kanban_config_update`) — é a DEFINIÇÃO; o valor de cada
+  card mora no item 1
+- Aparece em TODOS os cards de TODOS os funis (aba Campos do card)
+- Tipos que a tela cria: `string` (texto), `number`, `date`, `boolean`; lista de opções = `is_list: true` +
+  `list_values`
+- A lista enviada **substitui a inteira** — campo que não vier some da aba de todos os cards. Leia antes com
+  `lionchat_kanban_config_list`
+- **Não confundir com `funnel.global_custom_attributes`** (coluna do funil): nenhuma tela lê aquele campo
 - Use para: atributos que TODO card precisa ter
 
 ### 3. `custom_attribute_definitions` (atributos globais de contato/conversa)
@@ -607,3 +653,66 @@ Cada card pode receber atributos custom de 3 origens diferentes. **A escolha do 
 1. Algum card sem `item_details.value`?
 2. Cards arquivados estão sendo contados?
 3. Etapas "ganho"/"perdido" estão incluídas no cálculo?
+
+## Conciliação de vendas — "Importar vendas" (2026-09-24)
+
+O problema que ela resolve: **vendedor não marca a venda certa no card**. Aí o relatório de faturamento
+mente — ou porque o card ficou aberto, ou porque o valor do card não é o valor que o cliente pagou.
+
+A planilha do financeiro (ou de outro sistema) entra e:
+
+| Situação do card no funil | O que acontece |
+|---|---|
+| Card **aberto** (mais antigo, se houver vários) | Grava o valor e marca **ganho com a DATA DA VENDA** |
+| Card **já ganho** | Atualiza **só o valor**; a data do ganho dele **não muda** |
+| Card marcado como **perdido** | **Não é tocado** — vai pra conferência humana |
+| **Sem card nenhum** | Cria card já ganho (só se `criar_sem_card: true`) |
+| Linha com telefone sem DDI, valor ilegível ou data no futuro | Vira **erro da linha**, com motivo |
+
+### Ferramentas
+
+1. `lionchat_kanban_sales_reconciliation_preview` — **confere e não grava nada**. Chame SEMPRE antes.
+2. `lionchat_kanban_sales_reconciliation_apply` — aplica em segundo plano, devolve `run_id`.
+3. `lionchat_kanban_sales_reconciliation_status` — acompanha até `completed`/`failed`.
+
+O MCP **não sobe arquivo**: as linhas vão em `rows` (lista de objetos). Se a pessoa anexar uma planilha
+na conversa, LEIA o arquivo, monte as linhas em JSON e chame a ferramenta — não peça pra ela converter.
+Quem tem CSV/Excel e prefere a tela usa Kanban > botão azul **+** > **Importar vendas**, que lê o
+arquivo, aponta as colunas e ainda oferece uma planilha de exemplo pra baixar.
+
+### Formato de cada linha de `rows`
+
+| Campo | Obrigatório | Como mandar |
+|---|---|---|
+| `phone` | sim | Com o código do país: `5511999887766` |
+| `value` | sim | `1500`, `"1500,00"`, `"R$ 1.500,00"` ou `"1,500.00"` |
+| `sale_date` | sim | `"01/08/2026"` ou `"2026-08-01"` — o dia em que a venda aconteceu |
+| `name` | não | Nome do cliente (usado no título do card novo) |
+| `email` | não | |
+| `agent` | não | Nome ou e-mail do vendedor |
+| `order_id` | não | Número do pedido, guardado no card |
+
+### O que você PRECISA saber antes de aplicar
+
+- **O telefone tem que vir com o código do país** (`5511999887766`). O sistema **não** completa o 55 —
+  linha sem DDI é recusada com motivo. Celular antigo sem o nono dígito é encontrado do mesmo jeito.
+- **A data da venda é o ponto da funcionalidade.** É ela que faz a venda contar no mês certo do
+  relatório. Sem data, a linha é recusada — nunca vira "hoje" em silêncio.
+- **A conciliação não dispara conversão por conta própria.** Quem dispara é o caminho normal do ganho
+  (Meta/GA4/Google Ads), e só nos funis com o evento de Ganho configurado. Por isso rodar a mesma
+  planilha duas vezes não reenvia conversão: o identificador do evento de ganho é estável.
+- **Rodar a mesma planilha duas vezes é seguro**: card já com aquele valor volta como `sem_mudanca` e
+  nem é gravado.
+- **`criar_sem_card: true` abre uma CONVERSA nova por card criado**, e conversa nova acorda o que a conta
+  tiver em "Conversa criada" (automação, fluxo, notificação). Avise a pessoa antes de ligar isso numa
+  planilha grande.
+- **Automação de funil que duplica o card no ganho continua rodando** (é um dos dois motores de
+  automação, ver a seção acima). A conferência conta quantos cards de pós-venda vão nascer.
+- **O vendedor da planilha só entra em card SEM responsável** — nunca troca quem já está lá.
+- **Porta:** administrador ou cargo com "importar e exportar cards".
+
+### Diagnóstico: "a venda entrou no mês errado"
+
+Olhe `item_details.status_changed_at` do card: ele é comparado como **texto** contra a janela do
+relatório, e tem que terminar em `Z`. `2026-08-01T03:00:00Z` é 1º de agosto em Brasília; gravar
+`2026-08-01T00:00:00Z` joga a venda pra julho.

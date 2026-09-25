@@ -388,13 +388,15 @@ mandar). Detalhes em `lionchat://docs/best-practices`.
 
 **Onde fica armazenado:** `kanban_config.win_reasons` e `kanban_config.loss_reasons` (jsonb arrays na tabela `kanban_configs`).
 
-**Formato:** array de objetos `{id, title}`:
+**Formato:** array de objetos `{id, title}`, com `id` em **texto estável** (nunca número) — detalhes e erros 422 em
+`lionchat://docs/api-conventions` → "Estrutura interna das listas":
 ```json
 "win_reasons": [
   {"id": "wr-1", "title": "Preço competitivo"},
   {"id": "wr-2", "title": "Indicação forte"}
 ]
 ```
+**No card:** `item_details.loss_reason` / `win_reason` guardam o `id` (texto) do motivo escolhido; `reason`, o título.
 
 **Endpoint:** `PUT /api/v1/accounts/{id}/kanban_config` com body wrapped:
 ```json
@@ -414,7 +416,7 @@ mandar). Detalhes em `lionchat://docs/best-practices`.
 |---|---|---|
 | Motivo de Ganho/Perda do card | `kanban_config.win_reasons` / `loss_reasons` | ❌ NÃO |
 | Atributo em TODO card | `kanban_config.global_custom_attributes` | só se não couber acima |
-| Atributo de UM card específico | `kanban_item.custom_attributes` (jsonb direto) | já é nativo, não precisa definition |
+| Valor de um campo em UM card | `item_details.custom_attributes` — LISTA `[{name, type, value}]` casando com o campo de `kanban_config.global_custom_attributes` | a coluna `kanban_item.custom_attributes` NÃO aparece em tela nenhuma — não use pra dado que o cliente precisa ver |
 | CPF, RG, CNPJ, endereço, data nasc., gênero do cliente | mecanismo NATIVO cadastral: `PATCH /contacts/{id}/cadastral` (`update_cadastral`) | ❌ NÃO (tem nativo) |
 | Tag pro contato (residencial, empresarial) | `labels` | ✅ SIM via Label |
 | Etapa do funil | `funnel.stages` | ❌ NÃO |

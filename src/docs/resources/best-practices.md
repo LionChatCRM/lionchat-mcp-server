@@ -172,10 +172,13 @@ valores desta lista:
 | Econômicos / rápidos | `gpt-4.1-nano`, `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-5.4-nano`, `gpt-5.4-mini` |
 | Intermediários | `gpt-4o`, `gpt-4.1`, `gpt-5-mini`, `gpt-5.4` |
 | Raciocínio | `o3-mini`, `o4-mini` |
-| Premium | `gpt-5`, `gpt-5.2`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `o1`, `o3` |
+| Premium | `gpt-5`, `gpt-5.2`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-6-sol`, `o1`, `o3` |
+| Custo-benefício (nova geração) | `gpt-6-luna` — US$ 0,10/0,50 por 1M tokens, raciocínio, sem temperatura; liberado em 23/09/2026 |
 
 **`GPT-5.2 Pro` não existe.** O valor válido é `gpt-5.2`, sem "Pro".
 
+> **Família `gpt-6` (`gpt-6-luna`, `gpt-6-sol`) — LIBERADA em 23/09/2026**, pelo mesmo trilho do `gpt-5.6`: sem temperatura e fora do bloco de IA do Formulário de Lead. `gpt-6-astra` NÃO está disponível.
+>
 > **Família `gpt-5.6` (`gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`) — LIBERADA em 09/2026.**
 > Foi removida em 29/07/2026 porque recusa function tools no canal antigo da OpenAI e deixava a IA MUDA.
 > Desde 09/2026 o servidor fala com esses três pela porta `/v1/responses` (só para eles — nenhum outro
@@ -189,6 +192,47 @@ valores desta lista:
 > antigo com modelo fora da lista continua salvando os outros campos; só a troca é recusada.
 > Desde 29/07 o erro vira uma **nota privada em português** na conversa (`llm_request_rejected`) — é o
 > primeiro lugar a olhar quando "a IA parou de responder logo depois de mexerem nas configurações".
+
+## Ligação por IA — Agentes de ligação (2026-09-24)
+
+A ligação por voz **saiu do agente de texto**. Desde 24/09 ela mora em **Agentes de ligação**, uma área
+própria: cada agente de ligação tem um objetivo e **não ocupa vaga de IA do plano**. As chaves antigas
+`config.call_*` do `captain_assistants_update` **não existem mais** — mandar elas não tem efeito.
+
+| Ferramenta | Para quê |
+|---|---|
+| `captain_call_agents_list` | lista os agentes de ligação e `meta.dial_inboxes` (caixas que podem ligar) |
+| `captain_call_agents_create` / `_update` / `_duplicate` / `_destroy` | cadastro |
+| `captain_call_test_phones_list` / `_create` / `_destroy` | números autorizados a receber ligação de teste |
+| `captain_call_agents_test_call` | **liga de verdade** para um número de teste cadastrado |
+| `captain_call_agents_test_call_status` | tocando / atendeu / não atendeu, e em qual conversa ficou |
+
+Campos do agente de ligação: `name`, `objective` (roteiro, até 4000), `first_message` (até 400), `style`
+(jeito de falar, até 1200), `voice_provider` (`openai` padrão ou `elevenlabs`), `engine` (`gptlive` padrão
+ou `realtime`, só na OpenAI), `voice_id`, `elevenlabs_agent_id` (obrigatório na ElevenLabs),
+`max_duration_seconds` (30 a 600, padrão 180) e **`captain_assistant_id`**.
+
+**Como a ligação trabalha (GPT-Live).** A voz conversa e **só consulta** agenda (horários livres, agenda do
+atendente, quem está trabalhando). Quando o cliente pede algo que precisa ser FEITO — mandar link,
+endereço ou proposta pelo WhatsApp, mover o card, anotar — a voz **repassa** ao agente de texto de
+`captain_assistant_id`, diz "já pedi, vai chegar no seu WhatsApp" e **segue a conversa** (nunca diz "já
+mandei"). O agente de texto executa na conversa daquele contato, com as ferramentas e a configuração
+DELE, e decide se escreve ao cliente. Regras fixas desse pedido: roda mesmo com atendente humano na
+conversa ou com a IA pausada; não liga a IA na conversa nem mexe na IA que já estava lá; não passa para
+humano, não encerra, não transfere e não agenda retorno (fluxos rodam completos); no máximo 3 pedidos
+por ligação; caixa oficial fora da janela de 24h faz as ações mas não escreve.
+Sem `captain_assistant_id` (ou no motor `realtime`/ElevenLabs), a voz **só conversa**.
+
+**Voz.** É **própria** do agente de ligação — não mexe na voz do áudio da IA no WhatsApp
+(`config.voice_provider`/`config.voice_id` do agente de texto continuam sendo só do WhatsApp). No GPT-Live
+use `captain_voices_list` com `engine=gptlive`: aceita alloy, ash, ballad, coral, echo, sage, shimmer, verse,
+**marin** e **cedar** (as duas mais naturais de telefone); voz fora disso cai na marin.
+
+**Ligação de teste.** Só para número **cadastrado** em `captain_call_test_phones` (o telefone nunca vai no
+corpo, só o id). Cria contato e conversa de verdade, pode disparar automações de "conversa criada" e fica
+gravada. Limite de 10 por hora na conta. Precisa da Ligação com IA liberada na conta e da linha da caixa
+conectada; recusa volta 422 com o motivo em `message`. Depois que a ligação termina, a transcrição do
+próprio fornecedor aparece no card da ligação.
 
 ## Follow-up automático multi-etapa (2026-06)
 
@@ -463,7 +507,13 @@ puxados. Se a ativação reclamar de sample, NÃO é bloqueio — a integração
 - `ContactLabel` `{id}` — etiqueta de CONTATO (novo)
 - `ContactAttribute` `{key, value}` — atributo do contato (novo)
 - `CardAttribute` `{key, value}` — atributo do card Kanban (novo)
-- `AgentTeam` `{assignee_ids:[], team_ids:[]}` — responsável atual OU time da conversa (novo)
+- `AgentTeam` `{assignee_ids:[], team_ids:[], assignee_mode?, team_mode?}` — responsável atual OU time da
+  conversa. **Modos (24/09/2026):** `assignee_mode:'none'` = conversa SEM responsável ("Sem atendente"),
+  `'any'` = com qualquer responsável; `team_mode:'none'|'any'` igual para time. Ausente/`'specific'` = usa os
+  ids (comportamento de sempre). Vale QUALQUER conversa do contato, de qualquer status. Atendente e time
+  SEMPRE somam (um OU outro) — inclusive em blocos `AgentTeam` separados, que viram UMA seção só; o
+  `audience_mode:'all'` cruza o AgentTeam com as OUTRAS seções (etiqueta, funil, atributo), não atendente com
+  time. "Sem atendente E com time" não é montável hoje. Mesmos modos na `exclusion`.
 
 O campo `audience_mode` define a combinação ENTRE seções:
 - `"sum"` (default): união — contato em QUALQUER seção entra
