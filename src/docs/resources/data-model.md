@@ -190,9 +190,14 @@ vinculo sao SEMPRE manuais** (25/09): o sistema NAO cria empresa nem vincula con
 caminho (ficha, `lionchat_companies_contacts_create`, `lionchat_contacts_update`/`_create` com `company_id`);
 tire alguem antes de colocar outro. O cargo da
 pessoa na empresa e `additional_attributes.job_title`. A pagina da empresa junta os contatos
-(`lionchat_companies_contacts_list`), as anotacoes deles (`lionchat_companies_notes_list`) e as conversas
-(`lionchat_companies_conversations_list`, filtradas pelo que o usuario pode ver). Excluir empresa: so
-administrador; os contatos ficam, so deixam de estar na empresa.
+(`lionchat_companies_contacts_list`), as anotacoes (`lionchat_companies_notes_list`: as da PROPRIA empresa,
+`kind: company`, + as dos contatos, `kind: contact`), as conversas (`lionchat_companies_conversations_list`,
+filtradas pelo que o usuario pode ver), os documentos de todos os contatos (`lionchat_companies_documents_list`,
+so leitura, cada item com `contacts[]` — o mesmo arquivo mandado a varios contatos vem UMA vez) e os compromissos
+(`lionchat_companies_tasks_list`). Contratos dos contatos: `lionchat_signature_envelopes_list` com `company_id`.
+Anotacao da empresa: `lionchat_companies_notes_create` / `_update` / `_destroy` (`{note:{content}}`; qualquer
+atendente). Excluir empresa: so administrador; os contatos ficam, so deixam de estar na empresa (as anotacoes da
+empresa vao junto).
 
 **Dados cadastrais (`additional_attributes.cadastral`):** CPF, CNPJ, RG, passaporte, nascimento,
 gênero, estado civil, profissão e endereço completo moram em `additional_attributes->cadastral`.

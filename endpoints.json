@@ -11975,7 +11975,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/companies/{company_id}/notes",
   "title": "Anotacoes da Empresa",
-  "description": "Ultimas 20 anotacoes feitas nos contatos da empresa, juntas. Cada item traz content, user, created_at e contact {id, name, thumbnail}. So leitura: para criar anotacao use a do contato.",
+  "description": "Anotacoes da empresa, mais nova primeiro: as da PROPRIA empresa (kind 'company', criadas com lionchat_companies_notes_create) + as ultimas 50 feitas nos contatos dela (kind 'contact', com contact {id, name, thumbnail}). Cada item traz id, kind, content, user, created_at.",
   "category": "Empresas",
   "params": [
    {
@@ -11986,12 +11986,13 @@
     "description": "ID da empresa"
    }
   ],
-  "returns": "payload (array de anotacoes com contact)",
+  "returns": "payload (array de anotacoes; kind = company ou contact)",
   "common_use_cases": [
    "Resumo do relacionamento com um cliente",
    "Preparar reuniao com a empresa"
   ],
   "related_tools": [
+   "lionchat_companies_notes_create",
    "lionchat_contacts_notes_show",
    "lionchat_companies_conversations_list"
   ]
@@ -26040,7 +26041,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents",
   "title": "Documentos do Contato",
-  "description": "Central de arquivos do contato: uploads diretos + espelho dos anexos dos cards Kanban + das conversas (só imagem/documento). Dedup por arquivo.",
+  "description": "Central de arquivos do contato: uploads diretos + espelho dos anexos dos cards Kanban + das conversas (só imagem/documento). Dedup por arquivo. (25/09) O mesmo arquivo em varias origens vem UMA vez (representado pelo upload da ficha, se houver); cada item traz contacts [{id,name}]. Contrato assinado so aparece para quem pode ver contratos; arquivo de compromisso particular de outra pessoa nao aparece. mirror aceita tambem anexo de compromisso e de contrato.",
   "category": "Documentos do Contato",
   "params": [
    {
@@ -34177,7 +34178,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes",
   "title": "Listar Contratos Enviados",
-  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde.",
+  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde. Por empresa: company_id (contratos de todos os contatos dela).",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -34221,6 +34222,13 @@
     "location": "query",
     "required": false,
     "description": "Pagina (padrao 1, 25 por pagina)"
+   },
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Recorta pelos contatos de uma EMPRESA (aba Contratos da pagina da empresa). Empresa de outra conta = 404."
    }
   ],
   "returns": "payload: [{id, title, status, signature_document_id, document_name, contact_id, contact_name, conversation_id, sent_at, completed_at, expires_at, participants[{id, name, role, status, delivery_channel, phone, email, signed_at, viewed_at, public_url, signs_in_panel}], delivery: {failed[], delivered_participant_ids[]}, has_signed_document, pending_for_me}], meta: {page, per_page, has_more, counts}",
@@ -35077,5 +35085,159 @@
   "description": "Uma linha por AGENDA com o estado do Google de cada uma: `connected`, `state`, `calendar_id`, `connected_by`. A conexao Google e UMA POR AGENDA — cada unidade liga a conta Google dela, inclusive a mesma pessoa com contas diferentes. SO ADMINISTRADOR. Conta sem agendas devolve uma linha com agenda_id nulo (a principal).",
   "category": "Integracoes / Google Calendar",
   "params": []
+ },
+ {
+  "id": "lionchat_companies_notes_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/notes",
+  "title": "Criar Anotacao da Empresa",
+  "description": "Escreve uma anotacao da PROPRIA empresa (nao de um contato). Qualquer atendente da conta pode. Aparece na aba Anotacoes da pagina da empresa com o selo 'Empresa'.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "note",
+    "type": "object",
+    "location": "body",
+    "required": true,
+    "description": "{ content: texto da anotacao }"
+   }
+  ],
+  "returns": "{payload: anotacao} com kind 'company'",
+  "common_use_cases": [
+   "Registrar historico comercial da empresa",
+   "Anotar combinados com a empresa"
+  ],
+  "related_tools": [
+   "lionchat_companies_notes_list",
+   "lionchat_companies_notes_update"
+  ]
+ },
+ {
+  "id": "lionchat_companies_notes_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/notes/{id}",
+  "title": "Editar Anotacao da Empresa",
+  "description": "Edita uma anotacao da PROPRIA empresa (kind 'company'). A autoria passa para quem editou, como na anotacao do contato. Anotacao de contato (kind 'contact') NAO se edita aqui.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da anotacao da empresa (kind 'company')"
+   },
+   {
+    "name": "note",
+    "type": "object",
+    "location": "body",
+    "required": true,
+    "description": "{ content: texto da anotacao }"
+   }
+  ],
+  "returns": "{payload: anotacao}",
+  "common_use_cases": [
+   "Corrigir uma anotacao da empresa"
+  ],
+  "related_tools": [
+   "lionchat_companies_notes_list"
+  ]
+ },
+ {
+  "id": "lionchat_companies_notes_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/notes/{id}",
+  "title": "Apagar Anotacao da Empresa",
+  "description": "Apaga uma anotacao da PROPRIA empresa (kind 'company'). Nao tem volta.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da anotacao da empresa (kind 'company')"
+   }
+  ],
+  "returns": "200 sem corpo",
+  "common_use_cases": [
+   "Remover anotacao errada"
+  ],
+  "related_tools": [
+   "lionchat_companies_notes_list"
+  ]
+ },
+ {
+  "id": "lionchat_companies_documents_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/documents",
+  "title": "Documentos da Empresa",
+  "description": "Documentos de TODOS os contatos da empresa juntos (mesmas origens e regras da aba Documentos do contato: ficha, card, conversa, compromisso, formulario e contrato assinado). Cada item traz contacts [{id, name}] (de quem e). O mesmo arquivo mandado a varios contatos vem UMA vez, com todos os nomes. SO LEITURA: favoritar/renomear/enviar/apagar e pela ficha do contato (lionchat_contacts_documents_*). Lista inteira, teto de 1000 (meta.truncated avisa).",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   }
+  ],
+  "returns": "{payload: [...], meta: {total, truncated}}",
+  "common_use_cases": [
+   "Achar um arquivo de qualquer pessoa da empresa",
+   "Conferir documentos enviados para a empresa"
+  ],
+  "related_tools": [
+   "lionchat_contacts_documents_list",
+   "lionchat_companies_contacts_list"
+  ]
+ },
+ {
+  "id": "lionchat_companies_tasks_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/tasks",
+  "title": "Compromissos da Empresa",
+  "description": "Compromissos de TODOS os contatos da empresa, mais novo primeiro, pela mesma regra da ficha do contato (sem o compromisso particular de outra pessoa, so as agendas que o usuario ve). Cada item traz contact_name / conversation_contact_name. Precisa da Agenda ligada (senao 404). Editar/concluir: lionchat_tasks_update / lionchat_tasks_toggle.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   }
+  ],
+  "returns": "array de compromissos (mesmo formato de lionchat_tasks_list)",
+  "common_use_cases": [
+   "Ver a agenda de uma empresa inteira",
+   "Conferir proximas reunioes com a empresa"
+  ],
+  "related_tools": [
+   "lionchat_tasks_list",
+   "lionchat_tasks_update"
+  ]
  }
 ]
