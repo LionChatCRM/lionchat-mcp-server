@@ -507,7 +507,13 @@ puxados. Se a ativação reclamar de sample, NÃO é bloqueio — a integração
 - `ContactLabel` `{id}` — etiqueta de CONTATO (novo)
 - `ContactAttribute` `{key, value}` — atributo do contato (novo)
 - `CardAttribute` `{key, value}` — atributo do card Kanban (novo)
-- `AgentTeam` `{assignee_ids:[], team_ids:[]}` — responsável atual OU time da conversa (novo)
+- `AgentTeam` `{assignee_ids:[], team_ids:[], assignee_mode?, team_mode?}` — responsável atual OU time da
+  conversa. **Modos (24/09/2026):** `assignee_mode:'none'` = conversa SEM responsável ("Sem atendente"),
+  `'any'` = com qualquer responsável; `team_mode:'none'|'any'` igual para time. Ausente/`'specific'` = usa os
+  ids (comportamento de sempre). Vale QUALQUER conversa do contato, de qualquer status. Atendente e time
+  SEMPRE somam (um OU outro) — inclusive em blocos `AgentTeam` separados, que viram UMA seção só; o
+  `audience_mode:'all'` cruza o AgentTeam com as OUTRAS seções (etiqueta, funil, atributo), não atendente com
+  time. "Sem atendente E com time" não é montável hoje. Mesmos modos na `exclusion`.
 
 O campo `audience_mode` define a combinação ENTRE seções:
 - `"sum"` (default): união — contato em QUALQUER seção entra

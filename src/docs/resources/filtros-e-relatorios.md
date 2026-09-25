@@ -36,6 +36,14 @@ E/OU é encadeado condição a condição (sem parênteses).
 Atributo personalizado: informe `custom_attribute_type` na condição — `'conversation_attribute'`
 (atributo da conversa) ou `'contact_attribute'`. Sem ele o escopo pode sair errado.
 
+**`contact_attribute` lê a FICHA DO CONTATO da conversa (funciona de verdade desde 24/09/2026).** Antes o
+servidor ignorava o valor e lia o atributo da própria conversa — por isso lead de formulário da Meta
+(formulário, anúncio, campanha e 1ª/última origem ficam SÓ no contato) não era achado. Agora a conversa entra
+quando o contato dela casa. Chave precisa ter cadastro de atributo DE CONTATO na conta (senão 422). Exemplo:
+`{attribute_key:'meta_lead_form_name', custom_attribute_type:'contact_attribute', filter_operator:'contains',
+values:['vendas']}`. Negativos (`not_equal_to`, `does_not_contain`, `is_not_present`) incluem a conversa cujo
+contato não tem o dado. Texto compara sem maiúscula/acento.
+
 - `chat_type` em `conversations_filter` funciona desde 19/08/2026 (antes respondia 500). `group` =
   conversa de grupo de WhatsApp; `individual` cobre também canal, transmissão e status. Com
   `not_equal_to`, conversa sem contato vinculado NÃO some do resultado.
@@ -161,6 +169,13 @@ Params: `funnel_id` (obrigatório), `from`, `to`, `user_ids[]` (agentes), `team_
 | `created` | só quando o card nasceu | "quantos leads entraram" |
 | `moved` | só quando entrou na etapa atual (mesma expressão do `stage_date_*` da seção 3) | "o que se mexeu no período" |
 | `closed` | só ganhos/perdidos no período | **a pergunta de receita** — é a régua certa pra "quanto vendemos em julho" |
+
+**Ganho/perda pela DATA DO FECHAMENTO (23/09/2026).** Com a régua `any` o relatório traz também cards que
+nasceram no período mas fecharam DEPOIS dele. Por isso, para "quanto ganhamos/perdemos em julho", leia
+`wonInPeriod`/`wonValueInPeriod` e `lostInPeriod`/`lostValueInPeriod` (este último é campo NOVO) — **nunca**
+`statusDistribution`, que é a foto do status de HOJE (serve só para "negócios abertos agora"). Desde 23/09 os
+motivos de ganho/perda, os perdidos recentes, a receita por semana e o ranking de vendedores também contam só
+o que FECHOU no período — antes somavam por status de hoje e divergiam do quadro de Ganhos na mesma tela.
 
 O relatório de UMA etapa — tool `lionchat_funnels_stage_report` (`GET /funnels/:id/stage_report`, o
 painel que abre dentro do quadro) — tem as MESMAS 4 opções de régua, mesmo parâmetro `date_basis` e as
