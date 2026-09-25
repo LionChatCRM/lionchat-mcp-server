@@ -195,7 +195,9 @@ pessoa na empresa e `additional_attributes.job_title`. A pagina da empresa junta
 `kind: company`, + as dos contatos, `kind: contact`), as conversas (`lionchat_companies_conversations_list`,
 filtradas pelo que o usuario pode ver), os documentos de todos os contatos (`lionchat_companies_documents_list`,
 so leitura, cada item com `contacts[]` — o mesmo arquivo mandado a varios contatos vem UMA vez) e os compromissos
-(`lionchat_companies_tasks_list`). Contratos dos contatos: `lionchat_signature_envelopes_list` com `company_id`.
+(`lionchat_companies_tasks_list`) e os cards do Kanban dos contatos (`lionchat_companies_kanban_items_list`, cada
+card com `contacts[{id,name}]`, so os que o usuario ve no quadro). No card do quadro,
+`conversation.contact.company_id`/`company_name` dizem a empresa do contato do card. Contratos dos contatos: `lionchat_signature_envelopes_list` com `company_id`.
 Anotacao da empresa: `lionchat_companies_notes_create` / `_update` / `_destroy` (`{note:{content}}`; qualquer
 atendente). Cadastro da empresa (25/09): `lionchat_companies_create`/`_update` aceitam
 `additional_attributes` com `legal_name`, `cnpj` (validado; grava so digitos), `phone`, `email`,

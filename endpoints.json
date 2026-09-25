@@ -35239,5 +35239,53 @@
    "lionchat_tasks_list",
    "lionchat_tasks_update"
   ]
+ },
+ {
+  "id": "lionchat_companies_kanban_items_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{id}/kanban_items",
+  "title": "Cards do Kanban da Empresa",
+  "description": "Lista os cards do Kanban de TODOS os contatos da empresa (aba Cards da pagina da empresa). Mesma lista da aba Kanban da ficha do contato: card ligado a qualquer conversa dos contatos (principal ou vinculada), so os cards que o usuario ve no quadro (funil restrito e caixa respeitados), 25 por pagina, mais recentes primeiro. Cada card traz contacts[{id,name}] = de quem e (card ligado a 2 contatos da empresa traz os dois). ENTERPRISE; exige a funcao Empresas.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "open (padrao na tela), won, lost; omitir = todos"
+   },
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por funil"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Pagina (25 por pagina)"
+   }
+  ],
+  "returns": "{ meta: {total_count, page, per_page}, payload: [card com funnel, labels, next_task, permissions e contacts[{id,name}]] }",
+  "common_use_cases": [
+   "Ver os negocios de uma empresa",
+   "Somar oportunidades abertas de um cliente B2B"
+  ],
+  "related_tools": [
+   "lionchat_contacts_kanban_items_list",
+   "lionchat_companies_contacts_list",
+   "lionchat_kanban_items_show"
+  ]
  }
 ]
