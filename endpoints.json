@@ -237,7 +237,7 @@
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "Empresa da mesma conta a ligar ao contato (null/vazio tira da empresa; sem a chave nada muda). Escolher a empresa faz additional_attributes.company_name virar o nome dela. Empresa de outra conta = 404."
+    "description": "Empresa da mesma conta a ligar ao contato (null/vazio tira da empresa; sem a chave nada muda). Escolher a empresa faz additional_attributes.company_name virar o nome dela. Empresa de outra conta = 404. Empresa com 100 contatos = 422 (teto)."
    }
   ],
   "returns": "contato criado (com novo ID)",
@@ -361,7 +361,7 @@
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "Empresa da mesma conta a ligar ao contato (null/vazio tira da empresa; sem a chave nada muda). Escolher a empresa faz additional_attributes.company_name virar o nome dela. Empresa de outra conta = 404."
+    "description": "Empresa da mesma conta a ligar ao contato (null/vazio tira da empresa; sem a chave nada muda). Escolher a empresa faz additional_attributes.company_name virar o nome dela. Empresa de outra conta = 404. Empresa com 100 contatos = 422 (teto)."
    }
   ],
   "returns": "contato atualizado",
@@ -11714,7 +11714,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/companies",
   "title": "Criar Empresa",
-  "description": "Cria uma empresa. Body exige wrapper company. Aceita name, domain, description, avatar. NAO aceita custom_attributes. ENTERPRISE-only.",
+  "description": "Cria uma empresa. Body exige wrapper company. Aceita name, domain, description, avatar. NAO aceita custom_attributes. ENTERPRISE-only. Empresa so nasce assim (manual): o sistema nao cria empresa pelo dominio do e-mail dos contatos.",
   "category": "Empresas",
   "params": [
    {
@@ -11909,7 +11909,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/companies/{company_id}/contacts",
   "title": "Colocar Contato na Empresa",
-  "description": "Liga um contato da conta a esta empresa (se ele estava em outra, MOVE). O texto additional_attributes.company_name do contato passa a ser o nome da empresa. Para achar o contato use lionchat_contacts_search. Contato de outra conta = 404.",
+  "description": "Liga um contato da conta a esta empresa (se ele estava em outra, MOVE). O texto additional_attributes.company_name do contato passa a ser o nome da empresa. Para achar o contato use lionchat_contacts_search. Contato de outra conta = 404. TETO: 100 contatos por empresa (25/09) — o 101o e recusado com 422 'Esta empresa ja tem 100 contatos, o maximo permitido...'; tire alguem (lionchat_companies_contacts_destroy) antes de colocar outro. Empresa e vinculo sao SEMPRE manuais: o sistema NAO cria empresa nem vincula contato pelo dominio do e-mail.",
   "category": "Empresas",
   "params": [
    {

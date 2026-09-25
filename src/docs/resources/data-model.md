@@ -184,8 +184,11 @@ nascimento e documentos vêm mascarados (`masked: true`) para quem não é admin
 `lionchat_contacts_update` com `company_id` (empresa da mesma conta; vazio/null tira; se a chave nao for
 enviada nada muda) ou `lionchat_companies_contacts_create` / `_destroy`. Regra do texto
 `additional_attributes.company_name`: escolher a empresa faz ele virar o nome da empresa; tirar so apaga se
-ele ainda era o nome dela; o vinculo AUTOMATICO pelo e-mail (dominio de empresa, conta com a funcao ligada)
-NAO mexe no texto; renomear a empresa so troca nos contatos que ainda tinham o nome antigo. O cargo da
+ele ainda era o nome dela; renomear a empresa so troca nos contatos que ainda tinham o nome antigo. **Empresa e
+vinculo sao SEMPRE manuais** (25/09): o sistema NAO cria empresa nem vincula contato pelo dominio do e-mail.
+**Teto: 100 contatos por empresa** — o 101o e recusado (422, "Esta empresa ja tem 100 contatos...") por qualquer
+caminho (ficha, `lionchat_companies_contacts_create`, `lionchat_contacts_update`/`_create` com `company_id`);
+tire alguem antes de colocar outro. O cargo da
 pessoa na empresa e `additional_attributes.job_title`. A pagina da empresa junta os contatos
 (`lionchat_companies_contacts_list`), as anotacoes deles (`lionchat_companies_notes_list`) e as conversas
 (`lionchat_companies_conversations_list`, filtradas pelo que o usuario pode ver). Excluir empresa: so
