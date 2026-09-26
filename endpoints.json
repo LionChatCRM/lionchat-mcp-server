@@ -5528,7 +5528,7 @@
   "method": "GET",
   "path": "/api/v2/accounts/{account_id}/reports",
   "title": "Relatorios Detalhados",
-  "description": "Serie temporal de uma metrica. metric obrigatorio. group_by: hour/day/week/month/year.",
+  "description": "Serie temporal de uma metrica. metric obrigatorio. group_by: hour/day/week/month/year. Pra ver QUAIS conversas formam um ponto, use lionchat_reports_drilldown com o 'timestamp' dele.",
   "category": "Relatorios",
   "params": [
    {
@@ -5597,7 +5597,99 @@
   "related_tools": [
    "lionchat_reports_list",
    "lionchat_reports_list_1",
-   "lionchat_reports_list_2"
+   "lionchat_reports_list_2",
+   "lionchat_reports_drilldown"
+  ]
+ },
+ {
+  "id": "lionchat_reports_drilldown",
+  "method": "GET",
+  "path": "/api/v2/accounts/{account_id}/reports/drilldown",
+  "title": "Conversas por trás de um ponto do gráfico",
+  "description": "Lista as CONVERSAS que formam UM ponto da série temporal (lionchat_reports_list_5) — o mesmo que clicar numa barra do gráfico nos Relatórios. Usa a MESMA régua que desenhou o ponto, então a lista bate com o número (ex.: etiqueta conta pela data em que foi APLICADA). Fluxo: chame lionchat_reports_list_5, pegue o 'timestamp' do ponto e passe aqui em bucket_timestamp, repetindo metric, group_by, type, id, timezone_offset e business_hours da série (são eles que definem onde o ponto começa e termina). Mostra SÓ as conversas que a pessoa do token pode abrir: meta.hidden_count diz quantas ficaram de fora por permissão — diga isso ao usuário em vez de concluir que faltam conversas. 25 por página, mais recentes primeiro; teto de 5.000 conversas por ponto. Exige permissão de ver relatórios. Métrica fora da lista = 422 {error: 'invalid metric'}; data fora do formato Unix = 400.",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "metric",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "A MESMA métrica da série. Aceita SÓ: conversations_count | incoming_messages_count | outgoing_messages_count | resolutions_count | avg_first_response_time | avg_resolution_time | reply_time. Métricas de bot (bot_resolutions_count, bot_handoffs_count) NÃO têm lista."
+   },
+   {
+    "name": "bucket_timestamp",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "Início do ponto: o campo 'timestamp' devolvido por lionchat_reports_list_5 (Unix em SEGUNDOS)."
+   },
+   {
+    "name": "group_by",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Tamanho do ponto: hour | day | week | month | year (padrão day). Use o MESMO da série, senão o recorte muda e a lista não bate."
+   },
+   {
+    "name": "type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Escopo: account | inbox | agent | label | team (padrão account). O mesmo da série."
+   },
+   {
+    "name": "id",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "ID da caixa/agente/etiqueta/time quando type != account. O mesmo da série."
+   },
+   {
+    "name": "since",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Início do período do relatório (Unix em SEGUNDOS). Recorta o ponto quando o período começa no meio dele (ex.: semana que começou antes)."
+   },
+   {
+    "name": "until",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim do período do relatório (Unix em SEGUNDOS). Recorta o último ponto."
+   },
+   {
+    "name": "timezone_offset",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fuso em horas (ex: -3 pra Brasília). O MESMO da série — define a fronteira do dia/hora do ponto."
+   },
+   {
+    "name": "business_hours",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "Só nas médias de tempo: true = mede só o expediente (mesma regra da série). Use o MESMO valor da série."
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (25 por página, fixo). Padrão 1."
+   }
+  ],
+  "returns": "{ meta: { metric, since, until (o recorte REAL do ponto, Unix), page, per_page, total_count (conversas do ponto), visible_count (as que a pessoa pode abrir), hidden_count (fora por permissão) }, payload: [{ id, display_id (número da conversa na tela), status, created_at (Unix), contact_name, inbox_name, assignee_name, detail }] }. detail = o porquê de cada conversa: {count} (quantas mensagens/eventos dela caíram no ponto) nas contagens de mensagens e resoluções, {seconds} nas médias de tempo, ou null.",
+  "common_use_cases": [
+   "Quais conversas formam o pico de terça-feira no gráfico",
+   "Ver quem demorou para responder naquela semana (avg_first_response_time)",
+   "Listar as conversas resolvidas num dia específico"
+  ],
+  "related_tools": [
+   "lionchat_reports_list_5",
+   "lionchat_reports_summary",
+   "lionchat_conversations_show"
   ]
  },
  {
@@ -6410,9 +6502,16 @@
     "location": "query",
     "required": false,
     "description": "Busca textual em pergunta/resposta"
+   },
+   {
+    "name": "sort",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "occurrences = mais perguntadas primeiro (use com status=pending pra ver as sugestões que mais se repetem). Sem o parâmetro = mais recentes primeiro."
    }
   ],
-  "returns": "array de respostas (AssistantResponse)",
+  "returns": "array de respostas (AssistantResponse). Cada uma traz occurrences_count (desde 26/09/2026): em quantas conversas DIFERENTES a mesma pergunta pendente apareceu (começa em 1; só soma enquanto pendente) — é o 'perguntada em N conversas' da tela.",
   "common_use_cases": [
    "Dashboard: contar/exibir assistentes AI",
    "Buscar com filtros antes de outra operação",
@@ -6437,7 +6536,7 @@
     "type": "integer",
     "location": "body",
     "required": true,
-    "description": "ID do agente dono da FAQ — NOT NULL no banco"
+    "description": "ID do agente dono da FAQ — NOT NULL no banco. Tem que ser um agente DESTA conta: de outra conta = 404 (25/09/2026)."
    },
    {
     "name": "question",
@@ -10494,46 +10593,102 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/flows/test_api",
   "title": "Testar Node API",
-  "description": "Testa um no de API (executa a requisicao HTTP) e retorna a resposta.",
+  "description": "Executa a requisição HTTP de um bloco de API do FlowBuilder pelo SERVIDOR (o mesmo que o botão 'Testar requisição' da tela) e devolve a resposta. Só administrador. Tudo vai dentro de 'config', com os MESMOS nomes que o bloco de API grava no flow_data (apiUrl, apiMethod, apiHeaders...): dá pra copiar o data do node lido com lionchat_flows_show. Variáveis {{...}} são trocadas pelo valor de test_variables; {{account.custom_attribute.X}} usa a variável da conta (inclusive secreta). Variável sem valor fica como {{nome}} no texto. CORRIGIDO 25/09/2026: antes o servidor descartava em silêncio apiQueryParams, apiBodyMode, apiBodyFields, apiSendHeaders e apiSendQueryParams — o teste saía sem parâmetro de URL e sem body em modo chave-valor. Não segue redirecionamento.",
   "category": "Flows",
   "params": [
    {
-    "name": "url",
+    "name": "config.apiUrl",
     "type": "string",
     "location": "body",
     "required": true,
-    "description": "URL do endpoint"
+    "description": "URL do endpoint (aceita {{variáveis}})."
    },
    {
-    "name": "method",
+    "name": "config.apiMethod",
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "GET, POST, PUT, PATCH, DELETE"
+    "description": "GET (padrão), POST, PUT, PATCH, DELETE. Body só é enviado em POST/PUT/PATCH."
    },
    {
-    "name": "headers",
-    "type": "object",
+    "name": "config.apiQueryParams",
+    "type": "array",
     "location": "body",
     "required": false,
-    "description": "Headers customizados"
+    "description": "Parâmetros de URL: lista de {key, value} (aceitam {{variáveis}}). Acrescentados à URL já codificados."
    },
    {
-    "name": "body",
+    "name": "config.apiSendQueryParams",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "false = ignora apiQueryParams (chave desligada na tela). Padrão true."
+   },
+   {
+    "name": "config.apiHeaders",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Cabeçalhos: lista de {key, value} (aceitam {{variáveis}})."
+   },
+   {
+    "name": "config.apiSendHeaders",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "false = ignora apiHeaders. Padrão true."
+   },
+   {
+    "name": "config.apiAuthType",
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Body da requisição"
+    "description": "bearer (vira Authorization: Bearer <token>) | basic (Authorization: Basic <token>, token já em base64) | api_key (X-Api-Key: <token>) | vazio = sem autenticação."
    },
    {
-    "name": "timeout",
+    "name": "config.apiAuthToken",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Token da autenticação (aceita {{variáveis}}, ex. {{account.custom_attribute.minha_chave}})."
+   },
+   {
+    "name": "config.apiBodyMode",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "json (padrão: manda apiBody como está) | fields (monta um JSON a partir de apiBodyFields)."
+   },
+   {
+    "name": "config.apiBody",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Corpo em texto (normalmente JSON) quando apiBodyMode=json. Aceita {{variáveis}}."
+   },
+   {
+    "name": "config.apiBodyFields",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Corpo em modo chave-valor (apiBodyMode=fields): lista de {key, value}; vira um JSON {key: value}."
+   },
+   {
+    "name": "config.apiTimeout",
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "Timeout em segundos (max 25)"
+    "description": "Tempo limite em SEGUNDOS: padrão 10, máximo 25 (acima disso é limitado a 25)."
+   },
+   {
+    "name": "test_variables",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Valores pras variáveis do teste: {\"contact.name\": \"Maria\", \"var.pedido\": \"123\"} — a chave é o texto de dentro das chaves duplas."
    }
   ],
-  "returns": "resposta HTTP",
+  "returns": "{ status (código HTTP; 0 = não chegou a responder), ok (true se 2xx), body (resposta como texto; em falha, o motivo — ex. 'URL nao configurada', 'Request timeout apos 10s') }",
   "common_use_cases": [
    "Cadastro inicial de flow",
    "Automação a partir de evento externo",
@@ -10634,7 +10789,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. [{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao')."
+    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. [{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao'). ESPERA QUE CONFERE (26/09/2026): 'wait' aceita o formato OBJETO [{\"seconds\": 120, \"only_if_open\": true, \"only_if_no_reply\": true}] — na VOLTA, only_if_open só segue se a conversa ainda estiver aberta/pendente e only_if_no_reply só segue se ninguém respondeu o cliente durante a espera (qualquer mensagem pública de saída conta). Barrou = o resto da regra não roda e o histórico da execução mostra o passo wait_check 'skipped'. O formato antigo [120] continua valendo, sem conferência. Teto 300 s."
    },
    {
     "name": "active",
@@ -10732,7 +10887,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao')."
+    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao'). ESPERA QUE CONFERE (26/09/2026): 'wait' aceita o formato OBJETO [{\"seconds\": 120, \"only_if_open\": true, \"only_if_no_reply\": true}] — na VOLTA, only_if_open só segue se a conversa ainda estiver aberta/pendente e only_if_no_reply só segue se ninguém respondeu o cliente durante a espera (qualquer mensagem pública de saída conta). Barrou = o resto da regra não roda e o histórico da execução mostra o passo wait_check 'skipped'. O formato antigo [120] continua valendo, sem conferência. Teto 300 s."
    }
   ],
   "returns": "regra de automação atualizado",
@@ -28057,7 +28212,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/audit_logs",
   "title": "Registro de Auditoria",
-  "description": "Histórico de quem mexeu no quê dentro da conta (criação, edição, exclusão, login e logout), com o autor, o IP e o antes/depois de cada campo. ATENÇÃO ao formato das datas: aqui 'since' e 'until' são DATA POR EXTENSO (AAAA-MM-DD) e NÃO timestamp Unix — é o oposto dos relatórios; mandar um número Unix derruba a chamada com erro. Somente administradores; a conta precisa ter o recurso de auditoria habilitado, senão a lista volta VAZIA sem nenhum aviso de erro.",
+  "description": "Histórico de quem mexeu no quê dentro da conta (criação, edição, exclusão, login e logout), com o autor, o IP e o antes/depois de cada campo. ATENÇÃO ao formato das datas: aqui 'since' e 'until' são DATA POR EXTENSO (AAAA-MM-DD) e NÃO timestamp Unix — é o oposto dos relatórios; mandar um número Unix derruba a chamada com erro. Somente administradores; a conta precisa ter o recurso de auditoria habilitado, senão a lista volta VAZIA sem nenhum aviso de erro. MENSAGEM APAGADA (26/09/2026): quando alguém apaga uma mensagem pelo painel, fica um registro auditable_type 'Message', action 'destroy', com audited_changes = { content (texto, até 2000 caracteres), display_id (conversa), inbox_id, sender_type, sender_id, sender_name, attachments (nomes dos arquivos) } — é a foto tirada ANTES de apagar; auditable vem null nesse caso. Busque com q='trecho da mensagem' ou auditable_type=Message.",
   "category": "Auditoria",
   "params": [
    {
@@ -28093,7 +28248,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Tipo de recurso afetado: Account, AccountUser, AutomationRule, Conversation, Inbox, InboxMember, Macro, Team, TeamMember, User, Webhook"
+    "description": "Tipo de recurso afetado: Account, AccountUser, AutomationRule, Conversation, Inbox, InboxMember, Macro, Message (mensagem APAGADA pelo painel, desde 26/09/2026), Team, TeamMember, User, Webhook"
    },
    {
     "name": "remote_address",
@@ -28115,9 +28270,23 @@
     "location": "query",
     "required": false,
     "description": "Data final no formato AAAA-MM-DD (o dia inteiro entra). NÃO é timestamp Unix — número aqui gera erro"
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Busca por texto (3+ letras): nome de quem fez OU conteúdo da mudança (inclusive o texto de mensagem apagada). Menos de 3 letras = ignorado. Em conta grande pode levar ~1 s; combine com since/until pra encurtar."
+   },
+   {
+    "name": "sort",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Ordem por data: desc (mais recentes primeiro, padrão) ou asc."
    }
   ],
-  "returns": "{ per_page, total_entries, current_page, audit_logs: [{ id, auditable_id, auditable_type, auditable, associated_id, associated_type, user_id, user_type, username, action, audited_changes (antes/depois por campo), version, comment, request_uuid, created_at (Unix em segundos), remote_address }] }",
+  "returns": "{ per_page, total_entries, current_page, audit_logs: [{ id, auditable_id, auditable_type, auditable, associated_id, associated_type, user_id, user_type, username, action, audited_changes (antes/depois por campo), version, comment, request_uuid, created_at (Unix em segundos), remote_address (IP inteiro), ip_masked (IP parcial, ex. 177.12.x.x; null pra IP interno), ip_city, ip_region (cidade/estado do IP — só do que já foi descoberto; o que falta aparece na próxima consulta) }] }",
   "common_use_cases": [
    "Descobrir quem apagou uma caixa de entrada ou uma automação",
    "Ver todos os logins de um agente num intervalo de datas",

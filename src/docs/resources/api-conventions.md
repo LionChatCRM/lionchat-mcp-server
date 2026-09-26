@@ -9,6 +9,7 @@ Padrões de autenticação, paginação, filtros, formatos e tratamento de erros
 | Tipo | Header / Param | Quando usar |
 |---|---|---|
 | `api_access_token` | Header `api_access_token: <token>` | API principal (você usa isto via MCP) |
+| Chave de API como Bearer | `Authorization: Bearer <token>` (mesma chave de 24 caracteres do perfil) | Desde 26/09/2026, pra n8n, Make e ferramentas que só sabem mandar Bearer. Se os dois vierem, vale o `api_access_token` |
 | Devise Token Auth | `access-token` + `client` + `uid` | Dashboard web/mobile (não você) |
 | HMAC | `X-Webhook-Signature` | Webhooks de entrada |
 | OAuth Bearer | `Authorization: Bearer <token>` | MCP Remote (você usa isto) |

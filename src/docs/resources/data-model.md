@@ -221,6 +221,7 @@ universal); a superfície REST de contatos não mudou.
 **Padrões de `source_id` por canal:**
 - Waha: `5511999999999@c.us` (1-on-1) ou `120363xxx@g.us` (grupo) ou `XXXX@lid` (LID)
 - WhatsApp Cloud: `5511999999999` (E.164 sem prefixo)
+  - ou o ID do WhatsApp da Meta (`CO.1046754121506176`) quando o cliente chegou SEM telefone (so nome de usuario). Nesse caso o contato nao tem `phone_number` e guarda `additional_attributes.social_whatsapp_user_id` / `social_whatsapp_user_name` (2026-09-25)
 - Email: o email mesmo
 - WebWidget: UUID gerado
 
@@ -365,6 +366,8 @@ Captain::AssistantResponse (FAQ)
 ├── question
 ├── answer
 ├── status (pending/approved/rejected)
+├── occurrences_count (int, default 1 — em quantas conversas DIFERENTES a mesma pergunta pendente
+│     apareceu; soma so enquanto pendente. Lista: sort=occurrences = mais perguntadas primeiro, 2026-09-25)
 ├── embedding (vector, pgvector)
 └── documentable (polymorphic: Conversation que gerou)
 

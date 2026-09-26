@@ -721,7 +721,7 @@ Todos os formatos abaixo foram conferidos linha a linha em `app/services/action_
 | `add_note_to_kanban_item` | `[{"funnel_id": 31, "text": "texto da nota"}]` — a chave e **`text`**, nao `note` |
 | `set_kanban_item_status` | `[{"funnel_id": 31, "status": "won"}]` — `won`, `lost` ou `open`. Status fora disso e ignorado |
 | `start_kanban_item_timer` / `stop_kanban_item_timer` | `[{"funnel_id": 31}]` |
-| `wait` | `[30]` — segundos. Ver "Acao Aguardar" abaixo |
+| `wait` | `[30]` — segundos. Com conferência na volta: `[{"seconds": 120, "only_if_open": true, "only_if_no_reply": true}]`. Ver "Acao Aguardar" abaixo |
 
 **Acoes de Kanban:** todas precisam que a conversa ja tenha um card no funil informado. Sem card,
 a acao e pulada (fica so no log do servidor). Use `create_kanban_item` antes, na mesma regra.
@@ -755,6 +755,24 @@ propria pra sustentar o estado. A automacao nao foi feita pra isso.
 conversas esperam ao mesmo tempo sem travar o atendimento. Na volta, o sistema confere se a regra
 ainda existe e esta ligada, se a conversa ainda existe e se a caixa nao foi excluida — se algo
 disso mudou, ele simplesmente nao retoma.
+
+**Conferir na volta (novo 2026-09-25).** Duas caixinhas opcionais, no formato OBJETO:
+
+```json
+{ "action_name": "wait", "action_params": [{ "seconds": 120, "only_if_open": true, "only_if_no_reply": true }] }
+```
+
+| Chave | O que faz na volta |
+|---|---|
+| `only_if_open` | So segue se a conversa ainda estiver **aberta ou pendente**. Resolvida/adiada = o resto da regra NAO roda |
+| `only_if_no_reply` | So segue se **ninguem respondeu** o cliente durante a espera. Conta qualquer mensagem PUBLICA de saida depois da pausa — atendente, IA, outra automacao ou mensagem automatica da caixa (saudacao, ausencia). Nota privada nao conta |
+
+- Booleano de verdade (`true`/`false`); texto `"true"` tambem e aceito. Sem as chaves = retoma como sempre.
+- O formato antigo (`[120]`) continua valendo e nao tem conferencia nenhuma.
+- Quando a conferencia barra, o historico da execucao (`lionchat_automation_rules_list_1`) ganha o passo
+  `wait_check` com status `skipped` e o motivo. Nao e erro: e a regra fazendo o que foi pedido.
+- Caso tipico: "manda o lembrete em 5 minutos **se ninguem tiver atendido ainda**" — sem `only_if_no_reply`,
+  o lembrete sai mesmo depois que o atendente ja respondeu.
 
 Lista autoritativa de nomes validos: `AutomationRule#actions_attributes` no backend. Nome de acao
 fora dessa lista e recusado com 422 ao salvar — isso a API valida. O que ela **nao** valida e o

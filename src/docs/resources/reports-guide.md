@@ -111,6 +111,7 @@ conversa antiga que NÃO aparece no relatório de hoje (régua antiga por criaç
 | `lionchat_reports_list_3` | Resumo POR LABEL |
 | `lionchat_reports_list_4` | Resumo POR CANAL (channel) |
 | `lionchat_reports_list_5` | Série temporal / evolução (timeseries de um `metric`) |
+| `lionchat_reports_drilldown` | As CONVERSAS por trás de UM ponto da série temporal (clique na barra do gráfico) |
 | `lionchat_reports_list_6` | Resumo do BOT (bot_summary) |
 | `lionchat_reports_list_7` | Exportação de AGENTES em CSV |
 | `lionchat_reports_list_8` | Exportação de INBOXES em CSV |
@@ -146,6 +147,7 @@ conversa antiga que NÃO aparece no relatório de hoje (régua antiga por criaç
 | "qual canal tem mais demanda", "comparar WhatsApp vs Email" | `lionchat_reports_list_2` (inbox) ou `lionchat_reports_list_4` (tipo de canal) |
 | "quantas conversas urgentes", "por etiqueta" | `lionchat_reports_list_3` |
 | "evolução dia a dia", "mês a mês", "gráfico de linha" | `lionchat_reports_list_5` |
+| "quais conversas deram aquele pico de terça?", "quem são as 40 conversas do dia 12?" | `lionchat_reports_list_5` pra achar o ponto, depois `lionchat_reports_drilldown` |
 | "como tá o bot resolvendo", "% de handoff pra humano" | `lionchat_reports_list_6` ou `lionchat_reports_list_14` |
 | "exportar planilha de agentes/inboxes/labels/times" | `_7` / `_8` / `_9` / `_10` (CSV) |
 | "horário de pico", "quando tem mais demanda" | `lionchat_reports_list_13` |
@@ -232,6 +234,35 @@ Retorna pontos (data + valor) para UM `metric` por vez:
 - `since` / `until`: período (Unix timestamp em segundos)
 - `business_hours`: `true` faz médias contarem só o horário de atendimento
 - `timezone_offset`: deslocamento de fuso (horas) — afeta como os pontos são agrupados por dia/hora
+
+### `lionchat_reports_drilldown` — As conversas por trás de um ponto do gráfico (2026-09-25)
+**Use quando:** "quais conversas são essas 40 do dia 12?", "por que a terça teve pico?", "quem demorou
+naquela semana?"
+
+É o mesmo que clicar numa barra do gráfico nos Relatórios do painel. Conta com a **mesma régua** que
+desenhou a barra — então a lista bate com o número do ponto (ex.: por etiqueta conta pela data em que a
+etiqueta foi APLICADA, não pela criação da conversa).
+
+Fluxo: chame `lionchat_reports_list_5` → pegue o `timestamp` do ponto → chame esta ferramenta com:
+- `metric`: a MESMA da série. Aceita só `conversations_count`, `incoming_messages_count`,
+  `outgoing_messages_count`, `resolutions_count`, `avg_first_response_time`, `avg_resolution_time`,
+  `reply_time`. Métrica de bot ou fora da lista = 422 `invalid metric`.
+- `bucket_timestamp`: o `timestamp` do ponto (Unix em segundos).
+- `group_by`, `type`, `id`, `timezone_offset`, `business_hours`: os MESMOS usados na série — é isso
+  que define o começo e o fim do ponto. `group_by` diferente = outro recorte e a lista não bate.
+- `since` / `until`: o período do relatório (recorta o primeiro e o último ponto quando o período começa
+  ou termina no meio de uma semana/mês).
+- `page`: 25 conversas por página, mais recentes primeiro.
+
+Resposta: `{ meta: { metric, since, until, page, per_page, total_count, visible_count, hidden_count },
+payload: [{ id, display_id, status, created_at, contact_name, inbox_name, assignee_name, detail }] }`.
+`detail` explica o porquê de cada conversa: `{count}` (quantas mensagens/eventos dela caíram no ponto) nas
+contagens de mensagens e de resoluções, `{seconds}` nas médias de tempo, ou `null`. `display_id` é o número que aparece na
+tela da conversa.
+
+> A lista mostra **só as conversas que a pessoa do token pode abrir**. `hidden_count` diz quantas ficaram
+> de fora por permissão — diga isso ao usuário em vez de concluir que "faltam conversas". Teto de 5.000
+> conversas por ponto. Exige permissão de ver relatórios.
 
 ### `lionchat_reports_list_6` — Resumo do Bot
 **Use quando:** "como tá o bot resolvendo", "quantos handoffs pra humano"
