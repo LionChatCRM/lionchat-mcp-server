@@ -417,6 +417,8 @@ e `send_conversion` (`[{destinations, event_names, value}]` — só administrado
 execução). Atributo protegido em `update_*_attribute` é recusado na execução (só no log). Executar
 (`lionchat_macros_execute`): até 100 conversas por chamada, a mesma conversa em 5 s é pulada em silêncio,
 30 execuções por minuto por usuário (429). A mensagem de `send_canned_response` sai assinada por quem executou.
+Cada execução deixa na conversa a pílula "Macro: X executada por Fulano" (uma por conversa, 26/09) — vale
+também pelo MCP, então quem executa aparece no histórico da conversa.
 
 ## Agenda / Tarefas / Booking
 

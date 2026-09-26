@@ -15469,10 +15469,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    }
   ],
   "returns": "grupo WhatsApp (objeto completo com associações)",
@@ -15504,10 +15504,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "subject",
@@ -15546,10 +15546,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "description",
@@ -15588,10 +15588,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    }
   ],
   "returns": "array de participantes do grupo (id, admin, etc.)",
@@ -15623,10 +15623,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "participants",
@@ -15665,10 +15665,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "participants",
@@ -15707,10 +15707,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "participants",
@@ -15749,10 +15749,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "participants",
@@ -15791,10 +15791,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    }
   ],
   "returns": "link de convite do grupo (ex: { code, url })",
@@ -15814,7 +15814,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/invite_code/revoke",
   "title": "Revogar Link de Convite",
-  "description": "Revoga o link de convite atual do grupo WAHA e gera um novo. O numero conectado precisa ser admin do grupo (403 senao).",
+  "description": "Revoga o link de convite atual do grupo WAHA e gera um novo. O link antigo PARA DE FUNCIONAR, inclusive o que ja foi enviado por fluxos e campanhas — confirme com a pessoa antes. O numero conectado precisa ser admin do grupo (403 senao).",
   "category": "Grupos WhatsApp",
   "params": [
    {
@@ -15826,10 +15826,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    }
   ],
   "returns": "{ success: true } ou { data: ... }",
@@ -15849,7 +15849,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/settings",
   "title": "Atualizar Config do Grupo",
-  "description": "Atualiza as permissoes do grupo WAHA.",
+  "description": "Atualiza as permissoes do grupo WAHA. Aplica chave por chave: se uma falhar, responde 422 com `applied` (o que ja foi gravado) e `failed` (a chave que falhou). O numero conectado precisa ser admin do grupo (403 senao). `approval_required` so existe em servidores do WhatsApp mais novos: onde nao existe, 422 dizendo que o servidor ainda nao tem a opcao (confira antes com lionchat_inboxes_waha_groups_list_4, campo approval_supported).",
   "category": "Grupos WhatsApp",
   "params": [
    {
@@ -15861,10 +15861,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "info_admin_only",
@@ -15879,9 +15879,23 @@
     "location": "body",
     "required": false,
     "description": "Se true, somente admins podem enviar mensagens"
+   },
+   {
+    "name": "members_add_admin_only",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Se true, somente admins podem adicionar participantes (o servidor traduz para o sentido invertido do WhatsApp). So true ou false; qualquer outro valor e recusado com 422."
+   },
+   {
+    "name": "approval_required",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Se true, quem pede para entrar pelo link espera um admin aprovar. So true ou false. ATENCAO ao desligar: com pedidos esperando, o WhatsApp pode aprovar todos de uma vez — liste os pedidos antes (lionchat_inboxes_waha_groups_list_5) e confirme com a pessoa."
    }
   ],
-  "returns": "{ success: true } ou { data: ... }",
+  "returns": "{ success: true, applied: [...] } ou 422 { error, applied: [...], failed: \"chave\" }",
   "common_use_cases": [
    "Edição parcial de grupo WhatsApp",
    "Alteração de status/estado",
@@ -15910,10 +15924,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "file",
@@ -15952,10 +15966,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    }
   ],
   "returns": "{ success: true } ou { data: ... }",
@@ -16037,6 +16051,183 @@
    "lionchat_inboxes_waha_groups_list_3",
    "lionchat_inboxes_waha_groups_list",
    "lionchat_inboxes_waha_groups_show"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_list_4",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/security_settings",
+  "title": "Ler Permissoes Extras do Grupo",
+  "description": "SO LEITURA. Le \"apenas admins podem adicionar participantes\" (members_add_admin_only) e \"aprovar novos participantes\" (approval_required), ja no sentido da tela (true = so admins / precisa aprovar). null = o WhatsApp nao respondeu agora: NAO trate como false. approval_supported=false = o servidor do WhatsApp desta caixa ainda nao tem a opcao de aprovacao.",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "group_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
+   }
+  ],
+  "returns": "{ data: { members_add_admin_only: true|false|null, approval_required: true|false|null, approval_supported: true|false|null } }",
+  "common_use_cases": [
+   "Conferir as permissoes do grupo antes de mudar",
+   "Saber se o grupo exige aprovacao para entrar"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_update_2",
+   "lionchat_inboxes_waha_groups_show"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/picture",
+  "title": "Remover Foto do Grupo",
+  "description": "Remove a foto do grupo no WhatsApp e tambem a copia que o LionChat mostra na lista de conversas. O numero conectado precisa ser admin do grupo (403 senao).",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "group_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
+   }
+  ],
+  "returns": "{ success: true }",
+  "common_use_cases": [
+   "Tirar a foto do grupo"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_update_3",
+   "lionchat_inboxes_waha_groups_show"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_list_5",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/join_requests",
+  "title": "Listar Pedidos para Entrar no Grupo",
+  "description": "SO LEITURA. Pedidos de quem quer entrar no grupo e espera aprovacao. Use o campo `id` de cada pedido para aprovar/recusar. `pn` e o telefone (pode vir null: o WhatsApp esconde o numero — NUNCA use os digitos do id como telefone). `name` so vem se a pessoa ja e contato. supported=false = o servidor do WhatsApp desta caixa ainda nao tem pedidos para entrar; allowed=false = o WhatsApp nao deixou (o numero da caixa nao e admin do grupo).",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "group_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
+   }
+  ],
+  "returns": "{ data: { supported, allowed, requests: [{ id, requesterId, pn, name, request_method (invite_link|linked_group_join|non_admin_add|unknown), timestamp }] } }",
+  "common_use_cases": [
+   "Ver quem pediu para entrar no grupo",
+   "Aprovar pedidos pendentes em lote"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_create_7",
+   "lionchat_inboxes_waha_groups_create_8",
+   "lionchat_inboxes_waha_groups_list_4"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_create_7",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/join_requests/approve",
+  "title": "Aprovar Pedidos para Entrar no Grupo",
+  "description": "Aprovar pedidos para entrar no grupo. A pessoa entra no grupo e isso aciona a pilula \"entrou\" e os fluxos com gatilho \"Entrou no grupo\". Tentativa unica (nao repita sozinho). A resposta traz o resultado por pessoa e as listas RELIDAS no WhatsApp (pedidos e participantes). Se o WhatsApp recusar (ex.: pedido ja tratado pelo celular), 422 com a mensagem e as listas reais. O numero conectado precisa ser admin do grupo (403 senao); ids fora do formato = 422.",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "group_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
+   },
+   {
+    "name": "participants",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Lista de pedidos no formato [{ id: '...' }], com o `id` que veio em lionchat_inboxes_waha_groups_list_5"
+   }
+  ],
+  "returns": "{ data: { results: [{ id, success, error }], join_requests: [...]|null, participants: [...]|null } } ou 422 { error, data: { join_requests, participants } }",
+  "common_use_cases": [
+   "Aprovar quem pediu para entrar no grupo"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_list_5",
+   "lionchat_inboxes_waha_groups_list_1"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_create_8",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/join_requests/reject",
+  "title": "Recusar Pedidos para Entrar no Grupo",
+  "description": "Recusar pedidos para entrar no grupo. A pessoa nao entra e nada e disparado. Tentativa unica (nao repita sozinho). A resposta traz o resultado por pessoa e as listas RELIDAS no WhatsApp (pedidos e participantes). Se o WhatsApp recusar (ex.: pedido ja tratado pelo celular), 422 com a mensagem e as listas reais. O numero conectado precisa ser admin do grupo (403 senao); ids fora do formato = 422.",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "group_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
+   },
+   {
+    "name": "participants",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Lista de pedidos no formato [{ id: '...' }], com o `id` que veio em lionchat_inboxes_waha_groups_list_5"
+   }
+  ],
+  "returns": "{ data: { results: [{ id, success, error }], join_requests: [...]|null, participants: [...]|null } } ou 422 { error, data: { join_requests, participants } }",
+  "common_use_cases": [
+   "Recusar quem pediu para entrar no grupo"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_list_5",
+   "lionchat_inboxes_waha_groups_list_1"
   ]
  },
  {

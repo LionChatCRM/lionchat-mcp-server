@@ -1001,3 +1001,50 @@ grupo, então o número entraria num grupo que nunca apareceria no painel. O cam
 a opção nas configurações da caixa e tentar de novo.
 
 A resposta do join_info vem no formato cru do motor, em PascalCase (`Name`, não `name`).
+
+## Gerenciar um grupo: permissões, pedidos para entrar, link e foto (26/09/2026)
+
+Só em caixa de WhatsApp QR Code. O `group_id` é o id do WhatsApp **com o sufixo** (`120363...@g.us`),
+sempre como texto. Toda ação que muda o grupo exige que o número da caixa seja **admin do grupo**
+(403 se não for) — confira `my_role` em `lionchat_inboxes_waha_groups_show` antes.
+
+**Permissões** — `lionchat_inboxes_waha_groups_update_2` aceita quatro chaves, todas no mesmo sentido
+(`true` = só admins / precisa aprovar):
+
+| Chave | O que faz |
+|---|---|
+| `messages_admin_only` | só admins enviam mensagens |
+| `info_admin_only` | só admins editam nome, foto e descrição |
+| `members_add_admin_only` | só admins adicionam participantes |
+| `approval_required` | quem pede para entrar pelo link espera um admin aprovar |
+
+- Mande só `true` ou `false` nas duas últimas — qualquer outra coisa é recusada com 422 (nunca vira `true`).
+- A resposta diz o que foi aplicado: com várias chaves, se uma falhar vem 422 com `applied` e `failed`.
+  Informe à pessoa o que mudou e o que não mudou; não repita tudo de novo.
+- Para LER as duas últimas use `lionchat_inboxes_waha_groups_list_4`. `null` = o WhatsApp não respondeu
+  agora (não é `false`). `approval_supported: false` = o servidor do WhatsApp daquela caixa ainda não
+  tem aprovação de novos participantes: não ofereça a opção.
+- **Desligar `approval_required` com pedidos esperando:** o WhatsApp pode aprovar todos de uma vez.
+  Liste os pedidos antes (`lionchat_inboxes_waha_groups_list_5`), diga quantos são e só desligue com
+  confirmação explícita.
+
+**Pedidos para entrar**
+
+1. `lionchat_inboxes_waha_groups_list_5` — lista. `supported: false` = servidor sem o recurso;
+   `allowed: false` = o WhatsApp não deixou (o número não é admin do grupo).
+2. `lionchat_inboxes_waha_groups_create_7` (aprovar) ou `_create_8` (recusar) com
+   `participants: [{ id }]`, usando o `id` de cada pedido da lista.
+
+- Aprovar coloca a pessoa no grupo e **aciona a pílula "entrou" e os fluxos "Entrou no grupo"**, igual a
+  quem entra pelo link. Aprovar muitos de uma vez dispara um fluxo por pessoa.
+- A resposta traz `results` por pessoa e as listas **relidas** (`join_requests` e `participants`). Use
+  essas listas para responder — não chame o `show` de novo (ele faz 6 perguntas ao WhatsApp e leva ~7 s).
+- 422 com as listas reais = o WhatsApp recusou (o pedido pode ter sido tratado pelo celular). Não repita.
+- Telefone do pedido só vem em `pn`. Quando vier `null`, o WhatsApp escondeu o número: diga isso; nunca
+  apresente os dígitos do `id` (terminado em `@lid`) como telefone.
+
+**Link de convite** — `lionchat_inboxes_waha_groups_create_4` gera um link novo e **mata o antigo**,
+inclusive o que fluxos e campanhas já enviaram. Confirme antes.
+
+**Foto** — `lionchat_inboxes_waha_groups_update_3` troca; `lionchat_inboxes_waha_groups_destroy` remove
+(no WhatsApp e na lista de conversas do LionChat).
