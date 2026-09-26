@@ -149,7 +149,12 @@ Company
 ├── id (PK)
 ├── account_id (FK)
 ├── name
-└── domain
+├── domain
+├── description
+├── contacts_count
+├── avatar (foto)
+├── additional_attributes (jsonb: legal_name, cnpj, phone, email, address{...}, social_profiles{...}; 2026-09-25)
+└── last_activity_at (ultima vez que um contato da empresa teve atividade; 2026-09-25)
 
 AttributeChange (histórico de alterações de atributo — 2026-09-11)
 ├── id (PK)
@@ -173,8 +178,33 @@ não gera; chaves protegidas (rastreio `utm_*`/`gclid`, `waha_*`, `eclinica_*`, 
 nascimento e documentos vêm mascarados (`masked: true`) para quem não é administrador. Retenção 180 dias.
 
 **`additional_attributes` vs `custom_attributes` no Contato:**
-- `additional_attributes` (jsonb): campos do sistema porém **EDITÁVEIS via API** (`permitted_params` permite `additional_attributes: {}`). Guarda chaves padrão como `city`, `company`, `country_code` — que são as chaves filtráveis em `lib/filters/filter_keys.yml` (tipo `additional_attributes`). NÃO é não-editável.
+- `additional_attributes` (jsonb): campos do sistema porém **EDITÁVEIS via API** (`permitted_params` permite `additional_attributes: {}`). Guarda chaves padrão como `city`, `company_name` (o campo "Empresa" da ficha), `job_title` (o "Cargo", 2026-09-25) e `country_code`. NÃO é não-editável.
 - `custom_attributes` (jsonb): dado de negócio livre, definido pelo cliente via Atributos Customizados.
+
+**Empresas (2026-09-25):** o contato pode estar ligado a UMA empresa (`company_id`). Ligar/tirar:
+`lionchat_contacts_update` com `company_id` (empresa da mesma conta; vazio/null tira; se a chave nao for
+enviada nada muda) ou `lionchat_companies_contacts_create` / `_destroy`. Regra do texto
+`additional_attributes.company_name`: escolher a empresa faz ele virar o nome da empresa; tirar so apaga se
+ele ainda era o nome dela; renomear a empresa so troca nos contatos que ainda tinham o nome antigo. **Empresa e
+vinculo sao SEMPRE manuais** (25/09): o sistema NAO cria empresa nem vincula contato pelo dominio do e-mail.
+**Teto: 100 contatos por empresa** — o 101o e recusado (422, "Esta empresa ja tem 100 contatos...") por qualquer
+caminho (ficha, `lionchat_companies_contacts_create`, `lionchat_contacts_update`/`_create` com `company_id`);
+tire alguem antes de colocar outro. O cargo da
+pessoa na empresa e `additional_attributes.job_title`. A pagina da empresa junta os contatos
+(`lionchat_companies_contacts_list`), as anotacoes (`lionchat_companies_notes_list`: as da PROPRIA empresa,
+`kind: company`, + as dos contatos, `kind: contact`), as conversas (`lionchat_companies_conversations_list`,
+filtradas pelo que o usuario pode ver), os documentos de todos os contatos (`lionchat_companies_documents_list`,
+so leitura, cada item com `contacts[]` — o mesmo arquivo mandado a varios contatos vem UMA vez) e os compromissos
+(`lionchat_companies_tasks_list`) e os cards do Kanban dos contatos (`lionchat_companies_kanban_items_list`, cada
+card com `contacts[{id,name}]`, so os que o usuario ve no quadro). No card do quadro,
+`conversation.contact.company_id`/`company_name` dizem a empresa do contato do card. Contratos dos contatos: `lionchat_signature_envelopes_list` com `company_id`.
+Anotacao da empresa: `lionchat_companies_notes_create` / `_update` / `_destroy` (`{note:{content}}`; qualquer
+atendente). Cadastro da empresa (25/09): `lionchat_companies_create`/`_update` aceitam
+`additional_attributes` com `legal_name`, `cnpj` (validado; grava so digitos), `phone`, `email`,
+`address{cep,street,number,complement,neighborhood,city,state,country}` e
+`social_profiles{linkedin,facebook,instagram,telegram,tiktok,twitter,github}`. MESCLA: mande so o que muda;
+valor vazio apaga aquela chave. Excluir empresa: so administrador; os contatos ficam, so deixam de estar na empresa (as anotacoes da
+empresa vao junto).
 
 **Dados cadastrais (`additional_attributes.cadastral`):** CPF, CNPJ, RG, passaporte, nascimento,
 gênero, estado civil, profissão e endereço completo moram em `additional_attributes->cadastral`.

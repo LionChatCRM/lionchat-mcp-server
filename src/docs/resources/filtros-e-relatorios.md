@@ -86,7 +86,8 @@ Mesmo shape de condição. 15/página.
 | attribute_key | Operadores |
 |---|---|
 | `id` (id interno do contato) | equal_to, not_equal_to |
-| `name`, `email`, `identifier`, `city`, `company`, `profession` | equal_to, not_equal_to, contains, does_not_contain |
+| `name`, `email`, `identifier`, `city`, `company_name` (Empresa), `job_title` (Cargo), `profession` | equal_to, not_equal_to, contains, does_not_contain |
+| `company` | **campo ANTIGO — nada grava nele, nunca casa. Use `company_name`** (2026-09-25). Continua aceito só para não quebrar regras antigas |
 | `phone_number` | + starts_with (busca por DDD/prefixo) — **corrigido na atualização de 26/07/2026**; em instalação anterior devolve SEMPRE lista vazia (virava igualdade exata). Vazio com prefixo que existe = instalação antiga. **`equal_to`/`not_equal_to` casam as DUAS formas do celular BR (com e sem o 9º dígito) desde 05/09/2026** — mande `+5541999887766` ou `+554199887766`, os dois acham a mesma ficha; `not_equal_to` exclui as duas. Termo que não é celular BR completo (fixo, estrangeiro, trecho) segue exato |
 | `cpf`, `cnpj`, `rg` (cadastral) | equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present |
 | `country_code` | equal_to, not_equal_to |

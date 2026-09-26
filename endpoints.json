@@ -173,7 +173,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts",
   "title": "Criar Contato",
-  "description": "Cria um contato. Nenhum campo e estritamente obrigatorio (recomendado phone_number ou email). Aceita name, email, phone_number, identifier, additional_attributes, custom_attributes, blocked. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): phone_number ja cadastrado em outro contato da conta = 422 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe.\n\nSE VOLTAR 422 com attributes:['phone_number']: o contato JA EXISTE — na forma exata OU na outra forma do nono digito. Nao tente criar de novo trocando a forma do numero (a recusa protege contra ficha em dobro): busque com lionchat_contacts_search e use contacts_update. Case os 'attributes' da resposta, nunca o texto da mensagem (ela sai no idioma padrao da instalacao, em ingles).",
+  "description": "Cria um contato. Nenhum campo e estritamente obrigatorio (recomendado phone_number ou email). Aceita name, email, phone_number, identifier, additional_attributes, custom_attributes, blocked. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): phone_number ja cadastrado em outro contato da conta = 422 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe.\n\nSE VOLTAR 422 com attributes:['phone_number']: o contato JA EXISTE — na forma exata OU na outra forma do nono digito. Nao tente criar de novo trocando a forma do numero (a recusa protege contra ficha em dobro): busque com lionchat_contacts_search e use contacts_update. Case os 'attributes' da resposta, nunca o texto da mensagem (ela sai no idioma padrao da instalacao, em ingles). EMPRESA (2026-09-25): aceita company_id (ver param); o contato devolve company_id. Cargo da pessoa = additional_attributes.job_title.",
   "category": "Contatos",
   "params": [
    {
@@ -231,6 +231,13 @@
     "location": "body",
     "required": false,
     "description": "ID da sessão"
+   },
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Empresa da mesma conta a ligar ao contato (null/vazio tira da empresa; sem a chave nada muda). Escolher a empresa faz additional_attributes.company_name virar o nome dela. Empresa de outra conta = 404. Empresa com 100 contatos = 422 (teto)."
    }
   ],
   "returns": "contato criado (com novo ID)",
@@ -283,7 +290,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/contacts/{id}",
   "title": "Atualizar Contato",
-  "description": "Atualiza um contato. Aceita name, email, phone_number, identifier, custom_attributes, additional_attributes, blocked, avatar/avatar_url. NUNCA sobrescreva phone_number/email ja preenchido sem confirmacao. TELEFONE UNICO POR CONTA (trava no banco desde 01/09/2026): trocar phone_number para um numero que ja e de outro contato da conta = 422 'phone_number has already been taken'.",
+  "description": "Atualiza um contato. Aceita name, email, phone_number, identifier, custom_attributes, additional_attributes, blocked, avatar/avatar_url. NUNCA sobrescreva phone_number/email ja preenchido sem confirmacao. TELEFONE UNICO POR CONTA (trava no banco desde 01/09/2026): trocar phone_number para um numero que ja e de outro contato da conta = 422 'phone_number has already been taken'. EMPRESA (2026-09-25): aceita company_id (ver param); o contato devolve company_id. Cargo da pessoa = additional_attributes.job_title.",
   "category": "Contatos",
   "params": [
    {
@@ -348,6 +355,13 @@
     "location": "body",
     "required": false,
     "description": "Bloquear contato"
+   },
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Empresa da mesma conta a ligar ao contato (null/vazio tira da empresa; sem a chave nada muda). Escolher a empresa faz additional_attributes.company_name virar o nome dela. Empresa de outra conta = 404. Empresa com 100 contatos = 422 (teto)."
    }
   ],
   "returns": "contato atualizado",
@@ -698,7 +712,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/filter",
   "title": "Filtrar Contatos",
-  "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422. [2026-07-25] Nova chave id (id interno do contato, equal_to/not_equal_to) — serve pra exportar/checar UM contato especifico. NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas.\n\nTELEFONE COM E SEM O 9 (desde 05/09/2026): phone_number com equal_to/not_equal_to casa as DUAS formas do celular brasileiro (mande +5541999887766 ou +554199887766 — acham a mesma ficha; not_equal_to exclui as duas). Valor formatado ('(41) 99988-7766') tambem casa. Telefone fixo, estrangeiro ou trecho segue exato. ATENCAO: 'Selecionar todos' + excluir sobre um filtro de telefone apaga as 2 fichas da mesma pessoa (decisao do dono, 05/09).",
+  "description": "Filtra contatos com condicoes avancadas (payload de condicoes). 15/pagina.\n\nCHAVES FILTRAVEIS: name, email, identifier (equal_to/not_equal_to/contains/does_not_contain — match parcial case-insensitive); phone_number (+starts_with); country_code, city, company_name (Empresa), job_title (Cargo) [company = campo antigo, nunca casa]; cpf, cnpj, rg, profession (cadastral; cpf/cnpj/rg aceitam is_present/is_not_present); labels; created_at, last_activity_at (is_greater_than/is_less_than/days_before); blocked (equal_to true/false); QUALQUER outra chave = atributo personalizado do contato.\n\nREGISTROS VINCULADOS (acha o contato pelo que aconteceu com ele): attribute_key 'conversation_search' (conversa vinculada: conversation_status/conversation_labels/conversation_inbox_id), condicoes com custom_attribute_type 'conversation_attribute' (atributo da conversa vinculada) e attribute_key 'kanban_card' (card vinculado: card_funnel_id/card_stage/card_priority/card_status). Combinaveis com E/OU.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422. [2026-07-25] Nova chave id (id interno do contato, equal_to/not_equal_to) — serve pra exportar/checar UM contato especifico. NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas.\n\nTELEFONE COM E SEM O 9 (desde 05/09/2026): phone_number com equal_to/not_equal_to casa as DUAS formas do celular brasileiro (mande +5541999887766 ou +554199887766 — acham a mesma ficha; not_equal_to exclui as duas). Valor formatado ('(41) 99988-7766') tambem casa. Telefone fixo, estrangeiro ou trecho segue exato. ATENCAO: 'Selecionar todos' + excluir sobre um filtro de telefone apaga as 2 fichas da mesma pessoa (decisao do dono, 05/09).",
   "category": "Contatos",
   "params": [
    {
@@ -3274,7 +3288,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Objeto com os detalhes do card. MESCLA SO NO 1o NIVEL: cada chave enviada troca a chave inteira no card; as nao enviadas ficam. Lista FECHADA (outras chaves sao descartadas em silencio): title, description, status, reason, win_reason, loss_reason, attributed_to, duplicated_from_id, priority, value (NUMERO; texto de numero como \"1500.5\" e convertido, \"R$ 1.500,00\" e recusado com 422), currency, custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at, conversation_id, automations, notes. custom_attributes = campos da aba Campos do card: LISTA [{name, type, value}] onde name+type batem EXATAMENTE com a definicao da CONTA (lionchat_kanban_config_list -> global_custom_attributes). Ex.: [{\"name\": \"Origem do Lead\", \"type\": \"string\", \"value\": \"Google\"}]. A lista e TROCADA inteira: leia o card com lionchat_kanban_items_show e reenvie TODOS os campos. Objeto {chave: valor} no lugar da lista APAGA todos os campos do card. notes e offers tambem sao listas trocadas inteiras. Motivo de ganho/perda: status \"won\"/\"lost\" + win_reason/loss_reason = o id (TEXTO) de um motivo de kanban_config.win_reasons/loss_reasons + reason = o titulo dele. Motivo livre (fora da lista): win_reason/loss_reason nulo e o texto em reason. Ex.: {\"status\": \"lost\", \"loss_reason\": \"perda-preco\", \"reason\": \"Preco alto\"}."
+    "description": "Objeto com os detalhes do card. MESCLA SO NO 1o NIVEL: cada chave enviada troca a chave inteira no card; as nao enviadas ficam. Lista FECHADA (outras chaves sao descartadas em silencio): title, description, status, reason, win_reason, loss_reason, attributed_to, duplicated_from_id, priority, value (NUMERO; texto de numero como \"1500.5\" e convertido, \"R$ 1.500,00\" e recusado com 422), currency, custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at, conversation_id, automations, notes, retroativo_em. custom_attributes = campos da aba Campos do card: LISTA [{name, type, value}] onde name+type batem EXATAMENTE com a definicao da CONTA (lionchat_kanban_config_list -> global_custom_attributes). Ex.: [{\"name\": \"Origem do Lead\", \"type\": \"string\", \"value\": \"Google\"}]. A lista e TROCADA inteira: leia o card com lionchat_kanban_items_show e reenvie TODOS os campos. Objeto {chave: valor} no lugar da lista APAGA todos os campos do card. notes e offers tambem sao listas trocadas inteiras. Motivo de ganho/perda: status \"won\"/\"lost\" + win_reason/loss_reason = o id (TEXTO) de um motivo de kanban_config.win_reasons/loss_reasons + reason = o titulo dele. Motivo livre (fora da lista): win_reason/loss_reason nulo e o texto em reason. Ex.: {\"status\": \"lost\", \"loss_reason\": \"perda-preco\", \"reason\": \"Preco alto\"}. Lancamento retroativo (marcar o fechamento com data PASSADA): retroativo_em = \"AAAA-MM-DD\" faz o ganho/perda contar no MES ESCOLHIDO em todos os relatorios, em vez do dia de hoje. So funciona JUNTO com um status \"won\"/\"lost\" que MUDA o status do card — card que ja esta ganho ignora a data (pra corrigir uma data lancada errado: mande status \"open\", que apaga o carimbo, e depois \"won\"/\"lost\" com o retroativo_em certo). A chave NAO fica gravada no card: ela so decide o carimbo item_details.status_changed_at, que e o que os relatorios contam. Data FUTURA ou ilegivel = 422. Data anterior a criacao do card e permitida. Vale SO nesta ferramenta — no criar card a chave e descartada. Ex.: {\"status\": \"won\", \"win_reason\": \"indicacao\", \"retroativo_em\": \"2026-08-05\"}."
    },
    {
     "name": "kanban_item.assigned_agents",
@@ -3316,7 +3330,8 @@
   "common_use_cases": [
    "Edição parcial de item Kanban",
    "Alteração de status/estado",
-   "Atualização em massa via automação"
+   "Atualização em massa via automação",
+   "Registrar uma venda fechada no mes passado: status \"won\" + retroativo_em \"AAAA-MM-DD\" (o relatorio conta no mes escolhido)"
   ],
   "related_tools": [
    "lionchat_kanban_items_list",
@@ -11668,7 +11683,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/companies",
   "title": "Listar Empresas",
-  "description": "Lista as empresas da conta. meta usa total_count/page.",
+  "description": "Lista as empresas da conta. meta usa total_count/page. Cada empresa traz last_activity_at (ultima atividade dos contatos dela; null = nunca). Excluir empresa (lionchat_companies_destroy) e so para administrador e NAO apaga os contatos.",
   "category": "Empresas",
   "params": [
    {
@@ -11683,7 +11698,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Ordenação: name, domain, created_at, contacts_count"
+    "description": "Ordenacao: name, domain, created_at, contacts_count, last_activity_at (prefixo - = decrescente, ex. -last_activity_at)"
    }
   ],
   "returns": "meta (contadores globais) + payload (array de empresas)",
@@ -11699,7 +11714,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/companies",
   "title": "Criar Empresa",
-  "description": "Cria uma empresa. Body exige wrapper company. Aceita name, domain, description, avatar. NAO aceita custom_attributes. ENTERPRISE-only.",
+  "description": "Cria uma empresa. Body exige wrapper company. Aceita name, domain, description, avatar e additional_attributes (cadastro). NAO aceita custom_attributes. ENTERPRISE-only. Empresa so nasce assim (manual): o sistema nao cria empresa pelo dominio do e-mail dos contatos. Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava so digitos), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado).",
   "category": "Empresas",
   "params": [
    {
@@ -11707,7 +11722,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Wrapper com { name, domain, description, avatar }"
+    "description": "Wrapper com { name, domain, description, avatar, additional_attributes: { legal_name, cnpj, phone, email, address: {...}, social_profiles: {...} } }"
    }
   ],
   "returns": "empresa criado (com novo ID)",
@@ -11741,14 +11756,18 @@
    "Verificar estado atual antes de uma ação",
    "Mostrar perfil ou ficha de empresa"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_companies_contacts_list",
+   "lionchat_companies_conversations_list",
+   "lionchat_companies_notes_list"
+  ]
  },
  {
   "id": "lionchat_companies_update",
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/companies/{id}",
   "title": "Atualizar Empresa",
-  "description": "Atualiza dados da empresa. Atualiza campos do empresa existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, domain.",
+  "description": "Atualiza dados da empresa. Suporta atualizacao parcial (PATCH) — so campos enviados sao alterados. Campos suportados: name, domain, description, avatar e additional_attributes (cadastro). Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava so digitos), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado).",
   "category": "Empresas",
   "params": [
    {
@@ -11763,7 +11782,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Wrapper com { name, domain, description, avatar }"
+    "description": "Wrapper com { name, domain, description, avatar, additional_attributes: { legal_name, cnpj, phone, email, address: {...}, social_profiles: {...} } }"
    }
   ],
   "returns": "empresa atualizado",
@@ -11850,6 +11869,183 @@
    "Verificar se já existe antes de criar"
   ],
   "related_tools": []
+ },
+ {
+  "id": "lionchat_companies_contacts_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/contacts",
+  "title": "Contatos da Empresa",
+  "description": "Lista os contatos ligados a UMA empresa, 25 por pagina, ordenados por nome. meta usa count/current_page. Cada contato traz company_id e additional_attributes (company_name = texto 'Empresa', job_title = cargo).",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Pagina (padrao: 1)"
+   }
+  ],
+  "returns": "meta {count, current_page} + payload (array de contatos)",
+  "common_use_cases": [
+   "Ver quem trabalha numa empresa",
+   "Conferir cargo das pessoas de um cliente"
+  ],
+  "related_tools": [
+   "lionchat_companies_show",
+   "lionchat_companies_contacts_create",
+   "lionchat_companies_contacts_destroy"
+  ]
+ },
+ {
+  "id": "lionchat_companies_contacts_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/contacts",
+  "title": "Colocar Contato na Empresa",
+  "description": "Liga um contato da conta a esta empresa (se ele estava em outra, MOVE). O texto additional_attributes.company_name do contato passa a ser o nome da empresa. Para achar o contato use lionchat_contacts_search. Contato de outra conta = 404. TETO: 100 contatos por empresa (25/09) — o 101o e recusado com 422 'Esta empresa ja tem 100 contatos, o maximo permitido...'; tire alguem (lionchat_companies_contacts_destroy) antes de colocar outro. Empresa e vinculo sao SEMPRE manuais: o sistema NAO cria empresa nem vincula contato pelo dominio do e-mail.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do contato a colocar na empresa"
+   }
+  ],
+  "returns": "payload (contato atualizado)",
+  "common_use_cases": [
+   "Organizar contatos por cliente",
+   "Corrigir a empresa de um contato"
+  ],
+  "related_tools": [
+   "lionchat_contacts_search",
+   "lionchat_companies_contacts_list",
+   "lionchat_contacts_update"
+  ]
+ },
+ {
+  "id": "lionchat_companies_contacts_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/contacts/{contact_id}",
+  "title": "Tirar Contato da Empresa",
+  "description": "Tira o contato da empresa (o contato NAO e excluido). O texto company_name so e apagado se ainda era exatamente o nome da empresa.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contato"
+   }
+  ],
+  "returns": "200 OK",
+  "common_use_cases": [
+   "Pessoa saiu da empresa",
+   "Contato ligado errado pelo dominio do e-mail"
+  ],
+  "related_tools": [
+   "lionchat_companies_contacts_list"
+  ]
+ },
+ {
+  "id": "lionchat_companies_notes_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/notes",
+  "title": "Anotacoes da Empresa",
+  "description": "Anotacoes da empresa, mais nova primeiro: as da PROPRIA empresa (kind 'company', criadas com lionchat_companies_notes_create) + as ultimas 50 feitas nos contatos dela (kind 'contact', com contact {id, name, thumbnail}). Cada item traz id, kind, content, user, created_at.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   }
+  ],
+  "returns": "payload (array de anotacoes; kind = company ou contact)",
+  "common_use_cases": [
+   "Resumo do relacionamento com um cliente",
+   "Preparar reuniao com a empresa"
+  ],
+  "related_tools": [
+   "lionchat_companies_notes_create",
+   "lionchat_contacts_notes_show",
+   "lionchat_companies_conversations_list"
+  ]
+ },
+ {
+  "id": "lionchat_companies_conversations_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/conversations",
+  "title": "Conversas da Empresa",
+  "description": "Ultimas 20 conversas dos contatos da empresa, da mais recente para a mais antiga, filtradas pelo que o usuario do token pode ver (mesma regra da lista de conversas).",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   }
+  ],
+  "returns": "payload (array de conversas)",
+  "common_use_cases": [
+   "Historico de atendimento de um cliente",
+   "Ver se alguem da empresa falou recentemente"
+  ],
+  "related_tools": [
+   "lionchat_companies_notes_list",
+   "lionchat_conversations_show"
+  ]
+ },
+ {
+  "id": "lionchat_companies_avatar_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/companies/{id}/avatar",
+  "title": "Tirar Foto da Empresa",
+  "description": "Remove a foto da empresa. Para trocar a foto, envie avatar (arquivo) no lionchat_companies_update.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   }
+  ],
+  "returns": "payload (empresa)",
+  "common_use_cases": [
+   "Foto errada puxada do site da empresa"
+  ],
+  "related_tools": [
+   "lionchat_companies_update"
+  ]
  },
  {
   "id": "lionchat_offers_list",
@@ -25845,7 +26041,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents",
   "title": "Documentos do Contato",
-  "description": "Central de arquivos do contato: uploads diretos + espelho dos anexos dos cards Kanban + das conversas (só imagem/documento). Dedup por arquivo.",
+  "description": "Central de arquivos do contato: uploads diretos + espelho dos anexos dos cards Kanban + das conversas (só imagem/documento). Dedup por arquivo. (25/09) O mesmo arquivo em varias origens vem UMA vez (representado pelo upload da ficha, se houver); cada item traz contacts [{id,name}]. Contrato assinado so aparece para quem pode ver contratos; arquivo de compromisso particular de outra pessoa nao aparece. mirror aceita tambem anexo de compromisso e de contrato.",
   "category": "Documentos do Contato",
   "params": [
    {
@@ -33982,7 +34178,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes",
   "title": "Listar Contratos Enviados",
-  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde.",
+  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde. Por empresa: company_id (contratos de todos os contatos dela).",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -34026,6 +34222,13 @@
     "location": "query",
     "required": false,
     "description": "Pagina (padrao 1, 25 por pagina)"
+   },
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Recorta pelos contatos de uma EMPRESA (aba Contratos da pagina da empresa). Empresa de outra conta = 404."
    }
   ],
   "returns": "payload: [{id, title, status, signature_document_id, document_name, contact_id, contact_name, conversation_id, sent_at, completed_at, expires_at, participants[{id, name, role, status, delivery_channel, phone, email, signed_at, viewed_at, public_url, signs_in_panel}], delivery: {failed[], delivered_participant_ids[]}, has_signed_document, pending_for_me}], meta: {page, per_page, has_more, counts}",
@@ -34882,5 +35085,207 @@
   "description": "Uma linha por AGENDA com o estado do Google de cada uma: `connected`, `state`, `calendar_id`, `connected_by`. A conexao Google e UMA POR AGENDA — cada unidade liga a conta Google dela, inclusive a mesma pessoa com contas diferentes. SO ADMINISTRADOR. Conta sem agendas devolve uma linha com agenda_id nulo (a principal).",
   "category": "Integracoes / Google Calendar",
   "params": []
+ },
+ {
+  "id": "lionchat_companies_notes_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/notes",
+  "title": "Criar Anotacao da Empresa",
+  "description": "Escreve uma anotacao da PROPRIA empresa (nao de um contato). Qualquer atendente da conta pode. Aparece na aba Anotacoes da pagina da empresa com o selo 'Empresa'.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "note",
+    "type": "object",
+    "location": "body",
+    "required": true,
+    "description": "{ content: texto da anotacao }"
+   }
+  ],
+  "returns": "{payload: anotacao} com kind 'company'",
+  "common_use_cases": [
+   "Registrar historico comercial da empresa",
+   "Anotar combinados com a empresa"
+  ],
+  "related_tools": [
+   "lionchat_companies_notes_list",
+   "lionchat_companies_notes_update"
+  ]
+ },
+ {
+  "id": "lionchat_companies_notes_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/notes/{id}",
+  "title": "Editar Anotacao da Empresa",
+  "description": "Edita uma anotacao da PROPRIA empresa (kind 'company'). A autoria passa para quem editou, como na anotacao do contato. Anotacao de contato (kind 'contact') NAO se edita aqui.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da anotacao da empresa (kind 'company')"
+   },
+   {
+    "name": "note",
+    "type": "object",
+    "location": "body",
+    "required": true,
+    "description": "{ content: texto da anotacao }"
+   }
+  ],
+  "returns": "{payload: anotacao}",
+  "common_use_cases": [
+   "Corrigir uma anotacao da empresa"
+  ],
+  "related_tools": [
+   "lionchat_companies_notes_list"
+  ]
+ },
+ {
+  "id": "lionchat_companies_notes_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/notes/{id}",
+  "title": "Apagar Anotacao da Empresa",
+  "description": "Apaga uma anotacao da PROPRIA empresa (kind 'company'). Nao tem volta.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da anotacao da empresa (kind 'company')"
+   }
+  ],
+  "returns": "200 sem corpo",
+  "common_use_cases": [
+   "Remover anotacao errada"
+  ],
+  "related_tools": [
+   "lionchat_companies_notes_list"
+  ]
+ },
+ {
+  "id": "lionchat_companies_documents_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/documents",
+  "title": "Documentos da Empresa",
+  "description": "Documentos de TODOS os contatos da empresa juntos (mesmas origens e regras da aba Documentos do contato: ficha, card, conversa, compromisso, formulario e contrato assinado). Cada item traz contacts [{id, name}] (de quem e). O mesmo arquivo mandado a varios contatos vem UMA vez, com todos os nomes. SO LEITURA: favoritar/renomear/enviar/apagar e pela ficha do contato (lionchat_contacts_documents_*). Lista inteira, teto de 1000 (meta.truncated avisa).",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   }
+  ],
+  "returns": "{payload: [...], meta: {total, truncated}}",
+  "common_use_cases": [
+   "Achar um arquivo de qualquer pessoa da empresa",
+   "Conferir documentos enviados para a empresa"
+  ],
+  "related_tools": [
+   "lionchat_contacts_documents_list",
+   "lionchat_companies_contacts_list"
+  ]
+ },
+ {
+  "id": "lionchat_companies_tasks_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{company_id}/tasks",
+  "title": "Compromissos da Empresa",
+  "description": "Compromissos de TODOS os contatos da empresa, mais novo primeiro, pela mesma regra da ficha do contato (sem o compromisso particular de outra pessoa, so as agendas que o usuario ve). Cada item traz contact_name / conversation_contact_name. Precisa da Agenda ligada (senao 404). Editar/concluir: lionchat_tasks_update / lionchat_tasks_toggle.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "company_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   }
+  ],
+  "returns": "array de compromissos (mesmo formato de lionchat_tasks_list)",
+  "common_use_cases": [
+   "Ver a agenda de uma empresa inteira",
+   "Conferir proximas reunioes com a empresa"
+  ],
+  "related_tools": [
+   "lionchat_tasks_list",
+   "lionchat_tasks_update"
+  ]
+ },
+ {
+  "id": "lionchat_companies_kanban_items_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/{id}/kanban_items",
+  "title": "Cards do Kanban da Empresa",
+  "description": "Lista os cards do Kanban de TODOS os contatos da empresa (aba Cards da pagina da empresa). Mesma lista da aba Kanban da ficha do contato: card ligado a qualquer conversa dos contatos (principal ou vinculada), so os cards que o usuario ve no quadro (funil restrito e caixa respeitados), 25 por pagina, mais recentes primeiro. Cada card traz contacts[{id,name}] = de quem e (card ligado a 2 contatos da empresa traz os dois). ENTERPRISE; exige a funcao Empresas.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da empresa"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "open (padrao na tela), won, lost; omitir = todos"
+   },
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por funil"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Pagina (25 por pagina)"
+   }
+  ],
+  "returns": "{ meta: {total_count, page, per_page}, payload: [card com funnel, labels, next_task, permissions e contacts[{id,name}]] }",
+  "common_use_cases": [
+   "Ver os negocios de uma empresa",
+   "Somar oportunidades abertas de um cliente B2B"
+  ],
+  "related_tools": [
+   "lionchat_contacts_kanban_items_list",
+   "lionchat_companies_contacts_list",
+   "lionchat_kanban_items_show"
+  ]
  }
 ]

@@ -716,3 +716,34 @@ arquivo, aponta as colunas e ainda oferece uma planilha de exemplo pra baixar.
 Olhe `item_details.status_changed_at` do card: ele é comparado como **texto** contra a janela do
 relatório, e tem que terminar em `Z`. `2026-08-01T03:00:00Z` é 1º de agosto em Brasília; gravar
 `2026-08-01T00:00:00Z` joga a venda pra julho.
+
+---
+
+## Lançamento retroativo — marcar ganho/perda com data passada (2026-09-25)
+
+Serve para o caso do dia a dia: o negócio fechou semanas atrás e só agora alguém registra. Sem isso, o
+relatório contaria a venda no mês em que o registro foi feito, não no mês em que ela aconteceu.
+
+Na tela: ao marcar **Ganho** ou **Perdido** aparece a chavinha **"Lançamento retroativo"**; ligando, abre
+um campo de data. Pela API/MCP é a chave `retroativo_em` dentro de `item_details`, no
+`lionchat_kanban_items_update`:
+
+```json
+{ "item_details": { "status": "won", "win_reason": "indicacao", "retroativo_em": "2026-08-05" } }
+```
+
+| Regra | Detalhe |
+|---|---|
+| Quando vale | SÓ junto de um `status` `won`/`lost` que **muda** o status. Card que já está ganho ignora a data. |
+| O que ela faz | Decide o carimbo `item_details.status_changed_at` — o que TODOS os relatórios contam. |
+| O que ela NÃO faz | **Não é gravada no card.** Não muda conversão para Meta/GA4/Google Ads: essas continuam saindo com a data de hoje. |
+| Data futura ou ilegível | Recusada com **422** (a regra vive no servidor, não na tela — API e MCP passam por ela). |
+| Data anterior à criação do card | Permitida. |
+| Só no atualizar | No `lionchat_kanban_items_create` a chave é **descartada**. Para importar venda antiga já fechada, use a Conciliação de vendas (seção acima), que foi feita para isso. |
+
+**Corrigir uma data lançada errado:** marcar `won` de novo por cima **não muda nada** (o carimbo só é
+escrito quando o status muda). Mande `status: "open"` — isso apaga o carimbo — e depois `won`/`lost`
+com o `retroativo_em` certo.
+
+A hora é montada em **UTC**, com o horário atual no dia escolhido. É o mesmo motivo do diagnóstico
+acima: o relatório compara o carimbo como texto, então a data escolhida tem que ser a data contada.
