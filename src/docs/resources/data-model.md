@@ -577,12 +577,12 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 |---|---|---|
 | `eclinica_cliente_id` | text | ID do paciente no e-Clínica (chave de matching) |
 | `eclinica_unit_id` / `eclinica_unit_name` | text | Unidade/filial que originou o evento |
-| `eclinica_idagenda` | text | ID do último agendamento |
-| `eclinica_data_consulta` | date | Data da consulta, ISO |
+| `eclinica_idagenda` | text | ID do último agendamento (tela: "e-Clinica - ID do Ultimo Agendamento (ficha)") |
+| `eclinica_data_consulta` | date | Data da consulta do ÚLTIMO aviso recebido, ISO (tela: "e-Clinica - Data da Ultima Consulta (ficha)"). **Nunca use na mensagem de LEMBRETE** — ver "Variáveis do lembrete" abaixo |
 | `eclinica_hora_consulta` | **time** | Hora da consulta 24h `"HH:MM"` (novo 2026-07-06) |
 | `eclinica_hora_final` | **time** | Hora final da consulta (novo 2026-07-27) |
-| `eclinica_link_confirmacao` | **link** | Link ecli.co para o paciente confirmar/cancelar a ÚLTIMA consulta (novo 2026-09-08; só existe quando a unidade aprendeu o padrão na aba Unidades). No LEMBRETE use a variável `{{link_confirmacao}}` do fluxo (ou `{{agendamento.link_confirmacao}}` na automação): é da consulta certa — a ficha aponta para a última, e quem tem duas marcadas receberia o link errado |
-| `eclinica_paciente_nome` | text | Nome do PACIENTE como está no cadastro da e-Clínica (novo 2026-09-09). O nome do contato pode ser o do WhatsApp (mãe que agenda o filho pelo celular dela) — por isso NUNCA use `{{contact.name}}` nas mensagens da clínica. Nos fluxos por evento: `{{ contact.custom_attribute.eclinica_paciente_nome \| default: contact.name \| primeiro_nome }}`; no LEMBRETE use a variável `{{ paciente_nome \| default: contact.name \| primeiro_nome }}` (por consulta) ou `{{agendamento.paciente_nome}}` na automação. `primeiro_nome` = primeira palavra com inicial maiúscula. |
+| `eclinica_link_confirmacao` | **link** | Link ecli.co para o paciente confirmar/cancelar a ÚLTIMA consulta (novo 2026-09-08; só existe quando a unidade aprendeu o padrão na aba Unidades). No LEMBRETE use a variável `{{link_confirmacao}}` do fluxo (ou `{{eclinica_lembrete.link_confirmacao}}` na automação): é da consulta certa — a ficha aponta para a última, e quem tem duas marcadas receberia o link errado |
+| `eclinica_paciente_nome` | text | Nome do PACIENTE como está no cadastro da e-Clínica (novo 2026-09-09). O nome do contato pode ser o do WhatsApp (mãe que agenda o filho pelo celular dela) — por isso NUNCA use `{{contact.name}}` nas mensagens da clínica. Nos fluxos por evento: `{{ contact.custom_attribute.eclinica_paciente_nome \| default: contact.name \| primeiro_nome }}`; no LEMBRETE use a variável `{{ paciente_nome \| default: contact.name \| primeiro_nome }}` (por consulta) ou `{{eclinica_lembrete.paciente_nome}}` na automação. `primeiro_nome` = primeira palavra com inicial maiúscula. |
 | `eclinica_status_agendamento` | text | `agendado` / `aguardando` (paciente chegou) / `no_show` / `atendido` / `desmarcado`. Vem do TIPO do evento, nunca da letra da situação. **Estado terminal do MESMO agendamento não volta pra `agendado`** (2026-08-20): a e-Clínica manda `agendamento_alterado` a cada edição da consulta, inclusive depois da chegada/atendimento, e isso NÃO reabre o status. Consulta com `eclinica_idagenda` DIFERENTE nasce `agendado` |
 | `eclinica_situacao` | text | Situação do agendamento no painel, **POR EXTENSO** (2026-08-21, legenda oficial da e-Clínica): AGUARDANDO, NA CADEIRA, PASSAR FINANCEIRO, AGENDAR RETORNO, ATENDIDO, CONFIRMADO, CONFIRMADO PELO LINK, CONFIRMADO PELA API, FALTA, DESMARCADO, CANCELADO PELO LINK, CANCELADO PELA API. Antes guardava a letra crua (`A`, `C`…). Código nunca visto aparece como veio |
 | `eclinica_compromisso` | text | Tipo da consulta — TEXTO LIVRE da recepção (ex: Consulta, Retorno) |
@@ -663,10 +663,31 @@ linhas ANTIGAS (até 17/09); e `fail_reason = fluxo_ainda_em_andamento_com_este_
 fluxo do aviso anterior ainda estava em andamento com aquele contato (típico de fluxo que aguarda o
 paciente clicar num botão) — pode ser reenviado com `lionchat_eclinica_reminder_history_reprocess`.
 O fluxo do lembrete recebe também `{{cliente_id}}` (código do paciente DAQUELA consulta na e-Clínica) e
-`{{agendatipo}}`; na automação, `{{agendamento.cliente_id}}` e `{{agendamento.agendatipo}}`. Ao consultar a
+`{{agendatipo}}`; na automação, `{{eclinica_lembrete.cliente_id}}` e `{{eclinica_lembrete.agendatipo}}`. Ao consultar a
 agenda do paciente dentro do fluxo, use `{{cliente_id}}` do lembrete — a ficha do contato é uma por
 TELEFONE e guarda só o último paciente. Quem quiser "só um lembrete por dia" monta no próprio fluxo
 (condição num atributo da conversa com `{{data_consulta}}` + ação que grava o dia depois de enviar).
+
+**Variáveis do lembrete — o nome certo (desde 2026-09-28).** Cada lembrete guarda a FOTOGRAFIA da consulta
+dele. A FICHA do contato (`eclinica_data_consulta`, `eclinica_hora_consulta`, `eclinica_profissional`...) guarda
+só a consulta do ÚLTIMO aviso que a e-Clínica mandou — quem marca o retorno no mesmo dia em que é atendido tem
+a ficha sobrescrita e o lembrete sai com a data de OUTRA consulta (caso real: Big Odonto, 28/09). Na tela, os 9
+campos de agendamento da ficha aparecem como "e-Clinica - ... Ultima Consulta (ficha)" (a chave não mudou).
+- **Na AUTOMAÇÃO alvo de lembrete** (`reminder_config[].automation_id`), use SEMPRE
+  `{{eclinica_lembrete.<campo>}}`: `data_consulta`, `hora_consulta`, `profissional`, `compromisso`,
+  `paciente_nome`, `unidade`, `link_confirmacao`, `idagenda`, `cliente_id`, `agendatipo`, `cor`; no lembrete de
+  laboratório `data_prevista`, `data_entrega`, `data_referencia`; no de cobrança `vencimento`, `valor`,
+  `descricao`. Vale na mensagem, na nota interna, nos parâmetros do modelo de WhatsApp
+  (`processed_params.body`) e em título/descrição de tarefa. A data sai **DD/MM/AAAA** onde vira texto para a
+  pessoa; gravada em campo (atualizar atributo/campo do card) fica no formato interno `AAAA-MM-DD`. Filtro
+  Liquid (`{{ x | f }}`) NÃO funciona nesse nome. O nome antigo `{{agendamento.<campo>}}` continua funcionando
+  (automações antigas), mas não ensine mais.
+- **No FLUXO nada muda**: continue com as variáveis soltas `{{data_consulta}}`, `{{hora_consulta}}`,
+  `{{link_confirmacao}}`, `{{paciente_nome}}`, `{{cliente_id}}`... Não use `eclinica_lembrete` em fluxo. Nos
+  fluxos de lembrete que conferem a consulta na e-Clínica antes de enviar, essas variáveis soltas são
+  CORRIGIDAS pelo próprio fluxo quando a consulta foi remarcada.
+- Automação/fluxo disparado por EVENTO da e-Clínica (não lembrete) continua lendo a ficha — ali ela acabou de
+  ser gravada pelo próprio evento e está certa.
 
 ## Relatórios e Métricas
 
