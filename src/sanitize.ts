@@ -109,15 +109,22 @@ export function supportsFullResponse(toolId: string): boolean {
   return FULL_RESPONSE_TOOLS.has(toolId);
 }
 
+// AIDEV-SECURITY: [chave-reserva 2026-09-29] A forma PLURAL escapava: `fallback_api_keys` nao casa
+// o conjunto exato (`api_key`) nem o sufixo singular (`_api_key`), entao a chave reserva da OpenAI
+// saia CRUA na resposta enquanto a principal vinha censurada (achado numa leitura da integracao da
+// conta 99). Regra do dono 2026-09-29: chave e chave — primaria ou reserva, sempre censurada.
+// Por isso testamos tambem a forma singular (tira o `s` final) contra as MESMAS listas — inclusive a
+// de excecao, pra `website_tokens` continuar seguindo `website_token`.
 function shouldRedact(key: string): boolean {
   const k = key.toLowerCase();
-  if (REDACT_EXCEPTIONS.has(k)) {
+  const formas = k.endsWith('s') ? [k, k.slice(0, -1)] : [k];
+  if (formas.some((forma) => REDACT_EXCEPTIONS.has(forma))) {
     return false;
   }
-  if (REDACT_EXACT.has(k)) {
+  if (formas.some((forma) => REDACT_EXACT.has(forma))) {
     return true;
   }
-  return REDACT_SUFFIXES.some((suffix) => k.endsWith(suffix));
+  return formas.some((forma) => REDACT_SUFFIXES.some((suffix) => forma.endsWith(suffix)));
 }
 
 export interface SanitizeOptions {
@@ -143,7 +150,11 @@ export function sanitizeResponse(value: unknown, opts: SanitizeOptions): unknown
         if (shouldRedact(key)) {
           // AIDEV-SECURITY: valor vazio/null passa como esta (informativo); qualquer valor
           // presente vira o placeholder — nunca o conteudo.
-          out[key] = val === null || val === undefined || val === '' ? val : REDACT_PLACEHOLDER;
+          // AIDEV-NOTE: lista VAZIA de credenciais tambem passa como esta — devolver '[REDACTED]'
+          // pra `fallback_api_keys: []` faria a resposta afirmar que existe uma chave reserva que nao existe.
+          const vazio =
+            val === null || val === undefined || val === '' || (Array.isArray(val) && val.length === 0);
+          out[key] = vazio ? val : REDACT_PLACEHOLDER;
           continue;
         }
         if (slimActive && SLIM_KEYS.has(key.toLowerCase()) && val !== null && val !== undefined) {
