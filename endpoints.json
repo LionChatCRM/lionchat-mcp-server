@@ -5528,7 +5528,7 @@
   "method": "GET",
   "path": "/api/v2/accounts/{account_id}/reports",
   "title": "Relatorios Detalhados",
-  "description": "Serie temporal de uma metrica. metric obrigatorio. group_by: hour/day/week/month/year.",
+  "description": "Serie temporal de uma metrica. metric obrigatorio. group_by: hour/day/week/month/year. Pra ver QUAIS conversas formam um ponto, use lionchat_reports_drilldown com o 'timestamp' dele.",
   "category": "Relatorios",
   "params": [
    {
@@ -5597,7 +5597,99 @@
   "related_tools": [
    "lionchat_reports_list",
    "lionchat_reports_list_1",
-   "lionchat_reports_list_2"
+   "lionchat_reports_list_2",
+   "lionchat_reports_drilldown"
+  ]
+ },
+ {
+  "id": "lionchat_reports_drilldown",
+  "method": "GET",
+  "path": "/api/v2/accounts/{account_id}/reports/drilldown",
+  "title": "Conversas por trás de um ponto do gráfico",
+  "description": "Lista as CONVERSAS que formam UM ponto da série temporal (lionchat_reports_list_5) — o mesmo que clicar numa barra do gráfico nos Relatórios. Usa a MESMA régua que desenhou o ponto, então a lista bate com o número (ex.: etiqueta conta pela data em que foi APLICADA). Fluxo: chame lionchat_reports_list_5, pegue o 'timestamp' do ponto e passe aqui em bucket_timestamp, repetindo metric, group_by, type, id, timezone_offset e business_hours da série (são eles que definem onde o ponto começa e termina). Mostra SÓ as conversas que a pessoa do token pode abrir: meta.hidden_count diz quantas ficaram de fora por permissão — diga isso ao usuário em vez de concluir que faltam conversas. 25 por página, mais recentes primeiro; teto de 5.000 conversas por ponto. Exige permissão de ver relatórios. Métrica fora da lista = 422 {error: 'invalid metric'}; data fora do formato Unix = 400.",
+  "category": "Relatorios",
+  "params": [
+   {
+    "name": "metric",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "A MESMA métrica da série. Aceita SÓ: conversations_count | incoming_messages_count | outgoing_messages_count | resolutions_count | avg_first_response_time | avg_resolution_time | reply_time. Métricas de bot (bot_resolutions_count, bot_handoffs_count) NÃO têm lista."
+   },
+   {
+    "name": "bucket_timestamp",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "Início do ponto: o campo 'timestamp' devolvido por lionchat_reports_list_5 (Unix em SEGUNDOS)."
+   },
+   {
+    "name": "group_by",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Tamanho do ponto: hour | day | week | month | year (padrão day). Use o MESMO da série, senão o recorte muda e a lista não bate."
+   },
+   {
+    "name": "type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Escopo: account | inbox | agent | label | team (padrão account). O mesmo da série."
+   },
+   {
+    "name": "id",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "ID da caixa/agente/etiqueta/time quando type != account. O mesmo da série."
+   },
+   {
+    "name": "since",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Início do período do relatório (Unix em SEGUNDOS). Recorta o ponto quando o período começa no meio dele (ex.: semana que começou antes)."
+   },
+   {
+    "name": "until",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim do período do relatório (Unix em SEGUNDOS). Recorta o último ponto."
+   },
+   {
+    "name": "timezone_offset",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fuso em horas (ex: -3 pra Brasília). O MESMO da série — define a fronteira do dia/hora do ponto."
+   },
+   {
+    "name": "business_hours",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "Só nas médias de tempo: true = mede só o expediente (mesma regra da série). Use o MESMO valor da série."
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (25 por página, fixo). Padrão 1."
+   }
+  ],
+  "returns": "{ meta: { metric, since, until (o recorte REAL do ponto, Unix), page, per_page, total_count (conversas do ponto), visible_count (as que a pessoa pode abrir), hidden_count (fora por permissão) }, payload: [{ id, display_id (número da conversa na tela), status, created_at (Unix), contact_name, inbox_name, assignee_name, detail }] }. detail = o porquê de cada conversa: {count} (quantas mensagens/eventos dela caíram no ponto) nas contagens de mensagens e resoluções, {seconds} nas médias de tempo, ou null.",
+  "common_use_cases": [
+   "Quais conversas formam o pico de terça-feira no gráfico",
+   "Ver quem demorou para responder naquela semana (avg_first_response_time)",
+   "Listar as conversas resolvidas num dia específico"
+  ],
+  "related_tools": [
+   "lionchat_reports_list_5",
+   "lionchat_reports_summary",
+   "lionchat_conversations_show"
   ]
  },
  {
@@ -6410,9 +6502,16 @@
     "location": "query",
     "required": false,
     "description": "Busca textual em pergunta/resposta"
+   },
+   {
+    "name": "sort",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "occurrences = mais perguntadas primeiro (use com status=pending pra ver as sugestões que mais se repetem). Sem o parâmetro = mais recentes primeiro."
    }
   ],
-  "returns": "array de respostas (AssistantResponse)",
+  "returns": "array de respostas (AssistantResponse). Cada uma traz occurrences_count (desde 26/09/2026): em quantas conversas DIFERENTES a mesma pergunta pendente apareceu (começa em 1; só soma enquanto pendente) — é o 'perguntada em N conversas' da tela.",
   "common_use_cases": [
    "Dashboard: contar/exibir assistentes AI",
    "Buscar com filtros antes de outra operação",
@@ -6437,7 +6536,7 @@
     "type": "integer",
     "location": "body",
     "required": true,
-    "description": "ID do agente dono da FAQ — NOT NULL no banco"
+    "description": "ID do agente dono da FAQ — NOT NULL no banco. Tem que ser um agente DESTA conta: de outra conta = 404 (25/09/2026)."
    },
    {
     "name": "question",
@@ -10494,46 +10593,102 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/flows/test_api",
   "title": "Testar Node API",
-  "description": "Testa um no de API (executa a requisicao HTTP) e retorna a resposta.",
+  "description": "Executa a requisição HTTP de um bloco de API do FlowBuilder pelo SERVIDOR (o mesmo que o botão 'Testar requisição' da tela) e devolve a resposta. Só administrador. Tudo vai dentro de 'config', com os MESMOS nomes que o bloco de API grava no flow_data (apiUrl, apiMethod, apiHeaders...): dá pra copiar o data do node lido com lionchat_flows_show. Variáveis {{...}} são trocadas pelo valor de test_variables; {{account.custom_attribute.X}} usa a variável da conta (inclusive secreta). Variável sem valor fica como {{nome}} no texto. CORRIGIDO 25/09/2026: antes o servidor descartava em silêncio apiQueryParams, apiBodyMode, apiBodyFields, apiSendHeaders e apiSendQueryParams — o teste saía sem parâmetro de URL e sem body em modo chave-valor. Não segue redirecionamento.",
   "category": "Flows",
   "params": [
    {
-    "name": "url",
+    "name": "config.apiUrl",
     "type": "string",
     "location": "body",
     "required": true,
-    "description": "URL do endpoint"
+    "description": "URL do endpoint (aceita {{variáveis}})."
    },
    {
-    "name": "method",
+    "name": "config.apiMethod",
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "GET, POST, PUT, PATCH, DELETE"
+    "description": "GET (padrão), POST, PUT, PATCH, DELETE. Body só é enviado em POST/PUT/PATCH."
    },
    {
-    "name": "headers",
-    "type": "object",
+    "name": "config.apiQueryParams",
+    "type": "array",
     "location": "body",
     "required": false,
-    "description": "Headers customizados"
+    "description": "Parâmetros de URL: lista de {key, value} (aceitam {{variáveis}}). Acrescentados à URL já codificados."
    },
    {
-    "name": "body",
+    "name": "config.apiSendQueryParams",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "false = ignora apiQueryParams (chave desligada na tela). Padrão true."
+   },
+   {
+    "name": "config.apiHeaders",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Cabeçalhos: lista de {key, value} (aceitam {{variáveis}})."
+   },
+   {
+    "name": "config.apiSendHeaders",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "false = ignora apiHeaders. Padrão true."
+   },
+   {
+    "name": "config.apiAuthType",
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Body da requisição"
+    "description": "bearer (vira Authorization: Bearer <token>) | basic (Authorization: Basic <token>, token já em base64) | api_key (X-Api-Key: <token>) | vazio = sem autenticação."
    },
    {
-    "name": "timeout",
+    "name": "config.apiAuthToken",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Token da autenticação (aceita {{variáveis}}, ex. {{account.custom_attribute.minha_chave}})."
+   },
+   {
+    "name": "config.apiBodyMode",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "json (padrão: manda apiBody como está) | fields (monta um JSON a partir de apiBodyFields)."
+   },
+   {
+    "name": "config.apiBody",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Corpo em texto (normalmente JSON) quando apiBodyMode=json. Aceita {{variáveis}}."
+   },
+   {
+    "name": "config.apiBodyFields",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Corpo em modo chave-valor (apiBodyMode=fields): lista de {key, value}; vira um JSON {key: value}."
+   },
+   {
+    "name": "config.apiTimeout",
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "Timeout em segundos (max 25)"
+    "description": "Tempo limite em SEGUNDOS: padrão 10, máximo 25 (acima disso é limitado a 25)."
+   },
+   {
+    "name": "test_variables",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Valores pras variáveis do teste: {\"contact.name\": \"Maria\", \"var.pedido\": \"123\"} — a chave é o texto de dentro das chaves duplas."
    }
   ],
-  "returns": "resposta HTTP",
+  "returns": "{ status (código HTTP; 0 = não chegou a responder), ok (true se 2xx), body (resposta como texto; em falha, o motivo — ex. 'URL nao configurada', 'Request timeout apos 10s') }",
   "common_use_cases": [
    "Cadastro inicial de flow",
    "Automação a partir de evento externo",
@@ -10634,7 +10789,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. [{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao')."
+    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. [{action_name, action_params[]}] Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao'). ESPERA QUE CONFERE (26/09/2026): 'wait' aceita o formato OBJETO [{\"seconds\": 120, \"only_if_open\": true, \"only_if_no_reply\": true}] — na VOLTA, only_if_open só segue se a conversa ainda estiver aberta/pendente e only_if_no_reply só segue se ninguém respondeu o cliente durante a espera (qualquer mensagem pública de saída conta). Barrou = o resto da regra não roda e o histórico da execução mostra o passo wait_check 'skipped'. O formato antigo [120] continua valendo, sem conferência. Teto 300 s."
    },
    {
     "name": "active",
@@ -10732,7 +10887,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao')."
+    "description": "CADA item de actions DEVE ser um OBJETO {action_name (string), action_params (array)} — NUNCA um texto/string solto. Ex.: [{\"action_name\":\"send_message\",\"action_params\":[\"Oi\"]}]. Acoes Actions novas (2026-07-21): 'update_contact_attribute' e 'update_conversation_attribute' — action_params: [{attribute_key, value}], value aceita texto fixo OU variável Liquid (ex. {{contact.phone_number}}); grava atributo personalizado com MERGE (não apaga os demais) e passa pelo porteiro de data. 'pending_conversation' (2026-07-20, sem params) — deixa a conversa PENDENTE (handoff; mensagem nova do cliente NÃO reabre). ATENCAO — 'send_whatsapp_template': action_params: [{name, id, language, category, processed_params}]. 'name' e OBRIGATORIO e e o nome EXATO do modelo aprovado na Meta (o envio acontece por ele); 'language' precisa bater com o idioma aprovado (padrao pt_BR); processed_params: {\"body\": {\"1\": \"{{contact.first_name}}\"}}. NUNCA use template_name/template_id/template_category/template_language — esse e o formato dos nos do FlowBuilder e aqui e IGNORADO: a regra salva com sucesso, aparece na tela e NAO ENVIA NADA, sem erro nem log (incidente real conta 39 em 02/08/2026: 14h sem enviar, 9 leads perdidos). Confira o modelo antes com lionchat_inboxes_whatsapp_templates_list. So funciona em caixa WhatsApp API Oficial (Cloud). REGRA GERAL: action_params e SEMPRE um array (o backend le params[0]) e seu CONTEUDO nao e validado pela API. Se nao souber o formato de uma acao, leia uma regra existente com lionchat_automation_rules_show e copie — nunca invente nome de chave. Formato de TODAS as acoes no resource 'conversation-flows'. MAIS USADOS (action_params e SEMPRE lista): send_message [\"texto\"]; add_private_note [\"texto\"]; add_label/remove_label [\"nome-da-etiqueta\"]; assign_agent [70] ([\"nil\"] desatribui); assign_team [3]; change_status [\"resolved\"|\"open\"|\"pending\"|\"snoozed\"]; change_priority [\"high\"]; send_canned_response [12]; update_conversation_attribute [{\"attribute_key\": \"chave\", \"value\": \"texto\"}]; create_kanban_item [{\"funnel_id\": 31, \"funnel_stage\": \"prospeccao\"}]; move_kanban_item_to_stage [{\"funnel_id\": 31, \"funnel_stage\": \"qualificacao\"}]. Tabela completa no resource conversation-flows ('Acoes de automacao'). ESPERA QUE CONFERE (26/09/2026): 'wait' aceita o formato OBJETO [{\"seconds\": 120, \"only_if_open\": true, \"only_if_no_reply\": true}] — na VOLTA, only_if_open só segue se a conversa ainda estiver aberta/pendente e only_if_no_reply só segue se ninguém respondeu o cliente durante a espera (qualquer mensagem pública de saída conta). Barrou = o resto da regra não roda e o histórico da execução mostra o passo wait_check 'skipped'. O formato antigo [120] continua valendo, sem conferência. Teto 300 s."
    }
   ],
   "returns": "regra de automação atualizado",
@@ -15314,10 +15469,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    }
   ],
   "returns": "grupo WhatsApp (objeto completo com associações)",
@@ -15349,10 +15504,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "subject",
@@ -15391,10 +15546,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "description",
@@ -15433,10 +15588,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    }
   ],
   "returns": "array de participantes do grupo (id, admin, etc.)",
@@ -15468,10 +15623,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "participants",
@@ -15510,10 +15665,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "participants",
@@ -15552,10 +15707,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "participants",
@@ -15594,10 +15749,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "participants",
@@ -15636,10 +15791,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    }
   ],
   "returns": "link de convite do grupo (ex: { code, url })",
@@ -15659,7 +15814,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/invite_code/revoke",
   "title": "Revogar Link de Convite",
-  "description": "Revoga o link de convite atual do grupo WAHA e gera um novo. O numero conectado precisa ser admin do grupo (403 senao).",
+  "description": "Revoga o link de convite atual do grupo WAHA e gera um novo. O link antigo PARA DE FUNCIONAR, inclusive o que ja foi enviado por fluxos e campanhas — confirme com a pessoa antes. O numero conectado precisa ser admin do grupo (403 senao).",
   "category": "Grupos WhatsApp",
   "params": [
    {
@@ -15671,10 +15826,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    }
   ],
   "returns": "{ success: true } ou { data: ... }",
@@ -15694,7 +15849,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/settings",
   "title": "Atualizar Config do Grupo",
-  "description": "Atualiza as permissoes do grupo WAHA.",
+  "description": "Atualiza as permissoes do grupo WAHA. Aplica chave por chave: se uma falhar, responde 422 com `applied` (o que ja foi gravado) e `failed` (a chave que falhou). O numero conectado precisa ser admin do grupo (403 senao). `approval_required` so existe em servidores do WhatsApp mais novos: onde nao existe, 422 dizendo que o servidor ainda nao tem a opcao (confira antes com lionchat_inboxes_waha_groups_list_4, campo approval_supported).",
   "category": "Grupos WhatsApp",
   "params": [
    {
@@ -15706,10 +15861,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "info_admin_only",
@@ -15724,9 +15879,23 @@
     "location": "body",
     "required": false,
     "description": "Se true, somente admins podem enviar mensagens"
+   },
+   {
+    "name": "members_add_admin_only",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Se true, somente admins podem adicionar participantes (o servidor traduz para o sentido invertido do WhatsApp). So true ou false; qualquer outro valor e recusado com 422."
+   },
+   {
+    "name": "approval_required",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Se true, quem pede para entrar pelo link espera um admin aprovar. So true ou false. ATENCAO ao desligar: com pedidos esperando, o WhatsApp pode aprovar todos de uma vez — liste os pedidos antes (lionchat_inboxes_waha_groups_list_5) e confirme com a pessoa."
    }
   ],
-  "returns": "{ success: true } ou { data: ... }",
+  "returns": "{ success: true, applied: [...] } ou 422 { error, applied: [...], failed: \"chave\" }",
   "common_use_cases": [
    "Edição parcial de grupo WhatsApp",
    "Alteração de status/estado",
@@ -15755,10 +15924,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    },
    {
     "name": "file",
@@ -15797,10 +15966,10 @@
    },
    {
     "name": "group_id",
-    "type": "integer",
+    "type": "string",
     "location": "path",
     "required": true,
-    "description": "ID do grupo"
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
    }
   ],
   "returns": "{ success: true } ou { data: ... }",
@@ -15882,6 +16051,183 @@
    "lionchat_inboxes_waha_groups_list_3",
    "lionchat_inboxes_waha_groups_list",
    "lionchat_inboxes_waha_groups_show"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_list_4",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/security_settings",
+  "title": "Ler Permissoes Extras do Grupo",
+  "description": "SO LEITURA. Le \"apenas admins podem adicionar participantes\" (members_add_admin_only) e \"aprovar novos participantes\" (approval_required), ja no sentido da tela (true = so admins / precisa aprovar). null = o WhatsApp nao respondeu agora: NAO trate como false. approval_supported=false = o servidor do WhatsApp desta caixa ainda nao tem a opcao de aprovacao.",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "group_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
+   }
+  ],
+  "returns": "{ data: { members_add_admin_only: true|false|null, approval_required: true|false|null, approval_supported: true|false|null } }",
+  "common_use_cases": [
+   "Conferir as permissoes do grupo antes de mudar",
+   "Saber se o grupo exige aprovacao para entrar"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_update_2",
+   "lionchat_inboxes_waha_groups_show"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/picture",
+  "title": "Remover Foto do Grupo",
+  "description": "Remove a foto do grupo no WhatsApp e tambem a copia que o LionChat mostra na lista de conversas. O numero conectado precisa ser admin do grupo (403 senao).",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "group_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
+   }
+  ],
+  "returns": "{ success: true }",
+  "common_use_cases": [
+   "Tirar a foto do grupo"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_update_3",
+   "lionchat_inboxes_waha_groups_show"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_list_5",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/join_requests",
+  "title": "Listar Pedidos para Entrar no Grupo",
+  "description": "SO LEITURA. Pedidos de quem quer entrar no grupo e espera aprovacao. Use o campo `id` de cada pedido para aprovar/recusar. `pn` e o telefone (pode vir null: o WhatsApp esconde o numero — NUNCA use os digitos do id como telefone). `name` so vem se a pessoa ja e contato. supported=false = o servidor do WhatsApp desta caixa ainda nao tem pedidos para entrar; allowed=false = o WhatsApp nao deixou (o numero da caixa nao e admin do grupo).",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "group_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
+   }
+  ],
+  "returns": "{ data: { supported, allowed, requests: [{ id, requesterId, pn, name, request_method (invite_link|linked_group_join|non_admin_add|unknown), timestamp }] } }",
+  "common_use_cases": [
+   "Ver quem pediu para entrar no grupo",
+   "Aprovar pedidos pendentes em lote"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_create_7",
+   "lionchat_inboxes_waha_groups_create_8",
+   "lionchat_inboxes_waha_groups_list_4"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_create_7",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/join_requests/approve",
+  "title": "Aprovar Pedidos para Entrar no Grupo",
+  "description": "Aprovar pedidos para entrar no grupo. A pessoa entra no grupo e isso aciona a pilula \"entrou\" e os fluxos com gatilho \"Entrou no grupo\". Tentativa unica (nao repita sozinho). A resposta traz o resultado por pessoa e as listas RELIDAS no WhatsApp (pedidos e participantes). Se o WhatsApp recusar (ex.: pedido ja tratado pelo celular), 422 com a mensagem e as listas reais. O numero conectado precisa ser admin do grupo (403 senao); ids fora do formato = 422.",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "group_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
+   },
+   {
+    "name": "participants",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Lista de pedidos no formato [{ id: '...' }], com o `id` que veio em lionchat_inboxes_waha_groups_list_5"
+   }
+  ],
+  "returns": "{ data: { results: [{ id, success, error }], join_requests: [...]|null, participants: [...]|null } } ou 422 { error, data: { join_requests, participants } }",
+  "common_use_cases": [
+   "Aprovar quem pediu para entrar no grupo"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_list_5",
+   "lionchat_inboxes_waha_groups_list_1"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_waha_groups_create_8",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/waha_groups/{group_id}/join_requests/reject",
+  "title": "Recusar Pedidos para Entrar no Grupo",
+  "description": "Recusar pedidos para entrar no grupo. A pessoa nao entra e nada e disparado. Tentativa unica (nao repita sozinho). A resposta traz o resultado por pessoa e as listas RELIDAS no WhatsApp (pedidos e participantes). Se o WhatsApp recusar (ex.: pedido ja tratado pelo celular), 422 com a mensagem e as listas reais. O numero conectado precisa ser admin do grupo (403 senao); ids fora do formato = 422.",
+  "category": "Grupos WhatsApp",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da inbox (precisa ser WhatsApp QR Code)"
+   },
+   {
+    "name": "group_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "ID do grupo no WhatsApp, com o sufixo (ex.: '120363389719781395@g.us')"
+   },
+   {
+    "name": "participants",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Lista de pedidos no formato [{ id: '...' }], com o `id` que veio em lionchat_inboxes_waha_groups_list_5"
+   }
+  ],
+  "returns": "{ data: { results: [{ id, success, error }], join_requests: [...]|null, participants: [...]|null } } ou 422 { error, data: { join_requests, participants } }",
+  "common_use_cases": [
+   "Recusar quem pediu para entrar no grupo"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_waha_groups_list_5",
+   "lionchat_inboxes_waha_groups_list_1"
   ]
  },
  {
@@ -25863,7 +26209,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations",
   "title": "Listar Integração e-Clínica",
-  "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). O mapeamento evento→flow É EDITÁVEL via MCP desde 31/08/2026 — use lionchat_eclinica_integrations_update (ele SUBSTITUI o mapeamento inteiro: leia aqui primeiro e devolva completo). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes SAO editaveis via MCP desde 31/08/2026 — use lionchat_eclinica_integrations_update (ele SUBSTITUI a lista inteira: leia aqui primeiro e devolva completa). Cada unidade em units[] traz tambem settings {} (18/08). O atributo eclinica_cor (cor da agenda, hex com #) virou campo fresco dos lembretes: filtravel por filter_field e disponivel como variavel {{cor}}. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` alem do `flow_id` — pelo menos um dos dois (422 sem nenhum); com os DOIS preenchidos a AUTOMACAO vence no disparo. A automacao precisa ser da propria conta (422 senao). ALERTA de regra de negocio ao configurar: o caminho por automacao RODA AS ACOES SEM AVALIAR AS CONDICOES da automacao. Desde 17/09/2026 os DOIS caminhos (fluxo e automacao) mandam um aviso POR CONSULTA: paciente com duas consultas no dia (ou dois pacientes no mesmo celular) recebe um aviso para cada uma, ~10 min um do outro (fila por contato). Quem quer so um por dia monta no FLUXO (condicao num atributo com {{data_consulta}}); na automacao nao da, porque as condicoes dela nao sao avaliadas — avise o cliente antes de trocar fluxo por automacao.",
+  "description": "Lista a integração e-Clínica da conta (no máximo 1 por conta) com id, status e configurações. Use PRIMEIRO para descobrir o {id} exigido pelas ferramentas de histórico de lembretes. Eventos mapeáveis incluem (23/07) os novos cliente_inclusao_pagamento ('Inclusão de cobrança' — cobrança/carnê criado, ainda não pago; grava eclinica_ultima_cobranca_valor/vencimento/descricao no contato) e controle_laboratorio_novo ('Controle de laboratório' — grava eclinica_laboratorio_data_prevista/data_moldagem/data_entrega/situacao). O mapeamento evento→flow É EDITÁVEL via MCP desde 31/08/2026 — use lionchat_eclinica_integrations_update (ele SUBSTITUI o mapeamento inteiro: leia aqui primeiro e devolva completo). [2026-07-25] Cada linha de reminder_config traz agora event_type ('agendamento' padrao, 'controle_laboratorio_novo' para lembrete de laboratorio/medicacao, 'cliente_inclusao_pagamento' para lembrete de vencimento de cobranca), dispatch_time (hora do disparo, OBRIGATORIA: 'HH:MM' fixo ou formula Liquid com variavel de conta/contato) e o filtro opcional filter_field/filter_operator/filter_value. Os lembretes SAO editaveis via MCP desde 31/08/2026 — use lionchat_eclinica_integrations_update (ele SUBSTITUI a lista inteira: leia aqui primeiro e devolva completa). Cada unidade em units[] traz tambem settings {} (18/08). O atributo eclinica_cor (cor da agenda, hex com #) virou campo fresco dos lembretes: filtravel por filter_field e disponivel como variavel {{cor}}. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` alem do `flow_id` — pelo menos um dos dois (422 sem nenhum); com os DOIS preenchidos a AUTOMACAO vence no disparo. A automacao precisa ser da propria conta (422 senao). ALERTA de regra de negocio ao configurar: o caminho por automacao RODA AS ACOES SEM AVALIAR AS CONDICOES da automacao. Desde 17/09/2026 os DOIS caminhos (fluxo e automacao) mandam um aviso POR CONSULTA: paciente com duas consultas no dia (ou dois pacientes no mesmo celular) recebe um aviso para cada uma, ~10 min um do outro (fila por contato). Quem quer so um por dia monta no FLUXO (condicao num atributo com {{data_consulta}}); na automacao nao da, porque as condicoes dela nao sao avaliadas — avise o cliente antes de trocar fluxo por automacao. VARIAVEIS DA MENSAGEM (28/09/2026): na automacao alvo de lembrete use {{eclinica_lembrete.<campo>}} (data_consulta, hora_consulta, profissional, compromisso, paciente_nome, unidade, link_confirmacao, idagenda, cliente_id, agendatipo, cor; laboratorio: data_prevista/data_entrega/data_referencia; cobranca: vencimento/valor/descricao) — e a consulta DAQUELE lembrete, data em DD/MM/AAAA. NUNCA a ficha {{contact.custom_attribute.eclinica_*}}: guarda so a consulta do ULTIMO aviso e manda a data de outra consulta. O nome antigo {{agendamento.*}} ainda funciona. No FLUXO nada muda ({{data_consulta}} etc). Detalhe no resource data-model, secao e-Clinica.",
   "category": "Integracoes",
   "params": [],
   "returns": "200 {payload: {eclinica_integrations: [...]}}",
@@ -26692,6 +27038,13 @@
     "description": "true/false (padrao false). SO no bloco `eclinica_no_show`: a % de falta passa a ser faltaram/agendados em vez de faltaram/(compareceram+faltaram). Ligado, a unidade que nao anota desfecho parece a melhor da rede — o rotulo da coluna declara a base. Aceita as strings 'true'/'false' (novo 10/09/2026)."
    },
    {
+    "name": "only_first_visit",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "true/false (padrao false). SO no bloco `eclinica_no_show`: a tabela conta so a consulta INICIAL — retorno, sessao de tratamento e procedimento ficam de fora — e o rotulo da primeira coluna troca de 'Agendados' para 'Consultas iniciais'. A regra le o TEXTO do compromisso, porque a clinica escreve o tipo por extenso: comeca com CONSULTA e NAO contem RETORNO. Medido na conta 56 (01 a 24/09/2026): 'CONSULTA INICIAL' 1.445 vezes e 'CONSULTA DE RETORNO' 192, e Sorocaba tem 1.023 compromissos para 99 consultas iniciais. Use quando o pedido falar em primeira consulta, consulta inicial, paciente novo ou primeiro atendimento. Novo em 28/09/2026."
+   },
+   {
     "name": "count_retorno_as_consulta",
     "type": "boolean",
     "location": "body",
@@ -26739,7 +27092,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Lista de blocos. Cada item: {id, widget_type, chart_type, ...} com os mesmos campos do custom_dashboards_preview_widget. Maximo 12. DOIS campos de bloco que faltavam aqui: `follow_report_period` (true/false, tambem aceita as strings; AUSENTE = true) diz se o bloco obedece o calendario do TOPO do relatorio ou usa o periodo proprio — vale pra qualquer bloco, novo em 22/08/2026; e `direction_split` (true/false, padrao false) que SO faz efeito no bloco `calls_report` e troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida — OPT-IN de proposito pra nao mexer no relatorio de quem ja usa o bloco, novo em 28/08/2026. Desde 10/09/2026, dois campos SO dos blocos da e-Clinica: `no_show_over_scheduled` (true/false, padrao false — a % de falta passa a ser faltaram/agendados em vez de sobre os desfechos conhecidos; so faz efeito em `eclinica_no_show`) e `count_retorno_as_consulta` (true/false, padrao true — retorno conta como consulta na base da conversao; desligado, o retorno vai para 'Nao classificado'; so faz efeito em `eclinica_conversion`). Aceitam as strings 'true'/'false'; qualquer outro valor = 422 com o motivo."
+    "description": "Lista de blocos. Cada item: {id, widget_type, chart_type, ...} com os mesmos campos do custom_dashboards_preview_widget. Maximo 12. DOIS campos de bloco que faltavam aqui: `follow_report_period` (true/false, tambem aceita as strings; AUSENTE = true) diz se o bloco obedece o calendario do TOPO do relatorio ou usa o periodo proprio — vale pra qualquer bloco, novo em 22/08/2026; e `direction_split` (true/false, padrao false) que SO faz efeito no bloco `calls_report` e troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida — OPT-IN de proposito pra nao mexer no relatorio de quem ja usa o bloco, novo em 28/08/2026. Desde 10/09/2026, campos SO dos blocos da e-Clinica: `no_show_over_scheduled` (true/false, padrao false — a % de falta passa a ser faltaram/agendados em vez de sobre os desfechos conhecidos; so faz efeito em `eclinica_no_show`) e `count_retorno_as_consulta` (true/false, padrao true — retorno conta como consulta na base da conversao; desligado, o retorno vai para 'Nao classificado'; so faz efeito em `eclinica_conversion`). E desde 28/09/2026, `only_first_visit` (true/false, padrao false — SO em `eclinica_no_show`: conta so a consulta INICIAL, deixando de fora retorno, sessao de tratamento e procedimento, e o cabecalho da primeira coluna vira 'Consultas iniciais'). Aceitam as strings 'true'/'false'; qualquer outro valor = 422 com o motivo."
    }
   ],
   "returns": "{ id, name, position, widgets, created_at }",
@@ -26788,7 +27141,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Lista COMPLETA de blocos — substitui a atual. Preserve o `id` de cada bloco que ja existia, senao a tela perde o vinculo. Maximo 12. DOIS campos de bloco que faltavam aqui: `follow_report_period` (true/false, tambem aceita as strings; AUSENTE = true) diz se o bloco obedece o calendario do TOPO do relatorio ou usa o periodo proprio — vale pra qualquer bloco, novo em 22/08/2026; e `direction_split` (true/false, padrao false) que SO faz efeito no bloco `calls_report` e troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida — OPT-IN de proposito pra nao mexer no relatorio de quem ja usa o bloco, novo em 28/08/2026. Desde 10/09/2026, dois campos SO dos blocos da e-Clinica: `no_show_over_scheduled` (true/false, padrao false — a % de falta passa a ser faltaram/agendados em vez de sobre os desfechos conhecidos; so faz efeito em `eclinica_no_show`) e `count_retorno_as_consulta` (true/false, padrao true — retorno conta como consulta na base da conversao; desligado, o retorno vai para 'Nao classificado'; so faz efeito em `eclinica_conversion`). Aceitam as strings 'true'/'false'; qualquer outro valor = 422 com o motivo."
+    "description": "Lista COMPLETA de blocos — substitui a atual. Preserve o `id` de cada bloco que ja existia, senao a tela perde o vinculo. Maximo 12. DOIS campos de bloco que faltavam aqui: `follow_report_period` (true/false, tambem aceita as strings; AUSENTE = true) diz se o bloco obedece o calendario do TOPO do relatorio ou usa o periodo proprio — vale pra qualquer bloco, novo em 22/08/2026; e `direction_split` (true/false, padrao false) que SO faz efeito no bloco `calls_report` e troca as colunas fixas por Feitas x Recebidas, com quem atendeu na recebida — OPT-IN de proposito pra nao mexer no relatorio de quem ja usa o bloco, novo em 28/08/2026. Desde 10/09/2026, campos SO dos blocos da e-Clinica: `no_show_over_scheduled` (true/false, padrao false — a % de falta passa a ser faltaram/agendados em vez de sobre os desfechos conhecidos; so faz efeito em `eclinica_no_show`) e `count_retorno_as_consulta` (true/false, padrao true — retorno conta como consulta na base da conversao; desligado, o retorno vai para 'Nao classificado'; so faz efeito em `eclinica_conversion`). E desde 28/09/2026, `only_first_visit` (true/false, padrao false — SO em `eclinica_no_show`: conta so a consulta INICIAL, deixando de fora retorno, sessao de tratamento e procedimento, e o cabecalho da primeira coluna vira 'Consultas iniciais'). Aceitam as strings 'true'/'false'; qualquer outro valor = 422 com o motivo."
    }
   ],
   "returns": "{ id, name, position, widgets, created_at }",
@@ -28057,7 +28410,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/audit_logs",
   "title": "Registro de Auditoria",
-  "description": "Histórico de quem mexeu no quê dentro da conta (criação, edição, exclusão, login e logout), com o autor, o IP e o antes/depois de cada campo. ATENÇÃO ao formato das datas: aqui 'since' e 'until' são DATA POR EXTENSO (AAAA-MM-DD) e NÃO timestamp Unix — é o oposto dos relatórios; mandar um número Unix derruba a chamada com erro. Somente administradores; a conta precisa ter o recurso de auditoria habilitado, senão a lista volta VAZIA sem nenhum aviso de erro.",
+  "description": "Histórico de quem mexeu no quê dentro da conta (criação, edição, exclusão, login e logout), com o autor, o IP e o antes/depois de cada campo. ATENÇÃO ao formato das datas: aqui 'since' e 'until' são DATA POR EXTENSO (AAAA-MM-DD) e NÃO timestamp Unix — é o oposto dos relatórios; mandar um número Unix derruba a chamada com erro. Somente administradores; a conta precisa ter o recurso de auditoria habilitado, senão a lista volta VAZIA sem nenhum aviso de erro. MENSAGEM APAGADA (26/09/2026): quando alguém apaga uma mensagem pelo painel, fica um registro auditable_type 'Message', action 'destroy', com audited_changes = { content (texto, até 2000 caracteres), display_id (conversa), inbox_id, sender_type, sender_id, sender_name, attachments (nomes dos arquivos) } — é a foto tirada ANTES de apagar; auditable vem null nesse caso. Busque com q='trecho da mensagem' ou auditable_type=Message.",
   "category": "Auditoria",
   "params": [
    {
@@ -28093,7 +28446,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Tipo de recurso afetado: Account, AccountUser, AutomationRule, Conversation, Inbox, InboxMember, Macro, Team, TeamMember, User, Webhook"
+    "description": "Tipo de recurso afetado: Account, AccountUser, AutomationRule, Conversation, Inbox, InboxMember, Macro, Message (mensagem APAGADA pelo painel, desde 26/09/2026), Team, TeamMember, User, Webhook"
    },
    {
     "name": "remote_address",
@@ -28115,9 +28468,23 @@
     "location": "query",
     "required": false,
     "description": "Data final no formato AAAA-MM-DD (o dia inteiro entra). NÃO é timestamp Unix — número aqui gera erro"
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Busca por texto (3+ letras): nome de quem fez OU conteúdo da mudança (inclusive o texto de mensagem apagada). Menos de 3 letras = ignorado. Em conta grande pode levar ~1 s; combine com since/until pra encurtar."
+   },
+   {
+    "name": "sort",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Ordem por data: desc (mais recentes primeiro, padrão) ou asc."
    }
   ],
-  "returns": "{ per_page, total_entries, current_page, audit_logs: [{ id, auditable_id, auditable_type, auditable, associated_id, associated_type, user_id, user_type, username, action, audited_changes (antes/depois por campo), version, comment, request_uuid, created_at (Unix em segundos), remote_address }] }",
+  "returns": "{ per_page, total_entries, current_page, audit_logs: [{ id, auditable_id, auditable_type, auditable, associated_id, associated_type, user_id, user_type, username, action, audited_changes (antes/depois por campo), version, comment, request_uuid, created_at (Unix em segundos), remote_address (IP inteiro), ip_masked (IP parcial, ex. 177.12.x.x; null pra IP interno), ip_city, ip_region (cidade/estado do IP — só do que já foi descoberto; o que falta aparece na próxima consulta) }] }",
   "common_use_cases": [
    "Descobrir quem apagou uma caixa de entrada ou uma automação",
    "Ver todos os logins de um agente num intervalo de datas",
@@ -33375,7 +33742,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}",
   "title": "Detalhes da Integração e-Clínica",
-  "description": "SÓ LEITURA, somente administrador. A integração e-Clínica da conta (1 por conta; o id precisa ser o dela — 404 caso contrário) com status, saúde, mapeamento de eventos, lembretes, webhook_url e as UNIDADES (filiais) com status/token-por-variável/webhook próprio. Mesmo conteúdo de lionchat_eclinica_integrations_list, que já resolve o id. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` alem do `flow_id` — pelo menos um dos dois (422 sem nenhum); com os DOIS preenchidos a AUTOMACAO vence no disparo. A automacao precisa ser da propria conta (422 senao). ALERTA de regra de negocio ao configurar: o caminho por automacao RODA AS ACOES SEM AVALIAR AS CONDICOES da automacao. Desde 17/09/2026 os DOIS caminhos (fluxo e automacao) mandam um aviso POR CONSULTA: paciente com duas consultas no dia (ou dois pacientes no mesmo celular) recebe um aviso para cada uma, ~10 min um do outro (fila por contato). Quem quer so um por dia monta no FLUXO (condicao num atributo com {{data_consulta}}); na automacao nao da, porque as condicoes dela nao sao avaliadas — avise o cliente antes de trocar fluxo por automacao.",
+  "description": "SÓ LEITURA, somente administrador. A integração e-Clínica da conta (1 por conta; o id precisa ser o dela — 404 caso contrário) com status, saúde, mapeamento de eventos, lembretes, webhook_url e as UNIDADES (filiais) com status/token-por-variável/webhook próprio. Mesmo conteúdo de lionchat_eclinica_integrations_list, que já resolve o id. LEMBRETE POR AUTOMACAO (25/08): cada entrada de reminder_config aceita `automation_id` alem do `flow_id` — pelo menos um dos dois (422 sem nenhum); com os DOIS preenchidos a AUTOMACAO vence no disparo. A automacao precisa ser da propria conta (422 senao). ALERTA de regra de negocio ao configurar: o caminho por automacao RODA AS ACOES SEM AVALIAR AS CONDICOES da automacao. Desde 17/09/2026 os DOIS caminhos (fluxo e automacao) mandam um aviso POR CONSULTA: paciente com duas consultas no dia (ou dois pacientes no mesmo celular) recebe um aviso para cada uma, ~10 min um do outro (fila por contato). Quem quer so um por dia monta no FLUXO (condicao num atributo com {{data_consulta}}); na automacao nao da, porque as condicoes dela nao sao avaliadas — avise o cliente antes de trocar fluxo por automacao. VARIAVEIS DA MENSAGEM (28/09/2026): na automacao alvo de lembrete use {{eclinica_lembrete.<campo>}} (data_consulta, hora_consulta, profissional, compromisso, paciente_nome, unidade, link_confirmacao, idagenda, cliente_id, agendatipo, cor; laboratorio: data_prevista/data_entrega/data_referencia; cobranca: vencimento/valor/descricao) — e a consulta DAQUELE lembrete, data em DD/MM/AAAA. NUNCA a ficha {{contact.custom_attribute.eclinica_*}}: guarda so a consulta do ULTIMO aviso e manda a data de outra consulta. O nome antigo {{agendamento.*}} ainda funciona. No FLUXO nada muda ({{data_consulta}} etc). Detalhe no resource data-model, secao e-Clinica.",
   "category": "Integracoes",
   "params": [
    {
