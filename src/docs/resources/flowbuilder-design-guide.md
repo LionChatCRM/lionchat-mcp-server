@@ -447,7 +447,7 @@ campanha"):
   `lead_form` (Formulário), `organic` (Orgânico), `direct` (Direto), `referral` (Indicação), `manual` (Origem
   cadastrada). O painel mostra o rótulo em português, mas a comparação é pelo VALOR — `"Anúncio"` nunca casa.
 - `origin_platform` (e first/last): `facebook`, `instagram`, `google`, `tiktok`, `linkedin`, `youtube`,
-  `whatsapp`, `direct` — e, para origem cadastrada pelo cliente em Configurações > Origens de Lead,
+  `whatsapp`, `email`, `messenger`, `audience_network` (Rede de parceiros da Meta, desde 29/09/2026), `direct` — e, para origem cadastrada pelo cliente em Configurações > Origens de Lead,
   `custom:<slug>` (slug = nome parametrizado, ex.: "Indicação de amigo" → `custom:indicacao-de-amigo`;
   liste com `lionchat_lead_origins_list`). Para filtrar por uma origem cadastrada use `origin_platform`
   com `contains` + uma palavra do slug, ou `equal` + o `custom:<slug>` completo.

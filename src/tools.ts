@@ -484,7 +484,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-17)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-29)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -827,7 +827,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     VALORES FECHADOS de origin_kind (e first/last): paid_ad (Anuncio), lead_form (Formulario), organic
     (Organico), direct (Direto), referral (Indicacao), manual (Origem cadastrada) — compara pelo VALOR, nunca
     pelo rotulo ("Anuncio" nunca casa). origin_platform: facebook, instagram, google, tiktok, linkedin, youtube,
-    whatsapp, direct, e origem cadastrada pelo cliente = 'custom:<slug>' (ex 'custom:indicacao-de-amigo';
+    whatsapp, email, messenger, audience_network (Rede de parceiros da Meta), direct, e origem cadastrada pelo cliente = 'custom:<slug>' (ex 'custom:indicacao-de-amigo';
     lionchat_lead_origins_list) — filtre com contains + palavra do slug ou equal + 'custom:<slug>'.
     Caso real (Cast 01/09): "Ativar IA so para lead de anuncio" = cond_0 {origin_kind equal values:['paid_ad']}
     -> assign_captain; default sem nada.

@@ -528,6 +528,27 @@ viraram conversa). É um relatório de LEITURA puro — não cria nem altera nad
 **Perguntas que esse relatório responde:** "qual plataforma trouxe mais leads?", "qual campanha/
 conjunto converteu melhor?", "quantos leads únicos vieram esse mês e quantos fecharam?".
 
+**Valores de `platform`:** `facebook`, `instagram`, `google`, `tiktok`, `linkedin`, `email`, `messenger`,
+`audience_network` (Rede de parceiros da Meta), `twitter`, `youtube`, `whatsapp`, `direct`, `custom:<slug>`
+(origem cadastrada pela conta) e `other:<palavra>` (quando o `utm_source` do link não é uma plataforma conhecida).
+
+### Lead de anúncio da Meta aparece como `other:...` ou Orgânico (2026-09-29)
+
+Em anúncio da Meta que leva ao SITE, a plataforma e o tipo saem dos parâmetros do link (`utm_*`). Se o
+gestor de tráfego montou o link de outro jeito (ex.: nome da campanha no `utm_source`), o lead cai como
+`other:<primeira palavra>` e `organic`, mesmo tendo vindo de anúncio pago. Caso real: conta 174, 27 leads
+como `other:[fh]` em setembro. O conserto é do lado do anúncio: no Gerenciador de Anúncios da Meta, no
+nível do ANÚNCIO, campo "Parâmetros de URL", colar
+
+`utm_source={{site_source_name}}&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{adset.name}}&utm_term={{ad.name}}`
+
+A Meta preenche `{{site_source_name}}` com `ig`, `fb`, `msg` ou `an`, que viram `instagram`, `facebook`,
+`messenger` e `audience_network`. O LionChat lê `utm_content` como Conjunto e `utm_term` como Criativo (o
+modelo comum da internet inverte os dois). O mesmo texto, com botão de copiar, está na tela
+Configurações > Integrações > Meta Conversions API, bloco "Configurar o rastreio dos anúncios da Meta".
+Leads que já entraram não mudam sozinhos; para corrigir um a um use `lionchat_conversations_set_origin`.
+Anúncio que abre direto o WhatsApp não precisa disso (os dados chegam pelo `ctwa_*`).
+
 ### Atributos de anúncio (`ctwa_*`) — dois novos e nomes alinhados (2026-08-01)
 
 Conversa que veio de anúncio "Clique para WhatsApp" carrega atributos `ctwa_*` (`ctwa_campaign_name`,
