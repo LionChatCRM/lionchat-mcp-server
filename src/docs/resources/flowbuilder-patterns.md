@@ -514,7 +514,7 @@
 
 ## 16. Feliz aniversário (Gatilho de Data)
 
-**Caso:** manda uma mensagem de parabéns todo ano no aniversário do contato, às 09:00, pela caixa onde ele conversa. Usa o gatilho `date_trigger` (dispara na data, sem varredura). Só flow **individual**.
+**Caso:** manda uma mensagem de parabéns todo ano no aniversário do contato, às 09:00, pela caixa onde ele conversa. Usa o gatilho `date_trigger` (dispara na data, sem varredura). Vale em flow **individual e de grupo** — no de grupo a data é do próprio grupo (contato-grupo ou atributo da conversa).
 
 ```json
 {
