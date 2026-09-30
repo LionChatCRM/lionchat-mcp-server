@@ -33342,6 +33342,164 @@
   ]
  },
  {
+  "id": "lionchat_lead_origins_unrecognized",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/lead_origins/unrecognized",
+  "title": "Origens que o sistema nao reconheceu",
+  "description": "Lista os valores que chegaram no link do anuncio e que o LionChat nao soube classificar como plataforma (ficam como 'outra' nos relatorios). Diz em QUAL campo cada valor chegou (utm_source, anuncio de WhatsApp, formulario da Meta ou LionTrack), quantos leads vieram por ele e quantos valores diferentes existem. Traz junto o mapa de qual UTM alimenta qual campo, com o exemplo de cada plataforma (Meta, Google Ads, TikTok Ads). Somente leitura.",
+  "category": "Integracoes",
+  "params": [],
+  "returns": "{ total, field_map: [{ utm, field, meta, google, tiktok }], items: [{ platform, label, count, raw_value, field, field_count, distinct_values }] }",
+  "common_use_cases": [
+   "Descobrir por que leads de anuncio aparecem como 'outra' no relatorio de origem",
+   "Conferir se o link do anuncio foi montado com o valor no campo errado",
+   "Ver a tabela de qual UTM vira qual campo em cada plataforma"
+  ],
+  "related_tools": [
+   "lionchat_lead_origins_adopt_unrecognized",
+   "lionchat_lead_origins_dismiss_unrecognized",
+   "lionchat_lead_origin_reports"
+  ]
+ },
+ {
+  "id": "lionchat_lead_origins_adopt_unrecognized",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/lead_origins/adopt_unrecognized",
+  "title": "Transformar valor nao reconhecido em origem",
+  "description": "Cria uma origem de lead a partir de um valor que o sistema nao reconheceu, e ensina o motor a classificar esse valor dali em diante. NAO reprocessa os leads que ja entraram. So aceita plataforma no formato 'other:<valor>'. Conserta a PLATAFORMA, nao o tipo: se os leads vierem de anuncio pago, o link tambem precisa de utm_medium=paid, senao continuam como Organico.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "platform",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "O valor nao reconhecido, no formato 'other:<valor>', exatamente como veio de lead_origins_unrecognized"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome da origem que a pessoa vai ler na tela (ex.: 'Minha Pagina'). O identificador colado e gerado a partir dele"
+   }
+  ],
+  "returns": "{ id, name, slug, color, active }",
+  "common_use_cases": [
+   "Transformar um valor recorrente do link em origem propria da conta",
+   "Parar de ver leads de uma parceria caindo como 'outra'"
+  ],
+  "related_tools": [
+   "lionchat_lead_origins_unrecognized",
+   "lionchat_lead_origins_dismiss_unrecognized",
+   "lionchat_lead_origins_create"
+  ]
+ },
+ {
+  "id": "lionchat_lead_origins_dismiss_unrecognized",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/lead_origins/dismiss_unrecognized",
+  "title": "Descartar valor nao reconhecido do aviso",
+  "description": "Tira um valor nao reconhecido da lista de avisos, sem criar origem nenhuma. Use quando o valor e erro mesmo (nome de campanha escrito no campo da plataforma) ou nao interessa. Nao mexe em lead nenhum: os leads ja classificados continuam como estao. Guarda ate 50 descartes por conta.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "platform",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "O valor nao reconhecido, no formato 'other:<valor>'"
+   }
+  ],
+  "returns": "200 sem corpo",
+  "common_use_cases": [
+   "Limpar da lista um valor que e erro de montagem do link e nao vai ser corrigido",
+   "Evitar que o aviso de origens nao reconhecidas vire ruido"
+  ],
+  "related_tools": [
+   "lionchat_lead_origins_unrecognized",
+   "lionchat_lead_origins_adopt_unrecognized"
+  ]
+ },
+ {
+  "id": "lionchat_lead_origins_custom_utms",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/lead_origins/custom_utms",
+  "title": "UTMs inventadas que estao chegando",
+  "description": "Lista as UTMs que o cliente inventou no proprio link (utm_parceiro, utm_vendedor...) e que o LionTrack ja esta guardando de lado, mas que ainda NAO viraram campo da conversa. Mostra quantos leads chegaram com cada uma, exemplos de valor e se ela ja esta sendo acompanhada. Somente leitura: nada e criado aqui.",
+  "category": "Integracoes",
+  "params": [],
+  "returns": "{ limit, items: [{ key, count, samples, tracked }] }",
+  "common_use_cases": [
+   "Ver quais UTMs proprias o time de trafego ja esta usando nos links",
+   "Decidir qual UTM inventada vale virar campo de verdade"
+  ],
+  "related_tools": [
+   "lionchat_lead_origins_track_custom_utm",
+   "lionchat_lead_origins_untrack_custom_utm"
+  ]
+ },
+ {
+  "id": "lionchat_lead_origins_track_custom_utm",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/lead_origins/track_custom_utm",
+  "title": "Passar a acompanhar uma UTM inventada",
+  "description": "Transforma uma UTM inventada pelo cliente em atributo personalizado de CONVERSA, e preenche retroativamente as conversas que ja tinham o valor guardado (ate 200, das mais recentes). A partir dai ela aparece na ficha da conversa e pode ser usada em filtro, segmento, publico de campanha, automacao, fluxo, API e MCP. Recusa (422) chave fora do formato utm_<letras/numeros>, chave ja acompanhada, ou teto de 10 por conta atingido.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "key",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "A chave como aparece no link, comecando com utm_ (ex.: utm_parceiro)"
+   },
+   {
+    "name": "display_name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Nome que a pessoa le na tela. Sem isso, e derivado da propria chave"
+   }
+  ],
+  "returns": "{ key, display_name, backfilled } ou { error } com 422",
+  "common_use_cases": [
+   "Passar a filtrar conversas por uma UTM propria do cliente",
+   "Montar segmento ou publico de campanha por parceiro/vendedor que vem no link"
+  ],
+  "related_tools": [
+   "lionchat_lead_origins_custom_utms",
+   "lionchat_lead_origins_untrack_custom_utm",
+   "lionchat_custom_attributes_list"
+  ]
+ },
+ {
+  "id": "lionchat_lead_origins_untrack_custom_utm",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/lead_origins/untrack_custom_utm",
+  "title": "Parar de acompanhar uma UTM inventada",
+  "description": "Remove o CAMPO criado para uma UTM inventada. NAO apaga os valores ja gravados nas conversas: eles continuam la e voltam a aparecer se a chave for acompanhada de novo. So funciona em chave que comeca com utm_ e que nao seja atributo de sistema.",
+  "category": "Integracoes",
+  "params": [
+   {
+    "name": "key",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "A chave acompanhada que se quer remover (ex.: utm_parceiro)"
+   }
+  ],
+  "returns": "{ key, display_name }; 404 se a chave nao e acompanhada",
+  "common_use_cases": [
+   "Limpar da ficha da conversa uma UTM que deixou de ser usada",
+   "Liberar vaga no teto de 10 UTMs acompanhadas por conta"
+  ],
+  "related_tools": [
+   "lionchat_lead_origins_custom_utms",
+   "lionchat_lead_origins_track_custom_utm"
+  ]
+ },
+ {
   "id": "lionchat_meta_lead_refresh_sample",
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/integrations/meta_lead_forms/{id}/refresh_sample",
