@@ -290,7 +290,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/contacts/{id}",
   "title": "Atualizar Contato",
-  "description": "Atualiza um contato. Aceita name, email, phone_number, identifier, custom_attributes, additional_attributes, blocked, avatar/avatar_url. NUNCA sobrescreva phone_number/email ja preenchido sem confirmacao. TELEFONE UNICO POR CONTA (trava no banco desde 01/09/2026): trocar phone_number para um numero que ja e de outro contato da conta = 422 'phone_number has already been taken'. EMPRESA (2026-09-25): aceita company_id (ver param); o contato devolve company_id. Cargo da pessoa = additional_attributes.job_title.",
+  "description": "Atualiza um contato. Aceita name, email, phone_number, identifier, custom_attributes, additional_attributes, blocked, avatar/avatar_url. NUNCA sobrescreva phone_number/email ja preenchido sem confirmacao. ATENCAO — TROCAR DE NUMERO NAO E AQUI: mudar `phone_number` por esta rota muda o que aparece na tela mas NAO redireciona as mensagens, porque o endereco de entrega vem do cracha de cada caixa e de um cache por contato. Medido em 01/10: depois de editar so a ficha, todas as conversas seguiam enviando pro numero ANTIGO nos dois canais de WhatsApp, sem erro nenhum. Para trocar de numero de verdade use lionchat_contacts_change_phone. Esta rota serve para CORRIGIR o cadastro (erro de digitacao em contato que nunca conversou).",
   "category": "Contatos",
   "params": [
    {
@@ -319,7 +319,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Telefone"
+    "description": "Telefone. So para CORRIGIR o cadastro — nao redireciona o envio. Troca de numero de verdade: lionchat_contacts_change_phone"
    },
    {
     "name": "identifier",
@@ -371,6 +371,7 @@
    "Atualização em massa via automação"
   ],
   "related_tools": [
+   "lionchat_contacts_change_phone",
    "lionchat_contacts_update_1"
   ]
  },
@@ -29882,6 +29883,102 @@
   "related_tools": [
    "lionchat_conversations_set_origin",
    "lionchat_lead_origin_reports",
+   "lionchat_contacts_show"
+  ]
+ },
+ {
+  "id": "lionchat_contacts_change_phone",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/contacts/{id}/change_phone",
+  "title": "Trocar o Telefone do Contato (mantendo a conversa)",
+  "description": "Troca o telefone de um contato MANTENDO a mesma conversa no painel. Use SEMPRE esta rota quando a pessoa mudou de numero — nunca lionchat_contacts_update, que muda a ficha e NAO redireciona as mensagens (o endereco de entrega vem do cracha de cada caixa e de um cache por contato, nao da ficha). Esta rota mexe nas quatro pecas: telefone da ficha, cracha de cada caixa de WhatsApp (QR Code e oficial), crachas extras (saem de circulacao, com as conversas reapontadas) e o cache de LID. Escreve uma pilula de atividade nas conversas do contato dizendo de qual numero para qual, e limpa a marca \"nao tem WhatsApp\" do numero antigo (que tirava a pessoa de toda campanha). No QR Code, a forma canonica do numero e perguntada ao WhatsApp antes de gravar — isso resolve sozinho o caso do nono digito. RECUSA (nao troca) quando: o numero e o mesmo, e invalido, o contato e um GRUPO, ou o numero ja pertence a outra ficha (409 com quem e o dono). OPCIONAL merge_with: junta as fichas E troca numa so operacao, com ESTA ficha sobrevivendo e a outra sendo APAGADA — so aceita a ficha dona do numero, exige permissao de excluir contato, e NAO tem como desfazer. Antes de usar merge_with, consulte lionchat_contact_merge_preview para saber o que sera descartado e CONFIRME com a pessoa.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contato que vai trocar de numero"
+   },
+   {
+    "name": "phone_number",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Numero novo. Aceita com ou sem \"+\" (e normalizado para E.164)"
+   },
+   {
+    "name": "merge_with",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "ID da ficha a ser ABSORVIDA (e APAGADA) quando o numero novo ja pertence a ela. So aceita a ficha dona do numero. Exige permissao de excluir contato. Irreversivel — confirme antes"
+   }
+  ],
+  "returns": "200 { trocou, antigo, novo, crachas_atualizados, crachas_arquivados, conversas_reapontadas, conversas_avisadas }; 409 { error: \"telefone_de_outro_contato\", conflito: { id, name, phone_number } } quando o numero ja e de outra ficha; 422 { error } para telefone_igual, telefone_invalido, contato_de_grupo ou merge_with_nao_e_dono_do_numero",
+  "common_use_cases": [
+   "O cliente avisou que mudou de numero e quer continuar o atendimento na mesma conversa",
+   "A clinica ou integracao informou um telefone novo para o mesmo paciente",
+   "Juntar a ficha duplicada que ja usa o numero novo e passar a usar esse numero (merge_with)"
+  ],
+  "related_tools": [
+   "lionchat_contact_merge_preview",
+   "lionchat_contacts_show",
+   "lionchat_contacts_update"
+  ]
+ },
+ {
+  "id": "lionchat_contact_merge_preview",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/actions/contact_merge/preview",
+  "title": "Previa da Mesclagem de Contatos",
+  "description": "Diz o que a mesclagem VAI fazer, sem executar nada. Use SEMPRE antes de mesclar ou de usar merge_with, e mostre o resultado para a pessoa confirmar: mesclar APAGA uma ficha e NAO tem como desfazer. Devolve quem fica, quem deixa de existir, os campos que entram nos vazios do sobrevivente, os que serao DESCARTADOS (quando os dois tem valor diferente), quantas conversas vem, quantas vao aparecer encerradas, as etiquetas que somam e se a ficha vai ficar bloqueada. Regra de quem vence, campo a campo: o sobrevivente ganha onde ELE tem valor; onde esta vazio, recebe o do outro. Leitura pura; exige a mesma permissao de mesclar (excluir contato).",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "base_contact_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "ID do contato que SOBREVIVE"
+   },
+   {
+    "name": "mergee_contact_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "ID do contato que sera APAGADO"
+   },
+   {
+    "name": "phone_number",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Numero que a ficha vai adotar depois da juncao. Sem ele, a previa anuncia o telefone do absorvido como \"descartado\" — o que seria mentira no caminho da troca de telefone"
+   }
+  ],
+  "returns": "200 { fica: {id,name}, sai: {id,name}, entra: [{key,label,value}], descartado: [{key,label,atual,descartado}], telefone_novo, conversas, conversas_que_serao_fechadas, etiquetas_novas, vai_ficar_bloqueado }",
+  "common_use_cases": [
+   "Mostrar ao usuario o que se perde antes de confirmar a mesclagem de duas fichas",
+   "Conferir, antes de usar merge_with na troca de telefone, o que sera descartado"
+  ],
+  "related_tools": [
+   "lionchat_contacts_change_phone",
    "lionchat_contacts_show"
   ]
  },
