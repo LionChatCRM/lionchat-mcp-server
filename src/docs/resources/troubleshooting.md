@@ -617,6 +617,42 @@ abre esse canal e nunca vê isso.
 Correção (v1.15.1): o servidor manda um `ping` a cada 30 s enquanto o canal está aberto.
 Interruptor: `MCP_KEEPALIVE_INTERVAL_MS` (0 = desligado). Detalhe: `docs/plans/mcp-keepalive-cloudflare/`.
 
+## Conector REMOTO parou de funcionar e só volta reconectando na mão — CORRIGIDO na v1.27.0
+
+Vale SÓ para o conector remoto (`mcp.lionchat.com.br`). O conector local (npm, stdio) nunca teve isso.
+
+Sintoma, como o cliente relata: *"o MCP caiu"*, *"deu Server not initialized"*, *"parou de responder e
+só voltou quando eu desconectei e conectei o conector de novo"*. Todas as chamadas falham, não só
+algumas, e **não volta sozinho** — nem esperando, nem fechando e abrindo o chat. O que resolve é ir em
+Conectores e reconectar.
+
+Causa (até a v1.26.1): o servidor guardava cada conexão **na memória**. Quando o pod reiniciava (deploy,
+troca de nó, queda de máquina), a memória ia embora e o pedido seguinte do cliente recebia
+`400 Server not initialized`. O programa do cliente trata só 401/403/405 e **desiste em definitivo** com
+qualquer outro código — ele nunca descarta o número de sessão por conta própria. Daí o "só volta
+reconectando": reconectar é o único jeito de ele pedir um número novo.
+Caso real (01/10/2026): um cliente levou **28 recusas em 2 minutos** e ficou sem o MCP até alguém
+reconectar; ninguém foi avisado de nada.
+
+Correção (v1.27.0, 01/10/2026): o servidor não guarda mais sessão — cada pedido se resolve sozinho com
+as credenciais que já vêm nele. O número de sessão antigo passa a ser ignorado em vez de recusado, e o
+reinício do pod fica invisível para quem está usando.
+
+O que NÃO mudou, para quem perguntar:
+- A conta em que a IA age continua a mesma (a escolha do `lionchat_switch_account` é guardada e lida em
+  todo pedido novo). **Mudou um detalhe:** a conta escolhida agora vale para TODAS as janelas daquela
+  pessoa. Antes, cada janela tinha a sua — mas só até a próxima reconexão, que acontece sozinha a cada
+  poucos minutos, e então herdava a da outra. Era imprevisível, não isolamento.
+- O catálogo do ChatGPT (modo enxuto, 35 ferramentas na vitrine + o balcão que alcança as 935) é idêntico.
+- O `ping` de 30 s contra o corte do Cloudflare continua ativo (seção acima).
+
+Interruptor: `MCP_STATELESS` (`off` volta ao modo antigo, com sessão). Nasce ligado.
+Detalhe e medições: `docs/plans/mcp-sessao-sobrevive-reinicio/design.md` no repo `lionchat-mcp-remote`.
+
+**Se o sintoma voltar na v1.27.0 ou depois, NÃO é esta causa** — era por construção, e há rede de teste
+cobrindo. Procurar outra: token expirado (401), conector apontando para endereço errado, ou o canal de
+avisos sendo cortado (seção acima).
+
 ## "O grupo não recebeu o resumo diário" (Avisos de relatório) — 27/08
 
 Diagnóstico em 2 passos: `lionchat_report_alerts_list` (colunas `last_delivery_status`/`last_error`

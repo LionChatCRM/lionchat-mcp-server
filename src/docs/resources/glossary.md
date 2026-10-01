@@ -514,6 +514,14 @@ cards daquele funil).
 - **Plano B** (`fallback_reason` no `meta_capi_events`): o evento de anúncio saiu como SITE. O motivo
   fica gravado (`lionchat:*` nosso ou `"<subcode>: <mensagem>"` da Meta); na tela é o selo âmbar
   "site (plano B)" e o filtro "Só plano B" (`degraded=true` na API).
+- **`qr_page_attribution`** (no `meta_capi_events`, desde 2026-09-30): resultado da atribuição de
+  campanha em caixa **QR Code**, que não tem conta do WhatsApp Business. Ali a identidade é a
+  **Página do Facebook** do anúncio e o destino é o conjunto de dados dela — um **SEGUNDO** envio,
+  em adição ao evento de site, que continua indo para o pixel. Campos: `status` (200 = atribuída),
+  `reason`, `page_id`, `dataset_id`, `event_name`, `at`.
+  **Não confundir com Plano B**: evento de QR Code nunca tem `fallback_reason`, então `degraded=true`
+  não mostra essas falhas. Na tela, a coluna "Saiu como" diz **"Site + WhatsApp"** quando os dois
+  saíram. Exige as três conexões: WhatsApp, Pixel e Página.
 
 ## Idiomas da plataforma (2026-06)
 

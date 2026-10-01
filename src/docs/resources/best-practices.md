@@ -463,6 +463,23 @@ Meta só aceita isso num **dataset vinculado à WABA**, nunca no pixel do site (
   `lionchat:caixa_sem_token`, `lionchat:dataset_id_invalido`, `lionchat:desligado_pelo_cliente`,
   `lionchat:nome_sem_equivalente_whatsapp`; da Meta: `"<subcode>: <mensagem>"` (ex.: 2804087 = clique
   do anúncio inválido/expirado).
+- **Caixa QR Code (WhatsApp não oficial) tem OUTRA régua — `degraded=true` NÃO enxerga.** Ali a
+  atribuição de campanha é um SEGUNDO envio, para o conjunto de dados da Página do anúncio, e o
+  `action_source` da linha continua `website` (é o evento do pixel, que sempre sai). O resultado da
+  campanha mora em **`qr_page_attribution`** (`status`, `reason`, `page_id`, `dataset_id`), exposto
+  por `..._meta_capi_events_list` e `..._meta_capi_events_show`. `status: 200` = campanha atribuída;
+  qualquer outra coisa, ler o `reason`:
+  `sem_pagina_do_anuncio` (não foi possível ler a Página no anúncio — normalmente falta conectar a
+  Página do Facebook, ou a conexão não tem a permissão de eventos de WhatsApp),
+  `pagina_sem_conexao` (a Página do anúncio não está conectada nesta conta),
+  `dataset_indisponivel` (a Meta recusou criar/devolver o conjunto de dados da Página),
+  `dataset_e_o_proprio_pixel` (o conjunto da Página é o próprio pixel — o 2º envio é cancelado de
+  propósito, para não contar a conversão duas vezes), `conversa_nao_e_qr_code`,
+  `nao_e_evento_de_site` (o caminho oficial já atribuiu), `sem_clique_do_anuncio` (o lead não veio
+  de anúncio), `sem_nome_de_whatsapp`.
+  **Para atribuir: a conta precisa das TRÊS conexões** — WhatsApp (o clique), Pixel (o evento
+  existir) e Página do Facebook (o token que lê o anúncio). Depois de conectar a Página, o botão
+  **Reenviar** do histórico refaz só a atribuição, sem reenviar o evento de site.
 - Recusa ao vincular (422 com `subcode`, ex.: 2804116 / "whatsapp_business_manage_events"): a chave da
   caixa não tem a permissão — reconectar a caixa pelo Cadastro Incorporado da Meta; nunca pedir o token
   do pixel para isso. Um 401/403 da caixa NUNCA desliga o pixel da conta (site, formulário e agenda
