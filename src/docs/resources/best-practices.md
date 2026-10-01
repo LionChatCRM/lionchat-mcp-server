@@ -575,6 +575,13 @@ com uma única agenda liberada ela assume essa; com duas ou mais, recusa nomeand
 restringir quais agendas a IA oferece, continua valendo `captain_assistants_update` com
 `config.booking_event_type_ids`.
 
+**1-A. Quem limita a busca de horário é o DONO, não a IA (01/10/2026).** A janela de busca sai do
+`max_advance_days` do tipo de agendamento; sem limite configurado, vale o teto de 30 dias. A IA não
+consegue mais encurtar essa busca: ela varre dia a dia até achar vaga ou bater no limite. Consequência
+para quem configura pelo conector: se a IA está dizendo que "não há horário", o número a conferir é o
+`max_advance_days` do tipo (`lionchat_booking_event_types_update`), não o comportamento da IA. Agenda com
+vaga só daqui a 20 dias e janela configurada em 7 nunca oferece nada.
+
 **2. A IA entrega o link do Meet sozinha.** O link do Google Meet não existe no instante em que o
 agendamento é criado (nasce depois da ida ao Google), e antes a IA prometia o link e nunca voltava.
 Agora o sistema arma uma volta de ~25s; sem link ainda, ele remarca sozinho (+40s) sem gastar turno
