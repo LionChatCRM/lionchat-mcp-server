@@ -396,6 +396,26 @@ trava a criação.
 
 **NUNCA sobrescreva por inferência dados já preenchidos.** Em especial, **NUNCA sobrescreva telefone ou e-mail existente de um contato** — se já há valor preenchido, pergunte antes de alterar.
 
+**O cliente mudou de número? NÃO é `lionchat_contacts_update`.** Trocar `phone_number` por lá muda o
+que aparece na tela e **não redireciona as mensagens**: o endereço de entrega vem do crachá de cada
+caixa e de um cache por contato, não da ficha. Medido em 01/10/2026 — depois de editar só a ficha, todas
+as conversas seguiam enviando para o número ANTIGO nos dois canais de WhatsApp, sem erro nenhum.
+
+| Situação | Tool |
+|---|---|
+| A pessoa **mudou de número** | `lionchat_contacts_change_phone` |
+| **Corrigir erro de digitação** no cadastro de quem nunca conversou | `lionchat_contacts_update` |
+
+`lionchat_contacts_change_phone` mantém a mesma conversa, acerta o endereço nas duas caixas de WhatsApp,
+escreve uma pílula registrando a mudança e limpa a marca "não tem WhatsApp" do número antigo. Recusa
+quando o número é o mesmo, é inválido, o contato é um **grupo**, ou o número já pertence a outra ficha
+(devolve 409 dizendo de quem é).
+
+**Quando o número já é de outra ficha:** o parâmetro `merge_with` junta as duas e troca numa operação
+só — mas **apaga** a outra ficha e **não tem como desfazer**. Antes de usar, chame
+`lionchat_contact_merge_preview`, **mostre ao usuário o que será descartado e espere a confirmação
+dele**. Nunca use `merge_with` por conta própria.
+
 ## 8. Índice de roteamento (intenção → tool certa)
 
 Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da direita. Erros comuns aqui levam a ações de escrita disfaradas de leitura.
