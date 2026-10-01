@@ -78,7 +78,7 @@ Todo node tem essa estrutura base:
 - `conversation_attribute_changed` / `card_attribute_changed` (novo 2026-07-08): disparam na VIRADA de um atributo (da CONVERSA ou do CARD do kanban) pro valor que casa — RE-ENTRAM toda vez que o atributo muda pro valor alvo. Config: `{ "logic": "and"|"or", "rules": [ { "attr_key": "...", "operator": "...", "value": "..." } ] }` (uma rule pode usar `values: [...]` no lugar de `value` pra multi-valor). O `attrSource` é IMPLÍCITO pela chave do gatilho (conversa vs card) — NÃO informe. Operadores (contexto REATIVO — desde 09/07 `is_empty`/`is_not_empty` NÃO valem aqui, pois "está vazio AGORA" dispararia a cada evento; use-os só no nó Condição): `equal`/`not_equal`/`contains`/`not_contains`/`starts_with`/`ends_with`/`greater_than`/`less_than`/`number_range`. Só `card_attribute_changed` aceita `funnel_id`/`card_source` opcionais dentro da rule (pra achar o card). Rule sem `attr_key` é ignorada.
 - `contact_attribute_changed` (novo 2026-07-22 — "Atributo do contato muda"): dispara quando um atributo personalizado do **CONTATO** muda e a condição casa — mesmo com o contato fora de flow. Item: `{ "key": "contact_attribute_changed", "config": { "logic": "and"|"or", "rules": [ { "attrSource": "contact", "attr_key": "...", "operator": "...", "value": "..." } ] } }` (1 a 10 rules; `values: [...]` pra multi-valor). **DIFERENTE dos irmãos de 08/07: aqui o `attrSource` VAI na rule e é SEMPRE `"contact"`.** Operadores iguais aos do nó Condição. **VERSÃO SEGURA por decisão de produto:** dispara SÓ na conversa mais recente que JÁ EXISTE numa caixa do flow (reabre se resolvida); contato sem conversa NÃO dispara e NUNCA cria conversa. Dedup de 30s por contato + anti-loop por profundidade de cadeia (flow que muda atributo que dispara flow…). Só flows de conversa.
 
-- `date_trigger` — **Gatilho de Data (novo 2026-07-10):** dispara quando uma DATA guardada na ficha do CONTATO chega (aniversário, data de exame, vencimento de plano). Modelo "agendamento de mensagem": a escrita da data já marca o disparo — NÃO existe varredura periódica. Só em flow `conversation` **individual** (a data é de um contato; grupo não tem). Config (item usa `config` ANINHADO, igual `webhook_received`/`attribute_changed`):
+- `date_trigger` — **Gatilho de Data (novo 2026-07-10):** dispara quando uma DATA guardada na ficha do CONTATO chega (aniversário, data de exame, vencimento de plano). Modelo "agendamento de mensagem": a escrita da data já marca o disparo — NÃO existe varredura periódica. Vale em flow `conversation` **individual e de GRUPO** (liberado em 29/09/2026, cartão 1297): no flow de grupo a data sai do contato-grupo (que tem atributos próprios) ou, com `attr_source='conversation'`, do atributo da conversa do grupo. O motor barra o cruzamento — data de pessoa NÃO acorda flow de grupo e vice-versa (`FiringDispatchService#matches_conversation_mode?`, skip `modo_da_conversa`). Config (item usa `config` ANINHADO, igual `webhook_received`/`attribute_changed`):
   ```json
   { "key": "date_trigger", "config": {
     "attr_key": "_date_of_birth",          // "_date_of_birth" = Aniversário nativo; OU a chave de um atributo do contato do tipo Data (ex.: "data_exame")
@@ -447,7 +447,7 @@ campanha"):
   `lead_form` (Formulário), `organic` (Orgânico), `direct` (Direto), `referral` (Indicação), `manual` (Origem
   cadastrada). O painel mostra o rótulo em português, mas a comparação é pelo VALOR — `"Anúncio"` nunca casa.
 - `origin_platform` (e first/last): `facebook`, `instagram`, `google`, `tiktok`, `linkedin`, `youtube`,
-  `whatsapp`, `direct` — e, para origem cadastrada pelo cliente em Configurações > Origens de Lead,
+  `whatsapp`, `email`, `messenger`, `audience_network` (Rede de parceiros da Meta, desde 29/09/2026), `direct` — e, para origem cadastrada pelo cliente em Configurações > Origens de Lead,
   `custom:<slug>` (slug = nome parametrizado, ex.: "Indicação de amigo" → `custom:indicacao-de-amigo`;
   liste com `lionchat_lead_origins_list`). Para filtrar por uma origem cadastrada use `origin_platform`
   com `contains` + uma palavra do slug, ou `equal` + o `custom:<slug>` completo.
@@ -1117,7 +1117,7 @@ Na tela o usuário escolhe o TIPO (Conversa / IA Agente / Ações) e, só no tip
 |---|---|---|
 | Node `update_group` (Gestão de Grupos — WAHA) | disponível se a conta tem caixa QR Code — exige `groupInboxId` | disponível; `groupInboxId` opcional (padrão = grupo da conversa) |
 | Gatilhos e condições de **LionTrack** (visita de página / evento do site) | disponíveis | **NÃO** (grupo não tem um contato único navegando) |
-| Gatilho `date_trigger` (data do contato) | disponível | **NÃO** (grupo não tem um contato único) |
+| Gatilho `date_trigger` (data do contato) | disponível | disponível desde 29/09/2026 (data do contato-grupo, ou da conversa do grupo com `attr_source='conversation'`) |
 | Todos os outros nodes (`send_message`, `wait_response`, `condition`, `action`, `api`, `ai`, `set_variable`, `wait`, `randomizer`, `note`, `end`) | iguais | iguais |
 
 Regras práticas ao montar via API:

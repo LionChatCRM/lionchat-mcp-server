@@ -484,7 +484,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-17)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-29)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -561,14 +561,19 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     sla_type:'any'|'frt'|'nrt'|'rt'}} — vazio/'any' = qualquer politica / qualquer prazo; frt =
     1a resposta, nrt = resposta ao cliente, rt = resolucao. NAO re-dispara se o flow ja tem sessao
     ativa na conversa; flow antigo sem config = todos os SLAs/qualquer prazo),
-    date_trigger (NOVO 2026-07-10 — Gatilho de Data: dispara quando uma DATA do CONTATO chega,
-    aniversario/exame; modelo agenda, sem varredura; SO flow individual). Item usa config ANINHADO:
-    {key:'date_trigger', config:{ attr_key ('_date_of_birth'=aniversario nativo, OU chave de
-    atributo do contato tipo Data ex 'data_exame' — OBRIGATORIO), offset_direction 'before'|'on'|
-    'after', offset_days 0-365, repeat_yearly bool (true=ignora ano/aniversario), send_time_source
-    'fixed'|'attribute'|'variable' (+ send_time 'HH:MM' | send_time_attr_key | send_time_template
-    Liquid so-contato), inbox_mode 'contact_recent'|'fixed' (+ inbox_id obrigatorio se fixed),
-    filters {logic,rules[...]} opcional (attrSource sempre 'contact') }}. trigger_uuid e preenchido
+    date_trigger (NOVO 2026-07-10 — Gatilho de Data: dispara quando uma DATA chega,
+    aniversario/exame/entrega; modelo agenda, sem varredura). Vale em flow individual E DE GRUPO
+    (liberado 2026-09-29): no de grupo a data e do contato-grupo, ou da conversa do grupo com
+    attr_source 'conversation'. O motor barra o cruzamento — data de PESSOA nunca acorda flow de
+    grupo e data de GRUPO nunca acorda flow de mensagem (skip 'modo_da_conversa'). Item usa config
+    ANINHADO: {key:'date_trigger', config:{ attr_source 'contact' (padrao) | 'conversation',
+    attr_key ('_date_of_birth'=aniversario nativo, OU chave de atributo tipo Data ex 'data_exame';
+    com attr_source 'conversation' e a chave do atributo DA CONVERSA — OBRIGATORIO),
+    offset_direction 'before'|'on'|'after', offset_days 0-365, repeat_yearly bool (true=ignora
+    ano/aniversario), send_time_source 'fixed'|'attribute'|'variable' (+ send_time 'HH:MM' |
+    send_time_attr_key | send_time_template Liquid so-contato), inbox_mode 'contact_recent'|'fixed'
+    (+ inbox_id obrigatorio se fixed), filters {logic,rules[...]} opcional (attrSource sempre
+    'contact') }}. trigger_uuid e preenchido
     pelo backend (NAO envie). 29/02 vira 28/02 em ano nao-bissexto; tolerancia 24h; ativar o flow
     agenda quem ja tem a data; pulos aparecem em flows_executions_list.
     campaign_trigger (NOVO 2026-07-28 — Gatilho 'Campanha'): AUTORIZACAO, nao evento. Sozinho
@@ -827,7 +832,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     VALORES FECHADOS de origin_kind (e first/last): paid_ad (Anuncio), lead_form (Formulario), organic
     (Organico), direct (Direto), referral (Indicacao), manual (Origem cadastrada) — compara pelo VALOR, nunca
     pelo rotulo ("Anuncio" nunca casa). origin_platform: facebook, instagram, google, tiktok, linkedin, youtube,
-    whatsapp, direct, e origem cadastrada pelo cliente = 'custom:<slug>' (ex 'custom:indicacao-de-amigo';
+    whatsapp, email, messenger, audience_network (Rede de parceiros da Meta), direct, e origem cadastrada pelo cliente = 'custom:<slug>' (ex 'custom:indicacao-de-amigo';
     lionchat_lead_origins_list) — filtre com contains + palavra do slug ou equal + 'custom:<slug>'.
     Caso real (Cast 01/09): "Ativar IA so para lead de anuncio" = cond_0 {origin_kind equal values:['paid_ad']}
     -> assign_captain; default sem nada.

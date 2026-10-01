@@ -528,6 +528,63 @@ viraram conversa). É um relatório de LEITURA puro — não cria nem altera nad
 **Perguntas que esse relatório responde:** "qual plataforma trouxe mais leads?", "qual campanha/
 conjunto converteu melhor?", "quantos leads únicos vieram esse mês e quantos fecharam?".
 
+**Valores de `platform`:** `facebook`, `instagram`, `google`, `tiktok`, `linkedin`, `email`, `messenger`,
+`audience_network` (Rede de parceiros da Meta), `twitter`, `youtube`, `whatsapp`, `direct`, `custom:<slug>`
+(origem cadastrada pela conta) e `other:<palavra>` (quando o `utm_source` do link não é uma plataforma conhecida).
+
+### Lead de anúncio da Meta aparece como `other:...` ou Orgânico (2026-09-29)
+
+Em anúncio da Meta que leva ao SITE, a plataforma e o tipo saem dos parâmetros do link (`utm_*`). Se o
+gestor de tráfego montou o link de outro jeito (ex.: nome da campanha no `utm_source`), o lead cai como
+`other:<primeira palavra>` e `organic`, mesmo tendo vindo de anúncio pago. Caso real: conta 174, 27 leads
+como `other:[fh]` em setembro. O conserto é do lado do anúncio: no Gerenciador de Anúncios da Meta, no
+nível do ANÚNCIO, campo "Parâmetros de URL", colar
+
+`utm_source={{site_source_name}}&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{adset.name}}&utm_term={{ad.name}}`
+
+A Meta preenche `{{site_source_name}}` com `ig`, `fb`, `msg` ou `an`, que viram `instagram`, `facebook`,
+`messenger` e `audience_network`. O LionChat lê `utm_content` como Conjunto e `utm_term` como Criativo (o
+modelo comum da internet inverte os dois). O mesmo texto, com botão de copiar, está na tela
+Configurações > Integrações > Meta Conversions API, bloco "Configurar o rastreio dos anúncios da Meta".
+Leads que já entraram não mudam sozinhos; para corrigir um a um use `lionchat_conversations_set_origin`.
+Anúncio que abre direto o WhatsApp não precisa disso (os dados chegam pelo `ctwa_*`).
+
+### Google Ads: o mesmo campo passou a dizer a mesma coisa que na Meta (2026-09-29)
+
+Até 29/09 o campo **Criativo** mostrava o nome do anúncio na Meta e a **palavra pesquisada** no Google —
+quem somasse os dois num relatório somava coisas diferentes. Hoje as duas plataformas alimentam os mesmos
+campos, e a palavra-chave ganhou lugar próprio.
+
+| No link | Vira no LionChat | Meta | Google Ads | TikTok Ads |
+|---|---|---|---|---|
+| `utm_source` | Plataforma | `{{site_source_name}}` | `google` | `tiktok` |
+| `utm_medium` | Tipo (pago/orgânico) | `paid` | `cpc` | `paid` |
+| `utm_campaign` | Campanha | `{{campaign.name}}` | `{campaignid}` | `__CAMPAIGN_NAME__` |
+| `utm_content` | Conjunto | `{{adset.name}}` | `{adgroupid}` | `__AID_NAME__` |
+| `utm_term` | Criativo | `{{ad.name}}` | `{creative}` | `__CID_NAME__` |
+
+A tabela viva está em Configurações > Origens de Lead e sai de uma fonte única no servidor. **TikTok é só
+referência de como montar o link — não há integração com ele.** O Google entrega apenas CÓDIGO: o
+ValueTrack não tem `{campaignname}`, então ali aparece número onde a Meta mostra nome.
+
+**O modelo do Google começa com `{lpurl}`, nunca com o endereço do site.** `{lpurl}` é o marcador que o
+próprio Google troca pela página do anúncio no clique — serve para a campanha inteira e não há nada para
+editar. Colar o endereço no lugar dele faz o link chegar duplicado, e a doc do Google diz que a página
+quebra. Aconteceu em produção com quem seguiu a versão anterior da tela.
+
+**Os 9 dados do Google viraram atributos de conversa** e por isso agora dão para filtrar, segmentar e usar
+como público de campanha (antes apareciam no painel e eram invisíveis para tudo isso): `google_keyword`
+(Palavra-chave), `google_match_type`, `google_device`, `google_network`, `google_placement`,
+`google_ad_position`, `google_campaign_id`, `google_adgroup_id`, `google_creative_id`.
+
+**A palavra-chave só existe em campanha de BUSCA.** Medido na produção em 29/09: 39% dos cliques são
+Performance Max, onde o Google não informa palavra-chave, conjunto nem anúncio — nesses a linha vem vazia,
+e isso é do Google, não do LionChat. Em busca ela chega normalmente.
+
+Para isso funcionar o **LionTrack precisa estar instalado no site**: é ele que captura esses parâmetros do
+endereço e entrega ao LionChat quando a pessoa chama no WhatsApp. Sem ele chega só o identificador do
+clique (`gclid`).
+
 ### Atributos de anúncio (`ctwa_*`) — dois novos e nomes alinhados (2026-08-01)
 
 Conversa que veio de anúncio "Clique para WhatsApp" carrega atributos `ctwa_*` (`ctwa_campaign_name`,
