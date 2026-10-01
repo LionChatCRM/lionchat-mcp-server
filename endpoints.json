@@ -32148,7 +32148,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/meta_capi_events/{id}/retry",
   "title": "Reenviar Evento Meta CAPI falhado",
-  "description": "AÇÃO DE ESCRITA. Reenfileira UM evento Meta CAPI com status 'failed' (volta pra pending e o job envia de novo). Só failed: qualquer outro status responde 422 {error:'not failed'}. 404 se não for deste funil.",
+  "description": "ACAO DE ESCRITA. Reenfileira UM evento Meta CAPI que esta retentavel: status 'failed' OU 'pending' ABANDONADO (parado ha mais de 15 min). Volta pra pending e o job envia de novo, limpando o motivo da falha e o do plano B. Qualquer outro status responde 422 {error:'not retryable'}. 404 se o evento nao for deste funil.",
   "category": "Integracoes",
   "params": [
    {
@@ -32166,7 +32166,7 @@
     "description": "ID do evento falhado"
    }
   ],
-  "returns": "200 {ok: true} | 422 {error:'not failed'} | 404 {error:'not found'}",
+  "returns": "200 {ok: true} | 422 {error:'not retryable'} | 404 {error:'not found'}",
   "common_use_cases": [
    "Reenviar a conversão depois de corrigir o token/pixel"
   ],
