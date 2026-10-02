@@ -23,7 +23,7 @@ Há DOIS tipos de 401 — leia o corpo da resposta antes de concluir:
 
 - **Corpo `{"error": "You are not authorized to do this action"}`** = o token está CERTO, mas a pessoa
   não pode fazer aquela ação. Inclui o caso de o administrador ter escondido o menu no cargo
-  personalizado (caixinha "Acessar menu X" desmarcada: Contatos, Empresas, Kanban, Fluxos, Macros,
+  personalizado (caixinha "Acessar menu X" desmarcada: Contatos, Empresas, Kanban, Fluxos e Automação, Macros,
   Agente de IA, Central de ajuda, Agenda ou Chat interno). **NÃO peça para renovar o token.** Diga ao
   usuário que o cargo dele não libera aquela área e que quem resolve é um administrador da conta
   (desmarcar a ocultação em Configurações > Funções personalizadas, ou dar outro cargo).

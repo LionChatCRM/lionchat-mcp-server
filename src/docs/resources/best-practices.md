@@ -1013,14 +1013,17 @@ cargo existe o campo `hidden_menus` em `custom_roles_create` / `custom_roles_upd
 
 - Lista dos menus **escondidos** (as caixinhas "Acessar menu X" desmarcadas na tela). Valores:
   `contacts`, `companies`, `kanban`, `flows`, `macros`, `ai_agent`, `help_center`, `agenda`,
-  `internal_chat`. `[]` = vê todos (é como todo cargo nasce).
+  `internal_chat`. `[]` = vê todos (é como todo cargo nasce). **`flows` vale para Fluxos E Automação
+  juntos** (na tela: "Acessar menu Fluxos e Automação"): esconde os dois ou libera os dois. A Automação
+  continua aparecendo só para quem também tem `automation_manage`.
 - **Substitui a lista inteira.** Para esconder mais um menu, leia o cargo (`custom_roles_show`),
   acrescente e mande a lista toda. Não mandar o campo deixa o que está gravado.
 - Menu escondido some da barra lateral e a tela dele fica fechada; o que a pessoa usa **dentro da
   conversa** continua (executar macro, ligar/desligar a IA, agendar tarefa, campo Empresa do contato).
   Com Kanban escondido ela não vê card em lugar nenhum, nem os dela.
 - O servidor recusa (422) esconder um menu e dar o "Gerenciar" da mesma área no mesmo cargo
-  (ex.: `kanban` escondido com `kanban_manage`). Tire a permissão junto.
+  (ex.: `kanban` escondido com `kanban_manage`; `flows` escondido com `flowbuilder_manage` ou
+  `automation_manage`). Tire a permissão junto.
 - Vale na hora para quem tem o cargo; administrador nunca perde menu.
 - Quando a pessoa tenta abrir algo escondido, a API responde **401 "You are not authorized to do
   this action"** — é falta de permissão, não token vencido (ver `troubleshooting.md`).
