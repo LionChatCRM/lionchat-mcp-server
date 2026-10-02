@@ -298,6 +298,22 @@ custom_dashboards_preview_widget
 > `today`/`yesterday` em vez de datas fixas, que envelhecem.
 > ⚠️ O `total` da tabela **não é a soma das linhas** — cada métrica tem contagem própria.
 
+**R8b — Tabela do time de atendimento com tempo de resposta e ligações (02/10/2026):**
+
+```json
+custom_dashboards_preview_widget
+  widget_type=agent_report  chart_type=table  dimension=agent  scope_type=team  scope_id=142
+  time_range=yesterday  timezone_offset=-3
+  columns=[
+    {"metric":"leads"}, {"metric":"atendidos"},
+    {"metric":"primeira_resposta"}, {"metric":"tempo_resposta"},
+    {"metric":"ligacoes_feitas"}, {"metric":"taxa_ligacao"}
+  ]
+```
+> ⚠️ `primeira_resposta`/`tempo_resposta` vêm em **segundos**, contados só no horário comercial da conta.
+> `taxa_ligacao` = ligações feitas ÷ leads (ou `"denominator":"atendidos"`). Essas 4 colunas só valem com
+> `dimension: agent` — em tabela por equipe/caixa o salvamento volta 422 com o motivo.
+
 **R9 — Salvar isso como relatório na tela do cliente:** teste com o R8, mostre o número, confirme
 com o usuário e só então:
 ```json

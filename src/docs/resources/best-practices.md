@@ -1006,6 +1006,34 @@ na descrição** — a tela já as mostra na coluna "Permissões". Uma descriç�
 escondeu o cargo recém-criado na lista de Funções personalizadas da conta 1 (a tela foi corrigida
 para cortar o texto com reticências, mas a descrição longa continua ilegível ali).
 
+## Cargo personalizado: esconder menus e "ver conversas dos colegas" (02/10/2026)
+
+Permissão nunca TIRA nada — toda permissão só soma ao atendente comum. Para TIRAR um menu de um
+cargo existe o campo `hidden_menus` em `custom_roles_create` / `custom_roles_update`:
+
+- Lista dos menus **escondidos** (as caixinhas "Acessar menu X" desmarcadas na tela). Valores:
+  `contacts`, `companies`, `kanban`, `flows`, `macros`, `ai_agent`, `help_center`, `agenda`,
+  `internal_chat`. `[]` = vê todos (é como todo cargo nasce). **`flows` vale para Fluxos E Automação
+  juntos** (na tela: "Acessar menu Fluxos e Automação"): esconde os dois ou libera os dois. A Automação
+  continua aparecendo só para quem também tem `automation_manage`.
+- **Substitui a lista inteira.** Para esconder mais um menu, leia o cargo (`custom_roles_show`),
+  acrescente e mande a lista toda. Não mandar o campo deixa o que está gravado.
+- Menu escondido some da barra lateral e a tela dele fica fechada; o que a pessoa usa **dentro da
+  conversa** continua (executar macro, ligar/desligar a IA, agendar tarefa, campo Empresa do contato).
+  Com Kanban escondido ela não vê card em lugar nenhum, nem os dela.
+- O servidor recusa (422) esconder um menu e dar o "Gerenciar" da mesma área no mesmo cargo
+  (ex.: `kanban` escondido com `kanban_manage`; `flows` escondido com `flowbuilder_manage` ou
+  `automation_manage`). Tire a permissão junto.
+- Vale na hora para quem tem o cargo; administrador nunca perde menu.
+- Quando a pessoa tenta abrir algo escondido, a API responde **401 "You are not authorized to do
+  this action"** — é falta de permissão, não token vencido (ver `troubleshooting.md`).
+
+Permissão nova `conversation_assigned_manage` — "Ver conversas dos colegas": a pessoa vê as conversas
+que **já têm responsável** nas caixas de que é membro, mas nunca a fila sem dono. É o jeito de montar
+"vê tudo, menos as não atribuídas": marque essa + `conversation_team_manage` +
+`conversation_participating_manage`, sem `conversation_manage` e sem `conversation_unassigned_manage`.
+`conversation_manage` já inclui as quatro de conversa; mande a lista completa como a tela faz.
+
 ## Entrar num grupo por convite (17/09/2026)
 
 Só em caixa de WhatsApp QR Code (`Channel::Waha`). São DUAS tools e a ordem importa.
