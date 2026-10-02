@@ -44,6 +44,13 @@ const MAX_RETRIES_NETWORK = 1;
 function getErrorMessage(status: number, body: unknown): string {
   switch (status) {
     case 401:
+      // AIDEV-NOTE: [cargo-acessar-menus 02/10] O LionChat responde 401 com este texto quando o TOKEN e valido mas a
+      // pessoa nao pode fazer a acao (Pundit) — inclusive menu escondido pelo cargo ("Acessar menu X" desmarcado).
+      // Traduzir isso como "token invalido" fazia a IA mandar renovar credenciais que estavam certas.
+      if (isPermissionRefusal(body)) {
+        return 'Permission denied: your role does not allow this action (an administrator may have hidden this menu ' +
+          'in the custom role). The token is valid — do not ask the user to renew it.';
+      }
       return 'Authentication failed. Check your token at Login > Profile Settings';
     case 403:
       return 'Permission denied. Your token may not have access to this resource';
@@ -61,6 +68,16 @@ function getErrorMessage(status: number, body: unknown): string {
       }
       return `HTTP error ${status}`;
   }
+}
+
+// AIDEV-NOTE: [cargo-acessar-menus 02/10] Recusa de PERMISSAO (Pundit) chega como 401 com este texto exato; o 401
+// de token invalido/expirado vem com outro corpo. Comparacao pelo texto do servidor, sem adivinhar.
+const PERMISSION_REFUSAL_TEXT = 'You are not authorized to do this action';
+
+function isPermissionRefusal(body: unknown): boolean {
+  if (!body || typeof body !== 'object') return false;
+  const obj = body as Record<string, unknown>;
+  return obj.error === PERMISSION_REFUSAL_TEXT || obj.message === PERMISSION_REFUSAL_TEXT;
 }
 
 // AIDEV-NOTE: Extract validation details from 422 response body

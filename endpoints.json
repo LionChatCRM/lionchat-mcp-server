@@ -14278,7 +14278,7 @@
   "description": "Lista todos os roles personalizados da conta. Lista papéis personalizados paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de papel personalizado).",
   "category": "Roles Personalizados",
   "params": [],
-  "returns": "Lista pura (array), sem embrulho: a resposta E o array de papeis personalizados da conta. Cada papel traz id, name, description, `permissions` (lista de permissoes) e created_at/updated_at. Sem paginacao e sem contador. Recurso Enterprise — em instalacao sem Enterprise a rota nao responde.",
+  "returns": "Lista pura (array), sem embrulho: a resposta E o array de papeis personalizados da conta. Cada papel traz id, name, description, `permissions` (lista de permissoes), `hidden_menus` (lista dos menus ocultos; [] = ve todos) e created_at/updated_at. Sem paginacao e sem contador. Recurso Enterprise — em instalacao sem Enterprise a rota nao responde.",
   "common_use_cases": [
    "Dashboard: contar/exibir papéis personalizados",
    "Buscar com filtros antes de outra operação",
@@ -14295,7 +14295,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/custom_roles",
   "title": "Criar Role",
-  "description": "Cria um novo role personalizado. Cria novo papel personalizado. Obrigatórios: name, permissions. Valida unicidade quando aplicável. Retorna o papel personalizado criado com ID atribuído.",
+  "description": "Cria um novo role personalizado. Obrigatorios: name, permissions. Opcional: hidden_menus (menus que este cargo NAO ve). Retorna o papel personalizado criado com ID atribuido.",
   "category": "Roles Personalizados",
   "params": [
    {
@@ -14317,7 +14317,14 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Array de permissoes (array de strings). Valores aceitos (22): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu)."
+    "description": "Array de permissoes (array de strings). Valores aceitos (24): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, conversation_assigned_manage (Ver conversas dos colegas: so as que JA TEM responsavel, nas caixas de que a pessoa e membro; nunca a fila sem dono — 02/10/2026), contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09), agenda_manage (Gerenciar a Agenda). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu). O editor da tela marca junto as que uma inclui: conversation_manage inclui as 4 outras de conversa; conversation_team_manage inclui conversation_participating_manage; kanban_manage inclui kanban_view. Mande a lista ja completa."
+   },
+   {
+    "name": "hidden_menus",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Menus DESMARCADOS em 'Acessar menu X' (array de strings, 02/10/2026). Valores aceitos: contacts, companies, kanban, flows, macros, ai_agent, help_center, agenda, internal_chat. SUBSTITUI a lista inteira (mande todos os que devem ficar ocultos; [] = mostra todos). Campo AUSENTE no pedido NAO muda o que esta gravado. Menu oculto some da barra lateral e a tela dele fica fechada no servidor; o que a pessoa usa dentro da conversa continua (ex.: executar macro, ligar/desligar a IA, agendar tarefa). RECUSADO com 422: texto solto ou objeto no lugar da lista, menu desconhecido, e menu oculto junto do 'Gerenciar' da mesma area (contacts x contact_manage; kanban x kanban_manage/kanban_view/kanban_delete/kanban_export_import/offer_manage/funnel_manage; flows x flowbuilder_manage; ai_agent x captain_manage; help_center x knowledge_base_manage; agenda x agenda_manage). contact_export_import NAO conflita com contacts. Nunca esconde nada de administrador nem de conta sem o recurso de cargo personalizado. A mudanca vale NA HORA para quem tem o cargo (a tela dela se atualiza sozinha)."
    }
   ],
   "returns": "papel personalizado criado (com novo ID)",
@@ -14349,7 +14356,7 @@
     "description": "ID do role"
    }
   ],
-  "returns": "papel personalizado (objeto completo com associações)",
+  "returns": "papel personalizado: id, name, description, permissions, hidden_menus, created_at, updated_at",
   "common_use_cases": [
    "Ver dados completos antes de editar",
    "Verificar estado atual antes de uma ação",
@@ -14366,7 +14373,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/custom_roles/{id}",
   "title": "Atualizar Role",
-  "description": "Atualiza um role personalizado. Atualiza campos do papel personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, description, permissions.",
+  "description": "Atualiza um role personalizado. Suporta atualizacao parcial — so os campos enviados mudam. Campos: name, description, permissions, hidden_menus. Mudar permissions ou hidden_menus avisa ao vivo SO as pessoas que tem este cargo (a tela delas se ajusta sem recarregar).",
   "category": "Roles Personalizados",
   "params": [
    {
@@ -14395,7 +14402,14 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Permissoes (array de strings). Valores aceitos (22): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu)."
+    "description": "Permissoes (array de strings). Valores aceitos (24): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, conversation_assigned_manage (Ver conversas dos colegas: so as que JA TEM responsavel, nas caixas de que a pessoa e membro; nunca a fila sem dono — 02/10/2026), contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09), agenda_manage (Gerenciar a Agenda). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu). O editor da tela marca junto as que uma inclui: conversation_manage inclui as 4 outras de conversa; conversation_team_manage inclui conversation_participating_manage; kanban_manage inclui kanban_view. Mande a lista ja completa."
+   },
+   {
+    "name": "hidden_menus",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Menus DESMARCADOS em 'Acessar menu X' (array de strings, 02/10/2026). Valores aceitos: contacts, companies, kanban, flows, macros, ai_agent, help_center, agenda, internal_chat. SUBSTITUI a lista inteira (mande todos os que devem ficar ocultos; [] = mostra todos). Campo AUSENTE no pedido NAO muda o que esta gravado. Menu oculto some da barra lateral e a tela dele fica fechada no servidor; o que a pessoa usa dentro da conversa continua (ex.: executar macro, ligar/desligar a IA, agendar tarefa). RECUSADO com 422: texto solto ou objeto no lugar da lista, menu desconhecido, e menu oculto junto do 'Gerenciar' da mesma area (contacts x contact_manage; kanban x kanban_manage/kanban_view/kanban_delete/kanban_export_import/offer_manage/funnel_manage; flows x flowbuilder_manage; ai_agent x captain_manage; help_center x knowledge_base_manage; agenda x agenda_manage). contact_export_import NAO conflita com contacts. Nunca esconde nada de administrador nem de conta sem o recurso de cargo personalizado. A mudanca vale NA HORA para quem tem o cargo (a tela dela se atualiza sozinha)."
    }
   ],
   "returns": "papel personalizado atualizado",
@@ -14416,7 +14430,7 @@
   "method": "DELETE",
   "path": "/api/v1/accounts/{account_id}/custom_roles/{id}",
   "title": "Excluir Role",
-  "description": "Remove um role personalizado. Remove papel personalizado permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
+  "description": "Remove um role personalizado. Remove papel personalizado permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes. As pessoas que tinham o cargo ficam sem cargo (voltam a ser atendente comum, com todos os menus) e a tela delas se atualiza na hora.",
   "category": "Roles Personalizados",
   "params": [
    {
@@ -21916,7 +21930,7 @@
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "ID do cargo personalizado (custom role) a aplicar ao agente. Requer Enterprise. IMPORTANTE: o backend aplica este campo em TODA atualizacao do agente — se voce atualizar um agente que tem cargo personalizado SEM enviar custom_role_id, o cargo sera REMOVIDO. Ao editar um agente que tem cargo, envie sempre o custom_role_id junto. Use lionchat_custom_roles_list para obter os IDs dos cargos."
+    "description": "ID do cargo personalizado (custom role) a aplicar ao agente. Requer Enterprise. So muda quando o campo VEM no pedido: atualizar o agente SEM custom_role_id mantem o cargo atual; mandar null tira o cargo. Trocar o cargo avisa ao vivo so essa pessoa (menus e permissoes se ajustam na tela dela). Nao vale para o proprio usuario logado (422: ninguem muda o proprio cargo). Use lionchat_custom_roles_list para obter os IDs."
    },
    {
     "name": "team_ids",

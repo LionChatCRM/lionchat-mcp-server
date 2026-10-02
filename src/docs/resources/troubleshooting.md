@@ -19,9 +19,18 @@ Input malformado. Causas comuns:
 **Ação:** Releia a mensagem de erro. Corrija o payload. NÃO retry sem mudar nada.
 
 ### 401 Unauthorized
-Token de API inválido ou expirado.
+Há DOIS tipos de 401 — leia o corpo da resposta antes de concluir:
 
-**Ação:** Parar. Reportar pro usuário que precisa renovar credenciais. NÃO retry — vai falhar igual.
+- **Corpo `{"error": "You are not authorized to do this action"}`** = o token está CERTO, mas a pessoa
+  não pode fazer aquela ação. Inclui o caso de o administrador ter escondido o menu no cargo
+  personalizado (caixinha "Acessar menu X" desmarcada: Contatos, Empresas, Kanban, Fluxos, Macros,
+  Agente de IA, Central de ajuda, Agenda ou Chat interno). **NÃO peça para renovar o token.** Diga ao
+  usuário que o cargo dele não libera aquela área e que quem resolve é um administrador da conta
+  (desmarcar a ocultação em Configurações > Funções personalizadas, ou dar outro cargo).
+- **Qualquer outro corpo** (ex.: "You need to sign in or sign up before continuing") = token de API
+  inválido ou expirado. Parar e reportar que precisa renovar as credenciais.
+
+**Ação nos dois casos:** NÃO retry — vai falhar igual.
 
 ### 403 Forbidden
 Token válido, mas SEM permissão pra essa ação.

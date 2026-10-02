@@ -659,7 +659,7 @@ Não é consulta livre: escolha um `widget_type` e preencha **só os campos daqu
 | `sla_summary` | `time_range` | `sla` (Enterprise) |
 | `funnel_stages` | `funnel_id` · `date_basis` (created/moved/closed/any) · `status` (all/open/won/lost) · `measure` (count padrão / value = soma do valor dos cards) · `time_range` | `kanban_board` |
 | `stage_entries` | `funnel_id` · `measure` (count/value) · `time_range` — quantos cards DISTINTOS ENTRARAM em cada etapa no período (histórico desde 12/07/2026) | `kanban_board` |
-| `calls_report` | `dimension` (agent/inbox) · `scope_type` (só `inbox`, opcional — recorte por caixa, desde 27/08/2026) + `scope_id` · `time_range` — ligações / atendidas / não atendidas / não concluídas / tempo total / tempo médio | — |
+| `calls_report` | `dimension` (agent/inbox) · `scope_type` (`inbox` desde 27/08/2026; `team` desde 02/10/2026, só com `dimension: agent`, opcional) + `scope_id` · `time_range` — ligações / atendidas / não atendidas / não concluídas / tempo total / tempo médio | — |
 | `lead_origin` | `time_range` | `liontrack` |
 | `agent_report` | `dimension` (agent/team/inbox) · `scope_type`+`scope_id` · `columns[]` · `time_range` | — |
 | `eclinica_no_show` | `dimension` (unit / operator / date) · `time_range` · `no_show_over_scheduled` (true/false, nasce desligada) · `only_first_visit` (true/false, nasce desligada) — faltas na agenda da e-Clínica: agendados / compareceram / faltaram / desmarcados / sem desfecho / % de falta (o rótulo da coluna declara a base) | `eclinica_integration` |
@@ -721,6 +721,21 @@ funil sem nome chegam indistinguíveis pra quem lê depois.
 `label_count` (exige `label_id`) e `conversao` (exige `denominator` e `numerator`, que é **lista de
 IDs de etiqueta**, nunca nome de métrica).
 
+**Quatro colunas por PESSOA (novas, 02/10/2026 — só com `dimension: agent`; em tabela por equipe ou
+caixa o salvamento é RECUSADO com o motivo):**
+
+| `metric` | O que mostra | Cuidado |
+|---|---|---|
+| `primeira_resposta` | Tempo **médio** da 1ª resposta do atendente | Conta **só o horário comercial da conta** (o do SLA). Sem horário ligado na conta, cai no relógio corrido. O início é quando a IA passou a conversa (ou a reabertura/criação), não o instante da atribuição — pode divergir do SLA por alguns minutos. Vem em segundos; quem não respondeu nada no período vem vazio (travessão), nunca "0s" |
+| `tempo_resposta` | Tempo médio entre respostas, depois da 1ª | Mesma regra de horário. Registro de `reply_time` |
+| `ligacoes_feitas` | Ligações que a pessoa **fez** (`outbound`), atendidas ou não | Recebidas não entram. Acompanha o recorte por caixa; VTCall e Zenvia quase não gravam caixa |
+| `taxa_ligacao` | Ligações feitas ÷ leads, em % | `denominator` opcional: `leads` (padrão, a definição do Wesley — "100 leads, 10 ligações = 10%") ou `atendidos`; outro valor é recusado. Pessoa sem lead dá 0,0%, nunca erro |
+
+O `as` dessas colunas é honrado (diferente das métricas núcleo). Exemplo de bloco do Instituto Homem:
+`{"widget_type":"agent_report","chart_type":"table","dimension":"agent","scope_type":"team","scope_id":142,
+"columns":[{"metric":"leads"},{"metric":"atendidos"},{"metric":"primeira_resposta"},
+{"metric":"tempo_resposta"},{"metric":"ligacoes_feitas"},{"metric":"taxa_ligacao"}]}`.
+
 ### Como ler a resposta (campo `shape`)
 
 | `shape` | Estrutura | Cuidado |
@@ -739,7 +754,10 @@ IDs de etiqueta**, nunca nome de métrica).
    o que fizeram naquela caixa — é o desenho de "relatório por médico/unidade"). `inbox` +
    `dimension: team` é RECUSADO com motivo. No `calls_report`, `scope_type: inbox` conta só as
    ligações daquela caixa — **ligação sem caixa fica de fora** (VTCall ~90% e Zenvia 100% das
-   ligações não têm caixa; LionCalls e Wavoip têm em 100%). Confundir troca a conta inteira.
+   ligações não têm caixa; LionCalls e Wavoip têm em 100%). **Desde 02/10/2026 o `calls_report`
+   também aceita `scope_type: team`** (recorta as LINHAS: só quem é da equipe, inclusive quem saiu
+   dela; só com `dimension: agent`, com `inbox` é recusado). A linha "Sem responsável" (ligação que
+   ninguém atendeu) **continua aparecendo** de propósito. Confundir troca a conta inteira.
 2. **Campo fora da lista é descartado em silêncio.** Se um valor "não fez efeito", provavelmente o
    nome do campo está errado.
 3. **Sempre envie `timezone_offset` em HORAS, derivado do fuso DA CONTA** (`account_show.timezone`;
