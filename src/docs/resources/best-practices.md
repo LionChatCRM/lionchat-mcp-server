@@ -463,6 +463,22 @@ Meta só aceita isso num **dataset vinculado à WABA**, nunca no pixel do site (
   `lionchat:caixa_sem_token`, `lionchat:dataset_id_invalido`, `lionchat:desligado_pelo_cliente`,
   `lionchat:nome_sem_equivalente_whatsapp`; da Meta: `"<subcode>: <mensagem>"` (ex.: 2804087 = clique
   do anúncio inválido/expirado).
+- **Caixa QR Code (WhatsApp não oficial) atribui campanha pelo MESMO caminho que a oficial** (desde
+  01/10/2026). A identidade do negócio é a **Página do Facebook que rodou o anúncio** no lugar da
+  conta do WhatsApp Business (que caixa de QR Code não tem), e o evento vai para o pixel que a conta
+  já usa. Vale a régua normal: `degraded=true` + `fallback_reason` + `action_source`.
+  `action_source: business_messaging` = saiu como anúncio de WhatsApp; `website` = saiu como site.
+  **É um evento só** — quando a Meta recusa o de mensagem, ele é reenviado como site
+  automaticamente, e o motivo fica em `fallback_reason`.
+  **Motivo mais comum nessa caixa:** `"2804065: ..."` — a Página do anúncio não está vinculada ao
+  conjunto de dados. O cliente resolve sozinho no Gerenciador de Eventos da Meta (abrir o conjunto de
+  dados > Configurações > Dados vinculados > conectar a Página). Cabe **uma** Página por conjunto de
+  dados. Outros: `"2804072: ..."` (clique e Página de anúncios diferentes) e `"2804087: ..."` (clique
+  inválido ou expirado).
+  **NÃO existe mais** `qr_page_attribution` na resposta, nem os motivos `dataset_indisponivel`,
+  `sem_pagina_do_anuncio`, `pagina_sem_conexao` e `dataset_e_o_proprio_pixel`: o desenho de 30/09 que
+  criava um conjunto de dados próprio para a Página foi removido em 01/10 (exigia a permissão
+  `page_events`, que o aplicativo só tem em acesso padrão, e entregou zero em produção).
 - Recusa ao vincular (422 com `subcode`, ex.: 2804116 / "whatsapp_business_manage_events"): a chave da
   caixa não tem a permissão — reconectar a caixa pelo Cadastro Incorporado da Meta; nunca pedir o token
   do pixel para isso. Um 401/403 da caixa NUNCA desliga o pixel da conta (site, formulário e agenda
@@ -558,6 +574,13 @@ que a agenda NUNCA abre (parou de oferecer domingo) e não inventa mais identifi
 com uma única agenda liberada ela assume essa; com duas ou mais, recusa nomeando as válidas. Para
 restringir quais agendas a IA oferece, continua valendo `captain_assistants_update` com
 `config.booking_event_type_ids`.
+
+**1-A. Quem limita a busca de horário é o DONO, não a IA (01/10/2026).** A janela de busca sai do
+`max_advance_days` do tipo de agendamento; sem limite configurado, vale o teto de 30 dias. A IA não
+consegue mais encurtar essa busca: ela varre dia a dia até achar vaga ou bater no limite. Consequência
+para quem configura pelo conector: se a IA está dizendo que "não há horário", o número a conferir é o
+`max_advance_days` do tipo (`lionchat_booking_event_types_update`), não o comportamento da IA. Agenda com
+vaga só daqui a 20 dias e janela configurada em 7 nunca oferece nada.
 
 **2. A IA entrega o link do Meet sozinha.** O link do Google Meet não existe no instante em que o
 agendamento é criado (nasce depois da ida ao Google), e antes a IA prometia o link e nunca voltava.
