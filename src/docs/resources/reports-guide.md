@@ -508,8 +508,14 @@ ONDE vieram os leads, cruzando os campos `origin_*` das conversas com os leads �
 viraram conversa). É um relatório de LEITURA puro — não cria nem altera nada.
 
 **Filtros (query, todos opcionais):** `since` / `until` (ISO 8601; default = 30 dias atrás → agora),
-`funnel_id`, `platform`, `kind`, `campaign`, `adset`, `group_by`.
+`funnel_id`, `platform`, `kind`, `campaign`, `adset`, `inbox_id`, `assignee_id`, `group_by`.
 `campaign`/`adset` aceitam `__none__` para filtrar so os leads SEM aquele nome (campanha/conjunto vazio).
+
+**`inbox_id` e `assignee_id` (06/10/2026)** — recortam por caixa de entrada e por responsável da conversa.
+**Em conta com mais de uma loja/unidade, SEM `inbox_id` o relatório soma TODAS as caixas** — foi o que fez a
+mesma conta misturar duas lojas e não bater com o relatório da Meta. Com qualquer um dos dois ligado, os
+**leads órfãos saem da contagem** (contato sem conversa nenhuma não pertence a caixa nem a responsável), então
+`orphan_leads` vai a zero e `unique_leads` cai — é esperado, não é perda de dado.
 
 **Retorno:**
 - `period` — janela efetiva considerada.
