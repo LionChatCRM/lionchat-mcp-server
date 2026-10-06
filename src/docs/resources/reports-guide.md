@@ -40,7 +40,7 @@ Quando o usuário disser "o relatório está errado / não bate", quase sempre �
    Os dois cards podem divergir legitimamente em conta que reatribui.
 5. **timezone_offset NÃO altera totais** de summary — só o agrupamento dos pontos da série temporal.
    Diferenças de ~1% entre relatório e lista filtrada são borda de janela/fuso, não defeito.
-6. **since/until são unix SEGUNDOS** na família `reports_*`, no CSAT e no SLA. Data por extenso
+6. **since/until: prefira unix SEGUNDOS** (desde 05/10/2026 a API também aceita `aaaa-mm-dd` = dia inteiro no fuso da conta, ISO 8601 com fuso e milissegundos; formato ilegível dá 400) na família `reports_*`, no CSAT e no SLA. Data por extenso
    (`"2026-07-01"`) é lida como epoch: o `"2026"` vira 01/01/1970 e a janela some. Na conta 19 havia
    4.396 conversas no período e a resposta veio ZERO, com HTTP 200.
    **Desde 29/07/2026 a maioria dos relatórios RECUSA o formato errado** com HTTP **400** e a mensagem
@@ -280,7 +280,7 @@ Retorna SOMENTE estes dois campos (não existe taxa pronta):
 ### `lionchat_reports_list_13` — Conversation Traffic (tráfego)
 **Use quando:** "horário de pico", "quando tem mais demanda"
 
-Heatmap de volume por hora. Aceita SÓ `timezone_offset` (sem ele o pico sai em UTC). ATENÇÃO: janela FIXA a partir de hoje — NÃO aceita `since`/`until`.
+Heatmap de volume por hora. Aceita SÓ `timezone_offset` (desde 05/10/2026, sem ele o pico sai no FUSO DA CONTA; antes saía em UTC). ATENÇÃO: janela FIXA a partir de hoje — NÃO aceita `since`/`until`.
 
 > ⚠️ **Instalação anterior a 29/07/2026: o pico sai em UTC MESMO mandando `timezone_offset`.** O fuso
 > era resolvido por nome (`"-3"` não é nome de zona), caía em UTC e o horário vinha **3 horas adiantado**
@@ -721,7 +721,7 @@ funil sem nome chegam indistinguíveis pra quem lê depois.
 `label_count` (exige `label_id`) e `conversao` (exige `denominator` e `numerator`, que é **lista de
 IDs de etiqueta**, nunca nome de métrica).
 
-**Quatro colunas por PESSOA (novas, 02/10/2026 — só com `dimension: agent`; em tabela por equipe ou
+**Seis colunas por PESSOA (novas, 02/10 e 03/10/2026 — só com `dimension: agent`; em tabela por equipe ou
 caixa o salvamento é RECUSADO com o motivo):**
 
 | `metric` | O que mostra | Cuidado |
@@ -729,12 +729,15 @@ caixa o salvamento é RECUSADO com o motivo):**
 | `primeira_resposta` | Tempo **médio** da 1ª resposta do atendente | Conta **só o horário comercial da conta** (o do SLA). Sem horário ligado na conta, cai no relógio corrido. O início é quando a IA passou a conversa (ou a reabertura/criação), não o instante da atribuição — pode divergir do SLA por alguns minutos. Vem em segundos; quem não respondeu nada no período vem vazio (travessão), nunca "0s" |
 | `tempo_resposta` | Tempo médio entre respostas, depois da 1ª | Mesma regra de horário. Registro de `reply_time` |
 | `ligacoes_feitas` | Ligações que a pessoa **fez** (`outbound`), atendidas ou não | Recebidas não entram. Acompanha o recorte por caixa; VTCall e Zenvia quase não gravam caixa |
+| `ligacoes_recebidas` | Ligações **recebidas** ligadas à pessoa (`inbound`) | No VTCall o atendente só é gravado quando atende: na prática são as que ela **atendeu**. A que ninguém atendeu não tem dono — fica na linha "Sem responsável" do `calls_report` |
+| `tempo_falado` | Tempo total em ligação da pessoa (feitas + recebidas), em segundos | Mesma definição do "Tempo falado" do `calls_report`. Sem ligação = 0 (a tela e o aviso mostram travessão) |
 | `taxa_ligacao` | Ligações feitas ÷ leads, em % | `denominator` opcional: `leads` (padrão, a definição do Wesley — "100 leads, 10 ligações = 10%") ou `atendidos`; outro valor é recusado. Pessoa sem lead dá 0,0%, nunca erro |
 
 O `as` dessas colunas é honrado (diferente das métricas núcleo). Exemplo de bloco do Instituto Homem:
 `{"widget_type":"agent_report","chart_type":"table","dimension":"agent","scope_type":"team","scope_id":142,
 "columns":[{"metric":"leads"},{"metric":"atendidos"},{"metric":"primeira_resposta"},
-{"metric":"tempo_resposta"},{"metric":"ligacoes_feitas"},{"metric":"taxa_ligacao"}]}`.
+{"metric":"tempo_resposta"},{"metric":"ligacoes_feitas"},{"metric":"ligacoes_recebidas"},
+{"metric":"tempo_falado"},{"metric":"taxa_ligacao"}]}`.
 
 ### Como ler a resposta (campo `shape`)
 

@@ -99,6 +99,21 @@ Todo node tem essa estrutura base:
   Regras: `attr_key` é **obrigatório**. `trigger_uuid` é preenchido pelo backend no save (NÃO envie; se enviar é preservado). 29/02 em ano não-bissexto colapsa p/ 28/02. Disparo vencido tem tolerância de 24h. Se `inbox_mode` for `fixed` e a caixa for desvinculada do flow depois, os envios daquele gatilho são **pulados** (visíveis em `flows_executions_list`). Caixa oficial WhatsApp exige template na 1ª mensagem se a conversa for criada nova (senão pula). Ativar o flow agenda automaticamente os contatos que já têm a data preenchida.
   - **`attr_source: 'conversation'` (novo 2026-07-18):** a data vem de um atributo de DATA da CONVERSA (não do contato). Dispara NAQUELA conversa (reabre se resolvida). `attr_key` = chave de atributo de conversa tipo Data; o horário-por-atributo lê da conversa. NÃO tem seletor de caixa (a conversa já é conhecida) — não envie `inbox_mode`/`inbox_id`. NÃO use `repeat_yearly` (conversa é evento pontual — vetado com keep_both). SEM agendamento retroativo: só agenda o que for escrito/alterado APÓS ativar (100% forward). Ausente = `'contact'` (comportamento legado).
   - **`overwrite_mode` (novo 2026-07-18):** `'replace'` (default) = trocar a data cancela o agendamento anterior (correção de data errada não dispara em dobro). `'keep_both'` = acumula (cada data seu próprio disparo) — **SÓ com `attr_source: 'conversation'`** (vetado no contato) e **incompatível com `repeat_yearly`**. Os disparos futuros pendentes ficam visíveis/canceláveis na aba "Agendados" do editor.
+  - **QUANDO a mensagem sai de verdade (mudou em 2026-10-02):** o horário configurado passou a ser
+    **respeitado exatamente**. Até 02/10 o motor somava `id do contato % 180` **MINUTOS** ao horário
+    escolhido (espalhamento anti-banimento): quem configurava 18:00 podia receber às 20:50, e isso
+    nunca esteve documentado aqui. Caso real: Villa Eyá, 18:00 configurado, 19:50 entregue.
+    O que espaça agora é a **fila por caixa**, no momento do envio, e só quando há fila de verdade:
+    - **1 pessoa na data** → sai no horário configurado, nos dois canais.
+    - **Caixa QR Code (WAHA)**, várias pessoas na mesma data → **20 a 40 segundos entre cada**
+      (sorteado — intervalo exato é padrão de robô). 50 aniversariantes ≈ 25 min; 500 ≈ 4 h.
+      **Ao montar aniversário em massa no QR Code, avise o cliente disso** — não é atraso, é a
+      proteção que impede o número de ser bloqueado. A mesma fila atende os lembretes da e-Clínica:
+      se as duas coisas saem pela MESMA caixa, elas dividem a vaga.
+    - **Caixa oficial (Cloud)** → **10 mensagens por segundo** por número da Meta, com recuo
+      automático se a Meta reclamar (o mesmo freio da campanha). 5.000 aniversariantes ≈ 8 min.
+    - **Atraso maior que 24 h não sai**: aviso parado por queda do sistema é marcado `vencida_expirada`
+      no histórico em vez de ser entregue atrasado. O aniversário do ano seguinte continua agendado.
   - **Ver/cancelar os agendamentos (novo 2026-07-20):** `flows_scheduled_firings_list` (flow_id) lista os disparos FUTUROS pendentes do Gatilho de Data (quando vai disparar, atributo/valor que gerou, fonte contato/conversa, contato/conversa alvo). `flows_scheduled_firings_cancel` (flow_id, id) cancela um — se já disparou responde 409 `ja_disparado` e nada muda. Só flows com Gatilho de Data; ADMIN + flowbuilder_manage.
 
 **Trigger `campaign_trigger` — Gatilho "Campanha" (novo 2026-07-28):** LIBERA o flow para ser disparado

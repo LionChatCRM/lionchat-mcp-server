@@ -795,6 +795,33 @@ criptografia de grupo, aviso de protocolo, cabeçalho de álbum). Não são mens
 cabeçalho de álbum some porque as fotos chegam logo em seguida como mensagens próprias — se o
 cliente reclamar que "faltou uma mensagem antes das fotos", era isso.
 
+## "O aniversário saiu fora do horário que eu configurei" (Gatilho de Data) — 02/10/2026
+
+**Antes de 02/10/2026 isso era um defeito real:** o motor somava `id do contato % 180` **MINUTOS** ao
+horário escolhido (espalhamento anti-banimento). Quem configurava 18:00 podia receber às 20:50 — caso
+relatado: Villa Eyá, 18:00 configurado, 19:50 entregue. **Consertado.** O horário agora é respeitado.
+
+**Depois de 02/10, se a mensagem sair depois do horário, é a FILA — e é normal.** O que espaça agora é
+a fila por caixa, e só quando há mais de uma pessoa na mesma data:
+
+| Caixa | Ritmo | Efeito com 50 pessoas |
+|---|---|---|
+| QR Code (WAHA) | 20-40 s entre cada (sorteado) | a última sai ~25 min depois |
+| Oficial (Cloud) | 10 por segundo | a última sai ~5 s depois |
+
+A primeira sempre sai no horário configurado. **Uma pessoa sozinha nunca atrasa.**
+
+Ao consultar `lionchat_flows_scheduled_firings_list`:
+- `fire_at` **diferente do horário configurado** = a fila já reservou a vaga real daquele envio.
+  É o horário em que vai sair mesmo. **Normal — não é o defeito antigo, não reporte como erro.**
+- `skip_reason = vencida_expirada` = o aviso ficou mais de 24 h atrasado (queda do sistema) e foi
+  **descartado de propósito**, para não entregar "feliz aniversário" dias depois. O do ano seguinte
+  continua agendado. Não reprocessar.
+
+**Quando o cliente reclamar que "está demorando" numa base grande em QR Code:** não é lentidão, é a
+trava que impede o número de ser bloqueado — a mesma que a campanha usa. Se precisa de volume rápido,
+o caminho é caixa oficial ou Campanha de Fluxo (que tem agendamento por dias).
+
 ## "O paciente tem duas consultas no dia e recebeu um lembrete só" (e-Clínica) — 17/09/2026
 
 **Como é desde 17/09:** um lembrete por CONSULTA. Duas consultas no mesmo dia, ou duas pessoas no mesmo

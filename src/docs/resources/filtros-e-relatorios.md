@@ -245,10 +245,11 @@ payload=[
 **R3 — Ganhos do mês por agente/time:**
 `kanban_items_list_3 funnel_id=37 from=2026-07-01 to=2026-07-31 user_ids=[6,12]` (ou `team_id=3`)
 
-> ⚠️ **`from`/`to` deste relatório: mande SEMPRE timestamp UNIX.** Data por extenso (`2026-07-01`)
-> só é aceita a partir da atualização de 26/07/2026; antes dela o relatório volta **inteiro zerado,
-> sem erro nenhum** (vira 1970 por dentro). Timestamp funciona em qualquer versão — use ele e você
-> nunca cai na armadilha. Se vier tudo zero e o funil tem cards, era isso.
+> ⚠️ **`from`/`to` deste relatório:** timestamp UNIX funciona em QUALQUER versão e é o mais seguro.
+> Data por extenso (`2026-07-01`) só é aceita a partir da atualização de 26/07/2026; antes dela o
+> relatório volta **inteiro zerado, sem erro nenhum** (vira 1970 por dentro). Desde 05/10/2026 a data
+> pura cobre o **dia inteiro no fuso da CONTA** (00:00:00 até 23:59:59) e ISO 8601 também é aceito
+> (sem offset vale a hora da conta). Se vier tudo zero e o funil tem cards, repita com timestamp.
 
 **R4 — Conversas de uma campanha que FALHARAM/entregaram:** filtre por
 `campaign_id equal_to <id>`; o status da MENSAGEM de template (sent/delivered/read/failed) está
@@ -307,11 +308,12 @@ custom_dashboards_preview_widget
   columns=[
     {"metric":"leads"}, {"metric":"atendidos"},
     {"metric":"primeira_resposta"}, {"metric":"tempo_resposta"},
-    {"metric":"ligacoes_feitas"}, {"metric":"taxa_ligacao"}
+    {"metric":"ligacoes_feitas"}, {"metric":"ligacoes_recebidas"},
+    {"metric":"tempo_falado"}, {"metric":"taxa_ligacao"}
   ]
 ```
 > ⚠️ `primeira_resposta`/`tempo_resposta` vêm em **segundos**, contados só no horário comercial da conta.
-> `taxa_ligacao` = ligações feitas ÷ leads (ou `"denominator":"atendidos"`). Essas 4 colunas só valem com
+> `taxa_ligacao` = ligações feitas ÷ leads (ou `"denominator":"atendidos"`). Essas colunas só valem com
 > `dimension: agent` — em tabela por equipe/caixa o salvamento volta 422 com o motivo.
 
 **R9 — Salvar isso como relatório na tela do cliente:** teste com o R8, mostre o número, confirme
