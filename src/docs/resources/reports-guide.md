@@ -509,12 +509,15 @@ viraram conversa). É um relatório de LEITURA puro — não cria nem altera nad
 
 **Filtros (query, todos opcionais):** `since` / `until` (ISO 8601; default = 30 dias atrás → agora),
 `funnel_id`, `platform`, `kind`, `campaign`, `adset`, `group_by`.
+`campaign`/`adset` aceitam `__none__` para filtrar so os leads SEM aquele nome (campanha/conjunto vazio).
 
 **Retorno:**
 - `period` — janela efetiva considerada.
 - `totals` — `conversations`, `classified` (com origem identificada), `unclassified` (sem origem),
   `orphan_leads` (leads sem conversa ainda), `unique_leads` (deduplicados por TELEFONE),
   `won_leads` (leads em cards de estágio de Ganho) e `conversion_rate`.
+- `unclassified` — `{conversations, won, conversion_rate}` das conversas SEM origem (entram em `totals` mas nao em `by_platform`;
+  a venda de uma conversa iniciada pela propria empresa mora aqui).
 - Arrays de quebra: `by_platform`, `by_kind`, `by_campaign`, `by_adset`, `by_creative`. Cada linha
   tem `{value, conversations, won, conversion_rate}`.
 

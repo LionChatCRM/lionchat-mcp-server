@@ -807,6 +807,15 @@ ContactDocument (aba Documentos do contato, 2026-06-11)
 └── ações: preview, download, renomear, favoritar, excluir (conversas são só-leitura)
 ```
 
+**Paginação opcional da aba Documentos (2026-10-06):** `lionchat_contacts_documents_list` e
+`lionchat_companies_documents_list` aceitam `page` (50 por página, `per_page` até 100) e, junto com ele, os filtros
+`source` (contact/kanban/conversation/agenda/lead_form/esignature), `type` (images/pdf/sheets/docs/other), `favorite`
+e `q` (nome); a empresa aceita também `owner_id` (dono do arquivo). Com `page` a resposta é `{payload, meta: {total,
+page, per_page, total_pages, contacts, truncated}}`, o `total` já vem filtrado e uma página que não existe mais vira
+a última. **Sem `page` nada mudou: a lista inteira, como sempre.** Para quem tem muitos arquivos prefira paginar —
+só os itens da página trazem os links assinados (`open_url`/`download_url`/`preview_url`), então a resposta é bem
+menor (medido: 255 arquivos, 304 KB -> 59 KB por página).
+
 **Histórico de preenchimentos por CONTATO (2026-08-21 — entra com o próximo deploy do app depois
 de 21/08/2026):** `GET /contacts/{id}/form_entries` (aba "Preenchimentos" da ficha; tools
 `lionchat_contacts_form_entries_list` / `_show`) junta, em ordem de data, o que a pessoa preencheu

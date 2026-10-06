@@ -26423,7 +26423,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents",
   "title": "Documentos do Contato",
-  "description": "Central de arquivos do contato: uploads diretos + espelho dos anexos dos cards Kanban + das conversas (só imagem/documento). Dedup por arquivo. (25/09) O mesmo arquivo em varias origens vem UMA vez (representado pelo upload da ficha, se houver); cada item traz contacts [{id,name}]. Contrato assinado so aparece para quem pode ver contratos; arquivo de compromisso particular de outra pessoa nao aparece. mirror aceita tambem anexo de compromisso e de contrato.",
+  "description": "Central de arquivos do contato: uploads diretos + espelho dos anexos dos cards Kanban + das conversas (só imagem/documento). Dedup por arquivo. (25/09) O mesmo arquivo em varias origens vem UMA vez (representado pelo upload da ficha, se houver); cada item traz contacts [{id,name}]. Contrato assinado so aparece para quem pode ver contratos; arquivo de compromisso particular de outra pessoa nao aparece. mirror aceita tambem anexo de compromisso e de contrato. (06/10) PAGINACAO OPCIONAL: com `page` (50 por pagina, ate 100) o servidor devolve so aquela pagina e ja aplica os filtros source/type/favorite/q — recomendado para quem tem muitos arquivos, porque so os itens da pagina trazem os links assinados (open_url/download_url/preview_url). Sem `page` continua a lista inteira.",
   "category": "Documentos do Contato",
   "params": [
    {
@@ -26432,9 +26432,51 @@
     "location": "path",
     "required": true,
     "description": "ID do contato"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "PAGINA (a partir de 1). Ativa a paginacao NO SERVIDOR: devolve so os itens da pagina e `meta`. Sem `page` a resposta e a lista inteira, como sempre. Pagina que nao existe mais vira a ultima."
+   },
+   {
+    "name": "per_page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Itens por pagina (padrao 50, maximo 100). So vale com `page`."
+   },
+   {
+    "name": "source",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pela origem: contact, kanban, conversation, agenda, lead_form ou esignature. So vale com `page`."
+   },
+   {
+    "name": "type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo tipo do arquivo: images, pdf, sheets, docs ou other. Valor desconhecido e ignorado. So vale com `page`."
+   },
+   {
+    "name": "favorite",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = so os favoritos. So vale com `page`."
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Busca no nome do arquivo (sem diferenciar maiuscula). So vale com `page`."
    }
   ],
-  "returns": "{payload: [...]} ordenado por favorito e depois data. source tem 5 origens: contact, kanban, conversation, agenda e lead_form (NOVO 18/08 — arquivos que o lead enviou num formulario publico; itens trazem lead_form_id e lead_form_name; aparecem depois que a resposta e ligada ao contato). Anexo de lead_form aceita mirror (renomear/favoritar) mas NAO aceita destroy_mirror (422) — o arquivo pertence a resposta do formulario.",
+  "returns": "{payload: [...]} ordenado por favorito e depois data. source tem 5 origens: contact, kanban, conversation, agenda e lead_form (NOVO 18/08 — arquivos que o lead enviou num formulario publico; itens trazem lead_form_id e lead_form_name; aparecem depois que a resposta e ligada ao contato). Anexo de lead_form aceita mirror (renomear/favoritar) mas NAO aceita destroy_mirror (422) — o arquivo pertence a resposta do formulario. Com `page`: {payload: [so a pagina], meta: {total (ja filtrado), page, per_page, total_pages, contacts, truncated}}; o payload mantem a mesma ordem (favoritos, depois data) e as paginas juntas dao a lista inteira.",
   "common_use_cases": [
    "Ver todos os arquivos de um cliente num lugar só"
   ],
@@ -35857,7 +35899,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/companies/{company_id}/documents",
   "title": "Documentos da Empresa",
-  "description": "Documentos de TODOS os contatos da empresa juntos (mesmas origens e regras da aba Documentos do contato: ficha, card, conversa, compromisso, formulario e contrato assinado). Cada item traz contacts [{id, name}] (de quem e). O mesmo arquivo mandado a varios contatos vem UMA vez, com todos os nomes. SO LEITURA: favoritar/renomear/enviar/apagar e pela ficha do contato (lionchat_contacts_documents_*). Lista inteira, teto de 1000 (meta.truncated avisa).",
+  "description": "Documentos de TODOS os contatos da empresa juntos (mesmas origens e regras da aba Documentos do contato: ficha, card, conversa, compromisso, formulario e contrato assinado). Cada item traz contacts [{id, name}] (de quem e). O mesmo arquivo mandado a varios contatos vem UMA vez, com todos os nomes. SO LEITURA: favoritar/renomear/enviar/apagar e pela ficha do contato (lionchat_contacts_documents_*). Teto de 1000 (meta.truncated avisa). (06/10) PAGINACAO OPCIONAL: com `page` (50 por pagina, ate 100) devolve so a pagina e aplica os filtros source/type/favorite/q/owner_id no servidor; sem `page`, a lista inteira.",
   "category": "Empresas",
   "params": [
    {
@@ -35866,9 +35908,58 @@
     "location": "path",
     "required": true,
     "description": "ID da empresa"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "PAGINA (a partir de 1). Ativa a paginacao NO SERVIDOR: devolve so os itens da pagina e `meta`. Sem `page` a resposta e a lista inteira, como sempre. Pagina que nao existe mais vira a ultima."
+   },
+   {
+    "name": "per_page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Itens por pagina (padrao 50, maximo 100). So vale com `page`."
+   },
+   {
+    "name": "source",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pela origem: contact, kanban, conversation, agenda, lead_form ou esignature. So vale com `page`."
+   },
+   {
+    "name": "type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo tipo do arquivo: images, pdf, sheets, docs ou other. Valor desconhecido e ignorado. So vale com `page`."
+   },
+   {
+    "name": "favorite",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = so os favoritos. So vale com `page`."
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Busca no nome do arquivo (sem diferenciar maiuscula). So vale com `page`."
+   },
+   {
+    "name": "owner_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo DONO do arquivo (id de um contato da empresa; os donos disponiveis vem em meta.contacts). So vale com `page`."
    }
   ],
-  "returns": "{payload: [...], meta: {total, truncated}}",
+  "returns": "{payload: [...], meta: {total, truncated}}. Com `page`: meta = {total (ja filtrado), page, per_page, total_pages, contacts (os donos de TODOS os arquivos, para montar o filtro), truncated}.",
   "common_use_cases": [
    "Achar um arquivo de qualquer pessoa da empresa",
    "Conferir documentos enviados para a empresa"
