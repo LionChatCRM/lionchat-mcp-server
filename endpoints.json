@@ -1608,7 +1608,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/conversations/{id}/custom_attributes",
   "title": "Custom Attributes",
-  "description": "Atualiza atributos customizados da conversa. Obrigatorios: id, custom_attributes. O custom_attributes enviado SUBSTITUI o conjunto da conversa (menos captain_*): leia antes com lionchat_conversations_show e reenvie tudo — mandar so a chave nova apaga clique do anuncio, gclid e origem.",
+  "description": "Atualiza atributos customizados da conversa. Obrigatorios: id, custom_attributes. O custom_attributes enviado SUBSTITUI os atributos DO CLIENTE (o que nao vier no envio e apagado): leia antes com lionchat_conversations_show e reenvie os atributos do cliente com o alterado. O dado do SISTEMA fica FORA dessa troca — nao e apagado e tambem NAO e gravado por aqui: dados do anuncio (ctwa_*), origem (origin_*), UTM oficiais (utm_source, utm_medium, utm_campaign, utm_term, utm_content), cliques e dados do Google que o rastreio grava (gclid, gbraid, wbraid, google_keyword e demais), identificadores do WhatsApp (waha_*, whatsapp_*), campos da IA (captain_*) e todo atributo marcado como do sistema. Para marcar a origem a mao use lionchat_conversations_set_origin.",
   "category": "Conversas",
   "params": [
    {
@@ -1623,7 +1623,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Objeto {chave: valor} dos atributos da CONVERSA. ATENCAO: SUBSTITUI o conjunto inteiro — so os campos internos da IA (captain_*) sobrevivem; tudo que nao vier no envio e APAGADO, inclusive a origem do lead (utm_*, gclid, ctwa_*, origin_*). Leia antes com lionchat_conversations_show e reenvie TODOS os campos com o alterado. Ex.: {\"utm_source\": \"google\", \"motivo_contato\": \"orcamento\"}. Por tipo: data 'AAAA-MM-DD', numero como numero, lista = uma das opcoes cadastradas, sim/nao true/false."
+    "description": "Objeto {chave: valor} com os atributos DO CLIENTE na conversa. SUBSTITUI o conjunto dos atributos do cliente: o que nao vier no envio e APAGADO — leia antes com lionchat_conversations_show e reenvie todos com o alterado. Chave do sistema (ctwa_*, origin_*, UTM oficiais como utm_source, gclid/gbraid/wbraid, os google_* do rastreio, waha_*, whatsapp_*, captain_* e atributo marcado como do sistema) e IGNORADA: nao apaga e nao grava. Atributo proprio com nome parecido (ex.: utm_loja_fisica) funciona normal. Ex.: {\"motivo_contato\": \"orcamento\", \"cidade\": \"Campinas\"}. Por tipo: data 'AAAA-MM-DD', numero como numero, lista = uma das opcoes cadastradas, sim/nao true/false."
    }
   ],
   "returns": "conversa atualizada",
@@ -26817,7 +26817,7 @@
   "method": "GET",
   "path": "/api/v2/accounts/{account_id}/lead_origin_reports",
   "title": "Relatório de Origem dos Leads",
-  "description": "SÓ LEITURA. Agregado de origem dos leads/conversas: de qual plataforma, tipo, campanha, conjunto de anúncios e criativo vieram, com totais e taxa de conversão. Janela padrão: últimos 30 dias. Cruza os atributos origin_* das conversas + leads órfãos (contatos sem conversa); 'won' = cards em estágios de ganho do Kanban; leads únicos deduplicados por telefone. Permite drill-down por níveis (plataforma → tipo → campanha → conjunto → criativo). Filtra por caixa (inbox_id) e por responsável (assignee_id) — em conta com mais de uma loja, SEM inbox_id o relatório soma todas as caixas. campaign/adset aceitam o valor especial \"__none__\" (leads de anúncio cujo nome de campanha/conjunto a Meta não deixou ler).",
+  "description": "SÓ LEITURA. Agregado de origem dos leads/conversas: de qual plataforma, tipo, campanha, conjunto de anúncios e criativo vieram, com totais e taxa de conversão. Janela padrão: últimos 30 dias. Cruza os atributos origin_* das conversas + leads órfãos (contatos sem conversa); 'won' = cards em estágios de ganho do Kanban; leads únicos deduplicados por telefone. Permite drill-down por níveis (plataforma → tipo → campanha → conjunto → criativo). Filtra por caixa (inbox_id) e por responsável (assignee_id) — em conta com mais de uma loja, SEM inbox_id o relatório soma todas as caixas. campaign/adset aceitam o valor especial \"__none__\" = TODO lead sem nome de campanha/conjunto (diretos, orgânicos e também os de anúncio cujo nome a Meta não deixou ler); para isolar só os de anúncio sem nome, combine com kind=paid_ad.",
   "category": "Relatorios",
   "params": [
    {
@@ -26860,14 +26860,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtra por campanha"
+    "description": "Filtra por campanha (nome exato). Valor especial \"__none__\" = leads sem nome de campanha (todos, não só os de anúncio)."
    },
    {
     "name": "adset",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtra por conjunto de anúncios"
+    "description": "Filtra por conjunto de anúncios (nome exato). Valor especial \"__none__\" = leads sem nome de conjunto."
    },
    {
     "name": "inbox_id",

@@ -188,7 +188,7 @@ Muitos campos objeto/lista são **trocados inteiros** no update: o que não vier
 
 | TROCA inteira (leia e reenvie tudo) | SOMA (só as chaves enviadas mudam) |
 |---|---|
-| `custom_attributes` da CONVERSA (`conversations_create_3` — troca os atributos DO CLIENTE; desde 06/10/2026 o rastreio do sistema NÃO é mais apagado: ctwa/origin/utm/gclid/waha/captain ficam) | `custom_attributes` do CONTATO (`contacts_update`) |
+| `custom_attributes` da CONVERSA (`conversations_create_3` — troca os atributos DO CLIENTE; desde 06/10/2026 o dado do sistema fica FORA dessa troca: não é apagado e também não é gravado por aqui — ctwa/origin/UTM oficiais/cliques do Google/waha/captain e qualquer atributo marcado como do sistema. Atributo próprio do cliente segue normal, mesmo com nome parecido, ex.: `utm_loja_fisica`) | `custom_attributes` do CONTATO (`contacts_update`) |
 | card: cada chave de `item_details` (a lista `custom_attributes` do card, `offers`, `notes`), `assigned_agents`, coluna `custom_attributes` | `item_details` do card no 1º nível (chave não enviada fica) |
 | `funnel.settings`, `funnel.stages` (etapa ausente = removida), `kanban_config.global_custom_attributes` | `channel.additional_attributes` da caixa WhatsApp/Instagram/Facebook/TikTok |
 | `flow_data` do fluxo, `actions` de macro/automação, `query` de filtro salvo, `audience` de campanha | `roles_layout` do modelo de contrato |
