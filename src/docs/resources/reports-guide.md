@@ -585,6 +585,10 @@ quebra. Aconteceu em produção com quem seguiu a versão anterior da tela.
 como público de campanha (antes apareciam no painel e eram invisíveis para tudo isso): `google_keyword`
 (Palavra-chave), `google_match_type`, `google_device`, `google_network`, `google_placement`,
 `google_ad_position`, `google_campaign_id`, `google_adgroup_id`, `google_creative_id`.
+Desde 06/10/2026 são 12: entraram `google_feed_item_id` (a extensão do anúncio que foi clicada),
+`google_loc_physical` (o lugar onde a pessoa estava ao clicar) e `google_loc_interest` (o lugar que ela
+pesquisou). **Os três são CÓDIGOS numéricos do Google, não nomes** (ex.: `1001773`) — servem para filtrar por
+igualdade ou por "preenchido", não para ler o nome da cidade.
 
 **A palavra-chave só existe em campanha de BUSCA.** Medido na produção em 29/09: 39% dos cliques são
 Performance Max, onde o Google não informa palavra-chave, conjunto nem anúncio — nesses a linha vem vazia,
