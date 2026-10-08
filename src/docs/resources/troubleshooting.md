@@ -854,6 +854,41 @@ antes de 17/09 podem não ter `{{cliente_id}}`: use a ficha só como reserva
 
 ---
 
+## "A clínica trocou o celular do paciente e os dados da e-Clínica mudaram de contato" — 07/10/2026
+
+**Não é defeito.** Quando o celular novo informado pela e-Clínica **já é de outro contato** da conta (o
+paciente já conversava pelo número novo, por exemplo), os avisos da e-Clínica passam para o contato do
+número novo: os atributos `eclinica_*` (mais `endereco_unidade` e `unidade_de_atendimento`) saem do
+contato antigo e os lembretes pendentes do paciente trocam de contato. **Nenhum telefone é trocado e
+nenhuma ficha é juntada** — juntar continua sendo decisão da equipe (`lionchat_contact_merge_preview`
+antes de qualquer junção).
+
+**Como reconhecer:**
+- as duas conversas têm um aviso em cinza ("Os avisos da e-Clínica passam a sair por lá" / "Este contato
+  passou a receber os avisos da e-Clínica do paciente ...");
+- o contato antigo tem `additional_attributes.eclinica_vinculo_cedido` — um mapa
+  `"<unidade>:<paciente>" => { para, em, prova }` dizendo para qual contato o cadastro foi;
+- o contato novo pode ter `additional_attributes.eclinica_vinculo_recebido` (`{ de, em }`), só quando a
+  passagem foi sem prova de que é a mesma pessoa.
+
+**Não escreva nem apague essas duas chaves** (são do sistema) e **não regrave `eclinica_cliente_id` /
+`eclinica_unit_id` no contato antigo**: a busca do paciente prefere o contato que NÃO cedeu o cadastro, e
+o par regravado à mão só gera confusão.
+
+**Quando os avisos NÃO passam** (a conversa diz "Nada foi alterado. Confira o celular no cadastro da
+clínica."): o contato dono do número novo já é de OUTRO paciente da clínica, ou os dois contatos têm CPFs
+diferentes.
+
+**Número digitado errado na recepção:** se o número errado for de outro contato, os avisos vão para lá
+até a clínica corrigir; na correção eles voltam sozinhos para o contato do paciente (as duas conversas
+ganham novo aviso). Para mover à mão é com o suporte — não existe ferramenta do MCP para isso.
+
+**Lembrete "pendente" que aparece em nome de outro contato** em `lionchat_eclinica_reminder_history_list`:
+é o mesmo paciente, depois da passagem. Na hora de sair, o lembrete confere de novo qual contato tem o
+cadastro e sai por ele.
+
+---
+
 ## "Marquei Faltou (ou Compareceu) e a tarefa continua pendente" — 17/09/2026
 
 **Não é defeito.** Presença (`attendance`) e situação (`status`) são campos separados de propósito: marcar

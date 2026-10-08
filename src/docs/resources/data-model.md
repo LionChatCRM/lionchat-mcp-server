@@ -627,6 +627,14 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_ultima_cobranca_vencimento` | date | Vencimento da última cobrança |
 | `eclinica_ultima_cobranca_descricao` | text | Descrição da última cobrança |
 
+**O cadastro do paciente pode mudar de contato (07/10/2026).** Todos os atributos `eclinica_*` desta
+tabela (e `endereco_unidade` / `unidade_de_atendimento`) acompanham o paciente: quando a clínica troca o
+celular para um número que já é de OUTRO contato da conta, eles saem do contato antigo e passam para o
+contato do número novo, junto com os lembretes pendentes. O contato antigo fica com
+`additional_attributes.eclinica_vinculo_cedido` (para onde foi) e o novo pode ter
+`additional_attributes.eclinica_vinculo_recebido` (de onde veio) — chaves do sistema, só leitura. Ver o
+`troubleshooting` ("A clínica trocou o celular do paciente...").
+
 **Regras de atualização que enganam na leitura (2026-08-20/21):**
 
 - `eclinica_situacao` e `eclinica_cor` são **esparsas**: evento de agenda que vem SEM o campo
