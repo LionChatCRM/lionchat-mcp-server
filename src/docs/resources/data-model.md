@@ -627,6 +627,14 @@ Atributos de sistema no CONTATO (prefixo `eclinica_`, protegidos, usáveis como 
 | `eclinica_ultima_cobranca_vencimento` | date | Vencimento da última cobrança |
 | `eclinica_ultima_cobranca_descricao` | text | Descrição da última cobrança |
 
+**O cadastro do paciente pode mudar de contato (07/10/2026).** Todos os atributos `eclinica_*` desta
+tabela (e `endereco_unidade` / `unidade_de_atendimento`) acompanham o paciente: quando a clínica troca o
+celular para um número que já é de OUTRO contato da conta, eles saem do contato antigo e passam para o
+contato do número novo, junto com os lembretes pendentes. O contato antigo fica com
+`additional_attributes.eclinica_vinculo_cedido` (para onde foi) e o novo pode ter
+`additional_attributes.eclinica_vinculo_recebido` (de onde veio) — chaves do sistema, só leitura. Ver o
+`troubleshooting` ("A clínica trocou o celular do paciente...").
+
 **Regras de atualização que enganam na leitura (2026-08-20/21):**
 
 - `eclinica_situacao` e `eclinica_cor` são **esparsas**: evento de agenda que vem SEM o campo
@@ -806,6 +814,15 @@ ContactDocument (aba Documentos do contato, 2026-06-11)
 ├── dedup por checksum (arquivo repetido conta 1x no storage)
 └── ações: preview, download, renomear, favoritar, excluir (conversas são só-leitura)
 ```
+
+**Paginação opcional da aba Documentos (2026-10-06):** `lionchat_contacts_documents_list` e
+`lionchat_companies_documents_list` aceitam `page` (50 por página, `per_page` até 100) e, junto com ele, os filtros
+`source` (contact/kanban/conversation/agenda/lead_form/esignature), `type` (images/pdf/sheets/docs/other), `favorite`
+e `q` (nome); a empresa aceita também `owner_id` (dono do arquivo). Com `page` a resposta é `{payload, meta: {total,
+page, per_page, total_pages, contacts, truncated}}`, o `total` já vem filtrado e uma página que não existe mais vira
+a última. **Sem `page` nada mudou: a lista inteira, como sempre.** Para quem tem muitos arquivos prefira paginar —
+só os itens da página trazem os links assinados (`open_url`/`download_url`/`preview_url`), então a resposta é bem
+menor (medido: 255 arquivos, 304 KB -> 59 KB por página).
 
 **Histórico de preenchimentos por CONTATO (2026-08-21 — entra com o próximo deploy do app depois
 de 21/08/2026):** `GET /contacts/{id}/form_entries` (aba "Preenchimentos" da ficha; tools

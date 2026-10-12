@@ -264,9 +264,17 @@ function buildZodSchema(
   return z.object(shape);
 }
 
-// AIDEV-NOTE: Check if endpoint has any file-type params (unsupported in MCP v1)
+// AIDEV-NOTE: Check if endpoint REQUIRES a file-type param (unsupported in MCP v1).
+// AIDEV-NOTE: [arquivo-opcional 03/10] A pergunta e "EXIGE arquivo?", nunca "tem campo de arquivo?".
+//   O executor ja acertava (so recusa quando um VALOR de arquivo e enviado); quem errava era este
+//   aviso, que e a PRIMEIRA linha que o modelo le na descricao. Com `.some(type === 'file')` quatro
+//   ferramentas que funcionam hoje se anunciavam quebradas e a IA desistia antes de tentar:
+//   contacts_update (a foto e opcional), account_update (o logotipo), upload_create (aceita
+//   external_url) e captain_documents_create (a base de conhecimento da IA, aceita external_link —
+//   e a nossa propria best-practices.md ensina a usar o link enquanto esta linha dizia que nao da).
+//   Achado nas auditorias de 03/10. NUNCA voltar a ignorar `required`.
 function hasFileParam(params: EndpointParam[]): boolean {
-  return params.some((p) => p.type === 'file');
+  return params.some((p) => p.type === 'file' && p.required);
 }
 
 // AIDEV-NOTE: Register a single API endpoint as an MCP tool
@@ -296,22 +304,27 @@ function registerSingleTool(
     async (params: Record<string, unknown>) => {
       try {
         // AIDEV-NOTE: Block execution if file param was actually provided
-        if (hasFile) {
-          const fileParams = endpoint.params.filter((p) => p.type === 'file');
-          for (const fp of fileParams) {
-            // AIDEV-NOTE: B10 (2026-06-02) — trata "" como "não fornecido" (igual ao remoto
-            // runner.ts), pra os dois conectores terem o mesmo guard de file vazio.
-            if (params[fp.name] !== undefined && params[fp.name] !== null && params[fp.name] !== '') {
-              return {
-                content: [
-                  {
-                    type: 'text' as const,
-                    text: 'File upload is not supported via MCP. Use the LionChat web interface or direct API calls.',
-                  },
-                ],
-                isError: true,
-              };
-            }
+        // AIDEV-NOTE: [arquivo-opcional 03/10] A recusa roda SEMPRE, nunca mais dentro de
+        //   `if (hasFile)`. Desde que `hasFileParam` passou a exigir `required`, o antigo `if`
+        //   deixava as 4 ferramentas de arquivo OPCIONAL (contacts_update, account_update,
+        //   upload_create, captain_documents_create) sem defesa nenhuma — e o conector REMOTO
+        //   sempre recusou incondicionalmente (`runner.ts`), entao os dois tinham passado a
+        //   divergir. Hoje o param `type: file` nem entra no schema (`continue` acima), logo isto
+        //   e defesa em profundidade; e e exatamente por ser defesa que nao pode depender do aviso.
+        const fileParams = endpoint.params.filter((p) => p.type === 'file');
+        for (const fp of fileParams) {
+          // AIDEV-NOTE: B10 (2026-06-02) — trata "" como "não fornecido" (igual ao remoto
+          // runner.ts), pra os dois conectores terem o mesmo guard de file vazio.
+          if (params[fp.name] !== undefined && params[fp.name] !== null && params[fp.name] !== '') {
+            return {
+              content: [
+                {
+                  type: 'text' as const,
+                  text: 'File upload is not supported via MCP. Use the LionChat web interface or direct API calls.',
+                },
+              ],
+              isError: true,
+            };
           }
         }
 

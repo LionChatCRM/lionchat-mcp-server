@@ -549,6 +549,23 @@
 
 **Lembretes:** `attr_key` é obrigatório; `_date_of_birth` é o Aniversário nativo. `trigger_uuid` é preenchido pelo backend (não envie). Ativar o flow já agenda os contatos que têm a data. Pulos (contato sem telefone, caixa desvinculada, etc.) aparecem em `flows_executions_list`.
 
+**Quanto tempo leva, com muita gente na mesma data (mudou em 2026-10-02):** o horário configurado é
+respeitado — a primeira mensagem sai às 09:00 em ponto. As demais saem no ritmo da caixa, que existe
+para o número não ser bloqueado:
+
+| Caixa | Ritmo | 50 pessoas | 500 pessoas |
+|---|---|---|---|
+| QR Code (WAHA) | 20-40 s entre cada | ~25 min | ~4 h |
+| Oficial (Cloud) | 10 por segundo | 5 s | ~50 s |
+
+**Ao montar aniversário para uma base grande em QR Code, diga isso ao cliente antes** — ele vai ver as
+mensagens pingando e achar que travou. Não é atraso: é a trava anti-banimento. Se precisar sair rápido
+em volume, o caminho é caixa oficial ou Campanha de Fluxo (que tem agendamento por dias).
+
+Até 02/10/2026 o motor somava `id do contato % 180` MINUTOS ao horário escolhido — 18:00 podia virar
+20:50, sem nada na tela explicando. Isso acabou; se encontrar documentação antiga dizendo que o
+Gatilho de Data "espalha em até 3 horas", está desatualizada.
+
 ---
 
 ## 17. Gestão de Grupos WhatsApp por fluxo (`update_group`)

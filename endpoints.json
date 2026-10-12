@@ -1608,7 +1608,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/conversations/{id}/custom_attributes",
   "title": "Custom Attributes",
-  "description": "Atualiza atributos customizados da conversa. Obrigatorios: id, custom_attributes. O custom_attributes enviado SUBSTITUI o conjunto da conversa (menos captain_*): leia antes com lionchat_conversations_show e reenvie tudo — mandar so a chave nova apaga clique do anuncio, gclid e origem.",
+  "description": "Atualiza atributos customizados da conversa. Obrigatorios: id, custom_attributes. O custom_attributes enviado SUBSTITUI os atributos DO CLIENTE (o que nao vier no envio e apagado): leia antes com lionchat_conversations_show e reenvie os atributos do cliente com o alterado. O dado do SISTEMA fica FORA dessa troca — nao e apagado e tambem NAO e gravado por aqui: dados do anuncio (ctwa_*), origem (origin_*), UTM oficiais (utm_source, utm_medium, utm_campaign, utm_term, utm_content), cliques e dados do Google que o rastreio grava (gclid, gbraid, wbraid, google_keyword e demais), identificadores do WhatsApp (waha_*, whatsapp_*), campos da IA (captain_*) e todo atributo marcado como do sistema. Para marcar a origem a mao use lionchat_conversations_set_origin.",
   "category": "Conversas",
   "params": [
    {
@@ -1623,7 +1623,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Objeto {chave: valor} dos atributos da CONVERSA. ATENCAO: SUBSTITUI o conjunto inteiro — so os campos internos da IA (captain_*) sobrevivem; tudo que nao vier no envio e APAGADO, inclusive a origem do lead (utm_*, gclid, ctwa_*, origin_*). Leia antes com lionchat_conversations_show e reenvie TODOS os campos com o alterado. Ex.: {\"utm_source\": \"google\", \"motivo_contato\": \"orcamento\"}. Por tipo: data 'AAAA-MM-DD', numero como numero, lista = uma das opcoes cadastradas, sim/nao true/false."
+    "description": "Objeto {chave: valor} com os atributos DO CLIENTE na conversa. SUBSTITUI o conjunto dos atributos do cliente: o que nao vier no envio e APAGADO — leia antes com lionchat_conversations_show e reenvie todos com o alterado. Chave do sistema (ctwa_*, origin_*, UTM oficiais como utm_source, gclid/gbraid/wbraid, os google_* do rastreio, waha_*, whatsapp_*, captain_* e atributo marcado como do sistema) e IGNORADA: nao apaga e nao grava. Atributo proprio com nome parecido (ex.: utm_loja_fisica) funciona normal. Ex.: {\"motivo_contato\": \"orcamento\", \"cidade\": \"Campinas\"}. Por tipo: data 'AAAA-MM-DD', numero como numero, lista = uma das opcoes cadastradas, sim/nao true/false."
    }
   ],
   "returns": "conversa atualizada",
@@ -4064,14 +4064,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — mande SEMPRE timestamp UNIX (segundos ou milissegundos): funciona em QUALQUER versao. Data por extenso ('2026-07-01') so e aceita a partir da atualizacao de 26/07/2026; antes dela NAO da erro, devolve o relatorio INTEIRO ZERADO (vira 1970 por dentro). Se vier tudo zero e o funil tem cards, era isso — repita com timestamp."
+    "description": "Inicio do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Mande unix se quiser o instante exato; data SEM hora cobre o dia inteiro no fuso da conta."
    },
    {
     "name": "to",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — mesma regra do 'from': timestamp UNIX e sempre seguro. A partir da atualizacao de 26/07/2026 aceita tambem data por extenso, e data SEM hora passa a cobrir o dia inteiro (ate 23:59:59)."
+    "description": "Fim do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Data SEM hora cobre o dia inteiro (ate 23:59:59 no fuso da conta)."
    },
    {
     "name": "user_ids",
@@ -5320,14 +5320,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Inicio do periodo (ex: 1782864000 ou 2026-10-01). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Fim do periodo (ex: 1782864000 ou 2026-10-05). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "business_hours",
@@ -5369,14 +5369,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Inicio do periodo (ex: 1782864000 ou 2026-10-01). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Fim do periodo (ex: 1782864000 ou 2026-10-05). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "business_hours",
@@ -5411,14 +5411,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Inicio do periodo (ex: 1782864000 ou 2026-10-01). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Fim do periodo (ex: 1782864000 ou 2026-10-05). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "business_hours",
@@ -5453,14 +5453,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Inicio do periodo (ex: 1782864000 ou 2026-10-01). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Fim do periodo (ex: 1782864000 ou 2026-10-05). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "business_hours",
@@ -5495,14 +5495,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Inicio do periodo (ex: 1782864000 ou 2026-10-01). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Fim do periodo (ex: 1782864000 ou 2026-10-05). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "business_hours",
@@ -5551,14 +5551,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Inicio do periodo (ex: 1782864000 ou 2026-10-01). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Fim do periodo (ex: 1782864000 ou 2026-10-05). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "id",
@@ -5586,7 +5586,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Deslocamento de fuso em horas (ex: -3 pra Brasilia) — afeta SO o agrupamento dos pontos do grafico (fronteira do dia/hora), NAO altera totais de summary."
+    "description": "Deslocamento de fuso em horas (ex: -3 pra Brasilia) — afeta SO o agrupamento dos pontos do grafico (fronteira do dia/hora), NAO altera totais de summary. Opcional. Ausente usa o fuso DA CONTA (correto para quase todos os casos); so envie para olhar de OUTRO fuso, em horas (ex: -3)."
    }
   ],
   "returns": "array de { value, timestamp[, count] } (sem meta)",
@@ -5664,7 +5664,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fuso em horas (ex: -3 pra Brasília). O MESMO da série — define a fronteira do dia/hora do ponto."
+    "description": "Fuso em horas (ex: -3 pra Brasília). O MESMO da série — define a fronteira do dia/hora do ponto. Opcional. Ausente usa o fuso DA CONTA (correto para quase todos os casos); so envie para olhar de OUTRO fuso, em horas (ex: -3)."
    },
    {
     "name": "business_hours",
@@ -5706,14 +5706,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Inicio do periodo (ex: 1782864000 ou 2026-10-01). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Fim do periodo (ex: 1782864000 ou 2026-10-05). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "type",
@@ -5741,7 +5741,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Deslocamento de fuso em horas (ex: -3). NAO altera os totais do summary — so afeta agrupamento em endpoints de serie temporal."
+    "description": "Deslocamento de fuso em horas (ex: -3). NAO altera os totais do summary — so afeta agrupamento em endpoints de serie temporal. Opcional. Ausente usa o fuso DA CONTA (correto para quase todos os casos); so envie para olhar de OUTRO fuso, em horas (ex: -3)."
    }
   ],
   "returns": "{ conversations_count, incoming_messages_count, outgoing_messages_count, resolutions_count, avg_first_response_time (seg), avg_resolution_time (seg), median_first_response_time (seg), median_resolution_time (seg), reply_time (seg — tempo medio de resposta), previous: {...mesma estrutura...} }",
@@ -5800,7 +5800,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Offset de timezone em horas"
+    "description": "Offset de timezone em horas. Opcional. Ausente usa o fuso DA CONTA (correto para quase todos os casos); so envie para olhar de OUTRO fuso, em horas (ex: -3)."
    }
   ],
   "returns": "{ bot_resolutions_count, bot_handoffs_count, previous: {...} }",
@@ -5985,7 +5985,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Offset de timezone em horas"
+    "description": "Offset de timezone em horas. Opcional. Ausente usa o fuso DA CONTA (correto para quase todos os casos); so envie para olhar de OUTRO fuso, em horas (ex: -3)."
    }
   ],
   "returns": "arquivo CSV (conversation_traffic_reports.csv)",
@@ -8188,14 +8188,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras."
+    "description": "Inicio do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente."
+    "description": "Fim do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente."
    },
    {
     "name": "page",
@@ -8224,6 +8224,13 @@
     "location": "query",
     "required": false,
     "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+   },
+   {
+    "name": "date_basis",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "OPCIONAL. Qual data o periodo (since/until) usa: `activity` (padrao e qualquer outro valor: conversas e contatos pela ULTIMA ATIVIDADE, artigos pela ultima atualizacao) ou `created` (pela data de CRIACAO). Mensagens ja sao por criacao e cards do Kanban nao tem periodo. Valor invalido nunca da erro."
    }
   ],
   "returns": "{ payload: { conversations, contacts, messages, articles, kanban_items } } — sem meta. [29/07] Cada conversa vem com `status` e `labels` (etiquetas da conversa) e cada contato vem com `labels` (etiquetas do contato), entao NAO e preciso uma chamada extra por resultado so pra saber a etiqueta. Cada mensagem inclui previous_message/next_message (contexto vizinho) e NAO traz labels.",
@@ -8268,14 +8275,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras."
+    "description": "Inicio do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente."
+    "description": "Fim do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente."
    },
    {
     "name": "page",
@@ -8290,6 +8297,13 @@
     "location": "query",
     "required": false,
     "description": "Filtros estruturados (mesmo formato de conversations_filter). JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+   },
+   {
+    "name": "date_basis",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "OPCIONAL. Qual data o periodo (since/until) usa: `activity` (padrao e qualquer outro valor: conversas e contatos pela ULTIMA ATIVIDADE, artigos pela ultima atualizacao) ou `created` (pela data de CRIACAO). Mensagens ja sao por criacao e cards do Kanban nao tem periodo. Valor invalido nunca da erro."
    }
   ],
   "returns": "{ payload: { conversations: [...] } } — sem meta. [29/07] Cada conversa traz `labels` (etiquetas da conversa) e `status`, alem de contato, caixa, responsavel e ultima mensagem — nao e preciso outra chamada so pra saber a etiqueta.",
@@ -8323,14 +8337,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras. Filtra pela ULTIMA ATIVIDADE do contato (last_activity_at)."
+    "description": "Inicio do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras. Filtra pela ULTIMA ATIVIDADE do contato (last_activity_at)."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente. Filtra pela ULTIMA ATIVIDADE do contato (last_activity_at)."
+    "description": "Fim do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente. Filtra pela ULTIMA ATIVIDADE do contato (last_activity_at)."
    },
    {
     "name": "page",
@@ -8345,6 +8359,13 @@
     "location": "query",
     "required": false,
     "description": "Filtros estruturados (mesmo formato de contacts_filter). JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+   },
+   {
+    "name": "date_basis",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "OPCIONAL. Qual data o periodo (since/until) usa: `activity` (padrao e qualquer outro valor: conversas e contatos pela ULTIMA ATIVIDADE, artigos pela ultima atualizacao) ou `created` (pela data de CRIACAO). Mensagens ja sao por criacao e cards do Kanban nao tem periodo. Valor invalido nunca da erro."
    }
   ],
   "returns": "{ payload: { contacts: [...] } } — sem meta e sem total; 15 contatos por pagina, use `page` para as proximas, ordenados por atividade mais recente (last_activity_at desc). [29/07] Cada contato traz id, name, email, phone_number, identifier, `labels` (nomes das etiquetas do contato), `thumbnail` (foto), `last_activity_at` (unix) e `additional_attributes` — e dentro dele que ficam os dados cadastrais (`cadastral`: CPF/CNPJ/RG/endereco) e os atributos personalizados.",
@@ -8392,14 +8413,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras."
+    "description": "Inicio do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para tras."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 nem data por extenso: o servidor faz .to_i e \"2026-07-01\" vira 2026 (= 1970), devolvendo lista VAZIA sem nenhum erro. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente."
+    "description": "Fim do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Depende da \"Busca avancada\" ligada na conta (nasce DESLIGADA — sem ela o filtro e ignorado em silencio). Cortado em SILENCIO a 90 dias para frente."
    },
    {
     "name": "page",
@@ -13480,14 +13501,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Data inicio (YYYY-MM-DD)"
+    "description": "Data inicio (YYYY-MM-DD, dia inteiro no fuso da conta)"
    },
    {
     "name": "date_to",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Data fim (YYYY-MM-DD)"
+    "description": "Data fim (YYYY-MM-DD, dia inteiro no fuso da conta)"
    },
    {
     "name": "favorited",
@@ -15085,14 +15106,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Inicio do periodo (ex: 1782864000 ou 2026-10-01). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Fim do periodo (ex: 1782864000 ou 2026-10-05). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "inbox_id",
@@ -22288,14 +22309,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Data inicio"
+    "description": "Inicio do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Data fim"
+    "description": "Fim do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "user_ids",
@@ -22347,14 +22368,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Inicio do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Inicio do periodo (ex: 1782864000 ou 2026-10-01). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim do periodo — timestamp UNIX em SEGUNDOS (ex: 1782864000). NAO use ISO 8601 — o backend faz strptime %s e a janela quebra em silencio."
+    "description": "Fim do periodo (ex: 1782864000 ou 2026-10-05). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "user_ids",
@@ -22407,14 +22428,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Data inicio"
+    "description": "Inicio do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Data fim"
+    "description": "Fim do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    }
   ],
   "returns": "arquivo CSV (csat_report.csv)",
@@ -23869,14 +23890,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Início ISO 8601"
+    "description": "Início ISO 8601. Tambem aceita unix e AAAA-MM-DD (dia inteiro no fuso da conta)."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim ISO 8601 (máx 30 dias após since)"
+    "description": "Fim ISO 8601 (máx 30 dias após since). Tambem aceita unix e AAAA-MM-DD (ate 23:59:59 no fuso da conta)."
    },
    {
     "name": "utm_source",
@@ -26402,7 +26423,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts/{contact_id}/documents",
   "title": "Documentos do Contato",
-  "description": "Central de arquivos do contato: uploads diretos + espelho dos anexos dos cards Kanban + das conversas (só imagem/documento). Dedup por arquivo. (25/09) O mesmo arquivo em varias origens vem UMA vez (representado pelo upload da ficha, se houver); cada item traz contacts [{id,name}]. Contrato assinado so aparece para quem pode ver contratos; arquivo de compromisso particular de outra pessoa nao aparece. mirror aceita tambem anexo de compromisso e de contrato.",
+  "description": "Central de arquivos do contato: uploads diretos + espelho dos anexos dos cards Kanban + das conversas (só imagem/documento). Dedup por arquivo. (25/09) O mesmo arquivo em varias origens vem UMA vez (representado pelo upload da ficha, se houver); cada item traz contacts [{id,name}]. Contrato assinado so aparece para quem pode ver contratos; arquivo de compromisso particular de outra pessoa nao aparece. mirror aceita tambem anexo de compromisso e de contrato. (06/10) PAGINACAO OPCIONAL: com `page` (50 por pagina, ate 100) o servidor devolve so aquela pagina e ja aplica os filtros source/type/favorite/q — recomendado para quem tem muitos arquivos, porque so os itens da pagina trazem os links assinados (open_url/download_url/preview_url). Sem `page` continua a lista inteira.",
   "category": "Documentos do Contato",
   "params": [
    {
@@ -26411,9 +26432,51 @@
     "location": "path",
     "required": true,
     "description": "ID do contato"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "PAGINA (a partir de 1). Ativa a paginacao NO SERVIDOR: devolve so os itens da pagina e `meta`. Sem `page` a resposta e a lista inteira, como sempre. Pagina que nao existe mais vira a ultima."
+   },
+   {
+    "name": "per_page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Itens por pagina (padrao 50, maximo 100). So vale com `page`."
+   },
+   {
+    "name": "source",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pela origem: contact, kanban, conversation, agenda, lead_form ou esignature. So vale com `page`."
+   },
+   {
+    "name": "type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo tipo do arquivo: images, pdf, sheets, docs ou other. Valor desconhecido e ignorado. So vale com `page`."
+   },
+   {
+    "name": "favorite",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = so os favoritos. So vale com `page`."
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Busca no nome do arquivo (sem diferenciar maiuscula). So vale com `page`."
    }
   ],
-  "returns": "{payload: [...]} ordenado por favorito e depois data. source tem 5 origens: contact, kanban, conversation, agenda e lead_form (NOVO 18/08 — arquivos que o lead enviou num formulario publico; itens trazem lead_form_id e lead_form_name; aparecem depois que a resposta e ligada ao contato). Anexo de lead_form aceita mirror (renomear/favoritar) mas NAO aceita destroy_mirror (422) — o arquivo pertence a resposta do formulario.",
+  "returns": "{payload: [...]} ordenado por favorito e depois data. source tem 5 origens: contact, kanban, conversation, agenda e lead_form (NOVO 18/08 — arquivos que o lead enviou num formulario publico; itens trazem lead_form_id e lead_form_name; aparecem depois que a resposta e ligada ao contato). Anexo de lead_form aceita mirror (renomear/favoritar) mas NAO aceita destroy_mirror (422) — o arquivo pertence a resposta do formulario. Com `page`: {payload: [so a pagina], meta: {total (ja filtrado), page, per_page, total_pages, contacts, truncated}}; o payload mantem a mesma ordem (favoritos, depois data) e as paginas juntas dao a lista inteira.",
   "common_use_cases": [
    "Ver todos os arquivos de um cliente num lugar só"
   ],
@@ -26754,7 +26817,7 @@
   "method": "GET",
   "path": "/api/v2/accounts/{account_id}/lead_origin_reports",
   "title": "Relatório de Origem dos Leads",
-  "description": "SÓ LEITURA. Agregado de origem dos leads/conversas: de qual plataforma, tipo, campanha, conjunto de anúncios e criativo vieram, com totais e taxa de conversão. Janela padrão: últimos 30 dias. Cruza os atributos origin_* das conversas + leads órfãos (contatos sem conversa); 'won' = cards em estágios de ganho do Kanban; leads únicos deduplicados por telefone. Permite drill-down por níveis (plataforma → tipo → campanha → conjunto → criativo).",
+  "description": "SÓ LEITURA. Agregado de origem dos leads/conversas: de qual plataforma, tipo, campanha, conjunto de anúncios e criativo vieram, com totais e taxa de conversão. Janela padrão: últimos 30 dias. Cruza os atributos origin_* das conversas + leads órfãos (contatos sem conversa); 'won' = cards em estágios de ganho do Kanban; leads únicos deduplicados por telefone. Permite drill-down por níveis (plataforma → tipo → campanha → conjunto → criativo). Filtra por caixa (inbox_id) e por responsável (assignee_id) — em conta com mais de uma loja, SEM inbox_id o relatório soma todas as caixas. campaign/adset aceitam o valor especial \"__none__\" = TODO lead sem nome de campanha/conjunto (diretos, orgânicos e também os de anúncio cujo nome a Meta não deixou ler); para isolar só os de anúncio sem nome, combine com kind=paid_ad.",
   "category": "Relatorios",
   "params": [
    {
@@ -26762,14 +26825,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Início ISO 8601 (padrão: 30 dias atrás)"
+    "description": "Início ISO 8601 (padrão: 30 dias atrás). Tambem aceita unix e AAAA-MM-DD (dia inteiro no fuso da conta)."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim ISO 8601 (padrão: agora)"
+    "description": "Fim ISO 8601 (padrão: agora). Tambem aceita unix e AAAA-MM-DD (ate 23:59:59 no fuso da conta)."
    },
    {
     "name": "funnel_id",
@@ -26797,14 +26860,28 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtra por campanha"
+    "description": "Filtra por campanha (nome exato). Valor especial \"__none__\" = leads sem nome de campanha (todos, não só os de anúncio)."
    },
    {
     "name": "adset",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtra por conjunto de anúncios"
+    "description": "Filtra por conjunto de anúncios (nome exato). Valor especial \"__none__\" = leads sem nome de conjunto."
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra por caixa de entrada. Essencial em conta com mais de uma loja/unidade: sem ele o relatorio soma TODAS as caixas da conta. Leads orfaos (contato sem conversa nenhuma) saem da contagem quando este filtro esta ligado — eles nao pertencem a caixa nenhuma."
+   },
+   {
+    "name": "assignee_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo responsavel (atendente) da conversa. Leads orfaos saem da contagem quando este filtro esta ligado — eles nao tem responsavel."
    },
    {
     "name": "group_by",
@@ -26870,7 +26947,7 @@
     "type": "number",
     "location": "body",
     "required": false,
-    "description": "Fuso em HORAS. NAO chute nem assuma -3: LEIA o fuso DA CONTA com `lionchat_account_show` (campo `timezone`, ex.: 'America/Sao_Paulo') e converta pra horas. O padrao da plataforma e America/Sao_Paulo (-3), mas a conta pode ter outro — Mato Grosso do Sul e -4, e cliente fora do Brasil existe. SEMPRE envie: ausente calcula em UTC e o numero nao bate com o que o cliente ve na tela. Em janela de UM DIA (time_range 'today'/'yesterday') isso e decisivo: uma hora de diferenca joga o que aconteceu de madrugada pro dia errado."
+    "description": "Fuso em HORAS. Opcional. Ausente usa o fuso DA CONTA (correto para quase todos os casos); so envie para olhar de OUTRO fuso, em horas (ex: -3). O padrao da conta e America/Sao_Paulo (-3); Mato Grosso do Sul e -4. Em janela de UM DIA ('today'/'yesterday') o fuso decide em que dia cai o que aconteceu de madrugada."
    },
    {
     "name": "time_range",
@@ -27022,7 +27099,7 @@
     "type": "number",
     "location": "query",
     "required": false,
-    "description": "Fuso em HORAS. NAO chute nem assuma -3: LEIA o fuso DA CONTA com `lionchat_account_show` (campo `timezone`, ex.: 'America/Sao_Paulo') e converta pra horas. O padrao da plataforma e America/Sao_Paulo (-3), mas a conta pode ter outro — Mato Grosso do Sul e -4, e cliente fora do Brasil existe. SEMPRE envie: ausente calcula em UTC e o numero nao bate com o que o cliente ve na tela. Em janela de UM DIA (time_range 'today'/'yesterday') isso e decisivo: uma hora de diferenca joga o que aconteceu de madrugada pro dia errado."
+    "description": "Fuso em HORAS. Opcional. Ausente usa o fuso DA CONTA (correto para quase todos os casos); so envie para olhar de OUTRO fuso, em horas (ex: -3). O padrao da conta e America/Sao_Paulo (-3); Mato Grosso do Sul e -4. Em janela de UM DIA ('today'/'yesterday') o fuso decide em que dia cai o que aconteceu de madrugada."
    },
    {
     "name": "measure",
@@ -28475,14 +28552,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Data inicial no formato AAAA-MM-DD (o dia inteiro entra). NÃO é timestamp Unix — número aqui gera erro"
+    "description": "Data inicial (AAAA-MM-DD; o dia inteiro entra, no fuso da conta). Tambem aceita unix e ISO 8601."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Data final no formato AAAA-MM-DD (o dia inteiro entra). NÃO é timestamp Unix — número aqui gera erro"
+    "description": "Data final (AAAA-MM-DD; o dia inteiro entra, no fuso da conta). Tambem aceita unix e ISO 8601."
    },
    {
     "name": "q",
@@ -33749,14 +33826,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Início — timestamp UNIX em SEGUNDOS"
+    "description": "Inicio do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim — timestamp UNIX em SEGUNDOS"
+    "description": "Fim do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "inbox_id",
@@ -33825,14 +33902,21 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Início — timestamp UNIX em SEGUNDOS (só com Busca avançada)"
+    "description": "Inicio do periodo (so com Busca avancada). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    },
    {
     "name": "until",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Fim — timestamp UNIX em SEGUNDOS (só com Busca avançada)"
+    "description": "Fim do periodo (so com Busca avancada). Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
+   },
+   {
+    "name": "date_basis",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "OPCIONAL. Qual data o periodo (since/until) usa: `activity` (padrao e qualquer outro valor: conversas e contatos pela ULTIMA ATIVIDADE, artigos pela ultima atualizacao) ou `created` (pela data de CRIACAO). Mensagens ja sao por criacao e cards do Kanban nao tem periodo. Valor invalido nunca da erro."
    }
   ],
   "returns": "{payload: {articles: [{id, title, locale, content, slug, portal_slug, account_id, category_name, status, updated_at (unix)}]}}",
@@ -35829,7 +35913,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/companies/{company_id}/documents",
   "title": "Documentos da Empresa",
-  "description": "Documentos de TODOS os contatos da empresa juntos (mesmas origens e regras da aba Documentos do contato: ficha, card, conversa, compromisso, formulario e contrato assinado). Cada item traz contacts [{id, name}] (de quem e). O mesmo arquivo mandado a varios contatos vem UMA vez, com todos os nomes. SO LEITURA: favoritar/renomear/enviar/apagar e pela ficha do contato (lionchat_contacts_documents_*). Lista inteira, teto de 1000 (meta.truncated avisa).",
+  "description": "Documentos de TODOS os contatos da empresa juntos (mesmas origens e regras da aba Documentos do contato: ficha, card, conversa, compromisso, formulario e contrato assinado). Cada item traz contacts [{id, name}] (de quem e). O mesmo arquivo mandado a varios contatos vem UMA vez, com todos os nomes. SO LEITURA: favoritar/renomear/enviar/apagar e pela ficha do contato (lionchat_contacts_documents_*). Teto de 1000 (meta.truncated avisa). (06/10) PAGINACAO OPCIONAL: com `page` (50 por pagina, ate 100) devolve so a pagina e aplica os filtros source/type/favorite/q/owner_id no servidor; sem `page`, a lista inteira.",
   "category": "Empresas",
   "params": [
    {
@@ -35838,9 +35922,58 @@
     "location": "path",
     "required": true,
     "description": "ID da empresa"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "PAGINA (a partir de 1). Ativa a paginacao NO SERVIDOR: devolve so os itens da pagina e `meta`. Sem `page` a resposta e a lista inteira, como sempre. Pagina que nao existe mais vira a ultima."
+   },
+   {
+    "name": "per_page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Itens por pagina (padrao 50, maximo 100). So vale com `page`."
+   },
+   {
+    "name": "source",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pela origem: contact, kanban, conversation, agenda, lead_form ou esignature. So vale com `page`."
+   },
+   {
+    "name": "type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo tipo do arquivo: images, pdf, sheets, docs ou other. Valor desconhecido e ignorado. So vale com `page`."
+   },
+   {
+    "name": "favorite",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = so os favoritos. So vale com `page`."
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Busca no nome do arquivo (sem diferenciar maiuscula). So vale com `page`."
+   },
+   {
+    "name": "owner_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pelo DONO do arquivo (id de um contato da empresa; os donos disponiveis vem em meta.contacts). So vale com `page`."
    }
   ],
-  "returns": "{payload: [...], meta: {total, truncated}}",
+  "returns": "{payload: [...], meta: {total, truncated}}. Com `page`: meta = {total (ja filtrado), page, per_page, total_pages, contacts (os donos de TODOS os arquivos, para montar o filtro), truncated}.",
   "common_use_cases": [
    "Achar um arquivo de qualquer pessoa da empresa",
    "Conferir documentos enviados para a empresa"

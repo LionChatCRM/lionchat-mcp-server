@@ -188,7 +188,7 @@ Muitos campos objeto/lista são **trocados inteiros** no update: o que não vier
 
 | TROCA inteira (leia e reenvie tudo) | SOMA (só as chaves enviadas mudam) |
 |---|---|
-| `custom_attributes` da CONVERSA (`conversations_create_3` — só `captain_*` sobrevive; apaga utm/gclid/ctwa/origin) | `custom_attributes` do CONTATO (`contacts_update`) |
+| `custom_attributes` da CONVERSA (`conversations_create_3` — troca os atributos DO CLIENTE; desde 06/10/2026 o dado do sistema fica FORA dessa troca: não é apagado e também não é gravado por aqui — ctwa/origin/UTM oficiais/cliques do Google/waha/captain e qualquer atributo marcado como do sistema. Atributo próprio do cliente segue normal, mesmo com nome parecido, ex.: `utm_loja_fisica`) | `custom_attributes` do CONTATO (`contacts_update`) |
 | card: cada chave de `item_details` (a lista `custom_attributes` do card, `offers`, `notes`), `assigned_agents`, coluna `custom_attributes` | `item_details` do card no 1º nível (chave não enviada fica) |
 | `funnel.settings`, `funnel.stages` (etapa ausente = removida), `kanban_config.global_custom_attributes` | `channel.additional_attributes` da caixa WhatsApp/Instagram/Facebook/TikTok |
 | `flow_data` do fluxo, `actions` de macro/automação, `query` de filtro salvo, `audience` de campanha | `roles_layout` do modelo de contrato |
@@ -292,7 +292,7 @@ POST /api/v1/accounts/{account_id}/kanban_items
 2. lionchat_reports_list (por agente — passa since/until em Unix EM SEGUNDOS)
 3. Comparar avg_first_response_time entre agentes
 ```
-**`since`/`until` dos relatórios só aceitam número Unix em SEGUNDOS** (`1782864000` = 01/07/2026 00:00
+**`since`/`until` dos relatórios: prefira número Unix em SEGUNDOS** (desde 05/10/2026 também aceitam `aaaa-mm-dd` = dia inteiro no fuso da conta, ISO 8601 com fuso e milissegundos) (`1782864000` = 01/07/2026 00:00
 UTC), nunca ISO 8601 nem data por extenso — o formato ISO do resto da plataforma (seção 3) NÃO vale
 aqui. Desde 29/07/2026 a API recusa com HTTP 400 (`invalid_date_params`); antes disso o relatório
 voltava ZERADO com HTTP 200 (a conta 19 tinha 4.396 conversas no período e a resposta vinha zero).

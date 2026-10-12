@@ -795,6 +795,33 @@ criptografia de grupo, aviso de protocolo, cabeçalho de álbum). Não são mens
 cabeçalho de álbum some porque as fotos chegam logo em seguida como mensagens próprias — se o
 cliente reclamar que "faltou uma mensagem antes das fotos", era isso.
 
+## "O aniversário saiu fora do horário que eu configurei" (Gatilho de Data) — 02/10/2026
+
+**Antes de 02/10/2026 isso era um defeito real:** o motor somava `id do contato % 180` **MINUTOS** ao
+horário escolhido (espalhamento anti-banimento). Quem configurava 18:00 podia receber às 20:50 — caso
+relatado: Villa Eyá, 18:00 configurado, 19:50 entregue. **Consertado.** O horário agora é respeitado.
+
+**Depois de 02/10, se a mensagem sair depois do horário, é a FILA — e é normal.** O que espaça agora é
+a fila por caixa, e só quando há mais de uma pessoa na mesma data:
+
+| Caixa | Ritmo | Efeito com 50 pessoas |
+|---|---|---|
+| QR Code (WAHA) | 20-40 s entre cada (sorteado) | a última sai ~25 min depois |
+| Oficial (Cloud) | 10 por segundo | a última sai ~5 s depois |
+
+A primeira sempre sai no horário configurado. **Uma pessoa sozinha nunca atrasa.**
+
+Ao consultar `lionchat_flows_scheduled_firings_list`:
+- `fire_at` **diferente do horário configurado** = a fila já reservou a vaga real daquele envio.
+  É o horário em que vai sair mesmo. **Normal — não é o defeito antigo, não reporte como erro.**
+- `skip_reason = vencida_expirada` = o aviso ficou mais de 24 h atrasado (queda do sistema) e foi
+  **descartado de propósito**, para não entregar "feliz aniversário" dias depois. O do ano seguinte
+  continua agendado. Não reprocessar.
+
+**Quando o cliente reclamar que "está demorando" numa base grande em QR Code:** não é lentidão, é a
+trava que impede o número de ser bloqueado — a mesma que a campanha usa. Se precisa de volume rápido,
+o caminho é caixa oficial ou Campanha de Fluxo (que tem agendamento por dias).
+
 ## "O paciente tem duas consultas no dia e recebeu um lembrete só" (e-Clínica) — 17/09/2026
 
 **Como é desde 17/09:** um lembrete por CONSULTA. Duas consultas no mesmo dia, ou duas pessoas no mesmo
@@ -824,6 +851,41 @@ contato é uma por TELEFONE e guarda só o último paciente; com mãe e filho no
 olharia a agenda da pessoa errada e poderia concluir que a consulta foi desmarcada. Lembretes criados
 antes de 17/09 podem não ter `{{cliente_id}}`: use a ficha só como reserva
 (`{{ cliente_id | default: contact.custom_attribute.eclinica_cliente_id }}`).
+
+---
+
+## "A clínica trocou o celular do paciente e os dados da e-Clínica mudaram de contato" — 07/10/2026
+
+**Não é defeito.** Quando o celular novo informado pela e-Clínica **já é de outro contato** da conta (o
+paciente já conversava pelo número novo, por exemplo), os avisos da e-Clínica passam para o contato do
+número novo: os atributos `eclinica_*` (mais `endereco_unidade` e `unidade_de_atendimento`) saem do
+contato antigo e os lembretes pendentes do paciente trocam de contato. **Nenhum telefone é trocado e
+nenhuma ficha é juntada** — juntar continua sendo decisão da equipe (`lionchat_contact_merge_preview`
+antes de qualquer junção).
+
+**Como reconhecer:**
+- as duas conversas têm um aviso em cinza ("Os avisos da e-Clínica passam a sair por lá" / "Este contato
+  passou a receber os avisos da e-Clínica do paciente ...");
+- o contato antigo tem `additional_attributes.eclinica_vinculo_cedido` — um mapa
+  `"<unidade>:<paciente>" => { para, em, prova }` dizendo para qual contato o cadastro foi;
+- o contato novo pode ter `additional_attributes.eclinica_vinculo_recebido` (`{ de, em }`), só quando a
+  passagem foi sem prova de que é a mesma pessoa.
+
+**Não escreva nem apague essas duas chaves** (são do sistema) e **não regrave `eclinica_cliente_id` /
+`eclinica_unit_id` no contato antigo**: a busca do paciente prefere o contato que NÃO cedeu o cadastro, e
+o par regravado à mão só gera confusão.
+
+**Quando os avisos NÃO passam** (a conversa diz "Nada foi alterado. Confira o celular no cadastro da
+clínica."): o contato dono do número novo já é de OUTRO paciente da clínica, ou os dois contatos têm CPFs
+diferentes.
+
+**Número digitado errado na recepção:** se o número errado for de outro contato, os avisos vão para lá
+até a clínica corrigir; na correção eles voltam sozinhos para o contato do paciente (as duas conversas
+ganham novo aviso). Para mover à mão é com o suporte — não existe ferramenta do MCP para isso.
+
+**Lembrete "pendente" que aparece em nome de outro contato** em `lionchat_eclinica_reminder_history_list`:
+é o mesmo paciente, depois da passagem. Na hora de sair, o lembrete confere de novo qual contato tem o
+cadastro e sai por ele.
 
 ---
 
