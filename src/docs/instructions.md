@@ -85,6 +85,12 @@ Account (conta/empresa)
 ### KanbanItem.item_details.priority (string)
 - `urgent`, `high`, `medium`, `low`, `none`
 
+### Situação do card (desde 11/10/2026)
+- Gravada em `item_details.status`: `open`, `won`, `lost`. Na resposta vem também `effective_status`: `open`,
+  **`snoozed`** (adiado — o card sai da coluna até `snoozed_until` e volta sozinho), `won`, `lost`.
+- Adiar: `lionchat_kanban_items_snooze`. Abrir antes da data: `lionchat_kanban_items_unsnooze`. Regras em
+  `lionchat://docs/kanban-deep-dive`, seção "Card adiado".
+
 ### AccountUser.role (string)
 - `agent` (atendente comum)
 - `administrator` (admin/dono)

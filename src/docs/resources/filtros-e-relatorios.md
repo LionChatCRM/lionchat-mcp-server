@@ -119,7 +119,8 @@ GET com parâmetros FLAT (não usa payload). Filtros REAIS (2026-07-24 — parâ
 stage_id/inbox_id/sort_by/sort_direction/page foram REMOVIDOS, eram ignorados pelo backend):
 
 - `funnel_id` (obrigatório), `stages[]` (chaves internas das etapas), `priorities[]`,
-  `statuses[]` (open/won/lost), `agent_id`, `value_min`/`value_max`
+  `statuses[]` (open/won/lost/snoozed — desde 11/10/2026 `open` = aberto e NÃO adiado e `snoozed` = adiado; ver
+  "Card adiado" no kanban-deep-dive), `agent_id`, `value_min`/`value_max`
 - `date_start`/`date_end` (criação do card, YYYY-MM-DD)
 - `stage_date_start`/`stage_date_end` (2026-08-07) — **quando o card ENTROU na etapa em que ele está
   agora** (`stage_entered_at`, caindo em `created_at` para card que nunca se moveu). NÃO confundir com

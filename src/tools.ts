@@ -497,7 +497,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-29)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-11)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -693,7 +693,12 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     date_trigger; para disparo em lote, campaign_trigger + Campanha de Fluxo.
     team_changed ({team_ids:[] de STRINGS, vazio = qualquer equipe}), assignee_changed ({agent_ids:[]
     STRINGS, vazio = qualquer atendente}), card_won/card_lost ({funnel_ids:[] STRINGS} — disparam SO quando
-    o STATUS do card vira ganho/perdido, nunca por etapa com esse nome). page_track (LionTrack, so flow
+    o STATUS do card vira ganho/perdido, nunca por etapa com esse nome).
+    card_opened/card_snoozed (NOVOS 11/10/2026, mesma config {funnel_ids:[] STRINGS}): card_snoozed = o card
+    foi ADIADO; card_opened = um card adiado ABRIU (pela data, por alguem ou por automacao) ou um card
+    ganho/perdido foi REABERTO — card NOVO nao dispara (isso e card_created). Pela data o fluxo sai pela fila
+    de disparos agendados (depois dos lembretes; em caixa QR Code no ritmo da caixa), uma vez por card;
+    {{trigger.kanban.previous_status}} (snoozed/won/lost) separa os casos. page_track (LionTrack, so flow
     individual): {track_type:'visited_page'|'event_fired', urls:[...], operator:'contains'|'exact'|
     'starts_with', event_names:[...], event_operator:'equals'|'contains', cooldown_hours (default 24,
     minimo 1 — nao re-dispara pro mesmo contato dentro da janela)}.
@@ -883,13 +888,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       field JUNTOS — conversa usa field '{{conversation.label}}', contato usa '{{contact.label}}';
       a tela reabre a regra casando o par, e condicao escrita so com operator roda certa mas
       APARECE errada pro cliente. Mesma regra vale pros pares kanban_exists/kanban_in_stage
-      (fields '_kanban_check'/'_kanban_stage'), kanban_won/kanban_lost (field '_kanban_status') e
+      (fields '_kanban_check'/'_kanban_stage'), kanban_won/kanban_lost/kanban_snoozed (field '_kanban_status') e
       resposta do cliente/do atendente (fields '{{last_response}}'/'{{last_agent_response}}')),
-    kanban_exists/kanban_in_stage/kanban_won/kanban_lost (funnel_id e CHAVE SEPARADA da condicao,
+    kanban_exists/kanban_in_stage/kanban_won/kanban_lost/kanban_snoozed (funnel_id e CHAVE SEPARADA da condicao,
       numero ex funnel_id:37; a etapa vai em value=slug puro ex value:"avaliacao_aceita" ou em stage,
       NAO no formato "37:etapa"), pagetrack_visited/pagetrack_event,
       Desde 20/08 as 4 condicoes kanban_* enxergam o card da conversa ATUAL ou o card cuja conversa de
       ORIGEM e a atual (card religado pra conversa mais nova) — antes "nao tem card" na conversa velha.
+      kanban_snoozed (NOVO 11/10/2026) = o card esta ADIADO naquele funil; nao existe condicao "card aberto".
     sla_check (SO value, codigo fixo: frt_breached/frt_ok/nrt_breached/nrt_ok/rt_breached/rt_ok/has_sla/no_sla;
       frt=primeira resp, nrt=proxima, rt=resolucao; _ok exige politica de SLA aplicada),
     signature_status (NOVO 2026-09-14 — aba "Contrato" da tela; SO value, codigo fixo:
@@ -955,7 +961,12 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         — funnel_id e funnel_stage OBRIGATORIOS; title/description aceitam {{ }},
       move_kanban_stage({funnel_id,funnel_stage}), set_kanban_item_status({status:won|lost|active}),
       set_won({}), set_lost({reason?}), add_card_note({text}),
-      set_open({}) — reabre card ganho/perdido (status open; nao mexe nos responsaveis),
+      set_open({}) — reabre card ganho/perdido (status open; nao mexe nos responsaveis); num card ADIADO
+        abre o card na hora e dispara "Card aberto" (desde 11/10/2026),
+      snooze_kanban_item({funnel_id, amount, unit:'hours'|'days', card_source?}) — NOVO 11/10/2026: ADIA o card
+        por N horas ou dias a partir da execucao (amount inteiro >= 1; minimo 1 hora); so card aberto; adiar de
+        novo troca a data. Card ganho/perdido, sem card no funil ou card_source 'trigger' em fluxo que nao veio
+        de card = ERRO visivel no passo (nunca pulado, ao contrario das irmas de card),
       // title/description de create_kanban_item e text de add_card_note resolvem pelo resolvedor do
       //   FLUXO desde 20/08: {{conversation.id}} = numero da tela e variaveis da sessao valem ali
       assign_agent_card({agent_id, mode?}) — RESPONSAVEL DO CARD. mode (NOVO 2026-07-28):
@@ -1017,9 +1028,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         [x]" / "Meta: erro (...)" — o [evento] no fim diz qual nome foi pra cada destino.
         Falha de um destino nunca derruba o fluxo. Dry-run nao dispara.
   card_source (acoes de card): 'funnel' (default, acha o card pelo funnel_id) | 'trigger' (usa o card
-    que DISPAROU o flow em card_created/card_moved/card_won/card_lost). Com 'trigger' o funnel_id e
+    que DISPAROU o flow em card_created/card_moved/card_won/card_lost/card_opened/card_snoozed). Com 'trigger' o funnel_id e
     ignorado — EXCETO create_kanban_item/move_kanban_stage (funil = DESTINO). Vale pra move_kanban_stage,
-    set_won/set_lost/set_open, assign_agent_card, add_card_note, add_card_checklist, add_card_offer e
+    set_won/set_lost/set_open, snooze_kanban_item (sem card-gatilho = ERRO, nao pula), assign_agent_card, add_card_note, add_card_checklist, add_card_offer e
     update_attribute (attr_source:'card').
   Handles: "success" (sem handle error — falha vira warning e o flow continua).
 
@@ -1129,7 +1140,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     list_participants -> (groupTargetId) -> id,participants(ate 100; participants_truncated=true se cortou),participants_count
     add_participants  -> groupParticipants(obrig; array de telefones/JIDs ex ['5511999999999@c.us'] ou lista por virgula; aceita {{var}}) -> id,added,not_added,added_count,not_added_count,no_whatsapp,invited,invite_status  [risco de banimento]
                          mesma correcao do 9o digito do create (21/08). added = quem esta no grupo agora (inclui quem ja estava); ninguem entrou = saida "error" (nobody_changed); parte entrou = "partial"
-    remove_participants -> groupParticipants(obrig) -> id,removed,not_removed,removed_count,not_removed_count (ninguem saiu = "error"; parte = "partial")
+                         DESDE 09/10/2026 reconhece quem o WhatsApp devolve SO com o codigo interno (@lid, sem telefone — o normal para quem ACABOU de ser colocado): antes acusava nobody_changed/not_added com a pessoa DENTRO do grupo (e o create dava "partial" falso). Sem resposta do motor = conta como NAO colocado
+    remove_participants -> groupParticipants(obrig) -> id,removed,not_removed,removed_count,not_removed_count (ninguem saiu = "error"; parte = "partial"; desde 09/10/2026 tambem reconhece quem esta so com o codigo interno — antes dava SUCESSO falso)
     promote_admin     -> groupParticipants(obrig) -> id,participants
     demote_admin      -> groupParticipants(obrig) -> id,participants
     get_invite        -> (groupTargetId) -> id,invite_link
@@ -1151,6 +1163,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     'sem_mensagem'. EFEITO COLATERAL: cada convite entregue vira contato + conversa NOVOS no painel e
     dispara os ouvintes de conversation_created (automacao, outros flows, webhook do cliente, Kanban).
   Toda operacao (menos send_message e send_private_message) tambem devolve {{grupo.ok}} (bool) e {{grupo.error.message}}.
+  HISTORICO (09/10/2026): nas operacoes com groupParticipants o passo do historico (NAO a variavel {{grupo.*}})
+    traz participant_sources: [{number, source (a LINHA do campo de onde o numero saiu), typed (true = digitado,
+    sem variavel), informed? (o numero como foi escrito, quando o WhatsApp usa outra forma), filled_by?/filled_at?
+    (linha que e UM atributo personalizado sozinho: quem gravou e quando)}]. So anotacao: nunca muda o pedido;
+    origem e autor podem faltar, nunca saem errados.
   Handles: "success", "error" + "partial" em create/add_participants/remove_participants (a operacao
     rodou mas nem todo mundo entrou/saiu — listas not_added/not_removed dizem quem). "partial" sem fio
     segue pelo fio "success" (unica saida com esse fallback no motor).
@@ -1213,7 +1230,8 @@ trigger.* (variaveis do GATILHO que iniciou o flow — no autocomplete de TODO b
     message_created (gatilho message_received), message_sent, conversation_created, conversation_opened
     (gatilho conversation_reopened), conversation_resolved, label_added, label_removed, team_changed,
     assignee_changed, sla_missed, kanban_item_created/card_created, kanban_item_stage_changed/card_moved,
-    card_status_changed (card_won e card_lost — olhe trigger.kind ou o status do card), conversation_
+    card_status_changed (card_won/card_lost/card_opened/card_snoozed — olhe trigger.kanban.status:
+    won/lost/open/snoozed; rotulo "Situacao do card mudou" desde 11/10/2026), conversation_
     attributes_changed, card_attributes_changed, contact_attribute_changed, group_participant_joined/left,
     webhook_received, date_trigger, manual (sidebar), kanban_manual (botao do card), campaign (Campanha de
     Fluxo), page_track, activated_by_flow (fluxo chamou fluxo), lead_form (os 3 gatilhos de formulario —
@@ -1233,9 +1251,10 @@ trigger.* (variaveis do GATILHO que iniciou o flow — no autocomplete de TODO b
   Cada uma so tem valor quando o gatilho fornece — fora disso resolve vazio.
   FATOS do gatilho viraram variaveis (08/09/2026, no ar desde 10/09): {{trigger.<bloco>.<campo>}}, so
     quando o Inicio tem o gatilho que os preenche — card_created/card_moved/card_won/card_lost/
-    card_attribute_changed: trigger.kanban.title, trigger.kanban.funnel_name, trigger.kanban.stage_name,
+    card_opened/card_snoozed/card_attribute_changed: trigger.kanban.title, trigger.kanban.funnel_name, trigger.kanban.stage_name,
     trigger.kanban.stage (codigo da etapa); card_moved: trigger.kanban.previous_stage_name/previous_stage;
-    card_won/card_lost: trigger.kanban.status (won/lost); label_added/label_removed: trigger.label.name;
+    card_won/card_lost/card_opened/card_snoozed: trigger.kanban.status (won/lost/open/snoozed);
+    card_opened: trigger.kanban.previous_status (snoozed = voltou do adiamento; won/lost = reabriram); label_added/label_removed: trigger.label.name;
     assignee_changed: trigger.assignee.name (vazio = responsavel removido); team_changed: trigger.team.name;
     sla_missed: trigger.sla.policy_name/type (frt/nrt/rt); group_participant_joined/left:
     trigger.group.name/id, trigger.participant.phone/name (16/09 — QUEM entrou/saiu, telefone com +;

@@ -214,6 +214,10 @@ comportamento intencional.
 - `funnel_stage`: nome da etapa atual (string)
 - `position`: ordem dentro da etapa (inteiro)
 - `stage_entered_at`: timestamp de quando entrou na etapa atual
+- Situação (11/10/2026): `item_details.status` guarda `open`/`won`/`lost`; a resposta traz também `effective_status`
+  (`open`, **`snoozed`** = adiado, `won`, `lost`) e `snoozed_until`. **Card adiado** = card aberto que sai da coluna até
+  uma data e volta sozinho nela ("Adiar até" na tela). Ferramentas `lionchat_kanban_items_snooze`/`_unsnooze`; regras
+  em kanban-deep-dive, seção "Card adiado".
 
 ### `item_details` (jsonb)
 ```json

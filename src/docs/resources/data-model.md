@@ -282,6 +282,14 @@ KanbanItem
 ├── activities (jsonb)
 ├── timer_started_at / timer_duration
 └── created_at
+    (item_details.status guarda open/won/lost; ADIADO = open + linha em kanban_item_snoozes — a resposta da API
+     traz effective_status open|snoozed|won|lost e snoozed_until, calculados; nao sao colunas)
+
+KanbanItemSnooze (kanban_item_snoozes — 11/10/2026: ate quando o card esta ADIADO; uma linha por card)
+├── account_id, kanban_item_id (unico)
+├── snoozed_until (datetime)
+├── snoozed_by_id (quem adiou; nulo = automacao, macro ou fluxo)
+└── created_at / updated_at
 
 Item do checklist (elemento do array jsonb `checklist`)
 ├── id (uuid string)
