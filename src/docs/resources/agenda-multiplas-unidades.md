@@ -64,7 +64,7 @@ que é sua.
 
 ---
 
-## 4. Página pública (cancelar, remarcar, confirmar presença)
+## 4. Página pública (cancelar, remarcar, confirmar presença, salvar na agenda)
 
 O tipo de evento controla o que o cliente pode fazer:
 
@@ -84,12 +84,52 @@ cliente para fora).
 ### Variáveis da mensagem de abertura
 
 `{{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}}
-{{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}}`
+{{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}} {{link_salvar_na_agenda}}`
 
 As chaves são **em português nos dois idiomas** — elas são o identificador, não a tradução.
 Variável desconhecida **sai crua** para o cliente ("Olá {{name}}, ...").
 
 `{{link_confirmar}}` só é útil com `ask_attendance_confirmation` ligado.
+
+### Os QUATRO links da página (16/10)
+
+É UMA página só (`/booking/<conta>/manage/<id>?t=<chave>&action=...`). Cada link abre a mesma página numa
+parte diferente. São quatro links, cada um com um nome na mensagem do Booking e outro no fluxo:
+
+| O link abre na parte de... | Mensagem do Booking (confirmação, lembretes, texto de abertura) | Fluxo (gatilhos `booking_*`) |
+|---|---|---|
+| Confirmar presença | `{{link_confirmar}}` | `{{booking.confirm_url}}` |
+| Remarcar | `{{link_remarcar}}` | `{{booking.reschedule_url}}` |
+| Cancelar | `{{link_cancelar}}` | `{{booking.cancel_url}}` |
+| **Salvar na agenda** (novo, 16/10) | **`{{link_salvar_na_agenda}}`** | **`{{booking.calendar_url}}`** |
+
+**Salvar na agenda** = o cliente põe o compromisso na agenda DELE, sem informar e-mail. Dentro da página há dois
+botões: **Google Agenda** (abre o evento preenchido) e **Agenda do iPhone / Outlook** (arquivo `.ics` com a
+mesma chave do link). Os botões NÃO são variáveis: manda-se só o link e o cliente escolhe lá.
+
+Regras para a IA ao montar mensagem ou fluxo:
+- Para pedir "salve na sua agenda", use SEMPRE o quarto link. Mandar `{{link_cancelar}}` com esse texto abre a
+  parte de CANCELAR a consulta.
+- As outras três partes também mostram "Salvar na minha agenda" entre as opções (um toque a mais).
+- A parte de salvar aparece mesmo quando o tipo não deixa remarcar nem cancelar. Ela NÃO aparece (a página avisa)
+  quando o agendamento ou o compromisso foi cancelado, quando foi concluído e quando a hora já passou.
+- **O compromisso salvo é uma CÓPIA**: nada o atualiza depois. Se a hora mudar, avise o cliente com o gatilho
+  "Agendamento remarcado" (`booking_rescheduled`) + `{{booking.calendar_url}}` (já com a hora nova) e peça que
+  apague o compromisso antigo.
+- **A hora mostrada ao cliente** (mensagem `{{data}}`/`{{horario}}`/`{{duracao}}`, página e agenda salva) é a do
+  COMPROMISSO da Agenda (`account_tasks.scheduled_at`), que é a que o profissional vê.
+- Título salvo: "<tipo> com <profissional> — <empresa>". Sem dado do cliente e sem link com chave dentro.
+- Remarcar ou cancelar pelo link do cliente (ou pela IA) troca a chave: links antigos deixam de abrir. Mudança
+  pela tela da Agenda ou pelo Google não troca a chave, e o link antigo passa a salvar a hora nova.
+- Para mandar o link fora das mensagens automáticas: `tasks_list`/`tasks_show` devolvem `booking_calendar_url`
+  (e `booking_reschedule_url`) no compromisso que veio do Booking; nulo quando não dá para salvar. O painel tem o
+  botão "Link para salvar na agenda" no detalhe do compromisso.
+
+### Remarcar pela IA (16/10)
+
+A ferramenta de remarcar da IA grava o agendamento E o compromisso da Agenda juntos (antes de 16/10 a Agenda ficava
+na hora antiga e o gatilho "Agendamento remarcado" não disparava). Ela não remarca consulta concluída nem com
+"Compareceu" ("Faltou" pode). Pelo Copiloto, marcar, remarcar e cancelar ficam no nome do atendente.
 
 ### Presença é CARIMBO, não status
 
@@ -251,3 +291,5 @@ e se está atrasada.
 | Compromisso da filial no Google da matriz | não acontece mais; se aparecer, a conexão daquela agenda está com `agenda_id` errado |
 | `agendas_create` recusado | recurso `multiple_agendas` desligado ou teto de Extras Manuais atingido |
 | Histórico sumiu ao filtrar a principal | faltou incluir os compromissos com `agenda_id` **nulo** |
+| Cliente pediu para salvar na agenda e caiu na tela de cancelar | a mensagem usou `{{link_cancelar}}`; o certo é `{{link_salvar_na_agenda}}` (fluxo: `{{booking.calendar_url}}`) |
+| Compromisso salvo pelo cliente ficou na hora antiga | é cópia; avise pelo gatilho "Agendamento remarcado" com `{{booking.calendar_url}}` |

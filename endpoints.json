@@ -8801,7 +8801,7 @@
     "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
    }
   ],
-  "returns": "LISTA PURA (array no topo, SEM embrulho meta/payload) — a resposta JA E a lista de tarefas da agenda. Cada tarefa traz todos os campos da tarefa (id, title, description, task_type, status, scheduled_at, completed, recurrence_*), mais assignees [{id, name, agenda_color}], assignee_ids, conversation_display_id, conversation_contact_name, contact_name/contact_phone/contact_email, meeting_url, calendar_color, is_readonly, is_private, guest_emails, attendee_rsvp e booking_id. Lista vazia = []. Com filtro de data (date_start/date_end) devolve TUDO do periodo sem paginar (teto de 10.000). Sem filtro de data, pagina por `page`/`per_page` — mas a resposta NAO traz numero de paginas nem total: pagina cheia sugere que ha mais.",
+  "returns": "LISTA PURA (array no topo, SEM embrulho meta/payload) — a resposta JA E a lista de tarefas da agenda. Cada tarefa traz todos os campos da tarefa (id, title, description, task_type, status, scheduled_at, completed, recurrence_*), mais assignees [{id, name, agenda_color}], assignee_ids, conversation_display_id, conversation_contact_name, contact_name/contact_phone/contact_email, meeting_url, calendar_color, is_readonly, is_private, guest_emails, attendee_rsvp e booking_id; o compromisso que veio do Booking traz tambem booking_reschedule_url e booking_calendar_url (16/10: link \"salvar na minha agenda\" para mandar ao cliente; nulo quando o compromisso foi cancelado, concluido ou ja passou). Lista vazia = []. Com filtro de data (date_start/date_end) devolve TUDO do periodo sem paginar (teto de 10.000). Sem filtro de data, pagina por `page`/`per_page` — mas a resposta NAO traz numero de paginas nem total: pagina cheia sugere que ha mais.",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
    "Buscar com filtros antes de outra operação",
@@ -9009,7 +9009,7 @@
     "description": "ID da tarefa"
    }
   ],
-  "returns": "tarefa/agenda (objeto completo com associações)",
+  "returns": "tarefa/agenda (objeto completo com associações; compromisso do Booking traz booking_reschedule_url e booking_calendar_url — link \"salvar na minha agenda\", nulo quando não dá mais para salvar)",
   "common_use_cases": [
    "Ver dados completos antes de editar",
    "Verificar estado atual antes de uma ação",
@@ -10575,7 +10575,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}}. Variavel desconhecida sai CRUA para o cliente."
+    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}} {{link_salvar_na_agenda}} (16/10: abre a parte em que o cliente salva o compromisso no Google Agenda ou na agenda do iPhone/Outlook). Variavel desconhecida sai CRUA para o cliente."
    },
    {
     "name": "booking_event_type.sessions_enabled",
@@ -10771,7 +10771,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}}. Variavel desconhecida sai CRUA para o cliente."
+    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}} {{link_salvar_na_agenda}} (16/10: abre a parte em que o cliente salva o compromisso no Google Agenda ou na agenda do iPhone/Outlook). Variavel desconhecida sai CRUA para o cliente."
    },
    {
     "name": "booking_event_type.sessions_enabled",
@@ -11533,7 +11533,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}}. Variavel desconhecida sai CRUA para o cliente."
+    "description": "Texto de abertura da pagina publica. Aceita {{nome}} {{titulo}} {{tipo}} {{agente}} {{data}} {{horario}} {{dia_semana}} {{duracao}} {{telefone}} {{email}} {{link_cancelar}} {{link_remarcar}} {{link_confirmar}} {{link_salvar_na_agenda}} (16/10: abre a parte em que o cliente salva o compromisso no Google Agenda ou na agenda do iPhone/Outlook). Variavel desconhecida sai CRUA para o cliente."
    }
   ],
   "returns": "tipo de evento criado (com novo ID)",

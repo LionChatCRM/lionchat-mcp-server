@@ -520,7 +520,9 @@ db/schema.rb, tabela booking_event_types)
 │   {{nome}} {{email}} {{telefone}} {{data}} {{horario}} {{dia_semana}} (NOVO 24/08 — dia por
 │   extenso em pt: "terça-feira"; irmã do {{booking.weekday}} do FlowBuilder, mesma grafia)
 │   {{tipo_evento}} {{titulo}} {{duracao}} {{agente}} {{descricao}} {{meet_link}}
-│   {{link_cancelar}} {{link_remarcar}} {{horas_ate_evento}} {{horas_desde_evento}}
+│   {{link_cancelar}} {{link_remarcar}} {{link_confirmar}} {{link_salvar_na_agenda}} (16/10: abre a
+│   página onde o cliente salva no Google Agenda ou na agenda do iPhone/Outlook)
+│   {{horas_ate_evento}} {{horas_desde_evento}}. Data, hora e duração saem do COMPROMISSO da Agenda (16/10)
 └── booking_availabilities (has_many — dias/horários; `booking_availabilities_attributes` no create)
 
 Booking (agendamento confirmado — tabela bookings)
