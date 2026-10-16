@@ -154,6 +154,9 @@ Company
 ├── contacts_count
 ├── avatar (foto)
 ├── additional_attributes (jsonb: legal_name, cnpj, phone, email, address{...}, social_profiles{...}; 2026-09-25)
+├── custom_attributes (jsonb: atributos personalizados de EMPRESA, definicoes attribute_model=company_attribute;
+│   2026-10-15. Gravar: lionchat_companies_update com custom_attributes {chave: valor}; MESCLA; null limpa a chave;
+│   so chave definida como atributo de empresa da conta; criar a definicao exige o modulo Empresas)
 └── last_activity_at (ultima vez que um contato da empresa teve atividade; 2026-09-25)
 
 AttributeChange (histórico de alterações de atributo — 2026-09-11)
@@ -205,6 +208,28 @@ atendente). Cadastro da empresa (25/09): `lionchat_companies_create`/`_update` a
 `social_profiles{linkedin,facebook,instagram,telegram,tiktok,twitter,github}`. MESCLA: mande so o que muda;
 valor vazio apaga aquela chave. Excluir empresa: so administrador; os contatos ficam, so deixam de estar na empresa (as anotacoes da
 empresa vao junto).
+
+**Atributos personalizados da EMPRESA (2026-10-15):** campos proprios da empresa que o cliente cria ("Segmento",
+"Data de fundacao", "Faturamento anual"...), na aba Empresa de Configuracoes > Atributos personalizados. Sao um
+quarto tipo de definicao, separado de conversa, contato e variavel de conta:
+- **Criar a definicao:** `lionchat_custom_attributes_create` com `attribute_model: "company_attribute"` (SEMPRE com o
+  sufixo). So na conta com o modulo Empresas ligado (sem ele: 422 "O modulo Empresas nao esta ligado nesta conta").
+  Tipo `secret` e recusado. Chaves reservadas (os campos proprios da empresa) sao recusadas: `name`, `domain`,
+  `description`, `legal_name`, `cnpj`, `phone`, `email`, `address`, `social_profiles`, `contacts_count`,
+  `created_at`, `last_activity_at`. As mesmas regras valem ao TROCAR o `attribute_model` de uma definicao existente.
+- **Listar:** `lionchat_custom_attributes_list` com `attribute_model=company_attribute`.
+- **Preencher:** `lionchat_companies_update` (ou `_create`) com `custom_attributes: {"segmento": "Varejo"}` dentro do
+  wrapper `company`. MESCLA: mande so o que muda; `null` ou texto vazio LIMPA a chave; chave nao mandada fica.
+  Valores SIMPLES (texto, numero, verdadeiro/falso ou null) — lista ou objeto dentro = 422. Teto de 1.500 caracteres
+  por valor. Data pode ir como `15/10/2020` (grava `2020-10-15`).
+- **So aceita chave que JA existe** como atributo de empresa da conta: chave desconhecida = 422 com a lista das
+  validas, e NADA do pedido e gravado (nem o nome nem o cadastro que vieram junto). Crie a definicao antes de
+  preencher — a lista e lida na hora, entao criar e preencher logo em seguida funciona.
+- **Ler:** `lionchat_companies_show`/`_list` trazem `custom_attributes` em cada empresa (`{}` quando vazio).
+- **O que NAO faz nesta etapa:** atributo de empresa NAO vira variavel `{{...}}` em mensagem, fluxo ou automacao,
+  NAO entra em condicao de automacao (a regra que pede tipo "atributo de empresa" e recusada) nem de fluxo, NAO
+  filtra contatos, NAO e lido pela IA, NAO sai em exportacao/relatorio e NAO tem historico de alteracoes nem
+  gatilho de data. O lugar dele e a pagina da empresa e a API.
 
 **Dados cadastrais (`additional_attributes.cadastral`):** CPF, CNPJ, RG, passaporte, nascimento,
 gênero, estado civil, profissão e endereço completo moram em `additional_attributes->cadastral`.

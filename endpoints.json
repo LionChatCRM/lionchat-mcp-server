@@ -12159,7 +12159,7 @@
     "description": "Ordenacao: name, domain, created_at, contacts_count, last_activity_at (prefixo - = decrescente, ex. -last_activity_at)"
    }
   ],
-  "returns": "meta (contadores globais) + payload (array de empresas)",
+  "returns": "meta (contadores globais) + payload (array de empresas; cada uma com additional_attributes e custom_attributes)",
   "common_use_cases": [
    "Dashboard: contar/exibir empresas",
    "Buscar com filtros antes de outra operação",
@@ -12172,7 +12172,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/companies",
   "title": "Criar Empresa",
-  "description": "Cria uma empresa. Body exige wrapper company. Aceita name, domain, description, avatar e additional_attributes (cadastro). NAO aceita custom_attributes. ENTERPRISE-only. Empresa so nasce assim (manual): o sistema nao cria empresa pelo dominio do e-mail dos contatos. Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava so digitos), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado).",
+  "description": "Cria uma empresa. Body exige wrapper company. Aceita name, domain, description, avatar, additional_attributes (cadastro) e custom_attributes (atributos personalizados). custom_attributes (2026-10-15): atributos personalizados da EMPRESA, objeto {chave: valor} de valores SIMPLES (texto, numero, verdadeiro/falso ou null; lista ou objeto dentro = 422). MESCLA: mande so o que muda; null ou texto vazio LIMPA a chave. So chave que ja existe como definicao company_attribute da conta (lionchat_custom_attributes_list com attribute_model=company_attribute); chave desconhecida = 422 com a lista das validas e NADA do pedido e gravado. Teto de 1.500 caracteres por valor; data aceita DD/MM/AAAA. ENTERPRISE-only. Empresa so nasce assim (manual): o sistema nao cria empresa pelo dominio do e-mail dos contatos. Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava so digitos), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado).",
   "category": "Empresas",
   "params": [
    {
@@ -12180,7 +12180,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Wrapper com { name, domain, description, avatar, additional_attributes: { legal_name, cnpj, phone, email, address: {...}, social_profiles: {...} } }"
+    "description": "Wrapper com { name, domain, description, avatar, additional_attributes: { legal_name, cnpj, phone, email, address: {...}, social_profiles: {...} }, custom_attributes: { chave: valor } }"
    }
   ],
   "returns": "empresa criado (com novo ID)",
@@ -12208,7 +12208,7 @@
     "description": "ID da empresa"
    }
   ],
-  "returns": "empresa (objeto completo com associações)",
+  "returns": "empresa (objeto completo com associações), incluindo additional_attributes (cadastro) e custom_attributes (atributos personalizados, {} quando vazio)",
   "common_use_cases": [
    "Ver dados completos antes de editar",
    "Verificar estado atual antes de uma ação",
@@ -12225,7 +12225,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/companies/{id}",
   "title": "Atualizar Empresa",
-  "description": "Atualiza dados da empresa. Suporta atualizacao parcial (PATCH) — so campos enviados sao alterados. Campos suportados: name, domain, description, avatar e additional_attributes (cadastro). Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava so digitos), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado).",
+  "description": "Atualiza dados da empresa. Suporta atualizacao parcial (PATCH) — so campos enviados sao alterados. Campos suportados: name, domain, description, avatar, additional_attributes (cadastro) e custom_attributes (atributos personalizados). custom_attributes (2026-10-15): atributos personalizados da EMPRESA, objeto {chave: valor} de valores SIMPLES (texto, numero, verdadeiro/falso ou null; lista ou objeto dentro = 422). MESCLA: mande so o que muda; null ou texto vazio LIMPA a chave. So chave que ja existe como definicao company_attribute da conta (lionchat_custom_attributes_list com attribute_model=company_attribute); chave desconhecida = 422 com a lista das validas e NADA do pedido e gravado. Teto de 1.500 caracteres por valor; data aceita DD/MM/AAAA. Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava so digitos), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado).",
   "category": "Empresas",
   "params": [
    {
@@ -12240,7 +12240,7 @@
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Wrapper com { name, domain, description, avatar, additional_attributes: { legal_name, cnpj, phone, email, address: {...}, social_profiles: {...} } }"
+    "description": "Wrapper com { name, domain, description, avatar, additional_attributes: { legal_name, cnpj, phone, email, address: {...}, social_profiles: {...} }, custom_attributes: { chave: valor } }"
    }
   ],
   "returns": "empresa atualizado",
@@ -22315,7 +22315,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtra por modelo, SEMPRE com o sufixo: conversation_attribute | contact_attribute | account_attribute. So 'conversation' ou 'contact' NAO da erro — devolve a lista VAZIA."
+    "description": "Filtra por modelo, SEMPRE com o sufixo: conversation_attribute | contact_attribute | account_attribute | company_attribute (empresa). So 'conversation' ou 'contact' NAO da erro — devolve a lista VAZIA."
    },
    {
     "name": "include_system",
@@ -22342,7 +22342,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/custom_attribute_definitions",
   "title": "Criar Definicao de Atributo",
-  "description": "Cria uma nova definicao de atributo personalizado. **Requer perfil Administrador.** Obrigatórios: attribute_display_name, attribute_display_type, attribute_key. attribute_model tem default 'conversation_attribute' — para um atributo de contato, passe 'contact_attribute'. Retorna o atributo personalizado criado com ID atribuído.",
+  "description": "Cria uma nova definicao de atributo personalizado. **Requer perfil Administrador.** Obrigatórios: attribute_display_name, attribute_display_type, attribute_key. attribute_model tem default 'conversation_attribute' — para um atributo de contato, passe 'contact_attribute'; de EMPRESA, 'company_attribute' (so com o modulo Empresas; depois preencha com lionchat_companies_update custom_attributes). Retorna o atributo personalizado criado com ID atribuído.",
   "category": "Atributos Personalizados",
   "params": [
    {
@@ -22378,7 +22378,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "conversation_attribute (PADRAO) | contact_attribute | account_attribute (variavel da conta). SEMPRE com o sufixo _attribute."
+    "description": "conversation_attribute (PADRAO) | contact_attribute | account_attribute (variavel da conta) | company_attribute (atributo personalizado de EMPRESA, 2026-10-15: exige o modulo Empresas ligado na conta, tipo secret recusado, chaves reservadas recusadas: name, domain, description, legal_name, cnpj, phone, email, address, social_profiles, contacts_count, created_at, last_activity_at). SEMPRE com o sufixo _attribute."
    },
    {
     "name": "attribute_description",
@@ -22498,7 +22498,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "conversation_attribute (PADRAO) | contact_attribute | account_attribute (variavel da conta). SEMPRE com o sufixo _attribute."
+    "description": "conversation_attribute (PADRAO) | contact_attribute | account_attribute (variavel da conta) | company_attribute (atributo personalizado de EMPRESA, 2026-10-15: exige o modulo Empresas ligado na conta, tipo secret recusado, chaves reservadas recusadas: name, domain, description, legal_name, cnpj, phone, email, address, social_profiles, contacts_count, created_at, last_activity_at). SEMPRE com o sufixo _attribute."
    },
    {
     "name": "attribute_description",
@@ -35247,7 +35247,7 @@
     "description": "Recorta pelos contatos de uma EMPRESA (aba Contratos da pagina da empresa). Empresa de outra conta = 404."
    }
   ],
-  "returns": "payload: [{id, title, status, signature_document_id, document_name, contact_id, contact_name, conversation_id, sent_at, completed_at, expires_at, participants[{id, name, role, status, delivery_channel, phone, email, signed_at, viewed_at, public_url, signs_in_panel}], delivery: {failed[], delivered_participant_ids[]}, has_signed_document, pending_for_me}], meta: {page, per_page, has_more, counts}",
+  "returns": "payload: [{id, title, status, signature_document_id, document_name, contact_id, contact_name, conversation_id, sent_at, completed_at, expires_at, participants[{id, name, role, status, delivery_channel, phone, email, signed_at, viewed_at, public_url, signs_in_panel}], delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, has_signed_document, pending_for_me}], meta: {page, per_page, has_more, counts}",
   "common_use_cases": [
    "Ver o status dos contratos de um cliente (assinou? abriu? expirou?)",
    "Relatorio de um modelo: quantos aguardando/assinados, quem falta",
@@ -35275,7 +35275,7 @@
     "description": "ID do contrato"
    }
   ],
-  "returns": "contrato + events: [{kind, occurred_at, ip, device, location, participant_id, panel}] + original_sha256/sealed_sha256",
+  "returns": "contrato (com delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, copies = a via assinada de cada pessoa) + events: [{kind, occurred_at, ip, device, location, participant_id, panel}] + original_sha256/sealed_sha256",
   "common_use_cases": [
    "Conferir quando e de onde a pessoa abriu e assinou",
    "Ver por que um contrato nao foi entregue (delivery.failed) ou foi recusado"

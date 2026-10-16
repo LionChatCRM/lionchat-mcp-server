@@ -278,6 +278,12 @@ responsável, chame `conversations_update` depois — não adianta mandar junto 
 **O que É aproveitado:** `custom_attributes` entram por merge, **sem sobrescrever chave que já tem
 valor**. A conversa mantém a origem com que nasceu e só ganha o que ainda não tinha.
 
+**Conversa NOVA nasce com a origem da ficha (16/10/2026).** Quando você (API, automação, fluxo ou
+formulário) cria uma conversa nova e a ficha do contato já traz sinal de anúncio (formulário da Meta, UTM,
+Google, LionTrack), a conversa já nasce com os `origin_*` preenchidos — antes ficava sem origem até o
+cliente escrever. Sem sinal na ficha, nasce sem origem (nunca "Direto"): quem classifica "Direto" é a
+primeira mensagem do cliente. Origem que você mandar na criação não é trocada.
+
 **Reuso não dispara `conversation_created`** — automação, gatilho de flow, webhook de saída,
 notificação e a Agenda não rodam. Se o seu fluxo depende de um desses, ele não vai acontecer
 quando houver reuso.

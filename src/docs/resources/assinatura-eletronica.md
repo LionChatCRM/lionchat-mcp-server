@@ -29,7 +29,22 @@ Participante: `pending` → `viewed` → `verified` (confirmou o código) → `s
 `created` · `delivered` (link entregue a uma pessoa) · `sent` · `opened` (cada abertura) · `code_requested` ·
 `code_verified` · `signed` (com `ip`, `device`, `location`; `panel: true` = assinou no painel) · `all_signed` ·
 `sealed` (documento final gerado, `sealed_sha256`) · `refused` · `cancelled` · `expired` · `delivery_failed`
-(motivo em `delivery.failed[]`) · `reminded` · `resent`. Tudo append-only — é o relatório de evidências.
+(motivo em `delivery.failed[]`) · `reminded` · `resent` · `copy_sent` / `copy_failed` (a via assinada de cada pessoa,
+estado em `delivery.copies[]`). Tudo append-only — é o relatório de evidências. `delivery.failed[]` também mostra a
+recusa que a Meta manda depois (caixa oficial fora da janela de 24 h, motivo `window_expired`) e some sozinha se a
+mensagem acabar entregue.
+
+Falhas de e-mail (16/10): o convite e a via por e-mail tentam de novo sozinhos (1, 5 e 15 min). Só se nada der certo
+aparece `envio_falhou` (o servidor de e-mail não respondeu); `email_recusado` (o servidor de e-mail recusou o envio)
+aparece na hora. Falha de convite antigo some se a pessoa abriu o link, pediu o código ou assinou depois. Contrato em
+`signed_pending_seal` = o documento final está sendo gerado, com novas tentativas automáticas por até ~42 min; só um
+`seal_failed` depois disso quer dizer que não deu (oriente falar com o suporte).
+
+## A via assinada (15/10)
+Quando o documento final fica pronto, cada pessoa que assinou pelo link (testemunhas incluídas) recebe a sua via em PDF
+pelo mesmo canal do link: anexada numa mensagem na conversa dela (WhatsApp) ou no e-mail (acima de 10 MB vai sem anexo,
+pedindo que peça a via a quem enviou). Quem assinou no painel não recebe. Não há ferramenta para mandar de novo: oriente
+baixar na tela do documento. O código de 6 dígitos de quem assina por e-mail chega no próprio e-mail.
 
 ## Como mandar um contrato (receita)
 1. `lionchat_signature_documents_list` → escolha o modelo (ou crie um `text` com `signature_documents_create`;
@@ -59,7 +74,9 @@ Participante: `pending` → `viewed` → `verified` (confirmou o código) → `s
   Passou disso o envio/prévia volta `422 fila_cheia` — é só repetir em instantes (o modelo está bom).
 - **Limite mensal** (`signature_envelopes_limits`): cada contrato criado consome 1 vaga; cancelar não devolve.
 - **PDFs** (original, assinado, evidências) e o **QR de conferência** só existem pela tela/download autenticado —
-  não há ferramenta que devolva os bytes. O `sealed_sha256` é o hash do documento final.
+  não há ferramenta que devolva os bytes. O `sealed_sha256` é o hash do documento final. Exceção desde 15/10: a via
+  assinada vira anexo da mensagem na conversa de quem assinou por WhatsApp, então aparece nas ferramentas de mensagens
+  da conversa (`conversations_messages_*`).
 - **Só pela tela, de propósito** (existem na API, mas NÃO como ferramenta): importar um Word (`import_docx`),
   pré-visualizar modelo ou rascunho (`preview`, `preview_draft`) e baixar PDF (`download`). O conector não envia
   arquivo nem recebe PDF — não prometa "vou gerar a prévia" ou "vou baixar o assinado"; oriente a tela.
