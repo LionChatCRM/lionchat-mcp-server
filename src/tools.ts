@@ -825,6 +825,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
        salvar o flow pela tela nesse estado, a regra e PERDIDA. (Excecoes que nao usam field/valueType
        "variable": regras por attr_key/attrSource="attr_config", business_hours, can_reply, sla_check,
        kanban_*, conversation_has_agent/no_agent, pagetrack_*.)
+  EMPRESA DO CONTATO (NOVO 16/10 — card "Atributo da empresa", so com o modulo Empresas): regra
+    { id, valueType:'attr_config', attrSource:'company', attr_key, operator, value:'', values:[...] }.
+    attr_key = chave do campo PERSONALIZADO da empresa OU cadastro com prefixo: company.name,
+    company.legal_name, company.cnpj (comparado so por digitos), company.phone, company.email,
+    company.address.city, company.address.state. Empresa = a do contato da conversa (no maximo UMA).
+    Contato sem empresa = valor vazio (not_equal/is_empty casam). Modulo desligado = NUNCA casa, nem a
+    negativa. attrSource fora de contact/conversation/card/company NAO casa. Variaveis da empresa em
+    mensagem: {{contact.company.name}} ... {{contact.company.custom_attribute.<chave>}}.
   ORIGEM / CAMPANHA (NOVO 01/09 — preset "Atributo de campanha" da tela): regra de atributo da CONVERSA:
     { id, valueType:'attr_config', attrSource:'conversation', attrScope:'campaign', attr_key:'origin_kind',
       operator:'equal', value:'', values:['paid_ad'] }
@@ -1193,6 +1201,7 @@ condicao bater, o lead sai do flow NA HORA. Cada item tem "type":
 - Rico por atributo (novo 2026-07-08; REATIVO desde 2026-07-09):
   {type:'attribute_condition', logic:'and'|'or', rules:[{attr_key, attrSource:'contact'|'conversation'
    |'card', operator, value | values:[...], funnel_id?, card_source?}]}.
+  attrSource 'company' NAO vale aqui (so no node condition): a regra de saida nao le a empresa.
   AQUI o attrSource VAI na rule (ao contrario do gatilho de entrada por atributo, onde e implicito).
   Operadores da condition EXCETO is_empty/is_not_empty (removidos do contexto reativo 09/07 — use so
   no node condition); reativa: so reavalia quando o atributo VIGIADO muda; cada rule exige value|values;

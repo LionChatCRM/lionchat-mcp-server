@@ -627,7 +627,7 @@ O conector **liga a condicao com a SEGUINTE**. Logo:
 | `filter_operator` | SIM | Como comparar |
 | `values` | SIM (menos em `is_present`/`is_not_present`) | Array, sempre |
 | `query_operator` | SIM em todas | `"AND"`/`"OR"`; **`null` na ultima** |
-| `custom_attribute_type` | so p/ atributo personalizado | `conversation_attribute` ou `contact_attribute` |
+| `custom_attribute_type` | so p/ atributo personalizado | `conversation_attribute`, `contact_attribute` ou `company_attribute` (campo personalizado da EMPRESA do contato, desde 2026-10-16: so atributo personalizado, negativo inclui contato sem empresa, `attribute_changed` recusado, modulo Empresas desligado = nunca casa) |
 
 ### Operadores de filtro
 

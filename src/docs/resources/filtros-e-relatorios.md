@@ -35,6 +35,8 @@ E/OU é encadeado condição a condição (sem parênteses).
 
 Atributo personalizado: informe `custom_attribute_type` na condição — `'conversation_attribute'`
 (atributo da conversa) ou `'contact_attribute'`. Sem ele o escopo pode sair errado.
+`'company_attribute'` (atributo da empresa) NÃO vale em conversas: 422 (desde 16/10/2026; use o filtro de
+CONTATOS).
 
 **`contact_attribute` lê a FICHA DO CONTATO da conversa (funciona de verdade desde 24/09/2026).** Antes o
 servidor ignorava o valor e lia o atributo da própria conversa — por isso lead de formulário da Meta
@@ -102,6 +104,11 @@ Mesmo shape de condição. 15/página.
 - `card_funnel_id`, `card_stage`, `card_priority`, `card_status` (equal_to/not_equal_to) — card
   do Kanban vinculado.
 - Condição com `custom_attribute_type:'conversation_attribute'` — atributo da conversa vinculada.
+- Condição com `custom_attribute_type:'company_attribute'` (16/10/2026) — campo PERSONALIZADO da empresa do
+  contato, ex. `{attribute_key:'segmento', filter_operator:'equal_to', values:['Varejo'],
+  custom_attribute_type:'company_attribute'}`. Operadores pelo tipo (texto: igual/diferente/contém/não contém/
+  preenchido; número/data/hora: + maior/menor). Negativo inclui contato SEM empresa. Módulo Empresas desligado =
+  ninguém. Chave que não existe como atributo de empresa = 422.
 
 ### Duas regras que enganam nos filtros
 

@@ -226,10 +226,38 @@ quarto tipo de definicao, separado de conversa, contato e variavel de conta:
   validas, e NADA do pedido e gravado (nem o nome nem o cadastro que vieram junto). Crie a definicao antes de
   preencher — a lista e lida na hora, entao criar e preencher logo em seguida funciona.
 - **Ler:** `lionchat_companies_show`/`_list` trazem `custom_attributes` em cada empresa (`{}` quando vazio).
-- **O que NAO faz nesta etapa:** atributo de empresa NAO vira variavel `{{...}}` em mensagem, fluxo ou automacao,
-  NAO entra em condicao de automacao (a regra que pede tipo "atributo de empresa" e recusada) nem de fluxo, NAO
-  filtra contatos, NAO e lido pela IA, NAO sai em exportacao/relatorio e NAO tem historico de alteracoes nem
-  gatilho de data. O lugar dele e a pagina da empresa e a API.
+- **Onde mais ele aparece (2026-10-16), igual aos atributos de contato.** A empresa e a do CONTATO: um contato
+  tem no maximo UMA empresa (`contacts.company_id`); a conversa nao tem empresa propria. Com o modulo Empresas ligado:
+  - **Variavel** em mensagem, resposta pronta, automacao, fluxo, campanha e mensagem agendada:
+    `{{contact.company.custom_attribute.<chave>}}` (data sai DD/MM/AAAA) e o cadastro `{{contact.company.name}}`,
+    `{{contact.company.legal_name}}`, `{{contact.company.cnpj}}` (so digitos), `{{contact.company.phone}}`,
+    `{{contact.company.email}}`, `{{contact.company.address.city}}`, `{{contact.company.address.state}}`.
+    `{{contact.company}}` sozinho imprime o nome. Contato sem empresa = vazio, sem erro.
+  - **Modelo oficial do WhatsApp** (`variable_mapping`): campo personalizado com
+    `{"source": "company", "field": "custom_attribute.<chave>"}`; cadastro com
+    `{"source": "variable", "field": "contact.company.cnpj"}` (tambem `legal_name`, `phone`, `email`,
+    `address.city`, `address.state`). O nome da empresa ja e `contact.company_name`.
+  - **Condicao do bloco Condicao do fluxo:** regra `{"valueType": "attr_config", "attrSource": "company",
+    "attr_key": "<chave>", "operator": "...", "value": "", "values": [...]}`. `attr_key` = chave personalizada OU
+    cadastro com prefixo: `company.name`, `company.legal_name`, `company.cnpj` (comparado por digitos),
+    `company.phone`, `company.email`, `company.address.city`, `company.address.state`. Contato sem empresa = valor
+    vazio (os negativos casam).
+  - **Condicao de automacao e filtro da lista de contatos** (`lionchat_contacts_filter`, segmento salvo, acao em
+    massa): `{"attribute_key": "<chave>", "filter_operator": "...", "values": [...],
+    "custom_attribute_type": "company_attribute"}`. So atributo PERSONALIZADO (o cadastro da empresa fica fora).
+    Operadores pelo tipo do atributo: todos aceitam `equal_to`/`not_equal_to`/`is_present`/`is_not_present`;
+    texto tambem `contains`/`does_not_contain`; numero, data e hora tambem `is_greater_than`/`is_less_than`.
+    Negativo inclui o contato SEM empresa. `attribute_changed` e recusado (a empresa nao dispara evento).
+    Chave igual a de um atributo de contato e permitida: quem decide e o `custom_attribute_type`.
+  - **Filtro de CONVERSAS** (`lionchat_conversations_filter`) com `company_attribute` = 422 ("Atributo de empresa
+    so filtra a lista de contatos").
+  - **IA:** o Agente de IA e o Copiloto veem o nome, o cadastro e os campos personalizados preenchidos da empresa do
+    contato. Somente leitura: a IA nao grava na empresa.
+  - **Modulo Empresas DESLIGADO = para tudo:** variavel sai vazia, condicao nunca casa (nem "diferente de" nem
+    "esta vazio"), filtro nao acha ninguem, a IA nao ve a empresa. O que foi preenchido fica guardado.
+  - **Ainda NAO:** condicao de SAIDA do fluxo, gatilho do fluxo, parametro de ferramenta de IA, acao "Alterar
+    atributo" do fluxo/automacao (nao grava na empresa), exportacao/relatorio, historico de alteracoes e gatilho
+    de data.
 
 **Dados cadastrais (`additional_attributes.cadastral`):** CPF, CNPJ, RG, passaporte, nascimento,
 gênero, estado civil, profissão e endereço completo moram em `additional_attributes->cadastral`.
