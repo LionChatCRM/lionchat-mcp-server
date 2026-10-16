@@ -497,7 +497,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-11)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-16)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -846,7 +846,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Chaves de campanha: origin_kind, origin_platform, origin_first_kind/_platform, origin_last_kind/_platform,
     ctwa_* (anuncio click-to-WhatsApp: ctwa_ad_id, ctwa_ad_title, ctwa_campaign_name, ctwa_adset_name...),
     meta_lead_* (formulario Meta Lead Ads), lt_* (LionTrack: UTMs, pagina, dispositivo). Lista real:
-    lionchat_custom_attributes_list {attribute_model:'conversation', include_system:true}.
+    lionchat_custom_attributes_list {attribute_model:'conversation_attribute', include_system:true} (com o sufixo: so 'conversation' devolve lista VAZIA).
     VALORES FECHADOS de origin_kind (e first/last): paid_ad (Anuncio), lead_form (Formulario), organic
     (Organico), direct (Direto), referral (Indicacao), manual (Origem cadastrada) — compara pelo VALOR, nunca
     pelo rotulo ("Anuncio" nunca casa). origin_platform: facebook, instagram, google, tiktok, linkedin, youtube,

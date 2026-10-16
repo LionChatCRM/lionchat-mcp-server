@@ -3324,7 +3324,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}",
   "title": "Atualizar Item",
-  "description": "Atualiza item (detalhes, agentes, timer, ofertas, automações). Atualiza campos do item Kanban existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: kanban_item.funnel_stage, kanban_item.position, kanban_item.item_details, kanban_item.assigned_agents, kanban_item.custom_attributes, kanban_item.timer_started_at. CARD ADIADO (11/10/2026): item_details.status \"open\" NAO abre um card adiado (e o mesmo salvar que o aplicativo faz o tempo todo); para abrir use lionchat_kanban_items_unsnooze ou lionchat_kanban_items_create_2. Mandar \"won\"/\"lost\" encerra o adiamento.",
+  "description": "Atualiza item (detalhes, agentes, timer, ofertas, automações). Atualiza campos do item Kanban existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: kanban_item.funnel_stage, kanban_item.position, kanban_item.item_details, kanban_item.assigned_agents, kanban_item.custom_attributes, kanban_item.timer_started_at. CARD ADIADO (11/10/2026): item_details.status \"open\" NAO abre um card adiado (e o mesmo salvar que o aplicativo faz o tempo todo); para abrir use lionchat_kanban_items_unsnooze ou lionchat_kanban_items_create_2. Mandar \"won\"/\"lost\" encerra o adiamento. CO-PARTICIPANTE (13/10/2026): num card GANHO, item_details.co_attributed_to = id do co-participante da venda (ex. o SDR); null tira. Fora de ganho a chave e apagada. Mande so o id — co_attributed_name o card preenche.",
   "category": "Itens",
   "params": [
    {
@@ -3353,7 +3353,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Objeto com os detalhes do card. MESCLA SO NO 1o NIVEL: cada chave enviada troca a chave inteira no card; as nao enviadas ficam. Lista FECHADA (outras chaves sao descartadas em silencio): title, description, status, reason, win_reason, loss_reason, attributed_to, duplicated_from_id, priority, value (NUMERO; texto de numero como \"1500.5\" e convertido, \"R$ 1.500,00\" e recusado com 422), currency, custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at, conversation_id, automations, notes, retroativo_em. custom_attributes = campos da aba Campos do card: LISTA [{name, type, value}] onde name+type batem EXATAMENTE com a definicao da CONTA (lionchat_kanban_config_list -> global_custom_attributes). Ex.: [{\"name\": \"Origem do Lead\", \"type\": \"string\", \"value\": \"Google\"}]. A lista e TROCADA inteira: leia o card com lionchat_kanban_items_show e reenvie TODOS os campos. Objeto {chave: valor} no lugar da lista APAGA todos os campos do card. notes e offers tambem sao listas trocadas inteiras. Motivo de ganho/perda: status \"won\"/\"lost\" + win_reason/loss_reason = o id (TEXTO) de um motivo de kanban_config.win_reasons/loss_reasons + reason = o titulo dele. Motivo livre (fora da lista): win_reason/loss_reason nulo e o texto em reason. Ex.: {\"status\": \"lost\", \"loss_reason\": \"perda-preco\", \"reason\": \"Preco alto\"}. Lancamento retroativo (marcar o fechamento com data PASSADA): retroativo_em = \"AAAA-MM-DD\" faz o ganho/perda contar no MES ESCOLHIDO em todos os relatorios, em vez do dia de hoje. So funciona JUNTO com um status \"won\"/\"lost\" que MUDA o status do card — card que ja esta ganho ignora a data (pra corrigir uma data lancada errado: mande status \"open\", que apaga o carimbo, e depois \"won\"/\"lost\" com o retroativo_em certo). A chave NAO fica gravada no card: ela so decide o carimbo item_details.status_changed_at, que e o que os relatorios contam. Data FUTURA ou ilegivel = 422. Data anterior a criacao do card e permitida. Vale SO nesta ferramenta — no criar card a chave e descartada. Ex.: {\"status\": \"won\", \"win_reason\": \"indicacao\", \"retroativo_em\": \"2026-08-05\"}."
+    "description": "Objeto com os detalhes do card. MESCLA SO NO 1o NIVEL: cada chave enviada troca a chave inteira no card; as nao enviadas ficam. Lista FECHADA (outras chaves sao descartadas em silencio): title, description, status, reason, win_reason, loss_reason, attributed_to, co_attributed_to (co-participante da venda, so em card ganho; id de agente; null tira), duplicated_from_id, priority, value (NUMERO; texto de numero como \"1500.5\" e convertido, \"R$ 1.500,00\" e recusado com 422), currency, custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at, conversation_id, automations, notes, retroativo_em. custom_attributes = campos da aba Campos do card: LISTA [{name, type, value}] onde name+type batem EXATAMENTE com a definicao da CONTA (lionchat_kanban_config_list -> global_custom_attributes). Ex.: [{\"name\": \"Origem do Lead\", \"type\": \"string\", \"value\": \"Google\"}]. A lista e TROCADA inteira: leia o card com lionchat_kanban_items_show e reenvie TODOS os campos. Objeto {chave: valor} no lugar da lista APAGA todos os campos do card. notes e offers tambem sao listas trocadas inteiras. Motivo de ganho/perda: status \"won\"/\"lost\" + win_reason/loss_reason = o id (TEXTO) de um motivo de kanban_config.win_reasons/loss_reasons + reason = o titulo dele. Motivo livre (fora da lista): win_reason/loss_reason nulo e o texto em reason. Ex.: {\"status\": \"lost\", \"loss_reason\": \"perda-preco\", \"reason\": \"Preco alto\"}. Lancamento retroativo (marcar o fechamento com data PASSADA): retroativo_em = \"AAAA-MM-DD\" faz o ganho/perda contar no MES ESCOLHIDO em todos os relatorios, em vez do dia de hoje. So funciona JUNTO com um status \"won\"/\"lost\" que MUDA o status do card — card que ja esta ganho ignora a data (pra corrigir uma data lancada errado: mande status \"open\", que apaga o carimbo, e depois \"won\"/\"lost\" com o retroativo_em certo). A chave NAO fica gravada no card: ela so decide o carimbo item_details.status_changed_at, que e o que os relatorios contam. Data FUTURA ou ilegivel = 422. Data anterior a criacao do card e permitida. Vale SO nesta ferramenta — no criar card a chave e descartada. Ex.: {\"status\": \"won\", \"win_reason\": \"indicacao\", \"retroativo_em\": \"2026-08-05\"}."
    },
    {
     "name": "kanban_item.assigned_agents",
@@ -3549,7 +3549,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/change_status",
   "title": "Mudar Status",
-  "description": "Altera o status do card (open/won/lost). Param opcional attributed_to (id do responsavel pelo ganho/perda). CARD ADIADO (11/10/2026): status \"open\" num card adiado ABRE o card na hora (sai do adiamento, fica no historico e dispara o fluxo \"Card aberto\"); \"won\"/\"lost\" encerram o adiamento. Para ADIAR use lionchat_kanban_items_snooze. Card ocupado = 409.",
+  "description": "Altera o status do card (open/won/lost). Param opcional attributed_to (id do responsavel pelo ganho/perda). CARD ADIADO (11/10/2026): status \"open\" num card adiado ABRE o card na hora (sai do adiamento, fica no historico e dispara o fluxo \"Card aberto\"); \"won\"/\"lost\" encerram o adiamento. Para ADIAR use lionchat_kanban_items_snooze. Card ocupado = 409. CO-PARTICIPANTE (13/10/2026): com status \"won\" aceita co_attributed_to (id de UM agente, ex. o SDR que trouxe a venda) — a venda conta inteira para o vendedor (attributed_to) e o co-participante ganha numeros proprios no relatorio. Recusa 422 se nao for numero, nao for membro da conta, for o proprio vendedor ou nao tiver acesso ao funil. Reabrir/perder apaga o co-participante.",
   "category": "Itens",
   "params": [
    {
@@ -3572,6 +3572,13 @@
     "location": "body",
     "required": false,
     "description": "ID do responsavel pelo ganho/perda"
+   },
+   {
+    "name": "co_attributed_to",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "So com status won: id do CO-PARTICIPANTE da venda (ex. o SDR). Nao pode ser o vendedor. Objeto ou lista = 422. O nome o card preenche sozinho."
    }
   ],
   "returns": "o card atualizado (mesmo id). Status fora de won/lost/open = 422 {error}",
@@ -4198,7 +4205,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/reports",
   "title": "Relatório Agregado do Kanban",
-  "description": "RELATORIO AGREGADO do Kanban (funil de vendas) — a resposta e um OBJETO de metricas, nao lista de cards: soma de valores GANHOS no periodo, contagem/valor por etapa, previsao ponderada (forecast), top negocios, cards parados (stale) e metas do funil. CARD ADIADO (11/10/2026): statusDistribution.open CONTINUA incluindo os adiados (e a soma que o aplicativo le) e statusDistribution.snoozed vem ao lado: abertos de verdade = open - snoozed. Parados, maiores negocios, ranking e previsao ja deixam o adiado de fora. Filtra por periodo (from/to), agentes (user_ids[]) e time (team_id). USE ESTA TOOL quando pedirem 'relatorio do funil/vendas/ganhos do mes por agente ou time'. Pra LISTAR os cards em si, use lionchat_kanban_items_filter. ATENCAO wonInPeriod/wonValueInPeriod: em instalacao ANTERIOR a atualizacao de 26/07/2026 eles SUBCONTAM — negocio ganho no periodo cujo card foi criado ANTES do periodo fica de fora (numa conta real, metade dos ganhos e R$3.750 sumiam). Ao responder receita nessas contas, avise que o numero pode estar subestimado em funil de ciclo longo.",
+  "description": "RELATORIO AGREGADO do Kanban (funil de vendas) — a resposta e um OBJETO de metricas, nao lista de cards: soma de valores GANHOS no periodo, contagem/valor por etapa, previsao ponderada (forecast), top negocios, cards parados (stale) e metas do funil. CARD ADIADO (11/10/2026): statusDistribution.open CONTINUA incluindo os adiados (e a soma que o aplicativo le) e statusDistribution.snoozed vem ao lado: abertos de verdade = open - snoozed. Parados, maiores negocios, ranking e previsao ja deixam o adiado de fora. Filtra por periodo (from/to), agentes (user_ids[]) e time (team_id). USE ESTA TOOL quando pedirem 'relatorio do funil/vendas/ganhos do mes por agente ou time'. Pra LISTAR os cards em si, use lionchat_kanban_items_filter. ATENCAO wonInPeriod/wonValueInPeriod: em instalacao ANTERIOR a atualizacao de 26/07/2026 eles SUBCONTAM — negocio ganho no periodo cujo card foi criado ANTES do periodo fica de fora (numa conta real, metade dos ganhos e R$3.750 sumiam). Ao responder receita nessas contas, avise que o numero pode estar subestimado em funil de ciclo longo. CO-PARTICIPANTE DA VENDA (13/10/2026): vem sempre coParticipantRanking [{id, name, sales, value}] — uma linha por co-participante (ex. o SDR marcado no ganho), contando cards GANHOS no periodo com os mesmos recortes; o filtro de pessoa/time vale sobre o co-participante; nenhum numero antigo muda. Com include_shared_sales=true vem tambem sharedSalesSummary {solo, shared, sharedSellerLeft} (cada um {count, value}; sozinho + compartilhadas = ganhos do periodo) e sharedSalesBySeller [{id, sales, value}]. A LISTA das vendas compartilhadas e lionchat_kanban_items_shared_sales.",
   "category": "Itens",
   "params": [
    {
@@ -4238,22 +4245,147 @@
     "description": "ID do time — restringe aos cards dos agentes do time"
    },
    {
+    "name": "label_names",
+    "query_name": "label_names[]",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "description": "Etiquetas (pelo NOME, como aparecem na conversa) — so cards com essas etiquetas"
+   },
+   {
+    "name": "win_reason_ids",
+    "query_name": "win_reason_ids[]",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "description": "Codigos dos motivos de GANHO (lionchat_kanban_config_list) — so ganhos com esses motivos"
+   },
+   {
     "name": "date_basis",
     "type": "string",
     "location": "query",
     "required": false,
     "description": "Qual data o periodo (from/to) considera. 'any' = PADRAO e regua historica (card CRIADO no periodo OU FECHADO no periodo) — omitir mantem exatamente os numeros de sempre. 'created' = so criados. 'moved' = so os que entraram na etapa atual no periodo. 'closed' = so ganhos/perdidos no periodo (a pergunta de receita). Valor invalido cai no padrao sem erro, e a regua aplicada volta em dateBasis."
+   },
+   {
+    "name": "include_shared_sales",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = traz sharedSalesSummary e sharedSalesBySeller (vendas sozinho x compartilhadas com co-participante). Sem o parametro a resposta e a de sempre."
    }
   ],
-  "returns": "objeto de metricas agregadas do funil (valores ganhos, por etapa, forecast, top deals, stale) — NAO e array de itens",
+  "returns": "objeto de metricas agregadas do funil (valores ganhos, por etapa, forecast, top deals, stale, coParticipantRanking; com include_shared_sales=true tambem sharedSalesSummary e sharedSalesBySeller) — NAO e array de itens",
   "common_use_cases": [
    "Ganhos do mes por agente ou time",
    "Valor total e contagem por etapa do funil",
-   "Forecast (previsao ponderada) e negocios parados"
+   "Forecast (previsao ponderada) e negocios parados",
+   "Quanto cada SDR (co-participante) trouxe e vendas sozinho x compartilhadas para comissao dividida"
   ],
   "related_tools": [
    "lionchat_kanban_items_list",
    "lionchat_kanban_items_create",
+   "lionchat_kanban_items_show",
+   "lionchat_kanban_items_shared_sales"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_items_shared_sales",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/kanban_items/shared_sales",
+  "title": "Vendas Compartilhadas (vendedor + co-participante)",
+  "description": "[13/10/2026] A lista 'Vendas compartilhadas no periodo' do relatorio do Kanban (aba Vendedores): cards GANHOS no periodo com co-participante (ex. o SDR) DIFERENTE do vendedor gravado no card. Mesmos filtros e mesma regua do lionchat_kanban_items_list_3; a mais recente no topo, 50 por vez (limit ate 500). Para a proxima pagina devolva o nextCursor recebido: cursor_at = nextCursor.at e cursor_id = nextCursor.id; nextCursor nulo = acabou (cursor invalido volta a primeira pagina). Com filtro de pessoa/time so entra venda em que alguem do filtro foi VENDEDOR ou CO-PARTICIPANTE e vem asSellerCount/asCoCount (sem filtro, nulos). canOpen por linha diz se quem pediu pode abrir o card; quem ve so parte do Kanban recebe as vendas que nao ve so como hiddenCount (nunca o titulo). Sair da conta NAO transforma venda compartilhada em individual (vale o vendedor gravado). Mesma permissao do relatorio do Kanban.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "ID do funil (opcional; sem ele, todos os funis da conta)"
+   },
+   {
+    "name": "from",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Inicio do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Mande unix se quiser o instante exato; data SEM hora cobre o dia inteiro no fuso da conta. Padrao: 30 dias atras."
+   },
+   {
+    "name": "to",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Fim do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato. Data SEM hora cobre o dia inteiro (ate 23:59:59 no fuso da conta). Padrao: agora."
+   },
+   {
+    "name": "date_basis",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Qual data o periodo (from/to) considera. 'any' = PADRAO e regua historica (card CRIADO no periodo OU FECHADO no periodo) — omitir mantem exatamente os numeros de sempre. 'created' = so criados. 'moved' = so os que entraram na etapa atual no periodo. 'closed' = so ganhos/perdidos no periodo (a pergunta de receita). Valor invalido cai no padrao sem erro, e a regua aplicada volta em dateBasis."
+   },
+   {
+    "name": "user_ids",
+    "query_name": "user_ids[]",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "description": "IDs de agentes — so vendas em que um deles foi o VENDEDOR gravado ou o CO-PARTICIPANTE"
+   },
+   {
+    "name": "team_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "ID do time — mesma regra do user_ids para as pessoas do time"
+   },
+   {
+    "name": "label_names",
+    "query_name": "label_names[]",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "description": "Etiquetas (pelo NOME) — so cards com essas etiquetas"
+   },
+   {
+    "name": "win_reason_ids",
+    "query_name": "win_reason_ids[]",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "description": "Codigos dos motivos de GANHO — so ganhos com esses motivos"
+   },
+   {
+    "name": "cursor_at",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Pagina seguinte: o nextCursor.at da resposta anterior (data do ganho com 6 casas)"
+   },
+   {
+    "name": "cursor_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Pagina seguinte: o nextCursor.id da resposta anterior"
+   },
+   {
+    "name": "limit",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Linhas por pagina (padrao 50, maximo 500; acima disso para no teto)"
+   }
+  ],
+  "returns": "{total, totalValue, asSellerCount, asCoCount, hiddenCount, nextCursor: {at, id} | null, items: [{id, title, value, wonAt, funnelId, sellerId, sellerName, sellerActive, coId, coName, coActive, canOpen}]}",
+  "common_use_cases": [
+   "Listar as vendas feitas com SDR (co-participante) no mes para pagar comissao dividida",
+   "Ver as vendas compartilhadas de um vendedor ou de um SDR especifico (user_ids)"
+  ],
+  "related_tools": [
+   "lionchat_kanban_items_list_3",
+   "lionchat_kanban_items_create_2",
    "lionchat_kanban_items_show"
   ]
  },
@@ -22183,7 +22315,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtra por modelo: contact ou conversation"
+    "description": "Filtra por modelo, SEMPRE com o sufixo: conversation_attribute | contact_attribute | account_attribute. So 'conversation' ou 'contact' NAO da erro — devolve a lista VAZIA."
    },
    {
     "name": "include_system",
@@ -22246,7 +22378,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "contact_attribute ou conversation_attribute (default conversation_attribute)"
+    "description": "conversation_attribute (PADRAO) | contact_attribute | account_attribute (variavel da conta). SEMPRE com o sufixo _attribute."
    },
    {
     "name": "attribute_description",
@@ -22267,7 +22399,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Regex de validacao (opcional)"
+    "description": "Regra de formato (opcional, atributo de texto). Aceita os dois jeitos: CRU como no Ruby (ex. \\A\\d{5}-\\d{3}\\z) ou COM BARRAS como a tela grava (ex. /^\\d{5}-\\d{3}$/, flags i e s). Os dois valem na tela, na IA e no bloco Esperar resposta (desde 13/10/2026)."
    },
    {
     "name": "regex_cue",
@@ -22366,7 +22498,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "contact_attribute ou conversation_attribute"
+    "description": "conversation_attribute (PADRAO) | contact_attribute | account_attribute (variavel da conta). SEMPRE com o sufixo _attribute."
    },
    {
     "name": "attribute_description",
@@ -22387,7 +22519,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Regex de validacao (opcional)"
+    "description": "Regra de formato (opcional, atributo de texto). Aceita os dois jeitos: CRU como no Ruby (ex. \\A\\d{5}-\\d{3}\\z) ou COM BARRAS como a tela grava (ex. /^\\d{5}-\\d{3}$/, flags i e s). Os dois valem na tela, na IA e no bloco Esperar resposta (desde 13/10/2026)."
    },
    {
     "name": "regex_cue",
@@ -34381,7 +34513,7 @@
   "path": "/api/v2/accounts/{account_id}/booking_reports",
   "title": "Relatorio de Agendamentos",
   "category": "Relatorios",
-  "description": "[GET] A aba Relatorios > Agendamentos (2026-08-19). Unidade = o AGENDAMENTO (Booking nativo: link publico, IA e Agenda do painel — NAO e e-Clinica). Padrao de periodo: 30 dias pra TRAS e 30 pra FRENTE (agenda tem futuro). A SITUACAO vem da TAREFA da Agenda (account_tasks.status), nao de bookings.status — quem conclui/cancela pela Agenda deixa o booking parado em 'confirmado'; ler bookings direto pra contar concluidos da zero. attendance_rate (15/09) = attended / (attended + no_show), em %, pelas marcas Compareceu/Faltou; periodo SEM marca nenhuma cai na regra antiga concluidos / (concluidos + cancelados) — pendentes FORA do denominador (ainda nao aconteceram) — e attendance_basis diz qual valeu ('attendance' ou 'status'); nao recalcule com o total. snoozed (adiado) sai separado de pending. [15/09] totals traz tambem attended/no_show (marcas Compareceu/Faltou da tarefa — eixo proprio, NAO mexem no status nem na taxa) e a resposta ganha `treatments` (bloco Programas, refeito 15/09 a noite): o PERIODO since/until VALE; event_type_id recorta; user_id e status NAO. Programas: em_andamento e atrasados (medidos no FIM do periodo), comecaram/concluidos/encerrados (so se a data cair no periodo), sessoes_planejadas/sessoes_usadas/percentual (so dos em andamento). Sessoes do periodo: previstas = marcadas + nao_marcadas (nao_marcadas e PREVISAO), aconteceram, faltaram, taxa. Mais parados {programas, sessoes_restantes}, duracao {programas, dias_reais, dias_previstos}, linha[] {period, previstas, aconteceram, faltaram, aguardando (16/09), nao_marcadas} e por_tipo[] (mesmos campos + tipo). Sem valor em reais. Detalhe em lionchat://docs/reports-guide. Admin ou agente.",
+  "description": "[GET] A aba Relatorios > Agendamentos (2026-08-19). Unidade = o AGENDAMENTO (Booking nativo: link publico, IA e Agenda do painel — NAO e e-Clinica). Padrao de periodo: 30 dias pra TRAS e 30 pra FRENTE (agenda tem futuro). A SITUACAO vem da TAREFA da Agenda (account_tasks.status), nao de bookings.status — quem conclui/cancela pela Agenda deixa o booking parado em 'confirmado'; ler bookings direto pra contar concluidos da zero. attendance_rate (15/09) = attended / (attended + no_show), em %, pelas marcas Compareceu/Faltou; periodo SEM marca nenhuma cai na regra antiga concluidos / (concluidos + cancelados) — pendentes FORA do denominador (ainda nao aconteceram) — e attendance_basis diz qual valeu ('attendance' ou 'status'); nao recalcule com o total. snoozed (adiado) sai separado de pending. [15/09] totals traz tambem attended/no_show (marcas Compareceu/Faltou da tarefa — eixo proprio, NAO mexem no status nem na taxa) e a resposta ganha `treatments` (bloco Programas, refeito 15/09 a noite): o PERIODO since/until VALE; event_type_id recorta; user_id e status NAO. Programas: em_andamento e atrasados (medidos no FIM do periodo), comecaram/concluidos/encerrados (so se a data cair no periodo), sessoes_planejadas/sessoes_usadas/percentual (so dos em andamento). Sessoes do periodo: previstas = marcadas + nao_marcadas (nao_marcadas e PREVISAO), aconteceram, faltaram, taxa. Mais parados {programas, sessoes_restantes}, duracao {programas, dias_reais, dias_previstos}, linha[] {period, previstas, aconteceram, faltaram, aguardando (16/09), nao_marcadas} e por_tipo[] (mesmos campos + tipo). Sem valor em reais. Detalhe em lionchat://docs/reports-guide. Admin ou agente. [14/10/2026] source=agenda troca a fonte para os compromissos marcados A MAO na Agenda, sem Booking — ligacao, reuniao, videochamada e tipos de compromisso da conta (tarefa comum e evento do Google ficam FORA). Use quando a conta nao usa Booking e o relatorio normal vem zerado. Nessa opcao o tipo vai em task_type (event_type_id e ignorado; a lista de tipos vem em appointment_types da propria resposta), by_agent conta pelos RESPONSAVEIS (quem tem dois aparece nas duas linhas; os totais contam uma vez), by_origin vem vazio e treatments vem nulo.",
   "params": [
    {
     "name": "since",
@@ -34398,11 +34530,25 @@
     "description": "Fim do periodo. Default: 30 dias a frente"
    },
    {
+    "name": "source",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "booking (PADRAO, agendamentos do Booking) | agenda (compromissos marcados a mao na Agenda: ligacao, reuniao, videochamada e tipos da conta; tarefa comum e evento do Google ficam fora). Qualquer outro valor = booking."
+   },
+   {
     "name": "event_type_id",
     "type": "integer",
     "location": "query",
     "required": false,
-    "description": "Filtra por tipo de agendamento (booking_event_types)"
+    "description": "Filtra por tipo de agendamento (booking_event_types) (so no modo Booking; com source=agenda use task_type)"
+   },
+   {
+    "name": "task_type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "So com source=agenda: chave do tipo de compromisso (ex. meeting, call, video_call ou a chave de um tipo da conta). As opcoes vem em appointment_types da resposta com source=agenda."
    },
    {
     "name": "user_id",
@@ -34426,11 +34572,12 @@
     "description": "day | week | month (agrupamento da timeline; default day)"
    }
   ],
-  "returns": "{period: {since, until, group_by}, totals: {total, pending, completed, cancelled, snoozed, attended, no_show, attendance_rate, attendance_basis}, timeline: [{period, count}], by_event_type, by_agent, by_origin, treatments: {em_andamento, atrasados, comecaram, concluidos, encerrados, previstas, marcadas, aconteceram, faltaram, nao_marcadas, taxa, percentual, parados, duracao, linha, por_tipo}}",
+  "returns": "{period: {since, until, group_by}, totals: {total, pending, completed, cancelled, snoozed, attended, no_show, attendance_rate, attendance_basis}, timeline: [{period, count}], by_event_type, by_agent, by_origin, treatments: {em_andamento, atrasados, comecaram, concluidos, encerrados, previstas, marcadas, aconteceram, faltaram, nao_marcadas, taxa, percentual, parados, duracao, linha, por_tipo}} | com source=agenda vem tambem source: 'agenda' e appointment_types: [{key, name}]; by_origin vazio e treatments nulo",
   "common_use_cases": [
    "Quantos agendamentos foram marcados/concluidos/cancelados no mes",
    "Taxa de comparecimento por tipo de consulta ou por responsavel",
-   "De onde vem os agendamentos (origem/UTM)"
+   "De onde vem os agendamentos (origem/UTM)",
+   "Relatorio dos compromissos marcados a mao na Agenda quando a conta nao usa Booking (source=agenda)"
   ],
   "related_tools": [
    "lionchat_booking_event_types_list",

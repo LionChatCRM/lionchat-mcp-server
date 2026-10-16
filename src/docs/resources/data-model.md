@@ -284,6 +284,8 @@ KanbanItem
 └── created_at
     (item_details.status guarda open/won/lost; ADIADO = open + linha em kanban_item_snoozes — a resposta da API
      traz effective_status open|snoozed|won|lost e snoozed_until, calculados; nao sao colunas)
+    (13/10/2026: item_details.attributed_to = vendedor do ganho; item_details.co_attributed_to = CO-PARTICIPANTE da
+     venda, ex. o SDR — so em card ganho, id de agente; co_attributed_name o card preenche. Ver kanban-deep-dive)
 
 KanbanItemSnooze (kanban_item_snoozes — 11/10/2026: ate quando o card esta ADIADO; uma linha por card)
 ├── account_id, kanban_item_id (unico)

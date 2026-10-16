@@ -592,7 +592,8 @@ e o `{{meet_link}}` da mensagem de confirmação do Booking passaram a vir preen
 vazios) — isso vale inclusive para cliente que não usa IA.
 
 **3. A IA não confirma reunião que não existe.** No último instante antes da resposta virar
-mensagem: se ela afirma agendamento concluído, a agenda está liberada e não há compromisso real na
+mensagem: se ela afirma agendamento concluído, a agenda está liberada (a conta tem tipo de agendamento E o
+agente tem ao menos uma das 4 ferramentas de agenda ligada — desde 14/10) e não há compromisso real na
 conversa, o sistema roda UMA tentativa guiada que agenda de verdade com a data/hora prometidas.
 Agendou, sai a confirmação verdadeira; não agendou, a frase é trocada por uma honesta — nunca
 silêncio. Diagnóstico: se o cliente disser "a IA confirmou e não tem nada na agenda", esse é o

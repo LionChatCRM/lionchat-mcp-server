@@ -159,8 +159,29 @@ NÃO há filtro por time aqui (por time: use o relatório agregado abaixo, ou fi
 
 `GET /kanban_items/reports` — a resposta é um OBJETO de métricas (não lista): valores GANHOS,
 contagem/valor por etapa, forecast ponderado, top negócios, cards parados, metas do funil.
-Params: `funnel_id` (obrigatório), `from`, `to`, `user_ids[]` (agentes), `team_id`, `date_basis`.
+Params: `funnel_id` (obrigatório), `from`, `to`, `user_ids[]` (agentes), `team_id`, `date_basis`,
+`label_names[]` (só cards com essas etiquetas — nome da etiqueta, como aparece na conversa; desde 02/10/2026),
+`win_reason_ids[]` (só ganhos com esses motivos — o código do motivo em `lionchat_kanban_config_list`; desde 02/10/2026)
+e `include_shared_sales` (true = traz o quadro "sozinho x compartilhadas", ver abaixo; 13/10/2026).
 É a ferramenta certa pra "relatório de vendas/ganhos do mês por agente ou time".
+
+**Co-participante da venda (13/10/2026).** No ganho dá para marcar, além do vendedor, UM co-participante (ex.: o SDR
+que trouxe a venda — ver `lionchat://docs/kanban-deep-dive`, seção "Co-participante da venda"). O relatório mostra isso
+SEM mudar nenhum número antigo (Ganhos e Receita continuam do vendedor):
+- `coParticipantRanking` (sempre vem): `[{id, name, sales, value}]`, uma linha por co-participante, contando cards
+  GANHOS no período com os mesmos recortes de funil, régua, etiqueta e motivo. O filtro de pessoa/time vale sobre o
+  co-participante. Co-participante igual ao vendedor não conta. Lista vazia = a conta não usa o recurso.
+- Com `include_shared_sales=true`: `sharedSalesSummary` `{solo, shared, sharedSellerLeft}` (cada um `{count, value}`; sozinho + compartilhadas = ganhos do período; `sharedSellerLeft` = compartilhadas cujo vendedor saiu da conta)
+  e `sharedSalesBySeller` `[{id, sales, value}]` (parte compartilhada de cada vendedor). Sem o parâmetro a resposta é
+  a de sempre. Venda compartilhada = ganha no período com co-participante DIFERENTE do vendedor gravado no card; sair da
+  conta NÃO transforma venda compartilhada em individual.
+- **A lista das vendas compartilhadas** (data, negócio, valor, vendedor, co-participante) é a tool
+  `lionchat_kanban_items_shared_sales` (`GET /kanban_items/shared_sales`): mesmos filtros (`funnel_id` opcional, `from`,
+  `to`, `date_basis`, `user_ids[]`, `team_id`, `label_names[]`, `win_reason_ids[]`), a mais recente no topo, 50 por vez
+  (`limit` até 500). Para a página seguinte, devolva o `nextCursor` recebido em `cursor_at` e `cursor_id`; `nextCursor`
+  nulo = acabou. Com filtro de pessoa/time só entra venda em que alguém do filtro foi VENDEDOR ou CO-PARTICIPANTE, e vêm
+  `asSellerCount`/`asCoCount` (sem filtro, nulos). `canOpen` por linha diz se quem pediu pode abrir o card; quem vê só
+  parte do Kanban recebe as vendas que não vê como `hiddenCount` (nunca o título).
 
 **`date_basis` (2026-08-07) — qual data o período considera.** A resposta devolve a régua aplicada em
 `dateBasis`; valor inválido cai no padrão sem erro.

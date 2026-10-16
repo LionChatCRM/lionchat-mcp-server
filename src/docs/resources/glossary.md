@@ -218,6 +218,9 @@ comportamento intencional.
   (`open`, **`snoozed`** = adiado, `won`, `lost`) e `snoozed_until`. **Card adiado** = card aberto que sai da coluna até
   uma data e volta sozinho nela ("Adiar até" na tela). Ferramentas `lionchat_kanban_items_snooze`/`_unsnooze`; regras
   em kanban-deep-dive, seção "Card adiado".
+- Venda (13/10/2026): `item_details.attributed_to` = **vendedor** do ganho ("Atribuir ganho a");
+  `item_details.co_attributed_to` = **co-participante da venda** (ex.: o SDR), só em card ganho. Regras em
+  kanban-deep-dive, seção "Co-participante da venda".
 
 ### `item_details` (jsonb)
 ```json

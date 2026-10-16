@@ -459,7 +459,7 @@ campanha"):
   `origin_first_kind`/`origin_first_platform`, `origin_last_kind`/`origin_last_platform`, `origin_*` em geral
   (origem unificada), `ctwa_*` (anúncio click-to-WhatsApp: `ctwa_ad_id`, `ctwa_ad_title`, `ctwa_campaign_name`,
   `ctwa_adset_name`...), `meta_lead_*` (formulário Meta Lead Ads), `lt_*` (LionTrack: UTMs, página, dispositivo).
-  Veja a lista real com `lionchat_custom_attributes_list` (`attribute_model: conversation`, `include_system: true` — as chaves de campanha são atributos de sistema).
+  Veja a lista real com `lionchat_custom_attributes_list` (`attribute_model: conversation_attribute` — com o sufixo; só `conversation` devolve a lista VAZIA —, `include_system: true` — as chaves de campanha são atributos de sistema).
 - **Valores fechados** de `origin_kind` (e `origin_first_kind`/`origin_last_kind`): `paid_ad` (Anúncio),
   `lead_form` (Formulário), `organic` (Orgânico), `direct` (Direto), `referral` (Indicação), `manual` (Origem
   cadastrada). O painel mostra o rótulo em português, mas a comparação é pelo VALOR — `"Anúncio"` nunca casa.

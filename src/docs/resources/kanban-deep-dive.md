@@ -200,9 +200,9 @@ Como gravar pelo `lionchat_kanban_items_update` (`kanban_item.item_details`):
 - Mandar objeto (`{"origem_lead": "Facebook Ads"}`) no lugar da lista **APAGA todos os campos do card**: o
   servidor só aceita itens `{name, type, value}` e o objeto vira vazio.
 - Lista fechada de chaves do `item_details` (outras são descartadas em silêncio): title, description, status,
-  reason, win_reason, loss_reason, attributed_to, duplicated_from_id, priority, value, currency,
-  custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at,
-  conversation_id, automations, notes.
+  reason, win_reason, loss_reason, attributed_to, co_attributed_to (13/10/2026, ver "Co-participante da venda"),
+  duplicated_from_id, priority, value, currency, custom_attributes, offers, closed_offers, closed_offer, deadline_at,
+  scheduling_type, scheduled_at, conversation_id, automations, notes.
 - Para mudar UM campo sem reenviar a lista, as ações de automação/macro `update_card_attribute`
   (`[{funnel_id, attribute_key: "<nome do campo>", value}]`) mexem só naquela entrada.
 
@@ -800,3 +800,33 @@ data marcada, **abre sozinho** e volta para a coluna (disparando o fluxo "Card a
 **Laço de cadência é permitido:** um fluxo "Card aberto" que manda mensagem e adia de novo roda até alguém parar (no
 máximo uma volta por hora por card). Avise o cliente antes de montar. **Abrir à mão também dispara "Card aberto"**: se o
 fluxo manda mensagem, o cliente recebe na hora.
+
+## Co-participante da venda (vendedor + SDR) — 2026-10-13
+
+No ganho, além do vendedor (`attributed_to`, "Atribuir ganho a"), dá para marcar **UM co-participante** — ex.: o SDR
+que trouxe a venda. A venda conta INTEIRA para o vendedor; o co-participante tem números próprios no relatório.
+Marcar alguém como co-participante **não dá acesso ao card** nem o põe como responsável.
+
+**Como gravar:**
+- Junto com o ganho: `lionchat_kanban_items_create_2` (`change_status`) com `status: "won"` e `co_attributed_to: <id do
+  agente>`. Fora de `won` o parâmetro é ignorado.
+- Depois, num card JÁ ganho: `lionchat_kanban_items_update` com `kanban_item.item_details.co_attributed_to`. Para tirar,
+  mande `null`.
+- Mande SÓ o id (número). O nome (`co_attributed_name`) o próprio card preenche — nunca envie.
+- Objeto ou lista no lugar do id = 422 antes de gravar.
+
+**Recusas (422, com `error` legível):** id que não é número; pessoa que não é membro da conta; o próprio vendedor do
+card; pessoa sem acesso ao funil (vale: funil sem lista de agentes, agente da lista do funil ou dos times dele,
+administrador, ou quem já é responsável do card). A conferência só roda quando o valor MUDA — quem perdeu o acesso
+depois não trava outro salvamento.
+
+**O que mais saber:**
+- Reabrir ou marcar como perdido **apaga** o co-participante (o campo só existe em card ganho).
+- A ação "marcar como ganho" de fluxo, automação e macro NÃO marca co-participante (decisão do dono): ganho por ação
+  nasce sem ele, que entra depois pela tela, por `lionchat_kanban_items_update` ou pela planilha de "Importar vendas"
+  (coluna de co-participante, por nome ou e-mail).
+- Duplicar o card não copia o co-participante.
+- Histórico: marcado junto com o ganho vai dentro do registro da mudança de status; marcado depois gera
+  `co_participant_changed` (antes e depois, com nome e quem marcou).
+- Números: `coParticipantRanking`, `sharedSalesSummary`/`sharedSalesBySeller` (com `include_shared_sales=true`) no
+  relatório agregado e a lista `lionchat_kanban_items_shared_sales` — ver `lionchat://docs/filtros-e-relatorios` §4.
