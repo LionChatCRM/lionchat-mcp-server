@@ -22571,6 +22571,192 @@
   ]
  },
  {
+  "id": "lionchat_custom_attribute_categories_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/custom_attribute_categories",
+  "title": "Listar Categorias de Atributos",
+  "description": "Lista as categorias (pastas que abrem e fecham) dos atributos personalizados da conta, de TODAS as abas. Qualquer pessoa da conta pode ler. Atributo que nao aparece em nenhum attribute_keys esta em 'Sem categoria' (o normal: categoria e opcional). Uma chave em attribute_keys que nao existe mais como atributo e ignorada pela tela (atributo apagado). Para a aba Card, attribute_keys traz o NOME do campo exatamente como gravado em lionchat_kanban_config (global_custom_attributes[].name).",
+  "category": "Atributos Personalizados",
+  "params": [],
+  "returns": "Lista pura (array): [{id, attribute_model, name, position, attribute_keys: [...]}]. Ordene por attribute_model e position para reproduzir a tela.",
+  "common_use_cases": [
+   "Saber em que categoria cada atributo esta antes de mover",
+   "Mostrar ao cliente como os atributos estao organizados em cada aba",
+   "Achar o id da categoria para colocar um atributo nela"
+  ],
+  "related_tools": [
+   "lionchat_custom_attribute_categories_create",
+   "lionchat_custom_attribute_categories_assign",
+   "lionchat_custom_attributes_list",
+   "lionchat_custom_attribute_categories_reorder"
+  ]
+ },
+ {
+  "id": "lionchat_custom_attribute_categories_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/custom_attribute_categories",
+  "title": "Criar Categoria de Atributos",
+  "description": "Cria uma categoria (pasta) numa aba de Configuracoes > Atributos personalizados. **Requer perfil Administrador.** A categoria pertence a UMA aba so (attribute_model) e entra no FIM da aba. Nome de 1 a 60 caracteres, sem repetir na mesma aba (sem diferenciar maiuscula); 'Sem categoria' e reservado; maximo 50 categorias por aba. NAO aceita atributos junto: para colocar atributos, use lionchat_custom_attribute_categories_assign depois.",
+  "category": "Atributos Personalizados",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome da categoria (ex: 'Sobre a casa'). Texto de 1 a 60 caracteres."
+   },
+   {
+    "name": "attribute_model",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Aba da categoria, SEMPRE com o sufixo: conversation_attribute (Conversas) | contact_attribute (Contato) | company_attribute (Empresa, so com o modulo Empresas) | kanban_item_attribute (Card). Variavel de conta (account_attribute) NAO tem categoria."
+   }
+  ],
+  "returns": "A categoria criada: {id, attribute_model, name, position, attribute_keys: []} (201). 422 {error, code} se o nome repetir, for reservado, passar de 60 caracteres ou a aba ja tiver 50.",
+  "common_use_cases": [
+   "Organizar os atributos de contato em grupos (ex: 'Financeiro', 'Sobre a casa')",
+   "Montar a estrutura de atributos de um cliente novo"
+  ],
+  "related_tools": [
+   "lionchat_custom_attribute_categories_assign",
+   "lionchat_custom_attribute_categories_list",
+   "lionchat_custom_attribute_categories_update"
+  ]
+ },
+ {
+  "id": "lionchat_custom_attribute_categories_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/custom_attribute_categories/{id}",
+  "title": "Renomear Categoria de Atributos",
+  "description": "Renomeia uma categoria. **Requer perfil Administrador.** So muda o nome: a aba (attribute_model) NAO muda e atributos mandados junto sao ignorados. Mesmas regras de nome do create.",
+  "category": "Atributos Personalizados",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da categoria"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Novo nome (texto de 1 a 60 caracteres)."
+   }
+  ],
+  "returns": "A categoria atualizada: {id, attribute_model, name, position, attribute_keys}. 404 se for de outra conta.",
+  "common_use_cases": [
+   "Corrigir ou padronizar o nome de uma categoria"
+  ],
+  "related_tools": [
+   "lionchat_custom_attribute_categories_list",
+   "lionchat_custom_attribute_categories_create"
+  ]
+ },
+ {
+  "id": "lionchat_custom_attribute_categories_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/custom_attribute_categories/{id}",
+  "title": "Excluir Categoria de Atributos",
+  "description": "Exclui uma categoria. **Requer perfil Administrador.** NUNCA apaga atributo nem valor: os atributos que estavam nela voltam para 'Sem categoria'. Confirme com o cliente antes.",
+  "category": "Atributos Personalizados",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da categoria"
+   }
+  ],
+  "returns": "200 sem corpo. 404 se for de outra conta.",
+  "common_use_cases": [
+   "Desfazer uma categoria que nao e mais usada (os atributos ficam soltos)"
+  ],
+  "related_tools": [
+   "lionchat_custom_attribute_categories_list",
+   "lionchat_custom_attribute_categories_assign"
+  ]
+ },
+ {
+  "id": "lionchat_custom_attribute_categories_reorder",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/custom_attribute_categories/reorder",
+  "title": "Reordenar Categorias de Atributos",
+  "description": "Define a ordem das categorias de UMA aba. **Requer perfil Administrador.** Mande a lista COMPLETA de ids da aba na ordem desejada: faltando ou sobrando id = 422 reorder_mismatch (alguem mexeu no meio; releia com lionchat_custom_attribute_categories_list e mande de novo). 'Sem categoria' sempre aparece primeiro na tela e nao entra na lista.",
+  "category": "Atributos Personalizados",
+  "params": [
+   {
+    "name": "attribute_model",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Aba da categoria, SEMPRE com o sufixo: conversation_attribute (Conversas) | contact_attribute (Contato) | company_attribute (Empresa, so com o modulo Empresas) | kanban_item_attribute (Card). Variavel de conta (account_attribute) NAO tem categoria."
+   },
+   {
+    "name": "ids",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Lista com TODOS os ids de categoria da aba, na nova ordem (ex: [12, 10, 11]). Numeros."
+   }
+  ],
+  "returns": "Lista pura (array) das categorias DA ABA, na ordem: cada uma com id, attribute_model, name, position e attribute_keys (chaves dos atributos dentro dela, na ordem em que foram colocados).",
+  "common_use_cases": [
+   "Colocar a categoria mais usada no topo da aba"
+  ],
+  "related_tools": [
+   "lionchat_custom_attribute_categories_list"
+  ]
+ },
+ {
+  "id": "lionchat_custom_attribute_categories_assign",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/custom_attribute_categories/assign",
+  "title": "Colocar ou Tirar Atributo de Categoria",
+  "description": "Coloca um atributo numa categoria (ou tira, com category_id nulo). **Requer perfil Administrador.** Um atributo fica em UMA categoria so: colocar numa nova tira da anterior e ele entra no fim dela. A categoria tem de ser da MESMA aba (attribute_model) e o atributo tem de existir na aba (conversa/contato/empresa: attribute_key da definicao, ver lionchat_custom_attributes_list; Card: o NOME do campo exatamente como gravado em global_custom_attributes, com maiusculas e espacos, NUNCA uma chave em minuscula derivada). Tirar (category_id nulo) funciona mesmo se o atributo ja foi apagado.",
+  "category": "Atributos Personalizados",
+  "params": [
+   {
+    "name": "attribute_model",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Aba da categoria, SEMPRE com o sufixo: conversation_attribute (Conversas) | contact_attribute (Contato) | company_attribute (Empresa, so com o modulo Empresas) | kanban_item_attribute (Card). Variavel de conta (account_attribute) NAO tem categoria."
+   },
+   {
+    "name": "attribute_key",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Chave do atributo (ex: 'renda'); na aba Card, o nome do campo (ex: 'Metragem Total')."
+   },
+   {
+    "name": "category_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "ID da categoria de destino. Nulo ou ausente = tirar da categoria (vai para 'Sem categoria')."
+   }
+  ],
+  "returns": "Lista pura (array) das categorias DA ABA, na ordem: cada uma com id, attribute_model, name, position e attribute_keys (chaves dos atributos dentro dela, na ordem em que foram colocados). Erros: 422 {error, code} com code unknown_attribute (atributo nao existe na aba), category_other_tab (categoria de outra aba) ou invalid_format; 404 category_not_found.",
+  "common_use_cases": [
+   "Mover atributos existentes para uma categoria nova",
+   "Tirar um atributo de uma categoria",
+   "Logo depois de criar um atributo (lionchat_custom_attributes_create), coloca-lo na categoria certa"
+  ],
+  "related_tools": [
+   "lionchat_custom_attribute_categories_list",
+   "lionchat_custom_attribute_categories_create",
+   "lionchat_custom_attributes_list",
+   "lionchat_kanban_config_list"
+  ]
+ },
+ {
   "id": "lionchat_csat_list",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/csat_survey_responses",

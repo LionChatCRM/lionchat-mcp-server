@@ -979,3 +979,46 @@ SignatureDocument (modelo)  1 ──── N  SignatureEnvelope (contrato de UMA
 - `roles_layout` é jsonb aberto e MESCLADO no update; `progress` é calculado (aguardando/visualizado/assinado/encerrado).
 - Feature por conta: `document_signing`. Limite mensal em `usage_limits.signature_requests_per_month` (0 = ilimitado).
 - Detalhe completo: resource `lionchat://docs/assinatura-eletronica`.
+
+## Categorias dos atributos personalizados (17/10/2026)
+
+Pastas que abrem e fecham para organizar os atributos de cada aba de Configuracoes > Atributos personalizados (estilo
+"Data fields" do Pipedrive). Aparecem tambem onde a equipe preenche: painel lateral da conversa (atributos da conversa
+e do contato, grupos que abrem e fecham por pessoa), ficha do contato, pagina da empresa e bloco "Dados Adicionais"
+do card.
+
+- **Opcional:** conta sem categoria ve tudo como antes. Atributo que nao esta em nenhuma categoria aparece em "Sem
+  categoria" (primeiro grupo da tela).
+- **Uma aba por categoria** (`attribute_model`): `conversation_attribute`, `contact_attribute`, `company_attribute`
+  (so com o modulo Empresas) ou `kanban_item_attribute` (aba Card). Variavel de conta nao tem categoria. O mesmo nome
+  pode existir em abas diferentes.
+- **Um atributo em UMA categoria so.** Colocar numa nova tira da anterior; ele entra no fim da categoria.
+- **Chave do Card:** os campos do Card vivem em `global_custom_attributes` da configuracao do Kanban
+  (`lionchat_kanban_config_list`) e sao identificados pelo `name` EXATO (maiusculas e espacos). Nunca use uma chave
+  "em minuscula com sublinhado" derivada do nome: o servidor recusa (`unknown_attribute`).
+- **Regras do nome:** 1 a 60 caracteres, sem repetir na aba (sem diferenciar maiuscula), "Sem categoria" reservado,
+  ate 50 categorias por aba.
+- **Excluir categoria nunca apaga atributo nem valor:** os atributos voltam para "Sem categoria".
+- **Atributo apagado:** o vinculo fica guardado sem efeito. Se o atributo for recriado PELA API com a mesma chave, ele
+  volta para a categoria; pela tela, vale a categoria escolhida no formulario.
+- Escrita so de administrador (401 para os demais); leitura para todos.
+
+Ferramentas:
+
+| Tool | Para que |
+|---|---|
+| `lionchat_custom_attribute_categories_list` | Todas as categorias da conta (`id, attribute_model, name, position, attribute_keys`) |
+| `lionchat_custom_attribute_categories_create` | Cria na aba (`name`, `attribute_model`); entra no fim |
+| `lionchat_custom_attribute_categories_update` | Renomeia (`name`); a aba nao muda |
+| `lionchat_custom_attribute_categories_destroy` | Exclui (atributos voltam para "Sem categoria") |
+| `lionchat_custom_attribute_categories_reorder` | Nova ordem da aba: `ids` com TODOS os ids da aba (faltou/sobrou = 422; releia e mande de novo) |
+| `lionchat_custom_attribute_categories_assign` | Coloca (`category_id`) ou tira (`category_id` nulo) um atributo |
+
+Receita "organizar os atributos de contato do cliente": `lionchat_custom_attributes_list` (`attribute_model:
+contact_attribute`) para ver as chaves -> `lionchat_custom_attribute_categories_create` para cada grupo -> um
+`lionchat_custom_attribute_categories_assign` por atributo. Para criar um atributo ja dentro de uma categoria:
+`lionchat_custom_attributes_create` e depois `assign` com a `attribute_key` DEVOLVIDA pelo create (o servidor
+normaliza a chave: sem acento, minuscula).
+
+FUTURO (ainda nao existe): usar a categoria como filtro (ex.: um funil mostrar so certas categorias). Nao prometa isso
+ao cliente.
