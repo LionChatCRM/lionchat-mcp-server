@@ -536,6 +536,22 @@ A plataforma opera com 6 idiomas: `en`, `es`, `fr`, `it`, `pt`, `pt_BR` (default
 brasileiras: pt_BR). Conta com idioma antigo/descontinuado cai em inglês. Notas internas geradas
 pela IA saem no idioma da conta.
 
+## Formulário do WhatsApp (WhatsappForm) — 17/10/2026
+
+Formulário NATIVO da Meta (WhatsApp Flows), preenchido DENTRO do WhatsApp e aberto por um botão FLOW num modelo
+de mensagem. Só caixa do WhatsApp Oficial. Montado no LionChat (2º tipo da área Formulários) e publicado na conta
+do WhatsApp do cliente. Ferramentas `lionchat_whatsapp_forms_*`; regras completas no resource
+`lionchat://docs/formularios-publicos`, seção "Formulário do WhatsApp". Três formulários que NÃO são a mesma coisa:
+**Formulário público** (LeadForm, página com link próprio), **Formulário do WhatsApp** (este) e **formulário de
+anúncio da Meta** (MetaLeadForm, Lead Ads).
+
+| Status | Significado |
+|---|---|
+| `draft` | rascunho, nunca publicado (pode excluir) |
+| `publishing` | publicação em andamento |
+| `published` | no ar; `unpublished_changes: true` = o rascunho mudou depois da última publicação |
+| `deprecated` | aposentado na Meta (irreversível); pode excluir |
+
 ## LeadForm (Formulário público de captação)
 
 Formulário de captura próprio da conta, com página pública (link `/forms/<conta>/<slug>`), montado

@@ -19,7 +19,8 @@ Comprovado em produção (24/07): a sessão que dizia "não há função de list
   kanban_items, funnels, flows, flow_tools, campaigns, macros, automation_rules, agents, teams,
   inboxes, labels, canned_responses, reports, sla, csat, captain_assistants, captain_documents,
   scheduled_messages, custom_attributes, custom_attribute_categories (pastas dos atributos), webhooks, eclinica_integrations, tasks, notifications,
-  lead_forms (Formulários públicos de captação), signature_documents / signature_envelopes
+  lead_forms (Formulários públicos de captação), whatsapp_forms (Formulário do WhatsApp — o nativo
+  da Meta, aberto por botão de modelo), signature_documents / signature_envelopes
   (assinatura ELETRÔNICA de contratos — modelos e contratos enviados).
 - **Fora do MCP por decisão do dono (19/08): assinatura DO PLANO (cobrança), plano, fatura, forma de
   pagamento, cartão, saldo e recarga.** (A assinatura ELETRÔNICA de contratos é outra coisa e TEM

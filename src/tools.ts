@@ -702,6 +702,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     individual): {track_type:'visited_page'|'event_fired', urls:[...], operator:'contains'|'exact'|
     'starts_with', event_names:[...], event_operator:'equals'|'contains', cooldown_hours (default 24,
     minimo 1 — nao re-dispara pro mesmo contato dentro da janela)}.
+    whatsapp_form_answered (NOVO 17/10/2026): o cliente RESPONDEU um Formulario do WhatsApp (formulario nativo
+    da Meta, ferramenta whatsapp_forms_list). Config {whatsapp_form_id: '<id do NOSSO formulario, STRING>'} —
+    vazio/ausente = qualquer formulario. Dispara na conversa da resposta, DEPOIS do "Salvar em" do formulario
+    (o fluxo ja le o dado gravado); repetir o processamento nao abre o fluxo duas vezes.
     NOVO message_sent (2026-06-11): par do message_received pra mensagens de
     SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
     'desativar IA' com esse trigger sem keywords = a propria resposta da IA dispara o flow.
@@ -1263,7 +1267,7 @@ trigger.* (variaveis do GATILHO que iniciou o flow — no autocomplete de TODO b
     webhook_received, date_trigger, manual (sidebar), kanban_manual (botao do card), campaign (Campanha de
     Fluxo), page_track, activated_by_flow (fluxo chamou fluxo), lead_form (os 3 gatilhos de formulario —
     trigger.kind diz completed/milestone/abandoned), booking_created/booking_cancelled/booking_rescheduled/
-    booking_completed. Compare SEMPRE com esses codigos numa condicao.
+    booking_completed, whatsapp_form_answered. Compare SEMPRE com esses codigos numa condicao.
   trigger.name (rotulo legivel, pra escrever pro cliente), trigger.activated_at (ISO) — desde 20/08
     preenchidas em TODOS os caminhos de disparo (antes so no de evento de conversa).
   trigger.data = o contexto inteiro em JSON (menos type/name/activated_at) — util em node api/ai.
@@ -1285,7 +1289,9 @@ trigger.* (variaveis do GATILHO que iniciou o flow — no autocomplete de TODO b
     assignee_changed: trigger.assignee.name (vazio = responsavel removido); team_changed: trigger.team.name;
     sla_missed: trigger.sla.policy_name/type (frt/nrt/rt); group_participant_joined/left:
     trigger.group.name/id, trigger.participant.phone/name (16/09 — QUEM entrou/saiu, telefone com +;
-    nome so se a pessoa ja e contato; evento com varias pessoas = a 1a). Resolvem mas ficam FORA do seletor (produtor unico): trigger.attribute.name/
+    nome so se a pessoa ja e contato; evento com varias pessoas = a 1a); whatsapp_form_answered (17/10):
+    trigger.form.name, trigger.form.id e trigger.form.f_<n> = a resposta de cada pergunta ja em texto (opcao pelo
+    nome, data DD/MM/AAAA, Sim/Nao, "N arquivos: nomes"; codigos em whatsapp_forms_list com with_questions=true). Resolvem mas ficam FORA do seletor (produtor unico): trigger.attribute.name/
     current_value, trigger.form.name/milestone, trigger.payment.gateway/event/product/offer/method/status/
     amount, trigger.eclinica.event/unit/date/time/compromisso/idagenda, trigger.lead.form/page/ad/adset/
     campaign/platform, trigger.dtmf.key/campaign, trigger.reminder.date/time/compromisso/unit/days_before.

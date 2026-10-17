@@ -16644,7 +16644,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "LISTA de componentes no formato da Meta, cada item um OBJETO com type: HEADER {type, format: TEXT|IMAGE|VIDEO|DOCUMENT, text, example}; BODY {type, text, example: {body_text: [[...]]}} (obrigatorio); FOOTER {type, text}; BUTTONS {type, buttons: [{type: QUICK_REPLY|URL|PHONE_NUMBER, text, url, phone_number, example}]}. Ex.: [{\"type\": \"BODY\", \"text\": \"Ola {{1}}, seu pedido saiu.\", \"example\": {\"body_text\": [[\"Maria\"]]}}]. Variavel {{N}} no corpo exige example. Exemplos completos no resource best-practices (templates)."
+    "description": "LISTA de componentes no formato da Meta, cada item um OBJETO com type: HEADER {type, format: TEXT|IMAGE|VIDEO|DOCUMENT, text, example}; BODY {type, text, example: {body_text: [[...]]}} (obrigatorio); FOOTER {type, text}; BUTTONS {type, buttons: [{type: QUICK_REPLY|URL|PHONE_NUMBER, text, url, phone_number, example} ou {type: FLOW, text (ate 25), flow_id: '<meta_flow_id do formulario PUBLICADO, como texto>', flow_action: 'navigate'} — botao que abre um Formulario do WhatsApp (whatsapp_forms_list); no maximo 1 por modelo]}. Ex.: [{\"type\": \"BODY\", \"text\": \"Ola {{1}}, seu pedido saiu.\", \"example\": {\"body_text\": [[\"Maria\"]]}}]. Variavel {{N}} no corpo exige example. Exemplos completos no resource best-practices (templates)."
    },
    {
     "name": "variable_mapping",
@@ -31640,6 +31640,299 @@
   ],
   "related_tools": [
    "lionchat_lead_forms_update"
+  ]
+ },
+ {
+  "id": "lionchat_whatsapp_forms_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/whatsapp_forms",
+  "title": "Listar Formularios do WhatsApp",
+  "description": "Lista os Formularios do WhatsApp (formulario nativo da Meta, preenchido DENTRO do WhatsApp e aberto por botao de modelo de mensagem). So caixa do WhatsApp Oficial (Cloud API). Status: draft, publishing, published, deprecated; unpublished_changes diz se o rascunho mudou depois da ultima publicacao. meta_flow_id e o numero do formulario na Meta (vai no botao FLOW do modelo).",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Filtra pela conta do WhatsApp (WABA) desta caixa oficial"
+   },
+   {
+    "name": "refresh",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = rele o estado na Meta antes de responder (1 chamada por conta do WhatsApp)"
+   },
+   {
+    "name": "with_questions",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = inclui questions: [{code, label}] de cada formulario (as perguntas usadas nas variaveis do fluxo)"
+   }
+  ],
+  "returns": "lista [{id, name, status, meta_status, meta_flow_id, waba_id, inbox, publications_count, unpublished_changes, questions?}]",
+  "common_use_cases": [
+   "Achar o meta_flow_id para por o botao FLOW num modelo",
+   "Escolher o formulario do gatilho \"Formulario do WhatsApp respondido\""
+  ],
+  "related_tools": [
+   "lionchat_whatsapp_forms_show",
+   "lionchat_whatsapp_forms_create",
+   "lionchat_inboxes_whatsapp_templates_create"
+  ]
+ },
+ {
+  "id": "lionchat_whatsapp_forms_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/whatsapp_forms/{id}",
+  "title": "Ver Formulario do WhatsApp",
+  "description": "Rascunho completo (editor_data), save_targets (\"Salvar em\"), image_urls, limits (limites da Meta por tipo), published_version e version_outdated (true = publicado numa versao que a Meta nao aceita mais: publicar de novo).",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do Formulario do WhatsApp (o nosso, nao o da Meta)"
+   },
+   {
+    "name": "refresh",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = rele o estado na Meta"
+   }
+  ],
+  "returns": "formulario completo com editor_data, save_targets, image_urls, limits, published_version, version_outdated",
+  "common_use_cases": [
+   "Ler o rascunho antes de editar (update substitui o rascunho inteiro)",
+   "Conferir os limites antes de montar perguntas"
+  ],
+  "related_tools": [
+   "lionchat_whatsapp_forms_update",
+   "lionchat_whatsapp_forms_publish"
+  ]
+ },
+ {
+  "id": "lionchat_whatsapp_forms_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/whatsapp_forms",
+  "title": "Criar Formulario do WhatsApp",
+  "description": "Cria um Formulario do WhatsApp em rascunho (nada vai para a Meta ate publicar). Exige caixa do WhatsApp Oficial da propria conta (senao 422 inbox_must_be_official). O nome precisa ser unico na conta do WhatsApp (a Meta recusa repetido ao publicar). Admin-only.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome do formulario (aparece no painel da Meta; unico na conta do WhatsApp)"
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID de uma caixa do WhatsApp Oficial (Cloud API) da conta"
+   },
+   {
+    "name": "editor_data",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Rascunho {category, next_label (ate 35), submit_label (ate 35), screens: [{title (ate 30), fields: [...]}]}. SUBSTITUI o rascunho inteiro: leia com whatsapp_forms_show e mande de volta completo. Campo: {code (f_<n>; omita no campo NOVO, o servidor da), type, label, helper, required, ...}. Tipos de pergunta: short_text, email, phone, number (pergunta ate 20), long_text (20), date e calendar (40), single_choice e multiple_choice (30; options [{code o_<n>, label ate 30, description ate 300}]), opt_in (120; read_more_url), photo e document (80; description, max_files 1-10, max_size_mb 1-25; a foto sai sempre com no maximo 5 MB, o limite de recebimento, photo: source camera_gallery|camera|gallery, document: file_kinds [pdf, word, spreadsheet, presentation, image, text, compressed, video]). Ajustes: max_chars (NUMERO 1-4000, texto), min_date/max_date 'AAAA-MM-DD' (data/calendario), calendar: mode single|range, end_label, end_helper, title, description, days [Mon..Sun]; multiple_choice: min_selected/max_selected. Conteudo (type + text): heading e subheading (80), paragraph e caption (4096), link (text ate 25 + url http(s), ate 2 por tela); image: suba antes por lionchat_whatsapp_forms_images (link) e use o blob_id em image, com alt_text ate 100. Por tela: 1 foto/arquivo, 3 imagens, 2 links; no formulario inteiro ate 10 arquivos. Limite de caracteres NAO barra o salvar (so o publicar). Codigo f_<n> ja publicado NUNCA e reaproveitado. Contrato completo: resource lionchat://docs/formularios-publicos (secao Formulario do WhatsApp)."
+   }
+  ],
+  "returns": "formulario completo (201)",
+  "common_use_cases": [
+   "Montar um formulario de cadastro, pesquisa ou agendamento que o cliente preenche sem sair do WhatsApp"
+  ],
+  "related_tools": [
+   "lionchat_whatsapp_forms_update",
+   "lionchat_whatsapp_forms_publish",
+   "lionchat_whatsapp_forms_images"
+  ]
+ },
+ {
+  "id": "lionchat_whatsapp_forms_update",
+  "method": "PATCH",
+  "path": "/api/v1/accounts/{account_id}/whatsapp_forms/{id}",
+  "title": "Atualizar Formulario do WhatsApp",
+  "description": "Salva nome, rascunho e/ou \"Salvar em\". editor_data SUBSTITUI o rascunho inteiro (leia antes com whatsapp_forms_show). Formato errado = 422; limite de caracteres da Meta NAO barra o salvar (so o publicar). Durante a publicacao devolve 409 busy. Mudanca no rascunho so chega ao cliente depois de publicar; o \"Salvar em\" vale na hora. Admin-only.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do Formulario do WhatsApp (o nosso, nao o da Meta)"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Novo nome"
+   },
+   {
+    "name": "editor_data",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Rascunho {category, next_label (ate 35), submit_label (ate 35), screens: [{title (ate 30), fields: [...]}]}. SUBSTITUI o rascunho inteiro: leia com whatsapp_forms_show e mande de volta completo. Campo: {code (f_<n>; omita no campo NOVO, o servidor da), type, label, helper, required, ...}. Tipos de pergunta: short_text, email, phone, number (pergunta ate 20), long_text (20), date e calendar (40), single_choice e multiple_choice (30; options [{code o_<n>, label ate 30, description ate 300}]), opt_in (120; read_more_url), photo e document (80; description, max_files 1-10, max_size_mb 1-25; a foto sai sempre com no maximo 5 MB, o limite de recebimento, photo: source camera_gallery|camera|gallery, document: file_kinds [pdf, word, spreadsheet, presentation, image, text, compressed, video]). Ajustes: max_chars (NUMERO 1-4000, texto), min_date/max_date 'AAAA-MM-DD' (data/calendario), calendar: mode single|range, end_label, end_helper, title, description, days [Mon..Sun]; multiple_choice: min_selected/max_selected. Conteudo (type + text): heading e subheading (80), paragraph e caption (4096), link (text ate 25 + url http(s), ate 2 por tela); image: suba antes por lionchat_whatsapp_forms_images (link) e use o blob_id em image, com alt_text ate 100. Por tela: 1 foto/arquivo, 3 imagens, 2 links; no formulario inteiro ate 10 arquivos. Limite de caracteres NAO barra o salvar (so o publicar). Codigo f_<n> ja publicado NUNCA e reaproveitado. Contrato completo: resource lionchat://docs/formularios-publicos (secao Formulario do WhatsApp)."
+   },
+   {
+    "name": "save_targets",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "\"Salvar em\" por codigo de pergunta: {\"f_1\": destino}. Destinos: contact.name, contact.email, contact.cadastral.<cpf|rg|cnpj|passport|profession|marital_status|gender|date_of_birth>, contact.address.<cep|street|number|complement|neighborhood|city|state|country>, custom.<chave de atributo do CONTATO>, conversation_custom.<chave de atributo da CONVERSA>. Telefone nunca. Atributo precisa estar definido na conta e fora dos protegidos; destino invalido = 422. Foto/arquivo nao tem destino (vira anexo; codigo de foto = 422). Pergunta tirada do rascunho mantem o destino ate publicar de novo. Mudar nao exige publicar de novo. Dado novo vence; resposta em branco nao apaga."
+   }
+  ],
+  "returns": "formulario completo; 422 {errors} com formato ou destino invalido",
+  "common_use_cases": [
+   "Acrescentar ou mudar perguntas",
+   "Gravar as respostas na ficha do contato ou em atributos (save_targets)"
+  ],
+  "related_tools": [
+   "lionchat_whatsapp_forms_show",
+   "lionchat_whatsapp_forms_publish",
+   "lionchat_custom_attributes_list",
+   "lionchat_whatsapp_forms_images"
+  ]
+ },
+ {
+  "id": "lionchat_whatsapp_forms_images",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/whatsapp_forms/{id}/images",
+  "title": "Subir imagem do Formulario do WhatsApp (por link)",
+  "description": "Sobe a imagem de um componente Image POR LINK (o conector nao envia arquivo): o servidor baixa com protecao contra endereco interno, aceita so imagem (ate 10 MB), reduz para o limite da Meta (ate 1200 px e 300 KB, JPEG/PNG) e anexa ao formulario. Use o blob_id devolvido no campo {type: 'image', image: '<blob_id>', alt_text: '...'} do editor_data. 422 {error}: fetch_failed (link inacessivel, pagina da web ou endereco interno), invalid_image (nao e imagem), file_too_large (acima de 10 MB), too_large (nao coube em 300 KB). Ate 3 imagens por tela. Admin-only.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do Formulario do WhatsApp (o nosso, nao o da Meta)"
+   },
+   {
+    "name": "url",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Endereco http/https de uma imagem publica (o arquivo da imagem, nao a pagina onde ela aparece)"
+   }
+  ],
+  "returns": "{blob_id, url, width, height}; 422 {error}",
+  "common_use_cases": [
+   "Colocar logo ou foto ilustrativa no topo de uma tela do formulario"
+  ],
+  "related_tools": [
+   "lionchat_whatsapp_forms_update",
+   "lionchat_whatsapp_forms_show"
+  ]
+ },
+ {
+  "id": "lionchat_whatsapp_forms_publish",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/whatsapp_forms/{id}/publish",
+  "title": "Publicar Formulario do WhatsApp",
+  "description": "Gera o arquivo, cria (ou edita no lugar) o formulario na conta do WhatsApp do cliente e publica. Fica PARA SEMPRE na conta do WhatsApp (so da para aposentar). Republicar mantem os modelos que usam o formulario funcionando, sem nova aprovacao. 422 {problems: [{code, screen, field, limit}], error: {kind, message}, form}: problems = o que corrigir no rascunho (lista completa e o que corrigir em cada um: resource lionchat://docs/formularios-publicos, secao Formulario do WhatsApp); error.kind: no_channel, busy, duplicate_name, validation, meta, network, too_large, unexpected. Admin-only.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do Formulario do WhatsApp (o nosso, nao o da Meta)"
+   }
+  ],
+  "returns": "formulario publicado; 422 com problems/error",
+  "common_use_cases": [
+   "Colocar o formulario no ar para usar no botao de um modelo",
+   "Publicar de novo depois de editar ou quando version_outdated = true"
+  ],
+  "related_tools": [
+   "lionchat_whatsapp_forms_preview",
+   "lionchat_inboxes_whatsapp_templates_create"
+  ]
+ },
+ {
+  "id": "lionchat_whatsapp_forms_preview",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/whatsapp_forms/{id}/preview",
+  "title": "Previa oficial do Formulario do WhatsApp",
+  "description": "Endereco da previa oficial da Meta (abre sem login, vale 30 dias). preview_url nulo = ainda nao publicado.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do Formulario do WhatsApp (o nosso, nao o da Meta)"
+   }
+  ],
+  "returns": "{preview_url, expires_at}",
+  "common_use_cases": [
+   "Mostrar ao cliente como o formulario aparece no WhatsApp"
+  ],
+  "related_tools": [
+   "lionchat_whatsapp_forms_publish"
+  ]
+ },
+ {
+  "id": "lionchat_whatsapp_forms_deprecate",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/whatsapp_forms/{id}/deprecate",
+  "title": "Aposentar Formulario do WhatsApp",
+  "description": "IRREVERSIVEL: desliga o formulario para sempre na Meta e os modelos que o abrem param de funcionar. CONFIRME com o usuario antes. As respostas antigas continuam nas conversas. Admin-only.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do Formulario do WhatsApp (o nosso, nao o da Meta)"
+   }
+  ],
+  "returns": "formulario com status deprecated; 422 not_published se nunca foi publicado",
+  "common_use_cases": [
+   "Tirar de uso um formulario que nao vale mais"
+  ],
+  "related_tools": [
+   "lionchat_whatsapp_forms_destroy"
+  ]
+ },
+ {
+  "id": "lionchat_whatsapp_forms_destroy",
+  "method": "DELETE",
+  "path": "/api/v1/accounts/{account_id}/whatsapp_forms/{id}",
+  "title": "Excluir Formulario do WhatsApp",
+  "description": "Exclui so rascunho (nunca publicado) ou aposentado. Publicado devolve 422 deprecate_first. Admin-only.",
+  "category": "Formularios",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do Formulario do WhatsApp (o nosso, nao o da Meta)"
+   }
+  ],
+  "returns": "204; 422 {error: {kind: deprecate_first}}",
+  "common_use_cases": [
+   "Apagar um rascunho de teste"
+  ],
+  "related_tools": [
+   "lionchat_whatsapp_forms_deprecate"
   ]
  },
  {

@@ -835,6 +835,16 @@ LeadFormResponse (um preenchimento do formulário)
 └── answers (respostas) / milestones (marcos atingidos) / utm_params / started_at / completed_at /
     abandoned_at
 
+WhatsappForm (Formulário do WhatsApp — formulário nativo da Meta, 17/10/2026; mesma liberação dos Formulários)
+├── account_id (FK) / inbox_id (caixa oficial usada para a credencial) / waba_id (conta do WhatsApp)
+├── name (único na conta do WhatsApp) / status (draft/publishing/published/deprecated) / meta_flow_id (número na
+│   Meta — vai no botão FLOW do modelo) / meta_status / last_error / published_at
+├── editor_data (jsonb: telas e campos, códigos f_<n> e o_<n>) / save_targets (jsonb: "Salvar em" por código)
+├── images (arquivos anexados; o campo de imagem guarda o blob_id)
+└── publications (has_many: uma por publicação — number, token, editor_data e flow_json da época)
+    → a resposta do cliente vira MENSAGEM entrante content_type form (items + submitted_values +
+      whatsapp_form), com foto/arquivo como anexos
+
 CustomWebhookIntegration (Webhook Universal — entrada)
 ├── account_id (FK)
 ├── name / token (URL única) / active
