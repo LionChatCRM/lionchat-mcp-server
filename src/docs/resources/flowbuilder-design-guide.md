@@ -1091,6 +1091,31 @@ de conexão e viram bola de neve visual. Ao gerar `position`:
 
 ---
 
+### 2.15 `ai_call` — "Ligar com IA" (17/10/2026)
+
+So em conta com `ai_calling` + `lioncalls_calling`. A IA liga para o **telefone do contato** da conversa do flow
+pela linha de ligacao do WhatsApp (LionCalls).
+
+```json
+{ "id": "ligar", "type": "ai_call", "position": {"x": 600, "y": 0},
+  "data": { "aiCallAgentId": 4, "aiCallInboxId": 82 } }
+```
+
+- `aiCallAgentId`: id de `lionchat_captain_call_agents_list`. O que a IA fala, a voz e o **tempo maximo** da ligacao
+  vem do agente (`max_duration_seconds`, 30-600 s; no tempo o motor desliga sozinho).
+- `aiCallInboxId`: id de `meta.dial_inboxes` da mesma lista (caixa com a ligacao ligada).
+- Saidas: `answered` (atendeu), `no_answer` (nao atendeu/recusou), `error` (nao deu pra ligar; motivo no historico).
+  `answered`/`no_answer` sem edge = o flow termina; `error` sem edge = execucao "Falhou".
+- Liga **uma vez**. Para insistir, outro `ai_call` depois de `no_answer` (com um `wait` no meio). **Nunca** ligue
+  `error` direto em outro `ai_call`.
+- Nao confere horario (use `condition` antes). Linha ocupada: espera a vez por ate 2 h (a IA sempre deixa uma vaga
+  para a equipe).
+- **Proibido** em flow `action`, em flow de grupo e em `ai_tool` (o save recusa). Id de outra conta tambem e recusado.
+
+**Receita — a IA de atendimento pede a ligacao:** etiqueta `ligar`; o cenario manda por a etiqueta quando o cliente
+pede para falar por telefone; flow `conversation` com gatilho `label_added` (`label_names: ["ligar"]`) -> action
+`remove_conversation_label` (`labels: ["ligar"]`) logo depois do start -> `ai_call`.
+
 ## 2-B. Três tipos de flow: `conversation`, `ai_tool` e `action`
 
 O campo `flow_type` (definido na criação, IMUTÁVEL depois) decide a natureza do flow:

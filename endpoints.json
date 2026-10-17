@@ -29549,7 +29549,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/captain/call_agents",
   "title": "Listar Agentes de Ligacao",
-  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Devolve tambem meta.dial_inboxes: as caixas que podem fazer ligacao (LionCalls ligada).",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage — EXCETO para quem edita fluxo (Admin ou flowbuilder_manage): esse recebe a forma LEVE (so id e name de cada agente, e as linhas recortadas pelas caixas que ve), que e o que o node ai_call do FlowBuilder precisa. Devolve tambem meta.dial_inboxes: as caixas que podem fazer ligacao (LionCalls ligada) — use o id no data.aiCallInboxId do node ai_call.",
   "category": "Assistentes",
   "params": [],
   "returns": "{ payload: [agente de ligacao], meta: { dial_inboxes: [{id, name}] } }",
@@ -29660,7 +29660,7 @@
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "Duracao maxima da ligacao, 30 a 600 segundos (padrao 180)."
+    "description": "Tempo maximo da ligacao, 30 a 600 segundos (padrao 180). Aparece na tela do agente de ligacao (voltou em 17/10/2026). Quando acaba, o motor desliga a ligacao sozinho, com qualquer fornecedor (OpenAI ou ElevenLabs)."
    },
    {
     "name": "captain_assistant_id",
@@ -29758,7 +29758,7 @@
     "type": "integer",
     "location": "body",
     "required": false,
-    "description": "Duracao maxima da ligacao, 30 a 600 segundos (padrao 180)."
+    "description": "Tempo maximo da ligacao, 30 a 600 segundos (padrao 180). Aparece na tela do agente de ligacao (voltou em 17/10/2026). Quando acaba, o motor desliga a ligacao sozinho, com qualquer fornecedor (OpenAI ou ElevenLabs)."
    },
    {
     "name": "captain_assistant_id",

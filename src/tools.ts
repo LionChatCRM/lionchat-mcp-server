@@ -497,7 +497,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-16)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-17)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -511,12 +511,12 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 - ai_tool: ferramenta que o AI Agente invoca. Criar via lionchat_flow_tools_create (NAO flows_create!),
   com tool_name (snake_case, max 50) + tool_description (max 500). SEM inbox_ids. No 'end' OBRIGATORIO.
   Nodes permitidos em ai_tool: start, end, api, condition, set_variable, ai, randomizer, action,
-  send_message, note (SEM wait, wait_response, update_group). No action de ai_tool NAO use keys da
+  send_message, note (SEM wait, wait_response, update_group, ai_call). No action de ai_tool NAO use keys da
   aba Sistema (send_webhook/start_flow/send_conversion). Vincular ao assistente: POST /flow_tools/{id}/assistants.
   Testar: POST /flow_tools/{id}/run.
 - action (Fluxo de Acoes, 17/09/2026): NAO pertence a caixa nenhuma e roda em QUALQUER conversa de
   QUALQUER caixa — inclusive grupo. So executa acoes: NAO pode ter send_message, wait_response,
-  update_group nem end (a validacao recusa o save inteiro com "contains node types not allowed in
+  update_group, ai_call nem end (a validacao recusa o save inteiro com "contains node types not allowed in
   action flow"). Nodes permitidos: start, action, condition, wait, randomizer, api, ai,
   set_variable, note. Criar via lionchat_flows_create com flow_type:'action', SEM inbox_ids e SEM
   conversation_mode (o backend fixa 'individual'). Aceita os MESMOS gatilhos do conversation e roda
@@ -534,7 +534,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   e viaja no snapshot de versao; ferramenta que ja existe nao muda de comportamento.
 
 ═══ NODE GERAL ═══
-{ "id": "string-unico", "type": "start|send_message|wait_response|condition|action|api|set_variable|wait|randomizer|update_group|ai|end|note", "position": {"x":0,"y":0}, "data": { ... } }
+{ "id": "string-unico", "type": "start|send_message|wait_response|condition|action|api|set_variable|wait|randomizer|update_group|ai_call|ai|end|note", "position": {"x":0,"y":0}, "data": { ... } }
 (activate_flow existe como node LEGADO — nao crie novos; use action start_flow)
 
 ═══ NODE TYPES + source handles ═══
@@ -1123,6 +1123,24 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     action: a acao e rodizio SIMPLES (1,2,3 sem porcentagem); este modo aceita pesos diferentes (70/30).
     Com pesos iguais os dois dao o mesmo resultado.
   Handles: o id de cada branch (mode branches); "success" (mode distribute_agents).
+
+▸ ai_call ("Ligar com IA", 17/10/2026 — so em conta com ai_calling + lioncalls_calling)
+  A IA liga para o TELEFONE DO CONTATO da conversa do fluxo pela linha de ligacao do WhatsApp (LionCalls).
+  data: { aiCallAgentId: <id de lionchat_captain_call_agents_list>, aiCallInboxId: <id de meta.dial_inboxes> }
+  (aiCallAgentName/aiCallInboxName sao opcionais, so pro resumo do card). O que a IA fala, a voz e o TEMPO
+  MAXIMO da ligacao vem do agente de ligacao (max_duration_seconds, 30-600 s): no tempo o motor desliga sozinho.
+  Handles: "answered" (a pessoa atendeu), "no_answer" (nao atendeu ou recusou), "error" (nao deu pra ligar:
+  sem telefone, linha desconectada, agente apagado, linha ocupada por mais de 2 h — o motivo vai no historico).
+  answered/no_answer SEM fio = o fluxo termina ali; error SEM fio = execucao "Falhou".
+  Liga UMA vez (para insistir: outro ai_call depois de "no_answer", com um wait no meio). NUNCA ligue "error"
+  direto em outro ai_call (em alguns erros nao da pra saber se a ligacao saiu). Nao confere horario: use um
+  condition antes. A IA so liga se sobrar uma vaga na linha para uma pessoa; senao espera a vez (fila por
+  ordem de chegada, ate 2 h). O card da ligacao vai para a conversa do lead na caixa da linha.
+  PROIBIDO em flow 'action', em flow de GRUPO e em ai_tool (o save recusa); id de agente/caixa de OUTRA conta
+  tambem e recusado. Agente apagado ou caixa excluida NAO travam o save — falham na execucao.
+  Receita "a IA de atendimento pede a ligacao" (sem ferramenta nova): cenario manda por a etiqueta 'ligar';
+  flow conversation com gatilho label_added 'ligar' -> action remove_conversation_label 'ligar' (LOGO depois
+  do start) -> ai_call.
 
 ▸ update_group (Gestao de Grupos WhatsApp — UMA operacao por bloco, 18 operacoes)
   Roda em fluxo de QUALQUER canal desde que a conta tenha caixa WhatsApp QR Code (Channel::Waha).
