@@ -35,6 +35,8 @@ E/OU é encadeado condição a condição (sem parênteses).
 
 Atributo personalizado: informe `custom_attribute_type` na condição — `'conversation_attribute'`
 (atributo da conversa) ou `'contact_attribute'`. Sem ele o escopo pode sair errado.
+`'company_attribute'` (atributo da empresa) NÃO vale em conversas: 422 (desde 16/10/2026; use o filtro de
+CONTATOS).
 
 **`contact_attribute` lê a FICHA DO CONTATO da conversa (funciona de verdade desde 24/09/2026).** Antes o
 servidor ignorava o valor e lia o atributo da própria conversa — por isso lead de formulário da Meta
@@ -102,6 +104,11 @@ Mesmo shape de condição. 15/página.
 - `card_funnel_id`, `card_stage`, `card_priority`, `card_status` (equal_to/not_equal_to) — card
   do Kanban vinculado.
 - Condição com `custom_attribute_type:'conversation_attribute'` — atributo da conversa vinculada.
+- Condição com `custom_attribute_type:'company_attribute'` (16/10/2026) — campo PERSONALIZADO da empresa do
+  contato, ex. `{attribute_key:'segmento', filter_operator:'equal_to', values:['Varejo'],
+  custom_attribute_type:'company_attribute'}`. Operadores pelo tipo (texto: igual/diferente/contém/não contém/
+  preenchido; número/data/hora: + maior/menor). Negativo inclui contato SEM empresa. Módulo Empresas desligado =
+  ninguém. Chave que não existe como atributo de empresa = 422.
 
 ### Duas regras que enganam nos filtros
 
@@ -119,7 +126,8 @@ GET com parâmetros FLAT (não usa payload). Filtros REAIS (2026-07-24 — parâ
 stage_id/inbox_id/sort_by/sort_direction/page foram REMOVIDOS, eram ignorados pelo backend):
 
 - `funnel_id` (obrigatório), `stages[]` (chaves internas das etapas), `priorities[]`,
-  `statuses[]` (open/won/lost), `agent_id`, `value_min`/`value_max`
+  `statuses[]` (open/won/lost/snoozed — desde 11/10/2026 `open` = aberto e NÃO adiado e `snoozed` = adiado; ver
+  "Card adiado" no kanban-deep-dive), `agent_id`, `value_min`/`value_max`
 - `date_start`/`date_end` (criação do card, YYYY-MM-DD)
 - `stage_date_start`/`stage_date_end` (2026-08-07) — **quando o card ENTROU na etapa em que ele está
   agora** (`stage_entered_at`, caindo em `created_at` para card que nunca se moveu). NÃO confundir com
@@ -158,8 +166,29 @@ NÃO há filtro por time aqui (por time: use o relatório agregado abaixo, ou fi
 
 `GET /kanban_items/reports` — a resposta é um OBJETO de métricas (não lista): valores GANHOS,
 contagem/valor por etapa, forecast ponderado, top negócios, cards parados, metas do funil.
-Params: `funnel_id` (obrigatório), `from`, `to`, `user_ids[]` (agentes), `team_id`, `date_basis`.
+Params: `funnel_id` (obrigatório), `from`, `to`, `user_ids[]` (agentes), `team_id`, `date_basis`,
+`label_names[]` (só cards com essas etiquetas — nome da etiqueta, como aparece na conversa; desde 02/10/2026),
+`win_reason_ids[]` (só ganhos com esses motivos — o código do motivo em `lionchat_kanban_config_list`; desde 02/10/2026)
+e `include_shared_sales` (true = traz o quadro "sozinho x compartilhadas", ver abaixo; 13/10/2026).
 É a ferramenta certa pra "relatório de vendas/ganhos do mês por agente ou time".
+
+**Co-participante da venda (13/10/2026).** No ganho dá para marcar, além do vendedor, UM co-participante (ex.: o SDR
+que trouxe a venda — ver `lionchat://docs/kanban-deep-dive`, seção "Co-participante da venda"). O relatório mostra isso
+SEM mudar nenhum número antigo (Ganhos e Receita continuam do vendedor):
+- `coParticipantRanking` (sempre vem): `[{id, name, sales, value}]`, uma linha por co-participante, contando cards
+  GANHOS no período com os mesmos recortes de funil, régua, etiqueta e motivo. O filtro de pessoa/time vale sobre o
+  co-participante. Co-participante igual ao vendedor não conta. Lista vazia = a conta não usa o recurso.
+- Com `include_shared_sales=true`: `sharedSalesSummary` `{solo, shared, sharedSellerLeft}` (cada um `{count, value}`; sozinho + compartilhadas = ganhos do período; `sharedSellerLeft` = compartilhadas cujo vendedor saiu da conta)
+  e `sharedSalesBySeller` `[{id, sales, value}]` (parte compartilhada de cada vendedor). Sem o parâmetro a resposta é
+  a de sempre. Venda compartilhada = ganha no período com co-participante DIFERENTE do vendedor gravado no card; sair da
+  conta NÃO transforma venda compartilhada em individual.
+- **A lista das vendas compartilhadas** (data, negócio, valor, vendedor, co-participante) é a tool
+  `lionchat_kanban_items_shared_sales` (`GET /kanban_items/shared_sales`): mesmos filtros (`funnel_id` opcional, `from`,
+  `to`, `date_basis`, `user_ids[]`, `team_id`, `label_names[]`, `win_reason_ids[]`), a mais recente no topo, 50 por vez
+  (`limit` até 500). Para a página seguinte, devolva o `nextCursor` recebido em `cursor_at` e `cursor_id`; `nextCursor`
+  nulo = acabou. Com filtro de pessoa/time só entra venda em que alguém do filtro foi VENDEDOR ou CO-PARTICIPANTE, e vêm
+  `asSellerCount`/`asCoCount` (sem filtro, nulos). `canOpen` por linha diz se quem pediu pode abrir o card; quem vê só
+  parte do Kanban recebe as vendas que não vê como `hiddenCount` (nunca o título).
 
 **`date_basis` (2026-08-07) — qual data o período considera.** A resposta devolve a régua aplicada em
 `dateBasis`; valor inválido cai no padrão sem erro.

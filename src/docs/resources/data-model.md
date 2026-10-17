@@ -154,6 +154,9 @@ Company
 ├── contacts_count
 ├── avatar (foto)
 ├── additional_attributes (jsonb: legal_name, cnpj, phone, email, address{...}, social_profiles{...}; 2026-09-25)
+├── custom_attributes (jsonb: atributos personalizados de EMPRESA, definicoes attribute_model=company_attribute;
+│   2026-10-15. Gravar: lionchat_companies_update com custom_attributes {chave: valor}; MESCLA; null limpa a chave;
+│   so chave definida como atributo de empresa da conta; criar a definicao exige o modulo Empresas)
 └── last_activity_at (ultima vez que um contato da empresa teve atividade; 2026-09-25)
 
 AttributeChange (histórico de alterações de atributo — 2026-09-11)
@@ -205,6 +208,56 @@ atendente). Cadastro da empresa (25/09): `lionchat_companies_create`/`_update` a
 `social_profiles{linkedin,facebook,instagram,telegram,tiktok,twitter,github}`. MESCLA: mande so o que muda;
 valor vazio apaga aquela chave. Excluir empresa: so administrador; os contatos ficam, so deixam de estar na empresa (as anotacoes da
 empresa vao junto).
+
+**Atributos personalizados da EMPRESA (2026-10-15):** campos proprios da empresa que o cliente cria ("Segmento",
+"Data de fundacao", "Faturamento anual"...), na aba Empresa de Configuracoes > Atributos personalizados. Sao um
+quarto tipo de definicao, separado de conversa, contato e variavel de conta:
+- **Criar a definicao:** `lionchat_custom_attributes_create` com `attribute_model: "company_attribute"` (SEMPRE com o
+  sufixo). So na conta com o modulo Empresas ligado (sem ele: 422 "O modulo Empresas nao esta ligado nesta conta").
+  Tipo `secret` e recusado. Chaves reservadas (os campos proprios da empresa) sao recusadas: `name`, `domain`,
+  `description`, `legal_name`, `cnpj`, `phone`, `email`, `address`, `social_profiles`, `contacts_count`,
+  `created_at`, `last_activity_at`. As mesmas regras valem ao TROCAR o `attribute_model` de uma definicao existente.
+- **Listar:** `lionchat_custom_attributes_list` com `attribute_model=company_attribute`.
+- **Preencher:** `lionchat_companies_update` (ou `_create`) com `custom_attributes: {"segmento": "Varejo"}` dentro do
+  wrapper `company`. MESCLA: mande so o que muda; `null` ou texto vazio LIMPA a chave; chave nao mandada fica.
+  Valores SIMPLES (texto, numero, verdadeiro/falso ou null) — lista ou objeto dentro = 422. Teto de 1.500 caracteres
+  por valor. Data pode ir como `15/10/2020` (grava `2020-10-15`).
+- **So aceita chave que JA existe** como atributo de empresa da conta: chave desconhecida = 422 com a lista das
+  validas, e NADA do pedido e gravado (nem o nome nem o cadastro que vieram junto). Crie a definicao antes de
+  preencher — a lista e lida na hora, entao criar e preencher logo em seguida funciona.
+- **Ler:** `lionchat_companies_show`/`_list` trazem `custom_attributes` em cada empresa (`{}` quando vazio).
+- **Onde mais ele aparece (2026-10-16), igual aos atributos de contato.** A empresa e a do CONTATO: um contato
+  tem no maximo UMA empresa (`contacts.company_id`); a conversa nao tem empresa propria. Com o modulo Empresas ligado:
+  - **Variavel** em mensagem, resposta pronta, automacao, fluxo, campanha e mensagem agendada:
+    `{{contact.company.custom_attribute.<chave>}}` (data sai DD/MM/AAAA) e o cadastro `{{contact.company.name}}`,
+    `{{contact.company.legal_name}}`, `{{contact.company.cnpj}}` (so digitos), `{{contact.company.phone}}`,
+    `{{contact.company.email}}`, `{{contact.company.address.city}}`, `{{contact.company.address.state}}`.
+    `{{contact.company}}` sozinho imprime o nome. Contato sem empresa = vazio, sem erro.
+  - **Modelo oficial do WhatsApp** (`variable_mapping`): campo personalizado com
+    `{"source": "company", "field": "custom_attribute.<chave>"}`; cadastro com
+    `{"source": "variable", "field": "contact.company.cnpj"}` (tambem `legal_name`, `phone`, `email`,
+    `address.city`, `address.state`). O nome da empresa ja e `contact.company_name`.
+  - **Condicao do bloco Condicao do fluxo:** regra `{"valueType": "attr_config", "attrSource": "company",
+    "attr_key": "<chave>", "operator": "...", "value": "", "values": [...]}`. `attr_key` = chave personalizada OU
+    cadastro com prefixo: `company.name`, `company.legal_name`, `company.cnpj` (comparado por digitos),
+    `company.phone`, `company.email`, `company.address.city`, `company.address.state`. Contato sem empresa = valor
+    vazio (os negativos casam).
+  - **Condicao de automacao e filtro da lista de contatos** (`lionchat_contacts_filter`, segmento salvo, acao em
+    massa): `{"attribute_key": "<chave>", "filter_operator": "...", "values": [...],
+    "custom_attribute_type": "company_attribute"}`. So atributo PERSONALIZADO (o cadastro da empresa fica fora).
+    Operadores pelo tipo do atributo: todos aceitam `equal_to`/`not_equal_to`/`is_present`/`is_not_present`;
+    texto tambem `contains`/`does_not_contain`; numero, data e hora tambem `is_greater_than`/`is_less_than`.
+    Negativo inclui o contato SEM empresa. `attribute_changed` e recusado (a empresa nao dispara evento).
+    Chave igual a de um atributo de contato e permitida: quem decide e o `custom_attribute_type`.
+  - **Filtro de CONVERSAS** (`lionchat_conversations_filter`) com `company_attribute` = 422 ("Atributo de empresa
+    so filtra a lista de contatos").
+  - **IA:** o Agente de IA e o Copiloto veem o nome, o cadastro e os campos personalizados preenchidos da empresa do
+    contato. Somente leitura: a IA nao grava na empresa.
+  - **Modulo Empresas DESLIGADO = para tudo:** variavel sai vazia, condicao nunca casa (nem "diferente de" nem
+    "esta vazio"), filtro nao acha ninguem, a IA nao ve a empresa. O que foi preenchido fica guardado.
+  - **Ainda NAO:** condicao de SAIDA do fluxo, gatilho do fluxo, parametro de ferramenta de IA, acao "Alterar
+    atributo" do fluxo/automacao (nao grava na empresa), exportacao/relatorio, historico de alteracoes e gatilho
+    de data.
 
 **Dados cadastrais (`additional_attributes.cadastral`):** CPF, CNPJ, RG, passaporte, nascimento,
 gênero, estado civil, profissão e endereço completo moram em `additional_attributes->cadastral`.
@@ -282,6 +335,16 @@ KanbanItem
 ├── activities (jsonb)
 ├── timer_started_at / timer_duration
 └── created_at
+    (item_details.status guarda open/won/lost; ADIADO = open + linha em kanban_item_snoozes — a resposta da API
+     traz effective_status open|snoozed|won|lost e snoozed_until, calculados; nao sao colunas)
+    (13/10/2026: item_details.attributed_to = vendedor do ganho; item_details.co_attributed_to = CO-PARTICIPANTE da
+     venda, ex. o SDR — so em card ganho, id de agente; co_attributed_name o card preenche. Ver kanban-deep-dive)
+
+KanbanItemSnooze (kanban_item_snoozes — 11/10/2026: ate quando o card esta ADIADO; uma linha por card)
+├── account_id, kanban_item_id (unico)
+├── snoozed_until (datetime)
+├── snoozed_by_id (quem adiou; nulo = automacao, macro ou fluxo)
+└── created_at / updated_at
 
 Item do checklist (elemento do array jsonb `checklist`)
 ├── id (uuid string)
@@ -485,7 +548,9 @@ db/schema.rb, tabela booking_event_types)
 │   {{nome}} {{email}} {{telefone}} {{data}} {{horario}} {{dia_semana}} (NOVO 24/08 — dia por
 │   extenso em pt: "terça-feira"; irmã do {{booking.weekday}} do FlowBuilder, mesma grafia)
 │   {{tipo_evento}} {{titulo}} {{duracao}} {{agente}} {{descricao}} {{meet_link}}
-│   {{link_cancelar}} {{link_remarcar}} {{horas_ate_evento}} {{horas_desde_evento}}
+│   {{link_cancelar}} {{link_remarcar}} {{link_confirmar}} {{link_salvar_na_agenda}} (16/10: abre a
+│   página onde o cliente salva no Google Agenda ou na agenda do iPhone/Outlook)
+│   {{horas_ate_evento}} {{horas_desde_evento}}. Data, hora e duração saem do COMPROMISSO da Agenda (16/10)
 └── booking_availabilities (has_many — dias/horários; `booking_availabilities_attributes` no create)
 
 Booking (agendamento confirmado — tabela bookings)
@@ -770,6 +835,16 @@ LeadFormResponse (um preenchimento do formulário)
 └── answers (respostas) / milestones (marcos atingidos) / utm_params / started_at / completed_at /
     abandoned_at
 
+WhatsappForm (Formulário do WhatsApp — formulário nativo da Meta, 17/10/2026; mesma liberação dos Formulários)
+├── account_id (FK) / inbox_id (caixa oficial usada para a credencial) / waba_id (conta do WhatsApp)
+├── name (único na conta do WhatsApp) / status (draft/publishing/published/deprecated) / meta_flow_id (número na
+│   Meta — vai no botão FLOW do modelo) / meta_status / last_error / published_at
+├── editor_data (jsonb: telas e campos, códigos f_<n> e o_<n>) / save_targets (jsonb: "Salvar em" por código)
+├── images (arquivos anexados; o campo de imagem guarda o blob_id)
+└── publications (has_many: uma por publicação — number, token, editor_data e flow_json da época)
+    → a resposta do cliente vira MENSAGEM entrante content_type form (items + submitted_values +
+      whatsapp_form), com foto/arquivo como anexos
+
 CustomWebhookIntegration (Webhook Universal — entrada)
 ├── account_id (FK)
 ├── name / token (URL única) / active
@@ -914,3 +989,46 @@ SignatureDocument (modelo)  1 ──── N  SignatureEnvelope (contrato de UMA
 - `roles_layout` é jsonb aberto e MESCLADO no update; `progress` é calculado (aguardando/visualizado/assinado/encerrado).
 - Feature por conta: `document_signing`. Limite mensal em `usage_limits.signature_requests_per_month` (0 = ilimitado).
 - Detalhe completo: resource `lionchat://docs/assinatura-eletronica`.
+
+## Categorias dos atributos personalizados (17/10/2026)
+
+Pastas que abrem e fecham para organizar os atributos de cada aba de Configuracoes > Atributos personalizados (estilo
+"Data fields" do Pipedrive). Aparecem tambem onde a equipe preenche: painel lateral da conversa (atributos da conversa
+e do contato, grupos que abrem e fecham por pessoa), ficha do contato, pagina da empresa e bloco "Dados Adicionais"
+do card.
+
+- **Opcional:** conta sem categoria ve tudo como antes. Atributo que nao esta em nenhuma categoria aparece em "Sem
+  categoria" (primeiro grupo da tela).
+- **Uma aba por categoria** (`attribute_model`): `conversation_attribute`, `contact_attribute`, `company_attribute`
+  (so com o modulo Empresas) ou `kanban_item_attribute` (aba Card). Variavel de conta nao tem categoria. O mesmo nome
+  pode existir em abas diferentes.
+- **Um atributo em UMA categoria so.** Colocar numa nova tira da anterior; ele entra no fim da categoria.
+- **Chave do Card:** os campos do Card vivem em `global_custom_attributes` da configuracao do Kanban
+  (`lionchat_kanban_config_list`) e sao identificados pelo `name` EXATO (maiusculas e espacos). Nunca use uma chave
+  "em minuscula com sublinhado" derivada do nome: o servidor recusa (`unknown_attribute`).
+- **Regras do nome:** 1 a 60 caracteres, sem repetir na aba (sem diferenciar maiuscula), "Sem categoria" reservado,
+  ate 50 categorias por aba.
+- **Excluir categoria nunca apaga atributo nem valor:** os atributos voltam para "Sem categoria".
+- **Atributo apagado:** o vinculo fica guardado sem efeito. Se o atributo for recriado PELA API com a mesma chave, ele
+  volta para a categoria; pela tela, vale a categoria escolhida no formulario.
+- Escrita so de administrador (401 para os demais); leitura para todos.
+
+Ferramentas:
+
+| Tool | Para que |
+|---|---|
+| `lionchat_custom_attribute_categories_list` | Todas as categorias da conta (`id, attribute_model, name, position, attribute_keys`) |
+| `lionchat_custom_attribute_categories_create` | Cria na aba (`name`, `attribute_model`); entra no fim |
+| `lionchat_custom_attribute_categories_update` | Renomeia (`name`); a aba nao muda |
+| `lionchat_custom_attribute_categories_destroy` | Exclui (atributos voltam para "Sem categoria") |
+| `lionchat_custom_attribute_categories_reorder` | Nova ordem da aba: `ids` com TODOS os ids da aba (faltou/sobrou = 422; releia e mande de novo) |
+| `lionchat_custom_attribute_categories_assign` | Coloca (`category_id`) ou tira (`category_id` nulo) um atributo |
+
+Receita "organizar os atributos de contato do cliente": `lionchat_custom_attributes_list` (`attribute_model:
+contact_attribute`) para ver as chaves -> `lionchat_custom_attribute_categories_create` para cada grupo -> um
+`lionchat_custom_attribute_categories_assign` por atributo. Para criar um atributo ja dentro de uma categoria:
+`lionchat_custom_attributes_create` e depois `assign` com a `attribute_key` DEVOLVIDA pelo create (o servidor
+normaliza a chave: sem acento, minuscula).
+
+FUTURO (ainda nao existe): usar a categoria como filtro (ex.: um funil mostrar so certas categorias). Nao prometa isso
+ao cliente.

@@ -278,6 +278,12 @@ responsável, chame `conversations_update` depois — não adianta mandar junto 
 **O que É aproveitado:** `custom_attributes` entram por merge, **sem sobrescrever chave que já tem
 valor**. A conversa mantém a origem com que nasceu e só ganha o que ainda não tinha.
 
+**Conversa NOVA nasce com a origem da ficha (16/10/2026).** Quando você (API, automação, fluxo ou
+formulário) cria uma conversa nova e a ficha do contato já traz sinal de anúncio (formulário da Meta, UTM,
+Google, LionTrack), a conversa já nasce com os `origin_*` preenchidos — antes ficava sem origem até o
+cliente escrever. Sem sinal na ficha, nasce sem origem (nunca "Direto"): quem classifica "Direto" é a
+primeira mensagem do cliente. Origem que você mandar na criação não é trocada.
+
 **Reuso não dispara `conversation_created`** — automação, gatilho de flow, webhook de saída,
 notificação e a Agenda não rodam. Se o seu fluxo depende de um desses, ele não vai acontecer
 quando houver reuso.
@@ -621,7 +627,7 @@ O conector **liga a condicao com a SEGUINTE**. Logo:
 | `filter_operator` | SIM | Como comparar |
 | `values` | SIM (menos em `is_present`/`is_not_present`) | Array, sempre |
 | `query_operator` | SIM em todas | `"AND"`/`"OR"`; **`null` na ultima** |
-| `custom_attribute_type` | so p/ atributo personalizado | `conversation_attribute` ou `contact_attribute` |
+| `custom_attribute_type` | so p/ atributo personalizado | `conversation_attribute`, `contact_attribute` ou `company_attribute` (campo personalizado da EMPRESA do contato, desde 2026-10-16: so atributo personalizado, negativo inclui contato sem empresa, `attribute_changed` recusado, modulo Empresas desligado = nunca casa) |
 
 ### Operadores de filtro
 
@@ -715,16 +721,18 @@ Todos os formatos abaixo foram conferidos linha a linha em `app/services/action_
 | `snooze_conversation` | `[]` |
 | `resolve_conversation` / `open_conversation` / `pending_conversation` | `[]` |
 | `update_contact_attribute` / `update_conversation_attribute` | `[{"attribute_key": "chave", "value": "texto ou {{contact.phone_number}}"}]` — chave PROTEGIDA é recusada na execução e fica só no log (10/09/2026): prefixos `waha_whatsapp_`, `whatsapp_`, `origin_`, `ctwa_`, `meta_lead_`, `lt_` e atributos de sistema como `utm_*`/`gclid`. Vale pra macro e automação |
-| `create_kanban_item` | `[{"funnel_id": 31, "funnel_stage": "prospeccao", "allow_duplicates": false}]` |
+| `create_kanban_item` | `[{"funnel_id": 31, "funnel_stage": "prospeccao", "allow_duplicates": false}]` — sem `allow_duplicates`, duas execuções no mesmo instante (formulário + conversa que ele criou) NÃO criam dois cards (09/10/2026), e o texto `"false"` vale como desmarcado. Card ADIADO no funil conta como card que já existe: não cria outro, move se a etapa for diferente e continua adiado (11/10/2026) |
 | `move_kanban_item_to_stage` | `[{"funnel_id": 31, "funnel_stage": "qualificacao"}]` |
 | `assign_agent_to_kanban_item` | `[{"funnel_id": 31, "agent_id": 70, "mode": "add"}]` — `mode` aceita `add` (padrao) ou `remove_all` |
 | `add_note_to_kanban_item` | `[{"funnel_id": 31, "text": "texto da nota"}]` — a chave e **`text`**, nao `note` |
-| `set_kanban_item_status` | `[{"funnel_id": 31, "status": "won"}]` — `won`, `lost` ou `open`. Status fora disso e ignorado |
+| `set_kanban_item_status` | `[{"funnel_id": 31, "status": "won"}]` — `won`, `lost` ou `open`. Status fora disso e ignorado. `open` num card ADIADO abre o card na hora e dispara "Card aberto" (11/10/2026) |
+| `snooze_kanban_item` | `[{"funnel_id": 31, "amount": 3, "unit": "days"}]` — ADIA o card por N horas (`hours`) ou dias (`days`); minimo 1 hora, so card aberto (11/10/2026). Em regra de evento de CARD (`kanban_item_*`) o card e o do evento: `[{"amount": 3, "unit": "days"}]`. Diferente das outras acoes de card, sem card no funil, card ganho/perdido ou tempo invalido = FALHA visivel no historico da regra, nunca pula calado. Ver "Card adiado" no kanban-deep-dive |
 | `start_kanban_item_timer` / `stop_kanban_item_timer` | `[{"funnel_id": 31}]` |
 | `wait` | `[30]` — segundos. Com conferência na volta: `[{"seconds": 120, "only_if_open": true, "only_if_no_reply": true}]`. Ver "Acao Aguardar" abaixo |
 
 **Acoes de Kanban:** todas precisam que a conversa ja tenha um card no funil informado. Sem card,
-a acao e pulada (fica so no log do servidor). Use `create_kanban_item` antes, na mesma regra.
+a acao e pulada (fica so no log do servidor) — exceto `snooze_kanban_item`, que FALHA visivel. Use
+`create_kanban_item` antes, na mesma regra.
 
 ### Acao `wait` (Aguardar) — novo 2026-08-04
 

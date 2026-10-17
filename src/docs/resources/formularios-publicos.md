@@ -35,6 +35,7 @@ caixa de WhatsApp vinculada e (opcionalmente) dispara um fluxo do FlowBuilder no
 | **Formulário público** (este documento) | Página de captação hospedada pelo LionChat, com blocos e link próprio |
 | **MetaLeadForm** | Formulário de anúncio da Meta (Facebook/Instagram Lead Ads) — outro módulo |
 | **Flow / FlowBuilder** | Motor de automação de conversa. O formulário *dispara* fluxos, mas não é um fluxo |
+| **Formulário do WhatsApp** (17/10/2026) | Formulário nativo da Meta, preenchido DENTRO do WhatsApp, aberto por botão de modelo de mensagem. Ferramentas `lionchat_whatsapp_forms_*` — seção própria no fim deste documento |
 
 ## Ferramentas disponíveis
 
@@ -608,3 +609,141 @@ agendar (com `required: true` essa saída deixa de existir). O tipo de evento ve
   blocos. Teste o trecho seguinte pela página pública.
 - **`stats.views` é de vida inteira** (ignora `days`); `stats.milestones` não vê marco em `items`.
 - **`name` é interno; `settings.public_title` é o que o lead vê** (vazio = cai no `name`).
+
+## Formulário do WhatsApp (WhatsApp Flows da Meta) — 17/10/2026
+
+Segundo tipo da área Formulários. É o formulário **nativo do WhatsApp**: o cliente toca num botão de um modelo de
+mensagem e preenche sem sair do WhatsApp; as respostas voltam para a conversa ("Formulário respondido", pergunta por
+pergunta). Só caixa do **WhatsApp Oficial** (Cloud API). Montar, publicar, aposentar e excluir = só administrador;
+listar e ver = qualquer pessoa da conta. Não confundir com o **Formulário público** (o resto deste documento, página
+com link próprio) nem com o formulário de anúncio da Meta (MetaLeadForm).
+
+### Ferramentas
+
+| Ferramenta | Para quê |
+|---|---|
+| `lionchat_whatsapp_forms_list` | Lista (`inbox_id` filtra pela conta do WhatsApp; `with_questions=true` traz `questions: [{code, label}]`; `refresh=true` relê o estado na Meta) |
+| `lionchat_whatsapp_forms_show` | Rascunho completo, `save_targets`, `image_urls`, `limits` (os limites da Meta, por tipo), `published_version`, `version_outdated` |
+| `lionchat_whatsapp_forms_create` | Cria rascunho `{name, inbox_id, editor_data?}` — nada vai para a Meta ainda |
+| `lionchat_whatsapp_forms_update` | Salva `name`, `editor_data` (SUBSTITUI o rascunho inteiro) e/ou `save_targets` |
+| `lionchat_whatsapp_forms_images` | Sobe imagem POR LINK (`url` http/https de imagem pública): o servidor baixa, reduz para o limite da Meta e devolve `{blob_id, url, width, height}` |
+| `lionchat_whatsapp_forms_publish` | Gera o arquivo, cria/edita na Meta e publica |
+| `lionchat_whatsapp_forms_preview` | Endereço da prévia oficial da Meta (abre sem login, 30 dias) |
+| `lionchat_whatsapp_forms_deprecate` | Aposenta na Meta — IRREVERSÍVEL |
+| `lionchat_whatsapp_forms_destroy` | Exclui rascunho ou aposentado |
+
+### Passo a passo
+1. `_create` com `name` (único na conta do WhatsApp — a Meta recusa nome repetido ao publicar) e `inbox_id` de uma
+   caixa oficial da conta (outra caixa = 422 `inbox_must_be_official`).
+2. Imagem (se houver): `_images` com o link → use o `blob_id` em `{ "type": "image", "image": "<blob_id>" }`.
+3. `_update` com o `editor_data` completo (leia com `_show` antes de editar: o rascunho é substituído inteiro).
+4. `_publish`. Fica PARA SEMPRE na conta do WhatsApp do cliente (só dá para aposentar). Republicar depois de editar
+   mantém os modelos funcionando, sem nova aprovação.
+5. Botão no modelo: `lionchat_inboxes_whatsapp_templates_create` com
+   `{type: 'BUTTONS', buttons: [{type: 'FLOW', text: 'Preencher', flow_id: '<meta_flow_id>', flow_action: 'navigate'}]}`
+   (`meta_flow_id` vem do `_list`/`_show`; o formulário tem de estar publicado; no máximo 1 botão FLOW por modelo; texto
+   do botão até 25). A Meta costuma aprovar em minutos e pode trocar a categoria para Marketing. Trocar o formulário do
+   botão de um modelo aprovado manda o modelo de volta para análise.
+6. Envie o modelo como qualquer outro (conversa, campanha, fluxo, automação). O componente que a Meta exige para o
+   botão de formulário é montado pelo servidor — não mande nada a mais.
+7. (Opcional) Fluxo com gatilho `whatsapp_form_answered` — config `{whatsapp_form_id: '<id nosso, STRING>'}` (vazio =
+   qualquer formulário; lista também é aceita). Variáveis `{{trigger.form.name}}`, `{{trigger.form.id}}`,
+   `{{trigger.form.f_<n>}}` (a resposta de cada pergunta já em texto).
+
+### O `editor_data`
+```json
+{ "category": "SURVEY", "next_label": "Continuar", "submit_label": "Enviar",
+  "screens": [
+    { "title": "Seus dados",
+      "fields": [
+        { "type": "heading", "text": "Conte um pouco sobre você" },
+        { "type": "image", "image": "123", "alt_text": "Logo da clínica" },
+        { "type": "short_text", "label": "Seu nome", "required": true, "max_chars": 60 },
+        { "type": "single_choice", "label": "Como nos achou?",
+          "options": [{ "label": "Instagram" }, { "label": "Indicação", "description": "Amigo ou parente" }] },
+        { "type": "calendar", "label": "Entrada", "mode": "range", "end_label": "Saída", "days": ["Fri", "Sat"] },
+        { "type": "photo", "label": "Foto do documento", "max_files": 2 },
+        { "type": "link", "text": "Nossos termos", "url": "https://exemplo.com/termos" }
+      ] } ] }
+```
+- `category`: SIGN_UP, SIGN_IN, APPOINTMENT_BOOKING, LEAD_GENERATION, CONTACT_US, CUSTOMER_SUPPORT, SURVEY, OTHER.
+- `next_label` (botão das telas do meio) e `submit_label` (botão da última tela, que envia): até 35 caracteres.
+  Só a ÚLTIMA tela envia; as anteriores levam para a seguinte.
+- Campo NOVO vai sem `code`: o servidor dá `f_<n>` (opções `o_<n>`). Código já publicado NUNCA é reaproveitado.
+- Perguntas (limite do texto da pergunta entre parênteses — use `helper`, até 80, para explicar mais):
+  `short_text`, `email`, `phone`, `number`, `long_text` (20); `date` e `calendar` (40); `single_choice` (30; até 200
+  opções, passou de 20 vira lista suspensa) e `multiple_choice` (30; até 20 opções); opção até 30, descrição da opção
+  até 300; `opt_in` (aceite, 120; `read_more_url` mostra um "Ler mais" que abre o link); `photo` e `document` (80;
+  `description` até 300, `max_files` 1-10, `max_size_mb` 1-25 — a foto sai SEMPRE com no máximo 5 MB, o limite de
+  recebimento do WhatsApp oficial; foto: `source` camera_gallery|camera|gallery; arquivo: `file_kinds`
+  pdf|word|spreadsheet|presentation|image|text|compressed|video). `required: true` = obrigatória (na foto/arquivo
+  vira "pelo menos 1").
+- Ajustes: `max_chars` (NÚMERO 1-4000), `min_date`/`max_date` "AAAA-MM-DD" (data fixa — não existe "a partir de
+  hoje"), calendário `mode` single|range + `end_label`/`end_helper` (rótulo e ajuda do fim; a ajuda vai nas DUAS
+  pontas ou em nenhuma) + `title` (80) + `description` (300) + `days` (Mon..Sun, os dias que podem ser escolhidos);
+  escolha múltipla `min_selected`/`max_selected` (nunca acima do número de opções, mínimo nunca acima do máximo).
+- Conteúdo (`text`): `heading` e `subheading` (80), `paragraph` e `caption` (4096), `link` (`text` até 25 + `url`
+  http/https), `image` (`image` = `blob_id` do `_images`, `alt_text` até 100).
+- Tetos: 10 telas; 40 campos e 5 aceites por tela; título de tela 30; por tela 1 foto/arquivo, 3 imagens e 2 links;
+  até 10 arquivos no formulário inteiro (soma do `max_files`).
+
+### Salvar x publicar (onde cada erro aparece)
+- **Salvar** (`_create`/`_update`) recusa com 422 `{errors: [...]}` só o FORMATO: tipo desconhecido, número fora da
+  faixa, data fora do formato, lista com valor desconhecido, `category` fora da lista, telas fora de 1-10, mais de 40
+  campos ou 5 aceites numa tela, opções em formato errado. Limite de caracteres da Meta NÃO barra o salvar
+  (dá para salvar no meio do caminho).
+- **Publicar** recusa com 422 `{problems: [{code, screen, field, limit}], error, form}` (`screen`/`field` começam em
+  0). Códigos de `problems`:
+
+| code | O que corrigir |
+|---|---|
+| `no_questions` | o formulário não tem nenhuma pergunta |
+| `empty_label` / `empty_text` | pergunta sem texto / conteúdo sem texto |
+| `too_long` (`limit`) | texto acima do limite daquele tipo (pergunta, ajuda, fim do intervalo, link, texto alternativo) |
+| `title_too_long` / `button_too_long` | título de tela acima de 30 / botão acima de 35 |
+| `description_too_long` | descrição de foto/arquivo/calendário acima de 300 |
+| `no_options` / `empty_option` / `option_too_long` / `option_description_too_long` | escolha sem opções / opção vazia / opção acima de 30 / descrição de opção acima de 300 |
+| `selection_invalid` | mínimo/máximo de marcações impossível |
+| `date_range_invalid` | data mínima depois da máxima |
+| `empty_end_label` / `range_helper_incomplete` / `calendar_title_too_long` | intervalo sem rótulo do fim / ajuda numa ponta só / título do calendário acima de 80 |
+| `invalid_url` / `invalid_read_more_url` | link ou "Ler mais" sem http/https |
+| `no_image` / `image_missing` | imagem sem arquivo / arquivo que não é deste formulário (suba de novo pelo `_images`) |
+| `too_many_links` / `too_many_images` / `too_many_pickers` | mais de 2 links / 3 imagens / 1 foto-arquivo na mesma tela |
+| `too_many_files` | soma de arquivos acima de 10 no formulário |
+
+  `error.kind`: `no_channel` (nenhuma caixa oficial dessa conta do WhatsApp), `busy` (publicação em andamento),
+  `duplicate_name` (nome já usado nessa conta do WhatsApp), `validation` (a Meta recusou o arquivo; a mensagem diz
+  onde), `meta`, `network`, `too_large`, `unexpected`.
+- `_update` durante uma publicação devolve 409 `busy`.
+
+### "Salvar em" (`save_targets`)
+`{"f_1": "contact.name", "f_2": "custom.cidade"}` no `_update`. Destinos: `contact.name`, `contact.email`,
+`contact.cadastral.<cpf|rg|cnpj|passport|profession|marital_status|gender|date_of_birth>`,
+`contact.address.<cep|street|number|complement|neighborhood|city|state|country>`, `custom.<chave do contato>`,
+`conversation_custom.<chave da conversa>`. O atributo precisa existir na conta (`lionchat_custom_attributes_list`)
+e não ser protegido; destino inválido = 422 (inclusive código de pergunta de foto/arquivo, ou que não existe no
+rascunho nem na última publicação). Telefone nunca. Vale na hora (não precisa publicar). Grava quando o cliente
+envia: dado novo vence, resposta em branco não apaga, valor que não cabe no tipo do atributo não grava. Pergunta
+tirada do rascunho mantém o destino até publicar de novo (a versão no ar ainda pergunta). Foto e arquivo não têm
+destino: chegam como anexo da própria mensagem de resposta.
+
+### Como a resposta chega (para ler depois)
+- Mensagem ENTRANTE na conversa do cliente, texto fixo "Formulário respondido", `content_type: form`, com
+  `content_attributes.items` (`[{name: 'f_1', label: 'Seu nome'}]`) e `content_attributes.submitted_values`
+  (`[{name: 'f_1', value: 'Maria'}]`) — leia por `lionchat_conversations_messages_list`.
+- Os valores já vêm legíveis: opção pelo nome, data DD/MM/AAAA, intervalo "DD/MM/AAAA a DD/MM/AAAA", aceite Sim/Não,
+  foto/arquivo "N arquivos: nomes" (os arquivos vêm como anexos da mesma mensagem; arquivo acima do limite de
+  recebimento fica de fora).
+- `content_attributes.whatsapp_form`: `form_id`, `publication_number`, `flow_token` e `raw` (as respostas cruas).
+  Sem nenhuma resposta: "Formulário respondido (nenhuma resposta preenchida)"; ilegível: "Formulário recebido (não
+  foi possível ler as respostas)" com `whatsapp_form.unreadable = true`.
+- A IA de atendimento lê as respostas; a resposta reabre a conversa como qualquer mensagem do cliente. Fluxo parado
+  em "Aguardar resposta" só segue depois do "Salvar em" gravar.
+
+### Armadilhas
+- **Aposentar (`_deprecate`) é irreversível** e derruba todo modelo que abre o formulário. Confirme com o usuário.
+- `_destroy` só apaga rascunho ou aposentado (publicado = `deprecate_first`).
+- `version_outdated: true` no `_show` = publicado numa versão que a Meta não aceita mais: publicar de novo.
+- `flow_id` do botão é o `meta_flow_id` (número da Meta), não o `id` nosso; o gatilho do fluxo usa o `id` nosso.
+- Imagem: só por LINK de imagem pública (página da web, endereço interno ou arquivo que não é imagem = 422
+  `fetch_failed`/`invalid_image`; acima de 10 MB = `file_too_large`).

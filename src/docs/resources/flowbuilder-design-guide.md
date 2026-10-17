@@ -62,7 +62,7 @@ Todo node tem essa estrutura base:
 
 **ATENÇÃO — chave `items`, não `triggers` (corrigido 19/08/2026).** Os gatilhos vão em **`data.items`**, cada item no formato **`{ "key": "...", "config": { ...filtros... } }`**. O formato antigo (`data.triggers` + `type` + filtros soltos no topo) ainda é aceito pelo motor por compatibilidade, mas **NÃO deve ser usado em fluxo novo**: o editor do FlowBuilder lê apenas `data.items`, então um fluxo gravado no formato antigo **dispara normalmente mas abre com o bloco Início EM BRANCO no painel do cliente** — e um clique em "Concluir" naquele modal apagava o gatilho em silêncio. Foram 53 fluxos de 9 contas nesse estado até o conserto de 19/08. Alguns leitores do backend (`has_webhook_trigger?` do disparo por webhook, o filtro de Campanha de Fluxo, o gatilho LionTrack e o histórico de execução) também só entendem `items`.
 
-**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `team_changed`, `assignee_changed`, `label_added`, `label_removed`, `sla_missed`, `card_created`, `card_moved`, `card_won`, `card_lost`, `conversation_attribute_changed`, `card_attribute_changed`, `contact_attribute_changed`, `date_trigger`, `campaign_trigger`, `manual_trigger`, `webhook_received`, `page_track`, `group_participant_joined`, `group_participant_left`, `lead_form_completed`, `lead_form_milestone`, `lead_form_abandoned`, `booking_created`, `booking_cancelled`, `booking_rescheduled`, `booking_completed`.
+**Triggers válidos:** `message_received`, `message_sent`, `conversation_created`, `conversation_resolved`, `conversation_reopened`, `team_changed`, `assignee_changed`, `label_added`, `label_removed`, `sla_missed`, `card_created`, `card_moved`, `card_won`, `card_lost`, `card_opened`, `card_snoozed`, `conversation_attribute_changed`, `card_attribute_changed`, `contact_attribute_changed`, `date_trigger`, `campaign_trigger`, `manual_trigger`, `webhook_received`, `page_track`, `group_participant_joined`, `group_participant_left`, `lead_form_completed`, `lead_form_milestone`, `lead_form_abandoned`, `booking_created`, `booking_cancelled`, `booking_rescheduled`, `booking_completed`.
 
 **NÃO existem** os gatilhos `webhook` (o correto é **`webhook_received`**) nem `cron` (para disparo por data use `date_trigger`; para disparo em lote use `campaign_trigger` + Campanha de Fluxo). Até 19/08/2026 este guia listava os dois por engano — o fluxo 180 da conta 54 ficou ATIVO com `webhook` e **nunca disparou uma vez em 26 dias**, sem erro nenhum.
 
@@ -74,6 +74,7 @@ Todo node tem essa estrutura base:
 - `label_added` / `label_removed`: `label_names` (array de slugs). NÃO use `label` (singular) — é ignorado.
 - `card_created` / `card_moved`: `funnel_ids` (array de STRINGS, ex.: `["37"]` — número puro `[37]` NÃO casa) + `funnel_stages` (array de `"funnel_id:chave_da_etapa"`, ex.: `"37:agendamento_pendente"`). A `chave_da_etapa` é a CHAVE INTERNA da etapa no funil (slug legível em funis de template; pode ser um UUID/`stage_<n>` em etapa criada à mão ou funil duplicado) — NÃO o nome exibido na tela. Sem `funnel_ids` → dispara em qualquer funil; com `funnel_ids` mas sem `funnel_stages` → qualquer etapa daquele(s) funil(is). O card precisa estar num funil listado em `funnel_ids` pra o filtro de etapa valer. ATENÇÃO: dois flows ATIVOS na mesma inbox com `card_created`/`card_moved` de funil/etapa sobrepostos são bloqueados na criação/ativação (ver `flow_trigger_conflict` no fim deste guia).
 - `team_changed`: `team_ids` (array de STRINGS; vazio = qualquer equipe). `assignee_changed`: `agent_ids` (array de STRINGS; vazio = qualquer atendente). `card_won` / `card_lost`: `funnel_ids` (array de STRINGS) — disparam SÓ quando o STATUS do card vira ganho/perdido, nunca por etapa com esse nome.
+- `card_opened` ("Card aberto") / `card_snoozed` ("Card adiado") — NOVOS 11/10/2026, mesma config `funnel_ids` (array de STRINGS; vazio = qualquer funil). `card_snoozed` dispara quando o card é ADIADO. `card_opened` dispara quando um card adiado ABRE (pela data, por alguém ou por automação) e também quando um card ganho/perdido é REABERTO — card NOVO não dispara (para isso existe `card_created`). Pela data, o fluxo sai pela fila de disparos agendados, uma vez por card. Use `{{trigger.kanban.previous_status}}` (`snoozed`/`won`/`lost`) para separar "voltou do adiamento" de "reabriram um ganho/perdido".
 - `page_track` (LionTrack, só flow individual): `{ "track_type": "visited_page"|"event_fired", "urls": [...], "operator": "contains"|"exact"|"starts_with", "event_names": [...], "event_operator": "equals"|"contains", "cooldown_hours": 24 }` — `cooldown_hours` (padrão 24, mínimo 1) não re-dispara pro mesmo contato dentro da janela.
 - `conversation_attribute_changed` / `card_attribute_changed` (novo 2026-07-08): disparam na VIRADA de um atributo (da CONVERSA ou do CARD do kanban) pro valor que casa — RE-ENTRAM toda vez que o atributo muda pro valor alvo. Config: `{ "logic": "and"|"or", "rules": [ { "attr_key": "...", "operator": "...", "value": "..." } ] }` (uma rule pode usar `values: [...]` no lugar de `value` pra multi-valor). O `attrSource` é IMPLÍCITO pela chave do gatilho (conversa vs card) — NÃO informe. Operadores (contexto REATIVO — desde 09/07 `is_empty`/`is_not_empty` NÃO valem aqui, pois "está vazio AGORA" dispararia a cada evento; use-os só no nó Condição): `equal`/`not_equal`/`contains`/`not_contains`/`starts_with`/`ends_with`/`greater_than`/`less_than`/`number_range`. Só `card_attribute_changed` aceita `funnel_id`/`card_source` opcionais dentro da rule (pra achar o card). Rule sem `attr_key` é ignorada.
 - `contact_attribute_changed` (novo 2026-07-22 — "Atributo do contato muda"): dispara quando um atributo personalizado do **CONTATO** muda e a condição casa — mesmo com o contato fora de flow. Item: `{ "key": "contact_attribute_changed", "config": { "logic": "and"|"or", "rules": [ { "attrSource": "contact", "attr_key": "...", "operator": "...", "value": "..." } ] } }` (1 a 10 rules; `values: [...]` pra multi-valor). **DIFERENTE dos irmãos de 08/07: aqui o `attrSource` VAI na rule e é SEMPRE `"contact"`.** Operadores iguais aos do nó Condição. **VERSÃO SEGURA por decisão de produto:** dispara SÓ na conversa mais recente que JÁ EXISTE numa caixa do flow (reabre se resolvida); contato sem conversa NÃO dispara e NUNCA cria conversa. Dedup de 30s por contato + anti-loop por profundidade de cadeia (flow que muda atributo que dispara flow…). Só flows de conversa.
@@ -152,7 +153,7 @@ Receita completa: `flows_create`/`flows_update` com o item no start → `flows_l
 4. Salvar o flow (`flows_update`) — o save sincroniza a ativação do webhook embutido (remover o item desativa a integração automaticamente).
 Webhooks embutidos NÃO aparecem na listagem de integrações standalone; excluir o flow destrói o webhook; duplicar o flow NÃO copia o gatilho embutido. Rate limit do endpoint público: 60/min por token.
 
-**Gatilhos de AGENDAMENTO — Booking NATIVO do LionChat (2026-08-20):** `booking_created` (alguém marcou pelo link público, pela IA ou pelo painel), `booking_cancelled` (paciente cancelou pelo link, IA cancelou ou a equipe cancelou na Agenda), `booking_rescheduled` (a data/hora mudou — link do paciente, IA, editar/adiar na Agenda), `booking_completed` (equipe concluiu na Agenda; exige a Agenda unificada ligada na conta). **Não é e-Clínica.** Config (tudo opcional, vazio = todos): `booking_event_type_ids` (array de ids de tipo de agendamento, **STRING**), `agent_ids` (array de ids de usuário — o RESPONSÁVEL da tarefa), `create_conversation` (boolean, padrão `false`: só dispara para quem já tem conversa numa caixa do flow; `true` = cria a conversa na 1ª caixa do flow). Exemplo: `{ "key": "booking_created", "config": { "booking_event_type_ids": ["44"], "agent_ids": [], "create_conversation": true } }`. São INERTES a evento de conversa (quem dispara é o `Booking::FlowTriggerDispatcher`, por CONTA — caixa do flow só define onde a conversa é criada/reusada). Variáveis no flow: `{{booking.date}}` (DD/MM/AAAA), `{{booking.time}}`, `{{booking.weekday}}`, `{{booking.datetime}}` (ISO), `{{booking.type}}`, `{{booking.type_format}}` (presencial/videochamada), `{{booking.duration}}`, `{{booking.agent}}`, `{{booking.status}}` (confirmado/cancelado/remarcado/concluído), `{{booking.description}}`, `{{booking.cancel_url}}`, `{{booking.reschedule_url}}`, `{{booking.color}}`, `{{booking.id}}`; só no remarcado: `{{booking.previous_date}}`, `{{booking.previous_time}}`, `{{booking.previous_datetime}}`; `{{booking.meeting_url}}` NÃO vem no criado (nasce vazio). Data/hora vêm da TAREFA da Agenda (sempre atuais). Regras: o evento mais novo SUBSTITUI a rodada ativa do mesmo flow na mesma conversa (2ª consulta do mesmo paciente, ou cancelado chegando com o criado ainda esperando resposta); excluir a tarefa, reabrir cancelada ou desfazer conclusão NÃO disparam; adiar (snooze) conta como remarcado; tipo com confirmação/lembrete próprios ligados + `booking_created` = o paciente pode receber duas mensagens (a tela avisa). Colisão entre flows é por CONTA: mesmo kind + tipos se cruzando + agentes se cruzando (vazio = todos). Há também `{{booking.event}}` (`created`|`cancelled`|`rescheduled`|`completed` — bom pra condição; não aparece no seletor da tela, mas resolve); `{{trigger.type}}` = a chave do gatilho (ex.: `booking_created`), `{{trigger.kind}}` = `created`|`cancelled`|`rescheduled`|`completed` e `{{trigger.booking_id}}`. SÓ flow de conversa **individual** (a tela nem oferece em flow de grupo); **nunca dispara flow `ai_tool`**. Em caixa WhatsApp OFICIAL, conversa criada nova (ou parada há mais de 24h) está FORA da janela — texto livre no 1º bloco cai em `window_closed`/erro; comece por template.
+**Gatilhos de AGENDAMENTO — Booking NATIVO do LionChat (2026-08-20):** `booking_created` (alguém marcou pelo link público, pela IA ou pelo painel), `booking_cancelled` (paciente cancelou pelo link, IA cancelou ou a equipe cancelou na Agenda), `booking_rescheduled` (a data/hora mudou — link do paciente, IA, editar/adiar na Agenda), `booking_completed` (equipe concluiu na Agenda; exige a Agenda unificada ligada na conta). **Não é e-Clínica.** Config (tudo opcional, vazio = todos): `booking_event_type_ids` (array de ids de tipo de agendamento, **STRING**), `agent_ids` (array de ids de usuário — o RESPONSÁVEL da tarefa), `create_conversation` (boolean, padrão `false`: só dispara para quem já tem conversa numa caixa do flow; `true` = cria a conversa na 1ª caixa do flow). Exemplo: `{ "key": "booking_created", "config": { "booking_event_type_ids": ["44"], "agent_ids": [], "create_conversation": true } }`. São INERTES a evento de conversa (quem dispara é o `Booking::FlowTriggerDispatcher`, por CONTA — caixa do flow só define onde a conversa é criada/reusada). Variáveis no flow: `{{booking.date}}` (DD/MM/AAAA), `{{booking.time}}`, `{{booking.weekday}}`, `{{booking.datetime}}` (ISO), `{{booking.type}}`, `{{booking.type_format}}` (presencial/videochamada), `{{booking.duration}}`, `{{booking.agent}}`, `{{booking.status}}` (confirmado/cancelado/remarcado/concluído), `{{booking.description}}`, `{{booking.cancel_url}}`, `{{booking.reschedule_url}}`, `{{booking.confirm_url}}`, `{{booking.calendar_url}}` (16/10: página onde o cliente salva o compromisso na agenda DELE, sem e-mail; no remarcado já sai com a hora nova — é o jeito de avisar a mudança, pedindo para apagar o compromisso antigo), `{{booking.color}}`, `{{booking.id}}`; só no remarcado: `{{booking.previous_date}}`, `{{booking.previous_time}}`, `{{booking.previous_datetime}}`; `{{booking.meeting_url}}` NÃO vem no criado (nasce vazio). Data/hora vêm da TAREFA da Agenda (sempre atuais). Regras: o evento mais novo SUBSTITUI a rodada ativa do mesmo flow na mesma conversa (2ª consulta do mesmo paciente, ou cancelado chegando com o criado ainda esperando resposta); excluir a tarefa, reabrir cancelada ou desfazer conclusão NÃO disparam; adiar (snooze) conta como remarcado; tipo com confirmação/lembrete próprios ligados + `booking_created` = o paciente pode receber duas mensagens (a tela avisa). Colisão entre flows é por CONTA: mesmo kind + tipos se cruzando + agentes se cruzando (vazio = todos). Há também `{{booking.event}}` (`created`|`cancelled`|`rescheduled`|`completed` — bom pra condição; não aparece no seletor da tela, mas resolve); `{{trigger.type}}` = a chave do gatilho (ex.: `booking_created`), `{{trigger.kind}}` = `created`|`cancelled`|`rescheduled`|`completed` e `{{trigger.booking_id}}`. SÓ flow de conversa **individual** (a tela nem oferece em flow de grupo); **nunca dispara flow `ai_tool`**. Em caixa WhatsApp OFICIAL, conversa criada nova (ou parada há mais de 24h) está FORA da janela — texto livre no 1º bloco cai em `window_closed`/erro; comece por template.
 
 **TRAVA DE GATILHO DUPLICADO (2026-06-16) — leia ANTES de ativar/criar flow ativo:** o sistema BLOQUEIA ter dois flows ATIVOS com o MESMO gatilho na MESMA inbox e mesmo `conversation_mode` (evita o evento disparar dois flows). Colisão = mesmo tipo de gatilho + config cruzando (mesmas keywords/funil/labels/url/etc) + inbox compartilhada + mesmo modo. EXCEÇÕES que podem coexistir: `webhook_received`, `manual_trigger` e `campaign_trigger` (este último porque não dispara por evento — é só uma autorização para a campanha).
 - **`date_trigger` separa por HORÁRIO (24/09/2026):** dois flows no mesmo campo de data, mesma direção e mesmos dias NÃO colidem se os dois tiverem horário FIXO diferente (ex.: "1 dia depois às 08:00" e "às 14:00"). Horário vindo de atributo/fórmula continua colidindo (só existe na hora do disparo); `send_time` vazio conta como 09:00 e "8:00" = "08:00". A entrega é de 10 em 10 minutos — horários a menos de 10 min podem sair juntos.
@@ -397,6 +398,7 @@ só pra destravar, ela pode sair.
 | `conversation_has_ai_agent` / `conversation_no_ai_agent` / `conversation_not_ai_agent` | agente de IA atribuído (novo 2026-08-01) — ver abaixo |
 | `contact_has_label` / `contact_no_label` / `conversation_has_label` / `conversation_no_label` | labels |
 | `kanban_exists` / `kanban_in_stage` / `kanban_won` / `kanban_lost` | card no funil. `funnel_id` é CHAVE SEPARADA da condição (número, ex.: `"funnel_id": 37`). A etapa vai em `value` (slug puro da etapa, ex.: `"avaliacao_aceita"`) ou em `stage` — NÃO no formato `"37:etapa"`. Ex.: `{ "operator": "kanban_in_stage", "funnel_id": 37, "value": "avaliacao_aceita" }` |
+| `kanban_snoozed` (11/10/2026) | card ADIADO no funil — `field: '_kanban_status'`, `funnel_id` separado, igual às irmãs `kanban_won`/`kanban_lost` (mesma regra do card que iniciou o fluxo). Não existe condição "card aberto" |
 | `card_attr_equals` / `card_attr_contains` | atributo do card (`attrSource: 'card'` + `attr_key`; aceita `card_source: 'trigger'` p/ ler o card que iniciou o flow) |
 | `pagetrack_visited` / `pagetrack_event` | LionTrack |
 | `sla_check` | status do SLA da conversa (usa `value` = código fixo; ver abaixo) |
@@ -457,7 +459,7 @@ campanha"):
   `origin_first_kind`/`origin_first_platform`, `origin_last_kind`/`origin_last_platform`, `origin_*` em geral
   (origem unificada), `ctwa_*` (anúncio click-to-WhatsApp: `ctwa_ad_id`, `ctwa_ad_title`, `ctwa_campaign_name`,
   `ctwa_adset_name`...), `meta_lead_*` (formulário Meta Lead Ads), `lt_*` (LionTrack: UTMs, página, dispositivo).
-  Veja a lista real com `lionchat_custom_attributes_list` (`attribute_model: conversation`, `include_system: true` — as chaves de campanha são atributos de sistema).
+  Veja a lista real com `lionchat_custom_attributes_list` (`attribute_model: conversation_attribute` — com o sufixo; só `conversation` devolve a lista VAZIA —, `include_system: true` — as chaves de campanha são atributos de sistema).
 - **Valores fechados** de `origin_kind` (e `origin_first_kind`/`origin_last_kind`): `paid_ad` (Anúncio),
   `lead_form` (Formulário), `organic` (Orgânico), `direct` (Direto), `referral` (Indicação), `manual` (Origem
   cadastrada). O painel mostra o rótulo em português, mas a comparação é pelo VALOR — `"Anúncio"` nunca casa.
@@ -558,6 +560,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `set_kanban_item_status` | `{ status: 'won' \| 'lost' \| 'active' }` | Marca status do card |
 | `set_won` | `{}` | Atalho pra ganho |
 | `set_lost` | `{ reason? }` | Atalho pra perdido |
+| `snooze_kanban_item` (11/10/2026) | `{ funnel_id, amount, unit: 'hours' \| 'days', card_source? }` | "Adiar card": ADIA o card por N horas ou dias a partir da execução (`amount` inteiro, 1 ou mais; mínimo 1 hora). Só card aberto; adiar de novo troca a data. `card_source: 'trigger'` mira o card que iniciou o fluxo (aí `funnel_id` não é exigido). Diferente das irmãs de card: card ganho/perdido, sem card ou fluxo que NÃO veio de card com `card_source: 'trigger'` = ERRO visível no passo, nunca pulado. `set_open` (e `set_kanban_item_status` com `open`) num card ADIADO abre o card na hora e dispara "Card aberto". Ver "Card adiado" no kanban-deep-dive |
 | `assign_agent_card` | `{ agent_id, mode? }` | Responsável do card. `mode`: `'add'` (default — SOMA na lista), `'replace'` (só o escolhido fica; atribui antes de remover os demais) ou `'remove_all'` (tira TODOS os responsáveis; `agent_id` dispensado) |
 | `add_card_note` | `{ text }` | Nota no card. **A chave é `text`**, igual à irmã `add_private_note`. Aqui é mais grave: o motor lê SÓ `text`, sem rede — nota criada com `content` sairia REALMENTE vazia, não só invisível no formulário. Corrigido em 04/09 (a linha dizia `content`); a gravação normaliza `content` para `text` |
 | `add_card_checklist` | `{ template_id, funnel_id?, card_source? }` | Aplica um MODELO de checklist ao card (vira um grupo). `template_id` de `kanban_config.checklist_templates`. Um modelo por bloco (repita o bloco pra mais de um) |
@@ -573,7 +576,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 
 **Handles que SAEM:** `success`. Não tem handle `error` — falhas viram warning silencioso e o flow continua.
 
-**`card_source` (blocos de card) — opcional:** as ações de card aceitam `card_source`: `'funnel'` (default — procura o card pelo `funnel_id`) ou `'trigger'` (usa o card que DISPAROU o flow, em flows iniciados por `card_created`/`card_moved`/`card_won`/`card_lost`). Com `'trigger'`, `funnel_id` deixa de ser obrigatório — EXCETO em `move_kanban_stage`/`create_kanban_item`, cujo funil/etapa são o DESTINO. Sem card-gatilho disponível, a ação é pulada (não cai no fallback de funil). Aplica-se a `move_kanban_stage`, `set_won`/`set_lost`/`set_open`, `assign_agent_card`, `add_card_note`, `add_card_checklist`, `add_card_offer`, `update_attribute` (com `attr_source: 'card'`) e às condições `card_attr_equals`/`card_attr_contains` (gravando `card_source` na própria regra).
+**`card_source` (blocos de card) — opcional:** as ações de card aceitam `card_source`: `'funnel'` (default — procura o card pelo `funnel_id`) ou `'trigger'` (usa o card que DISPAROU o flow, em flows iniciados por `card_created`/`card_moved`/`card_won`/`card_lost`/`card_opened`/`card_snoozed`). Com `'trigger'`, `funnel_id` deixa de ser obrigatório — EXCETO em `move_kanban_stage`/`create_kanban_item`, cujo funil/etapa são o DESTINO. Sem card-gatilho disponível, a ação é pulada (não cai no fallback de funil). Aplica-se a `move_kanban_stage`, `set_won`/`set_lost`/`set_open`, `snooze_kanban_item` (esta, sem card-gatilho, dá ERRO em vez de pular), `assign_agent_card`, `add_card_note`, `add_card_checklist`, `add_card_offer`, `update_attribute` (com `attr_source: 'card'`) e às condições `card_attr_equals`/`card_attr_contains` (gravando `card_source` na própria regra).
 
 **`send_conversion` — Enviar conversão (2026-09-01):**
 
@@ -622,6 +625,12 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 **Coerção por TIPO (2026-07-29):** em `attr_source: 'contact'|'conversation'`, o `attr_value` de atributo personalizado é coagido pelo tipo da definição antes de gravar: número/moeda/porcentagem viram numérico ("1.234,56" → 1234.56; inteiro fica inteiro), checkbox aceita sim/não/true/false e grava BOOLEANO, lista casa caixa-insensível e grava a opção canônica, data aceita DD/MM/AAAA ou ISO, hora aceita "14:30"/"14h30". Valor irreconhecível grava como veio e o passo mostra nota âmbar no histórico. Card NÃO coage (atributo de card não tem definição tipada no backend).
 
 **Empresa e Cargo (2026-09-25):** `contact.company_name` e `contact.job_title` valem em CONDIÇÃO (`attr_source: 'contact'`, `attr_key` igual ao path), em filtro de regras e como variável (`{{contact.company_name}}`, `{{contact.job_title}}`). São SÓ LEITURA: a ação "Alterar atributo do contato" NÃO grava esses dois (o texto Empresa anda junto com a empresa vinculada — para ligar a empresa use `lionchat_contacts_update` com `company_id`).
+
+**Empresa do contato (2026-10-16):** a empresa ligada ao contato da conversa (no máximo UMA por contato) vale como VARIÁVEL e como CONDIÇÃO, só com o módulo Empresas ligado.
+- Variável em qualquer bloco de mensagem: `{{contact.company.name}}`, `{{contact.company.legal_name}}`, `{{contact.company.cnpj}}`, `{{contact.company.phone}}`, `{{contact.company.email}}`, `{{contact.company.address.city}}`, `{{contact.company.address.state}}` e `{{contact.company.custom_attribute.<chave>}}` (campo personalizado da empresa). Contato sem empresa = vazio. Data do campo personalizado: DD/MM/AAAA no bloco de mensagem; crua (AAAA-MM-DD) em API, Definir variável e Condição — igual ao atributo do contato.
+- Condição (bloco Condição, aba Atributos, card "Atributo da empresa"): `{ "valueType": "attr_config", "attrSource": "company", "attr_key": "segmento", "operator": "equal", "value": "", "values": ["Varejo"] }`. `attr_key` = chave do campo personalizado OU cadastro com prefixo `company.name`, `company.legal_name`, `company.cnpj` (comparado só pelos dígitos), `company.phone`, `company.email`, `company.address.city`, `company.address.state`. Contato sem empresa = valor vazio (`not_equal`/`is_empty` casam). Módulo Empresas DESLIGADO = a regra NUNCA casa, nem a negativa.
+- `attrSource` fora de `contact`/`conversation`/`card`/`company` NÃO casa (antes comparava a última mensagem do cliente) e marca o bloco com aviso.
+- NÃO vale em condição de SAÍDA (`exit_conditions`), gatilho de entrada, parâmetro de ferramenta de IA nem em `update_attribute` (a ação não grava na empresa).
 
 **Campos NATIVOS do contato (2026-07-29):** com `attr_source: 'contact'`, `attr_key` também aceita os paths canônicos `contact.name`, `contact.email`, `contact.cpf`, `contact.cnpj`, `contact.rg`, `contact.passport`, `contact.date_of_birth`, `contact.gender`, `contact.marital_status`, `contact.profession` e `contact.address.{cep,street,number,complement,neighborhood,city,state,country}` — gravam na ficha nativa do contato (não em custom_attributes). Regras: telefone/identifier/etiquetas NÃO são aceitos (mapa fechado — chave fora dele vira atributo personalizado comum); documentos, nascimento, gênero e **e-mail** só preenchem campo VAZIO; nome/profissão/estado civil/endereço sobrescrevem; valor em branco nunca grava; gênero aceita `m|f|o|na` e estado civil `solteiro|casado|uniao_estavel|divorciado|separado|viuvo`; data de nascimento em `dd/mm/aaaa` ou `aaaa-mm-dd`. Recusas aparecem no histórico de execução (passo 'skipped'/'error' com mensagem).
 
@@ -959,6 +968,24 @@ erro). Número de celular BR escrito sem o 9 é corrigido pelo WhatsApp antes de
 sessão do canal, orçamento 8 s). Antes de 21/08 o passo dava SUCESSO mesmo com o lead fora do grupo. A
 mesma correção do 9º dígito vale no `add_participants`.
 
+**Quem volta só com o código interno (2026-10-09):** o WhatsApp devolve a pessoa RECÉM-COLOCADA só com o
+código interno dela (`<código>@lid`, sem telefone) — e horas depois continua assim. Até 09/10 o bloco comparava
+só telefone: `add_participants` acusava `nobody_changed`/`not_added` com a pessoa DENTRO do grupo (o fluxo
+parava), `create` dava `partial` falso (e mandava convite para quem já estava) e `remove_participants` dava
+SUCESSO falso. Desde 09/10 o bloco confere pelo telefone e, só para quem não casou, pergunta ao WhatsApp o
+código daquele telefone. Sem resposta do WhatsApp = conta como NÃO colocado (nunca inventa que entrou). Limite
+conhecido: número que não passou pela conferência de existência (fora do Brasil) e volte só com o código
+continua contando como fora.
+
+**De onde veio cada número (2026-10-09):** nas operações com `groupParticipants`, o passo do bloco no
+HISTÓRICO da execução (não a variável `{{grupo.*}}`) traz `participant_sources` — um item por número com
+`number`, `source` (a LINHA do campo de participantes de onde ele saiu), `typed` (`true` = digitado, sem
+variável), `informed` (o número como foi escrito, quando o WhatsApp usa outra forma) e, quando a linha é UM
+atributo personalizado sozinho (`{{conversation.custom_attribute.x}}` / `{{contact.custom_attribute.x}}`),
+`filled_by`/`filled_at` (quem preencheu aquele atributo e quando). É só anotação: nunca muda quem vai no
+pedido; origem e autor podem faltar, mas nunca saem errados. Use para responder "de onde saiu esse número?"
+em vez de concluir que o número "não está configurado".
+
 **Convite no privado de quem ficou de fora (opcional, nasce desligado; só `create`/`add_participants`;
 2026-08-21 — entra com o próximo deploy do app depois de 21/08/2026):** `groupInviteOnFailure: true` +
 `groupInviteMessage` (texto OBRIGATÓRIO nesse modo — sem texto = `invite_status: 'sem_mensagem'` e nada
@@ -1063,6 +1090,31 @@ de conexão e viram bola de neve visual. Ao gerar `position`:
 ```
 
 ---
+
+### 2.15 `ai_call` — "Ligar com IA" (17/10/2026)
+
+So em conta com `ai_calling` + `lioncalls_calling`. A IA liga para o **telefone do contato** da conversa do flow
+pela linha de ligacao do WhatsApp (LionCalls).
+
+```json
+{ "id": "ligar", "type": "ai_call", "position": {"x": 600, "y": 0},
+  "data": { "aiCallAgentId": 4, "aiCallInboxId": 82 } }
+```
+
+- `aiCallAgentId`: id de `lionchat_captain_call_agents_list`. O que a IA fala, a voz e o **tempo maximo** da ligacao
+  vem do agente (`max_duration_seconds`, 30-600 s; no tempo o motor desliga sozinho).
+- `aiCallInboxId`: id de `meta.dial_inboxes` da mesma lista (caixa com a ligacao ligada).
+- Saidas: `answered` (atendeu), `no_answer` (nao atendeu/recusou), `error` (nao deu pra ligar; motivo no historico).
+  `answered`/`no_answer` sem edge = o flow termina; `error` sem edge = execucao "Falhou".
+- Liga **uma vez**. Para insistir, outro `ai_call` depois de `no_answer` (com um `wait` no meio). **Nunca** ligue
+  `error` direto em outro `ai_call`.
+- Nao confere horario (use `condition` antes). Linha ocupada: espera a vez por ate 2 h (a IA sempre deixa uma vaga
+  para a equipe).
+- **Proibido** em flow `action`, em flow de grupo e em `ai_tool` (o save recusa). Id de outra conta tambem e recusado.
+
+**Receita — a IA de atendimento pede a ligacao:** etiqueta `ligar`; o cenario manda por a etiqueta quando o cliente
+pede para falar por telefone; flow `conversation` com gatilho `label_added` (`label_names: ["ligar"]`) -> action
+`remove_conversation_label` (`labels: ["ligar"]`) logo depois do start -> `ai_call`.
 
 ## 2-B. Três tipos de flow: `conversation`, `ai_tool` e `action`
 
@@ -1180,7 +1232,7 @@ Sempre presente:
 
 | Variável | Conteúdo |
 |---|---|
-| `{{trigger.type}}` | código do **EVENTO** que disparou — **NÃO é a chave do item do Início**. Valores reais: `message_created` (gatilho `message_received`), `message_sent`, `conversation_created`, `conversation_opened` (gatilho `conversation_reopened`), `conversation_resolved`, `label_added`, `label_removed`, `team_changed`, `assignee_changed`, `sla_missed`, `kanban_item_created`/`card_created`, `kanban_item_stage_changed`/`card_moved`, `card_status_changed` (`card_won` e `card_lost` — olhe `trigger.kind` ou o status do card), `conversation_attributes_changed`, `card_attributes_changed`, `contact_attribute_changed`, `group_participant_joined`/`_left`, `webhook_received`, `date_trigger`, `manual` (sidebar), `kanban_manual` (botão do card), `campaign` (Campanha de Fluxo), `page_track`, `activated_by_flow` (fluxo chamou fluxo), `lead_form` (os 3 gatilhos de formulário — `trigger.kind` diz `completed`/`milestone`/`abandoned`), `booking_created`/`booking_cancelled`/`booking_rescheduled`/`booking_completed`. Compare SEMPRE com esses códigos numa condição |
+| `{{trigger.type}}` | código do **EVENTO** que disparou — **NÃO é a chave do item do Início**. Valores reais: `message_created` (gatilho `message_received`), `message_sent`, `conversation_created`, `conversation_opened` (gatilho `conversation_reopened`), `conversation_resolved`, `label_added`, `label_removed`, `team_changed`, `assignee_changed`, `sla_missed`, `kanban_item_created`/`card_created`, `kanban_item_stage_changed`/`card_moved`, `card_status_changed` (`card_won`, `card_lost`, `card_opened` e `card_snoozed` — olhe `{{trigger.kanban.status}}`: `won`/`lost`/`open`/`snoozed`; rótulo "Situação do card mudou" desde 11/10/2026), `conversation_attributes_changed`, `card_attributes_changed`, `contact_attribute_changed`, `group_participant_joined`/`_left`, `webhook_received`, `date_trigger`, `manual` (sidebar), `kanban_manual` (botão do card), `campaign` (Campanha de Fluxo), `page_track`, `activated_by_flow` (fluxo chamou fluxo), `lead_form` (os 3 gatilhos de formulário — `trigger.kind` diz `completed`/`milestone`/`abandoned`), `booking_created`/`booking_cancelled`/`booking_rescheduled`/`booking_completed`. Compare SEMPRE com esses códigos numa condição |
 | `{{trigger.name}}` | rótulo legível do MESMO evento ("Mensagem recebida", "Card mudou de etapa") — use este pra ESCREVER pro cliente, e o `type` pra COMPARAR em condição |
 | `{{trigger.activated_at}}` | quando disparou (ISO 8601). Desde 20/08/2026 `name` e `activated_at` são preenchidos em TODOS os caminhos de disparo (antes só no de evento de conversa) |
 | `{{trigger.kanban_item_id}}` / `{{trigger.funnel_id}}` | só quando veio do Kanban |
@@ -1220,9 +1272,10 @@ Oferecidos no autocompletar (só quando o bloco Início tem o gatilho que os pre
 
 | Gatilhos do Início | Variáveis |
 |---|---|
-| `card_created`, `card_moved`, `card_won`, `card_lost`, `card_attribute_changed` | `{{trigger.kanban.title}}`, `{{trigger.kanban.funnel_name}}`, `{{trigger.kanban.stage_name}}`, `{{trigger.kanban.stage}}` (código da etapa) |
+| `card_created`, `card_moved`, `card_won`, `card_lost`, `card_opened`, `card_snoozed`, `card_attribute_changed` | `{{trigger.kanban.title}}`, `{{trigger.kanban.funnel_name}}`, `{{trigger.kanban.stage_name}}`, `{{trigger.kanban.stage}}` (código da etapa) |
 | `card_moved` | `{{trigger.kanban.previous_stage_name}}`, `{{trigger.kanban.previous_stage}}` |
-| `card_won`, `card_lost` | `{{trigger.kanban.status}}` (`won`/`lost`) |
+| `card_won`, `card_lost`, `card_opened`, `card_snoozed` | `{{trigger.kanban.status}}` (`won`/`lost`/`open`/`snoozed`) |
+| `card_opened` | `{{trigger.kanban.previous_status}}` (`snoozed` = voltou do adiamento; `won`/`lost` = reabriram um ganho/perdido) |
 | `label_added`, `label_removed` | `{{trigger.label.name}}` |
 | `assignee_changed` | `{{trigger.assignee.name}}` (vazio = responsável removido) |
 | `team_changed` | `{{trigger.team.name}}` (vazio = equipe removida) |
@@ -1235,7 +1288,7 @@ Resolvem mas NÃO aparecem no seletor (produtor único — só o gatilho daquela
 `{{trigger.eclinica.event|unit|date|time|compromisso|idagenda}}`, `{{trigger.lead.form|page|ad|adset|campaign|platform}}`
 (nome do anúncio, não dado de pessoa), `{{trigger.dtmf.key|campaign}}`, `{{trigger.reminder.date|time|compromisso|unit|days_before}}`,
 além de `{{trigger.kanban.id}}`/`funnel_id` (use `{{trigger.kanban_item_id}}`/`{{trigger.funnel_id}}`),
-`{{trigger.assignee.id}}`, `{{trigger.team.id}}`, `{{trigger.kanban.previous_status}}` e
+`{{trigger.assignee.id}}`, `{{trigger.team.id}}` (`{{trigger.kanban.previous_status}}` passou a ser oferecida no `card_opened`, 11/10/2026) e
 `{{trigger.group.participants_count}}`. As RESPOSTAS do lead do Meta não viram variável (só aparecem no
 histórico). Sessões anteriores a 22/08 não têm fatos gravados: essas variáveis saem vazias nelas.
 O bloco do card chama-se `kanban` — nunca `card`. Se o cliente precisar de um dado que não está aqui,
@@ -1280,7 +1333,7 @@ texto trocava o protocolo pelo id interno do banco.
     { "attr_key": "status", "attrSource": "conversation", "operator": "equal", "value": "cancelado" }
   ] }
 ```
-- `attrSource` (`'contact'`|`'conversation'`|`'card'`) VAI na rule (ao contrário do gatilho de entrada por atributo, onde é implícito).
+- `attrSource` (`'contact'`|`'conversation'`|`'card'`) VAI na rule (ao contrário do gatilho de entrada por atributo, onde é implícito). `'company'` NÃO vale aqui (só no bloco Condição): a regra de saída não lê a empresa.
 - `operator` (contexto REATIVO — desde 09/07 SEM `is_empty`/`is_not_empty`, que dispararia a cada evento; use-os só no nó Condição): `equal`/`not_equal`/`contains`/`not_contains`/`starts_with`/`ends_with`/`greater_than`/`less_than`/`number_range`. Multi-valor via `values: [...]` no lugar de `value`.
 - Reativa (09/07): só é reavaliada quando o atributo VIGIADO daquela rule realmente muda — não a cada mensagem. Cada rule exige `attr_key` + (`value` ou `values`); rule sem isso é ignorada.
 - `card` aceita `funnel_id`/`card_source` opcionais na rule.

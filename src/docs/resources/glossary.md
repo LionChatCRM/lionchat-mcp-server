@@ -214,6 +214,13 @@ comportamento intencional.
 - `funnel_stage`: nome da etapa atual (string)
 - `position`: ordem dentro da etapa (inteiro)
 - `stage_entered_at`: timestamp de quando entrou na etapa atual
+- Situação (11/10/2026): `item_details.status` guarda `open`/`won`/`lost`; a resposta traz também `effective_status`
+  (`open`, **`snoozed`** = adiado, `won`, `lost`) e `snoozed_until`. **Card adiado** = card aberto que sai da coluna até
+  uma data e volta sozinho nela ("Adiar até" na tela). Ferramentas `lionchat_kanban_items_snooze`/`_unsnooze`; regras
+  em kanban-deep-dive, seção "Card adiado".
+- Venda (13/10/2026): `item_details.attributed_to` = **vendedor** do ganho ("Atribuir ganho a");
+  `item_details.co_attributed_to` = **co-participante da venda** (ex.: o SDR), só em card ganho. Regras em
+  kanban-deep-dive, seção "Co-participante da venda".
 
 ### `item_details` (jsonb)
 ```json
@@ -528,6 +535,22 @@ cards daquele funil).
 A plataforma opera com 6 idiomas: `en`, `es`, `fr`, `it`, `pt`, `pt_BR` (default das contas
 brasileiras: pt_BR). Conta com idioma antigo/descontinuado cai em inglês. Notas internas geradas
 pela IA saem no idioma da conta.
+
+## Formulário do WhatsApp (WhatsappForm) — 17/10/2026
+
+Formulário NATIVO da Meta (WhatsApp Flows), preenchido DENTRO do WhatsApp e aberto por um botão FLOW num modelo
+de mensagem. Só caixa do WhatsApp Oficial. Montado no LionChat (2º tipo da área Formulários) e publicado na conta
+do WhatsApp do cliente. Ferramentas `lionchat_whatsapp_forms_*`; regras completas no resource
+`lionchat://docs/formularios-publicos`, seção "Formulário do WhatsApp". Três formulários que NÃO são a mesma coisa:
+**Formulário público** (LeadForm, página com link próprio), **Formulário do WhatsApp** (este) e **formulário de
+anúncio da Meta** (MetaLeadForm, Lead Ads).
+
+| Status | Significado |
+|---|---|
+| `draft` | rascunho, nunca publicado (pode excluir) |
+| `publishing` | publicação em andamento |
+| `published` | no ar; `unpublished_changes: true` = o rascunho mudou depois da última publicação |
+| `deprecated` | aposentado na Meta (irreversível); pode excluir |
 
 ## LeadForm (Formulário público de captação)
 

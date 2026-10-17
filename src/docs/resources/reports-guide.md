@@ -155,7 +155,8 @@ conversa antiga que NÃO aparece no relatório de hoje (régua antiga por criaç
 | "retrospectiva do ano" | `lionchat_reports_list_15` |
 | "satisfação", "CSAT", "nota dos clientes" | `lionchat_csat_metrics` |
 | "SLA", "cumprimento de prazo" (se a conta tiver Enterprise) | `lionchat_sla_metrics` |
-| "quantos agendamentos", "taxa de comparecimento", "agendamentos por tipo/atendente" | `lionchat_booking_reports` (ver "Agendamentos" no fim deste guia) |
+| "quantos agendamentos", "taxa de comparecimento", "agendamentos por tipo/atendente" | `lionchat_booking_reports` (ver "Agendamentos" no fim deste guia). Conta sem Booking (relatório zerado, compromissos marcados à mão na Agenda): `source=agenda` |
+| "vendas com SDR", "comissão dividida", "quanto cada SDR trouxe", "vendas sozinho x compartilhadas" | `lionchat_kanban_items_list_3` (`coParticipantRanking`; `include_shared_sales=true` para o quadro) e a lista `lionchat_kanban_items_shared_sales` — ver `lionchat://docs/filtros-e-relatorios` §4 |
 
 ---
 
@@ -523,7 +524,9 @@ mesma conta misturar duas lojas e não bater com o relatório da Meta. Com qualq
   `orphan_leads` (leads sem conversa ainda), `unique_leads` (deduplicados por TELEFONE),
   `won_leads` (leads em cards de estágio de Ganho) e `conversion_rate`.
 - `unclassified` — `{conversations, won, conversion_rate}` das conversas SEM origem (entram em `totals` mas nao em `by_platform`;
-  a venda de uma conversa iniciada pela propria empresa mora aqui).
+  a venda de uma conversa iniciada pela propria empresa mora aqui). Desde 16/10/2026 a conversa criada pelo nosso
+  lado (automação, fluxo, formulário) nasce com a origem que a ficha do contato já tinha; antes ela caía aqui
+  até o cliente responder. Vale só de hoje pra frente: as conversas antigas nesse caso continuam sem origem.
 - Arrays de quebra: `by_platform`, `by_kind`, `by_campaign`, `by_adset`, `by_creative`. Cada linha
   tem `{value, conversations, won, conversion_rate}`.
 
@@ -868,6 +871,12 @@ Resposta: `totals` (`total`, `pending`, `completed`, `cancelled`, `snoozed`, `at
 `attendance_rate`, `attendance_basis`), `timeline`, `by_event_type`, `by_agent`, `by_origin` e
 `treatments`.
 
+- **`source=agenda`** (14/10): troca a fonte para os compromissos marcados À MÃO na Agenda, sem
+  Booking — ligação, reunião, videochamada e tipos da conta (tarefa comum e evento do Google ficam
+  fora). Use quando a conta não usa Booking e o relatório normal vem zerado. Nessa opção o tipo vai em
+  `task_type` (não `event_type_id`; a lista vem em `appointment_types`), `by_agent` conta pelos
+  responsáveis (quem tem dois aparece nas duas linhas, os totais contam uma vez), `by_origin` vem vazio
+  e `treatments` vem nulo.
 - **`attended` / `no_show`** (15/09) são as marcas Compareceu/Faltou do compromisso
   (`account_tasks.attendance`), um eixo próprio: **não mudam a situação** — compromisso "faltou"
   continua `pending` até alguém concluir ou cancelar, igual a Agenda mostra.

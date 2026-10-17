@@ -418,6 +418,9 @@ Nas condições de automação, desambigue com `custom_attribute_type`:
 
 Sem o tipo, o filtro pode bater no escopo errado. A UI mostra sufixo "(Conversa)/(Contato)".
 
+Campo personalizado da EMPRESA do contato (desde 2026-10-16): `"custom_attribute_type": "company_attribute"`
+(a chave pode ser igual a de contato; o tipo decide). Na tela aparece no grupo "Atributos da empresa".
+
 ## Meta Lead e CAPI (2026-06)
 
 - Conexão Meta Lead agora é **por página selecionada** (a BM virou só rótulo — antes puxava todas
@@ -592,7 +595,8 @@ e o `{{meet_link}}` da mensagem de confirmação do Booking passaram a vir preen
 vazios) — isso vale inclusive para cliente que não usa IA.
 
 **3. A IA não confirma reunião que não existe.** No último instante antes da resposta virar
-mensagem: se ela afirma agendamento concluído, a agenda está liberada e não há compromisso real na
+mensagem: se ela afirma agendamento concluído, a agenda está liberada (a conta tem tipo de agendamento E o
+agente tem ao menos uma das 4 ferramentas de agenda ligada — desde 14/10) e não há compromisso real na
 conversa, o sistema roda UMA tentativa guiada que agenda de verdade com a data/hora prometidas.
 Agendou, sai a confirmação verdadeira; não agendou, a frase é trocada por uma honesta — nunca
 silêncio. Diagnóstico: se o cliente disser "a IA confirmou e não tem nada na agenda", esse é o
@@ -729,6 +733,8 @@ Fontes/campos disponíveis (`source` / `field`):
 | Equipe | conversation | team.name |
 | Nome da conta | account | name |
 | Campo personalizado | contact | custom_attributes.CHAVE |
+| Campo personalizado da EMPRESA do contato (2026-10-16) | company | custom_attribute.CHAVE |
+| Razão social / CNPJ / telefone / e-mail / cidade / estado da empresa | variable | contact.company.legal_name (ou .cnpj, .phone, .email, .address.city, .address.state) |
 
 Lembrete: todo template recém-criado pelo MCP só mostra o texto na tela depois de **sincronizar**
 (o MCP cria na Meta, mas o "puxar de volta" o conteúdo é o que a tela faz com o botão Sincronizar).

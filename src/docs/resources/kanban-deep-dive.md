@@ -141,6 +141,8 @@ Um card individual dentro de uma etapa.
 | `activities` | jsonb array — log de atividades |
 | `checklist` | **O que fica guardado:** jsonb array de tarefas do card (item: `text`/`completed`/`position` + `group_id`/`group_name` opcionais para agrupar). **O que a API devolve é OUTRA coisa** — ver o aviso logo abaixo |
 | `timer_started_at`, `timer_duration` | Timer interno do card |
+| `effective_status` | **Só na resposta, não é coluna (11/10/2026).** A situação EFETIVA do card: `open`, `snoozed` (adiado), `won` ou `lost`. `item_details.status` continua `open` num card adiado — quem quer saber se ele está adiado lê ESTE campo. Vem em `kanban_items_list`/`_show`/`_filter`/`_search`, na busca geral, na ficha do contato e no card embutido em `conversations_show`. Ver "Card adiado" no fim |
+| `snoozed_until` | **Só na resposta (11/10/2026).** Até quando o card está adiado (ISO 8601); `null` quando não está adiado |
 
 > **ATENÇÃO — na maioria das respostas o `checklist` NÃO é a lista de tarefas, e sim um resumo com
 > os números:** `{ total_count, completed_count, groups: [{ group_id, group_name, total_count,
@@ -198,9 +200,9 @@ Como gravar pelo `lionchat_kanban_items_update` (`kanban_item.item_details`):
 - Mandar objeto (`{"origem_lead": "Facebook Ads"}`) no lugar da lista **APAGA todos os campos do card**: o
   servidor só aceita itens `{name, type, value}` e o objeto vira vazio.
 - Lista fechada de chaves do `item_details` (outras são descartadas em silêncio): title, description, status,
-  reason, win_reason, loss_reason, attributed_to, duplicated_from_id, priority, value, currency,
-  custom_attributes, offers, closed_offers, closed_offer, deadline_at, scheduling_type, scheduled_at,
-  conversation_id, automations, notes.
+  reason, win_reason, loss_reason, attributed_to, co_attributed_to (13/10/2026, ver "Co-participante da venda"),
+  duplicated_from_id, priority, value, currency, custom_attributes, offers, closed_offers, closed_offer, deadline_at,
+  scheduling_type, scheduled_at, conversation_id, automations, notes.
 - Para mudar UM campo sem reenviar a lista, as ações de automação/macro `update_card_attribute`
   (`[{funnel_id, attribute_key: "<nome do campo>", value}]`) mexem só naquela entrada.
 
@@ -283,6 +285,10 @@ Log automático de eventos do card:
 ```
 
 Tipos comuns: `created`, `stage_changed`, `agent_assigned`, `agent_removed`, `note_added`, `value_changed`, `priority_changed`, `archived`.
+
+Desde 11/10/2026 também `item_snoozed` (o card foi adiado — leva `snoozed_until`) e `item_unsnoozed` (o card adiado
+abriu — leva `reason`: `person` = alguém abriu, `automation` = automação, macro ou fluxo, `due` = chegou a data; e a
+data que estava marcada).
 
 Quem fez: `by_user_id`/`user` traz a pessoa; ação de automação ou flow vem com o nome da regra/fluxo;
 ação da IA (desde 21/08/2026 — entra com o próximo deploy do app depois de 21/08/2026) vem como
@@ -503,7 +509,7 @@ PUT /api/v1/accounts/43/funnels/43
 | trigger_type | trigger_value |
 |---|---|
 | `card_created` | `"card_created"` (literal — NUNCA vazio) |
-| `status_change` | `"won"` ou `"lost"` |
+| `status_change` | `"won"`, `"lost"` ou `"snoozed"` (desde 11/10/2026: roda quando o card é ADIADO; trocar a data de um card já adiado NÃO roda de novo). NÃO existe `"open"` aqui |
 | `stage_moved` | chave da etapa de DESTINO no hash `funnel.stages` (ex. `"agendar_instalacao"` — a chave, NÃO o campo `id` interno) |
 
 **Ações (`action` + `action_config`):**
@@ -647,6 +653,9 @@ Cada card pode receber atributos custom de 3 origens diferentes. **A escolha do 
    `funnel_stage` com o slug que aparece em `kanban_items_show` e compare com `funnels_show`.
 3. `position` está faltando? (cards sem position vão pro fim)
 4. Está em outro funil? (mover entre funis muda `funnel_id`)
+5. Está **adiado**? (desde 11/10/2026) Card adiado sai da coluna e só aparece com o botão **Adiados** ligado no topo
+   do quadro. Confira `effective_status`/`snoozed_until` em `lionchat_kanban_items_show`: ele volta sozinho na data, ou
+   abra agora com `lionchat_kanban_items_unsnooze`. Ver "Card adiado" abaixo.
 
 ## Diagnóstico: "Valor do pipeline errado"
 
@@ -747,3 +756,77 @@ com o `retroativo_em` certo.
 
 A hora é montada em **UTC**, com o horário atual no dia escolhido. É o mesmo motivo do diagnóstico
 acima: o relatório compara o carimbo como texto, então a data escolhida tem que ser a data contada.
+
+## Card adiado — "Adiar até" (2026-10-11)
+
+O card ganha uma situação a mais: **Adiado** — "este negócio só volta a importar no dia X". Ele sai da coluna e, na
+data marcada, **abre sozinho** e volta para a coluna (disparando o fluxo "Card aberto", se houver).
+
+| Regra | Detalhe |
+|---|---|
+| O que é | Situação **do card**, não da conversa. Mensagem do cliente NÃO abre o card; adiar o card não mexe na conversa. |
+| Como fica gravado | `item_details.status` **continua `open`** — o adiamento mora numa tabela à parte (`kanban_item_snoozes`). Por isso o aplicativo de celular, os webhooks do cliente e a IA de atendimento continuam vendo `open`/`won`/`lost`. Para saber se está adiado, leia `effective_status` (`snoozed`) e `snoozed_until`. |
+| Quem pode | Quem pode editar o card. Só card **aberto** pode ser adiado (ganho/perdido = 422). |
+| Data | Pelo menos **1 hora** à frente (menos que isso = 422). Sem prazo máximo. Adiar um card já adiado **troca a data**. |
+| O que NÃO encerra | Mover de etapa ou de funil, editar, nota, tarefa, responsável. |
+| O que encerra | Marcar **ganho** ou **perdido** (por qualquer caminho); **abrir** de propósito (`lionchat_kanban_items_unsnooze`, `lionchat_kanban_items_create_2` com `status: "open"`, ação "Aberto" de automação/macro/fluxo); e a chegada da data. |
+| `status: "open"` no `lionchat_kanban_items_update` | **NÃO abre** card adiado (é o mesmo salvar que o aplicativo faz o tempo todo). Para abrir, use `lionchat_kanban_items_unsnooze` ou o `change_status`. |
+| Na data | O sistema abre o card numa rodada de até ~5 minutos depois da hora e dispara "Card aberto" **uma vez por card**. Esse fluxo entra na fila de disparos agendados: depois dos lembretes de consulta e, em caixa QR Code, no ritmo da caixa (um lote grande que vence junto sai aos poucos). |
+| "Criar card" acha um adiado | Trata como card que **já existe**: não cria outro, move se a etapa for diferente e **não muda a situação** (continua adiado). Vale para automação, macro, fluxo e IA. |
+
+**Ferramentas:**
+- `lionchat_kanban_items_snooze` — `POST .../kanban_items/{id}/snooze` com `snoozed_until`.
+- `lionchat_kanban_items_unsnooze` — `DELETE .../kanban_items/{id}/snooze` (abre agora e dispara "Card aberto").
+- Automações de dentro do funil (`settings.automations`): gatilho `status_change` com `trigger_value: "snoozed"`
+  ("Adiado" na tela do funil) roda quando o card passa de aberto para adiado.
+- Automação e macro: ação `snooze_kanban_item` — `[{"funnel_id": 31, "amount": 3, "unit": "days"}]` (`unit` `hours`
+  ou `days`; `amount` inteiro, 1 ou mais). Em regra de evento de CARD basta `[{"amount": 3, "unit": "days"}]` (o card
+  é o do evento). Diferente das outras ações de card, ela **falha visível** quando não dá para adiar (card fechado,
+  sem card no funil, tempo inválido) — nunca passa verde sem adiar.
+- Fluxo: ação `snooze_kanban_item`, gatilhos `card_opened` ("Card aberto") e `card_snoozed` ("Card adiado") e
+  condição `kanban_snoozed`. Ver o resource do FlowBuilder.
+
+**Onde o adiado aparece e como filtrar:**
+
+| Lugar | Comportamento |
+|---|---|
+| Quadro (`lionchat_kanban_items_list`) | Sem nenhum `show_*`, a lista traz TODAS as situações (o adiado vem com `status: "open"` e `effective_status: "snoozed"`). Com qualquer `show_*`: `show_open` vale `true` salvo se vier `"false"` (= aberto e **não** adiado) e `show_snoozed=true` inclui os adiados. **Só os adiados:** `show_snoozed=true` **e** `show_open=false`. Esta lista **ignora** `statuses`. |
+| Filtro rico (`lionchat_kanban_items_filter`), exportação e relatório da etapa | `statuses: ["open"]` = aberto e **não** adiado; `statuses: ["snoozed"]` = adiados. |
+| Ficha do contato (`lionchat_contacts_kanban_items_list`) | `status=snoozed` = adiados; `status=open` deixa os adiados de fora. |
+| Busca geral (`lionchat_search_kanban_items`) | `kanban_filters` com `statuses: ["snoozed"]`. |
+| Números | `lionchat_funnels_open_counts` conta aberto e **não** adiado. `lionchat_funnels_stage_report` traz a linha `snoozed` — mas esse relatório SEMPRE aplica os botões de situação com o padrão da tela: sem `show_*` conta só os abertos não adiados e as linhas `won`/`lost`/`snoozed` voltam zeradas (mande `show_won`/`show_lost`/`show_snoozed=true`). No relatório agregado (`lionchat_kanban_items_list_3`), `statusDistribution.open` **continua incluindo** os adiados (é a soma que o aplicativo lê) e `statusDistribution.snoozed` vem ao lado: abertos de verdade = `open − snoozed`. Parados, maiores negócios, ranking e previsão já deixam o adiado de fora. |
+| Histórico do card | `item_snoozed` (com a data) e `item_unsnoozed` (com o motivo). |
+
+**Laço de cadência é permitido:** um fluxo "Card aberto" que manda mensagem e adia de novo roda até alguém parar (no
+máximo uma volta por hora por card). Avise o cliente antes de montar. **Abrir à mão também dispara "Card aberto"**: se o
+fluxo manda mensagem, o cliente recebe na hora.
+
+## Co-participante da venda (vendedor + SDR) — 2026-10-13
+
+No ganho, além do vendedor (`attributed_to`, "Atribuir ganho a"), dá para marcar **UM co-participante** — ex.: o SDR
+que trouxe a venda. A venda conta INTEIRA para o vendedor; o co-participante tem números próprios no relatório.
+Marcar alguém como co-participante **não dá acesso ao card** nem o põe como responsável.
+
+**Como gravar:**
+- Junto com o ganho: `lionchat_kanban_items_create_2` (`change_status`) com `status: "won"` e `co_attributed_to: <id do
+  agente>`. Fora de `won` o parâmetro é ignorado.
+- Depois, num card JÁ ganho: `lionchat_kanban_items_update` com `kanban_item.item_details.co_attributed_to`. Para tirar,
+  mande `null`.
+- Mande SÓ o id (número). O nome (`co_attributed_name`) o próprio card preenche — nunca envie.
+- Objeto ou lista no lugar do id = 422 antes de gravar.
+
+**Recusas (422, com `error` legível):** id que não é número; pessoa que não é membro da conta; o próprio vendedor do
+card; pessoa sem acesso ao funil (vale: funil sem lista de agentes, agente da lista do funil ou dos times dele,
+administrador, ou quem já é responsável do card). A conferência só roda quando o valor MUDA — quem perdeu o acesso
+depois não trava outro salvamento.
+
+**O que mais saber:**
+- Reabrir ou marcar como perdido **apaga** o co-participante (o campo só existe em card ganho).
+- A ação "marcar como ganho" de fluxo, automação e macro NÃO marca co-participante (decisão do dono): ganho por ação
+  nasce sem ele, que entra depois pela tela, por `lionchat_kanban_items_update` ou pela planilha de "Importar vendas"
+  (coluna de co-participante, por nome ou e-mail).
+- Duplicar o card não copia o co-participante.
+- Histórico: marcado junto com o ganho vai dentro do registro da mudança de status; marcado depois gera
+  `co_participant_changed` (antes e depois, com nome e quem marcou).
+- Números: `coParticipantRanking`, `sharedSalesSummary`/`sharedSalesBySeller` (com `include_shared_sales=true`) no
+  relatório agregado e a lista `lionchat_kanban_items_shared_sales` — ver `lionchat://docs/filtros-e-relatorios` §4.

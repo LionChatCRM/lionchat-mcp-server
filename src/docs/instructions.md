@@ -18,8 +18,9 @@ Comprovado em produção (24/07): a sessão que dizia "não há função de list
 - **Famílias principais pra pesquisar:** conversations, conversations_messages, contacts,
   kanban_items, funnels, flows, flow_tools, campaigns, macros, automation_rules, agents, teams,
   inboxes, labels, canned_responses, reports, sla, csat, captain_assistants, captain_documents,
-  scheduled_messages, custom_attributes, webhooks, eclinica_integrations, tasks, notifications,
-  lead_forms (Formulários públicos de captação), signature_documents / signature_envelopes
+  scheduled_messages, custom_attributes, custom_attribute_categories (pastas dos atributos), webhooks, eclinica_integrations, tasks, notifications,
+  lead_forms (Formulários públicos de captação), whatsapp_forms (Formulário do WhatsApp — o nativo
+  da Meta, aberto por botão de modelo), signature_documents / signature_envelopes
   (assinatura ELETRÔNICA de contratos — modelos e contratos enviados).
 - **Fora do MCP por decisão do dono (19/08): assinatura DO PLANO (cobrança), plano, fatura, forma de
   pagamento, cartão, saldo e recarga.** (A assinatura ELETRÔNICA de contratos é outra coisa e TEM
@@ -84,6 +85,12 @@ Account (conta/empresa)
 
 ### KanbanItem.item_details.priority (string)
 - `urgent`, `high`, `medium`, `low`, `none`
+
+### Situação do card (desde 11/10/2026)
+- Gravada em `item_details.status`: `open`, `won`, `lost`. Na resposta vem também `effective_status`: `open`,
+  **`snoozed`** (adiado — o card sai da coluna até `snoozed_until` e volta sozinho), `won`, `lost`.
+- Adiar: `lionchat_kanban_items_snooze`. Abrir antes da data: `lionchat_kanban_items_unsnooze`. Regras em
+  `lionchat://docs/kanban-deep-dive`, seção "Card adiado".
 
 ### AccountUser.role (string)
 - `agent` (atendente comum)
@@ -424,6 +431,8 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 |---|---|---|
 | Listar / ver não lidas | `lionchat_conversations_list` (`conversation_type: 'unread'`) ou `lionchat_conversations_meta` | NÃO use `lionchat_conversations_unread` — é AÇÃO DE ESCRITA (marca como não-lida) |
 | Ver **uma empresa** (quem trabalha la, anotacoes, conversas) e ligar/tirar contatos | `lionchat_companies_show` + `lionchat_companies_contacts_list` / `_create` / `_destroy`, `lionchat_companies_notes_list`, `lionchat_companies_conversations_list` | Ligar pela ficha: `lionchat_contacts_update` com `company_id` (null tira). Cargo da pessoa = `additional_attributes.job_title`. Escolher a empresa troca o texto `company_name` pelo nome dela |
+| Criar / preencher **campo personalizado da empresa** ("Segmento", "Data de fundacao") | `lionchat_custom_attributes_create` com `attribute_model: company_attribute` + `lionchat_companies_update` com `company.custom_attributes {chave: valor}` | So com o modulo Empresas ligado; tipo segredo recusado. Chave que nao existe como atributo de empresa = 422 e nada do pedido grava: crie a definicao ANTES. MESCLA; `null` limpa. Desde 2026-10-16 vira variavel `{{contact.company.custom_attribute.CHAVE}}`, condicao do fluxo (`attrSource: company`), condicao de automacao e filtro de contatos (`custom_attribute_type: company_attribute`) e a IA le — detalhe no resource data-model |
+| Organizar atributos em **categorias** (pastas que abrem e fecham: "Sobre a casa", "Financeiro") | `lionchat_custom_attribute_categories_create` (`name` + `attribute_model`) e depois `lionchat_custom_attribute_categories_assign` (`attribute_key` + `category_id`; `null` tira) | Categoria e OPCIONAL e de UMA aba so (`conversation_attribute`, `contact_attribute`, `company_attribute` ou `kanban_item_attribute` = Card). Criar categoria NAO aceita atributos junto. Card: `attribute_key` = NOME do campo exatamente como gravado. Excluir categoria nunca apaga atributo (voltam para "Sem categoria"). Ver resource data-model |
 | Achar a conversa **de uma pessoa/empresa** (nome, telefone, e-mail, CPF/CNPJ, nº da conversa) | `lionchat_search_list` (`/search/conversations`) ou `lionchat_contacts_search` | RÁPIDO. **NÃO use `lionchat_conversations_search`**: apesar do nome, ele é o legado que procura dentro das mensagens e leva **15 a 22 s** (medido em produção 11/08). O sufixo `_list` aqui é histórico — `lionchat_search_list*` **são buscas**, não listagens; a regra "não baixe tudo com `*_list`" vale para `lionchat_<recurso>_list` |
 | Achar **onde foi dito** algo (palavra dentro da conversa) | `lionchat_search_list_2` (`/search/messages`) | RÁPIDO: índice trigram próprio e teto de tempo em duas fases (2 s / 2 s desde 04/09 — antes a 2ª fase herdava 14 s e o pior caso da seção era 16 s). Estourou as duas, o payload volta com `message_search_interrupted: true` e a lista VAZIA — isso NÃO quer dizer que não existe, quer dizer que não deu tempo: tente de novo. É a substituta certa do `lionchat_conversations_search` |
 | Não sei se o termo é nome de alguém ou algo dito no papo | `lionchat_search_search` (`/search`) | Cobre os dois numa chamada. Opção mais segura quando a intenção é ambígua |

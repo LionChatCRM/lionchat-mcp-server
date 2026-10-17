@@ -497,7 +497,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-09-29)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-17)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -511,12 +511,12 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 - ai_tool: ferramenta que o AI Agente invoca. Criar via lionchat_flow_tools_create (NAO flows_create!),
   com tool_name (snake_case, max 50) + tool_description (max 500). SEM inbox_ids. No 'end' OBRIGATORIO.
   Nodes permitidos em ai_tool: start, end, api, condition, set_variable, ai, randomizer, action,
-  send_message, note (SEM wait, wait_response, update_group). No action de ai_tool NAO use keys da
+  send_message, note (SEM wait, wait_response, update_group, ai_call). No action de ai_tool NAO use keys da
   aba Sistema (send_webhook/start_flow/send_conversion). Vincular ao assistente: POST /flow_tools/{id}/assistants.
   Testar: POST /flow_tools/{id}/run.
 - action (Fluxo de Acoes, 17/09/2026): NAO pertence a caixa nenhuma e roda em QUALQUER conversa de
   QUALQUER caixa — inclusive grupo. So executa acoes: NAO pode ter send_message, wait_response,
-  update_group nem end (a validacao recusa o save inteiro com "contains node types not allowed in
+  update_group, ai_call nem end (a validacao recusa o save inteiro com "contains node types not allowed in
   action flow"). Nodes permitidos: start, action, condition, wait, randomizer, api, ai,
   set_variable, note. Criar via lionchat_flows_create com flow_type:'action', SEM inbox_ids e SEM
   conversation_mode (o backend fixa 'individual'). Aceita os MESMOS gatilhos do conversation e roda
@@ -534,7 +534,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   e viaja no snapshot de versao; ferramenta que ja existe nao muda de comportamento.
 
 ═══ NODE GERAL ═══
-{ "id": "string-unico", "type": "start|send_message|wait_response|condition|action|api|set_variable|wait|randomizer|update_group|ai|end|note", "position": {"x":0,"y":0}, "data": { ... } }
+{ "id": "string-unico", "type": "start|send_message|wait_response|condition|action|api|set_variable|wait|randomizer|update_group|ai_call|ai|end|note", "position": {"x":0,"y":0}, "data": { ... } }
 (activate_flow existe como node LEGADO — nao crie novos; use action start_flow)
 
 ═══ NODE TYPES + source handles ═══
@@ -693,10 +693,19 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     date_trigger; para disparo em lote, campaign_trigger + Campanha de Fluxo.
     team_changed ({team_ids:[] de STRINGS, vazio = qualquer equipe}), assignee_changed ({agent_ids:[]
     STRINGS, vazio = qualquer atendente}), card_won/card_lost ({funnel_ids:[] STRINGS} — disparam SO quando
-    o STATUS do card vira ganho/perdido, nunca por etapa com esse nome). page_track (LionTrack, so flow
+    o STATUS do card vira ganho/perdido, nunca por etapa com esse nome).
+    card_opened/card_snoozed (NOVOS 11/10/2026, mesma config {funnel_ids:[] STRINGS}): card_snoozed = o card
+    foi ADIADO; card_opened = um card adiado ABRIU (pela data, por alguem ou por automacao) ou um card
+    ganho/perdido foi REABERTO — card NOVO nao dispara (isso e card_created). Pela data o fluxo sai pela fila
+    de disparos agendados (depois dos lembretes; em caixa QR Code no ritmo da caixa), uma vez por card;
+    {{trigger.kanban.previous_status}} (snoozed/won/lost) separa os casos. page_track (LionTrack, so flow
     individual): {track_type:'visited_page'|'event_fired', urls:[...], operator:'contains'|'exact'|
     'starts_with', event_names:[...], event_operator:'equals'|'contains', cooldown_hours (default 24,
     minimo 1 — nao re-dispara pro mesmo contato dentro da janela)}.
+    whatsapp_form_answered (NOVO 17/10/2026): o cliente RESPONDEU um Formulario do WhatsApp (formulario nativo
+    da Meta, ferramenta whatsapp_forms_list). Config {whatsapp_form_id: '<id do NOSSO formulario, STRING>'} —
+    vazio/ausente = qualquer formulario. Dispara na conversa da resposta, DEPOIS do "Salvar em" do formulario
+    (o fluxo ja le o dado gravado); repetir o processamento nao abre o fluxo duas vezes.
     NOVO message_sent (2026-06-11): par do message_received pra mensagens de
     SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
     'desativar IA' com esse trigger sem keywords = a propria resposta da IA dispara o flow.
@@ -820,6 +829,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
        salvar o flow pela tela nesse estado, a regra e PERDIDA. (Excecoes que nao usam field/valueType
        "variable": regras por attr_key/attrSource="attr_config", business_hours, can_reply, sla_check,
        kanban_*, conversation_has_agent/no_agent, pagetrack_*.)
+  EMPRESA DO CONTATO (NOVO 16/10 — card "Atributo da empresa", so com o modulo Empresas): regra
+    { id, valueType:'attr_config', attrSource:'company', attr_key, operator, value:'', values:[...] }.
+    attr_key = chave do campo PERSONALIZADO da empresa OU cadastro com prefixo: company.name,
+    company.legal_name, company.cnpj (comparado so por digitos), company.phone, company.email,
+    company.address.city, company.address.state. Empresa = a do contato da conversa (no maximo UMA).
+    Contato sem empresa = valor vazio (not_equal/is_empty casam). Modulo desligado = NUNCA casa, nem a
+    negativa. attrSource fora de contact/conversation/card/company NAO casa. Variaveis da empresa em
+    mensagem: {{contact.company.name}} ... {{contact.company.custom_attribute.<chave>}}.
   ORIGEM / CAMPANHA (NOVO 01/09 — preset "Atributo de campanha" da tela): regra de atributo da CONVERSA:
     { id, valueType:'attr_config', attrSource:'conversation', attrScope:'campaign', attr_key:'origin_kind',
       operator:'equal', value:'', values:['paid_ad'] }
@@ -841,7 +858,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Chaves de campanha: origin_kind, origin_platform, origin_first_kind/_platform, origin_last_kind/_platform,
     ctwa_* (anuncio click-to-WhatsApp: ctwa_ad_id, ctwa_ad_title, ctwa_campaign_name, ctwa_adset_name...),
     meta_lead_* (formulario Meta Lead Ads), lt_* (LionTrack: UTMs, pagina, dispositivo). Lista real:
-    lionchat_custom_attributes_list {attribute_model:'conversation', include_system:true}.
+    lionchat_custom_attributes_list {attribute_model:'conversation_attribute', include_system:true} (com o sufixo: so 'conversation' devolve lista VAZIA).
     VALORES FECHADOS de origin_kind (e first/last): paid_ad (Anuncio), lead_form (Formulario), organic
     (Organico), direct (Direto), referral (Indicacao), manual (Origem cadastrada) — compara pelo VALOR, nunca
     pelo rotulo ("Anuncio" nunca casa). origin_platform: facebook, instagram, google, tiktok, linkedin, youtube,
@@ -883,13 +900,14 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       field JUNTOS — conversa usa field '{{conversation.label}}', contato usa '{{contact.label}}';
       a tela reabre a regra casando o par, e condicao escrita so com operator roda certa mas
       APARECE errada pro cliente. Mesma regra vale pros pares kanban_exists/kanban_in_stage
-      (fields '_kanban_check'/'_kanban_stage'), kanban_won/kanban_lost (field '_kanban_status') e
+      (fields '_kanban_check'/'_kanban_stage'), kanban_won/kanban_lost/kanban_snoozed (field '_kanban_status') e
       resposta do cliente/do atendente (fields '{{last_response}}'/'{{last_agent_response}}')),
-    kanban_exists/kanban_in_stage/kanban_won/kanban_lost (funnel_id e CHAVE SEPARADA da condicao,
+    kanban_exists/kanban_in_stage/kanban_won/kanban_lost/kanban_snoozed (funnel_id e CHAVE SEPARADA da condicao,
       numero ex funnel_id:37; a etapa vai em value=slug puro ex value:"avaliacao_aceita" ou em stage,
       NAO no formato "37:etapa"), pagetrack_visited/pagetrack_event,
       Desde 20/08 as 4 condicoes kanban_* enxergam o card da conversa ATUAL ou o card cuja conversa de
       ORIGEM e a atual (card religado pra conversa mais nova) — antes "nao tem card" na conversa velha.
+      kanban_snoozed (NOVO 11/10/2026) = o card esta ADIADO naquele funil; nao existe condicao "card aberto".
     sla_check (SO value, codigo fixo: frt_breached/frt_ok/nrt_breached/nrt_ok/rt_breached/rt_ok/has_sla/no_sla;
       frt=primeira resp, nrt=proxima, rt=resolucao; _ok exige politica de SLA aplicada),
     signature_status (NOVO 2026-09-14 — aba "Contrato" da tela; SO value, codigo fixo:
@@ -955,7 +973,12 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         — funnel_id e funnel_stage OBRIGATORIOS; title/description aceitam {{ }},
       move_kanban_stage({funnel_id,funnel_stage}), set_kanban_item_status({status:won|lost|active}),
       set_won({}), set_lost({reason?}), add_card_note({text}),
-      set_open({}) — reabre card ganho/perdido (status open; nao mexe nos responsaveis),
+      set_open({}) — reabre card ganho/perdido (status open; nao mexe nos responsaveis); num card ADIADO
+        abre o card na hora e dispara "Card aberto" (desde 11/10/2026),
+      snooze_kanban_item({funnel_id, amount, unit:'hours'|'days', card_source?}) — NOVO 11/10/2026: ADIA o card
+        por N horas ou dias a partir da execucao (amount inteiro >= 1; minimo 1 hora); so card aberto; adiar de
+        novo troca a data. Card ganho/perdido, sem card no funil ou card_source 'trigger' em fluxo que nao veio
+        de card = ERRO visivel no passo (nunca pulado, ao contrario das irmas de card),
       // title/description de create_kanban_item e text de add_card_note resolvem pelo resolvedor do
       //   FLUXO desde 20/08: {{conversation.id}} = numero da tela e variaveis da sessao valem ali
       assign_agent_card({agent_id, mode?}) — RESPONSAVEL DO CARD. mode (NOVO 2026-07-28):
@@ -1017,9 +1040,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         [x]" / "Meta: erro (...)" — o [evento] no fim diz qual nome foi pra cada destino.
         Falha de um destino nunca derruba o fluxo. Dry-run nao dispara.
   card_source (acoes de card): 'funnel' (default, acha o card pelo funnel_id) | 'trigger' (usa o card
-    que DISPAROU o flow em card_created/card_moved/card_won/card_lost). Com 'trigger' o funnel_id e
+    que DISPAROU o flow em card_created/card_moved/card_won/card_lost/card_opened/card_snoozed). Com 'trigger' o funnel_id e
     ignorado — EXCETO create_kanban_item/move_kanban_stage (funil = DESTINO). Vale pra move_kanban_stage,
-    set_won/set_lost/set_open, assign_agent_card, add_card_note, add_card_checklist, add_card_offer e
+    set_won/set_lost/set_open, snooze_kanban_item (sem card-gatilho = ERRO, nao pula), assign_agent_card, add_card_note, add_card_checklist, add_card_offer e
     update_attribute (attr_source:'card').
   Handles: "success" (sem handle error — falha vira warning e o flow continua).
 
@@ -1105,6 +1128,24 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     Com pesos iguais os dois dao o mesmo resultado.
   Handles: o id de cada branch (mode branches); "success" (mode distribute_agents).
 
+▸ ai_call ("Ligar com IA", 17/10/2026 — so em conta com ai_calling + lioncalls_calling)
+  A IA liga para o TELEFONE DO CONTATO da conversa do fluxo pela linha de ligacao do WhatsApp (LionCalls).
+  data: { aiCallAgentId: <id de lionchat_captain_call_agents_list>, aiCallInboxId: <id de meta.dial_inboxes> }
+  (aiCallAgentName/aiCallInboxName sao opcionais, so pro resumo do card). O que a IA fala, a voz e o TEMPO
+  MAXIMO da ligacao vem do agente de ligacao (max_duration_seconds, 30-600 s): no tempo o motor desliga sozinho.
+  Handles: "answered" (a pessoa atendeu), "no_answer" (nao atendeu ou recusou), "error" (nao deu pra ligar:
+  sem telefone, linha desconectada, agente apagado, linha ocupada por mais de 2 h — o motivo vai no historico).
+  answered/no_answer SEM fio = o fluxo termina ali; error SEM fio = execucao "Falhou".
+  Liga UMA vez (para insistir: outro ai_call depois de "no_answer", com um wait no meio). NUNCA ligue "error"
+  direto em outro ai_call (em alguns erros nao da pra saber se a ligacao saiu). Nao confere horario: use um
+  condition antes. A IA so liga se sobrar uma vaga na linha para uma pessoa; senao espera a vez (fila por
+  ordem de chegada, ate 2 h). O card da ligacao vai para a conversa do lead na caixa da linha.
+  PROIBIDO em flow 'action', em flow de GRUPO e em ai_tool (o save recusa); id de agente/caixa de OUTRA conta
+  tambem e recusado. Agente apagado ou caixa excluida NAO travam o save — falham na execucao.
+  Receita "a IA de atendimento pede a ligacao" (sem ferramenta nova): cenario manda por a etiqueta 'ligar';
+  flow conversation com gatilho label_added 'ligar' -> action remove_conversation_label 'ligar' (LOGO depois
+  do start) -> ai_call.
+
 ▸ update_group (Gestao de Grupos WhatsApp — UMA operacao por bloco, 18 operacoes)
   Roda em fluxo de QUALQUER canal desde que a conta tenha caixa WhatsApp QR Code (Channel::Waha).
   Em flow de GRUPO o campo de caixa e opcional (vazio = caixa da conversa); em flow NAO-grupo
@@ -1129,7 +1170,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     list_participants -> (groupTargetId) -> id,participants(ate 100; participants_truncated=true se cortou),participants_count
     add_participants  -> groupParticipants(obrig; array de telefones/JIDs ex ['5511999999999@c.us'] ou lista por virgula; aceita {{var}}) -> id,added,not_added,added_count,not_added_count,no_whatsapp,invited,invite_status  [risco de banimento]
                          mesma correcao do 9o digito do create (21/08). added = quem esta no grupo agora (inclui quem ja estava); ninguem entrou = saida "error" (nobody_changed); parte entrou = "partial"
-    remove_participants -> groupParticipants(obrig) -> id,removed,not_removed,removed_count,not_removed_count (ninguem saiu = "error"; parte = "partial")
+                         DESDE 09/10/2026 reconhece quem o WhatsApp devolve SO com o codigo interno (@lid, sem telefone — o normal para quem ACABOU de ser colocado): antes acusava nobody_changed/not_added com a pessoa DENTRO do grupo (e o create dava "partial" falso). Sem resposta do motor = conta como NAO colocado
+    remove_participants -> groupParticipants(obrig) -> id,removed,not_removed,removed_count,not_removed_count (ninguem saiu = "error"; parte = "partial"; desde 09/10/2026 tambem reconhece quem esta so com o codigo interno — antes dava SUCESSO falso)
     promote_admin     -> groupParticipants(obrig) -> id,participants
     demote_admin      -> groupParticipants(obrig) -> id,participants
     get_invite        -> (groupTargetId) -> id,invite_link
@@ -1151,6 +1193,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     'sem_mensagem'. EFEITO COLATERAL: cada convite entregue vira contato + conversa NOVOS no painel e
     dispara os ouvintes de conversation_created (automacao, outros flows, webhook do cliente, Kanban).
   Toda operacao (menos send_message e send_private_message) tambem devolve {{grupo.ok}} (bool) e {{grupo.error.message}}.
+  HISTORICO (09/10/2026): nas operacoes com groupParticipants o passo do historico (NAO a variavel {{grupo.*}})
+    traz participant_sources: [{number, source (a LINHA do campo de onde o numero saiu), typed (true = digitado,
+    sem variavel), informed? (o numero como foi escrito, quando o WhatsApp usa outra forma), filled_by?/filled_at?
+    (linha que e UM atributo personalizado sozinho: quem gravou e quando)}]. So anotacao: nunca muda o pedido;
+    origem e autor podem faltar, nunca saem errados.
   Handles: "success", "error" + "partial" em create/add_participants/remove_participants (a operacao
     rodou mas nem todo mundo entrou/saiu — listas not_added/not_removed dizem quem). "partial" sem fio
     segue pelo fio "success" (unica saida com esse fallback no motor).
@@ -1176,6 +1223,7 @@ condicao bater, o lead sai do flow NA HORA. Cada item tem "type":
 - Rico por atributo (novo 2026-07-08; REATIVO desde 2026-07-09):
   {type:'attribute_condition', logic:'and'|'or', rules:[{attr_key, attrSource:'contact'|'conversation'
    |'card', operator, value | values:[...], funnel_id?, card_source?}]}.
+  attrSource 'company' NAO vale aqui (so no node condition): a regra de saida nao le a empresa.
   AQUI o attrSource VAI na rule (ao contrario do gatilho de entrada por atributo, onde e implicito).
   Operadores da condition EXCETO is_empty/is_not_empty (removidos do contexto reativo 09/07 — use so
   no node condition); reativa: so reavalia quando o atributo VIGIADO muda; cada rule exige value|values;
@@ -1213,12 +1261,13 @@ trigger.* (variaveis do GATILHO que iniciou o flow — no autocomplete de TODO b
     message_created (gatilho message_received), message_sent, conversation_created, conversation_opened
     (gatilho conversation_reopened), conversation_resolved, label_added, label_removed, team_changed,
     assignee_changed, sla_missed, kanban_item_created/card_created, kanban_item_stage_changed/card_moved,
-    card_status_changed (card_won e card_lost — olhe trigger.kind ou o status do card), conversation_
+    card_status_changed (card_won/card_lost/card_opened/card_snoozed — olhe trigger.kanban.status:
+    won/lost/open/snoozed; rotulo "Situacao do card mudou" desde 11/10/2026), conversation_
     attributes_changed, card_attributes_changed, contact_attribute_changed, group_participant_joined/left,
     webhook_received, date_trigger, manual (sidebar), kanban_manual (botao do card), campaign (Campanha de
     Fluxo), page_track, activated_by_flow (fluxo chamou fluxo), lead_form (os 3 gatilhos de formulario —
     trigger.kind diz completed/milestone/abandoned), booking_created/booking_cancelled/booking_rescheduled/
-    booking_completed. Compare SEMPRE com esses codigos numa condicao.
+    booking_completed, whatsapp_form_answered. Compare SEMPRE com esses codigos numa condicao.
   trigger.name (rotulo legivel, pra escrever pro cliente), trigger.activated_at (ISO) — desde 20/08
     preenchidas em TODOS os caminhos de disparo (antes so no de evento de conversa).
   trigger.data = o contexto inteiro em JSON (menos type/name/activated_at) — util em node api/ai.
@@ -1233,13 +1282,16 @@ trigger.* (variaveis do GATILHO que iniciou o flow — no autocomplete de TODO b
   Cada uma so tem valor quando o gatilho fornece — fora disso resolve vazio.
   FATOS do gatilho viraram variaveis (08/09/2026, no ar desde 10/09): {{trigger.<bloco>.<campo>}}, so
     quando o Inicio tem o gatilho que os preenche — card_created/card_moved/card_won/card_lost/
-    card_attribute_changed: trigger.kanban.title, trigger.kanban.funnel_name, trigger.kanban.stage_name,
+    card_opened/card_snoozed/card_attribute_changed: trigger.kanban.title, trigger.kanban.funnel_name, trigger.kanban.stage_name,
     trigger.kanban.stage (codigo da etapa); card_moved: trigger.kanban.previous_stage_name/previous_stage;
-    card_won/card_lost: trigger.kanban.status (won/lost); label_added/label_removed: trigger.label.name;
+    card_won/card_lost/card_opened/card_snoozed: trigger.kanban.status (won/lost/open/snoozed);
+    card_opened: trigger.kanban.previous_status (snoozed = voltou do adiamento; won/lost = reabriram); label_added/label_removed: trigger.label.name;
     assignee_changed: trigger.assignee.name (vazio = responsavel removido); team_changed: trigger.team.name;
     sla_missed: trigger.sla.policy_name/type (frt/nrt/rt); group_participant_joined/left:
     trigger.group.name/id, trigger.participant.phone/name (16/09 — QUEM entrou/saiu, telefone com +;
-    nome so se a pessoa ja e contato; evento com varias pessoas = a 1a). Resolvem mas ficam FORA do seletor (produtor unico): trigger.attribute.name/
+    nome so se a pessoa ja e contato; evento com varias pessoas = a 1a); whatsapp_form_answered (17/10):
+    trigger.form.name, trigger.form.id e trigger.form.f_<n> = a resposta de cada pergunta ja em texto (opcao pelo
+    nome, data DD/MM/AAAA, Sim/Nao, "N arquivos: nomes"; codigos em whatsapp_forms_list com with_questions=true). Resolvem mas ficam FORA do seletor (produtor unico): trigger.attribute.name/
     current_value, trigger.form.name/milestone, trigger.payment.gateway/event/product/offer/method/status/
     amount, trigger.eclinica.event/unit/date/time/compromisso/idagenda, trigger.lead.form/page/ad/adset/
     campaign/platform, trigger.dtmf.key/campaign, trigger.reminder.date/time/compromisso/unit/days_before.
