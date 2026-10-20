@@ -497,7 +497,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-17)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-20)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -512,7 +512,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   com tool_name (snake_case, max 50) + tool_description (max 500). SEM inbox_ids. No 'end' OBRIGATORIO.
   Nodes permitidos em ai_tool: start, end, api, condition, set_variable, ai, randomizer, action,
   send_message, note (SEM wait, wait_response, update_group, ai_call). No action de ai_tool NAO use keys da
-  aba Sistema (send_webhook/start_flow/send_conversion). Vincular ao assistente: POST /flow_tools/{id}/assistants.
+  aba Sistema (send_webhook/start_flow/send_conversion) nem create_account_task. Vincular ao assistente: POST /flow_tools/{id}/assistants.
   Testar: POST /flow_tools/{id}/run.
 - action (Fluxo de Acoes, 17/09/2026): NAO pertence a caixa nenhuma e roda em QUALQUER conversa de
   QUALQUER caixa — inclusive grupo. So executa acoes: NAO pode ter send_message, wait_response,
@@ -999,6 +999,24 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         evento, sem laco). 'cancelled' cancela o AGENDAMENTO (desarma lembrete, mata o link de gerenciar).
         Origem gravada = 'fluxo', ator = o proprio flow. Sem 'remarcado'/'adiado'/'nao confirmado': o bloco NAO
         mexe em data.
+    Tarefa (aba Agenda; exige a Agenda unificada ligada na conta; NAO roda em fluxo ai_tool nem em fluxo de grupo —
+      o save aceita, o motor recusa com ERRO visivel no passo e a tela esconde o item):
+      create_account_task({title, description?, task_type, agenda_id?, priority?, occupies_agenda?,
+        due:{amount, unit:'hours'|'days', at?:'HH:MM', business_days?:true},
+        responsible:{mode:'card_owner'|'fixed'|'funnel_rotation'|'team_rotation', user_id?, team_id?, fallback_user_id?},
+        card_source:'funnel'|'trigger', funnel_id?}) — NOVO 20/10/2026 ("Criar tarefa"): cria uma tarefa COMUM da
+        Agenda presa ao card do fluxo (ou so a conversa, se nao houver card). Os campos de title a occupies_agenda
+        sao os MESMOS da acao create_task do funil (settings.automations): title obrigatorio; due em horas (1 a 720)
+        ou dias (0 a 365; at e business_days SO em dias; dia util = segunda a sexta sem feriado de DIA INTEIRO da
+        agenda da tarefa); responsible.mode exige a chave do modo (card_owner -> fallback_user_id; fixed -> user_id;
+        team_rotation -> team_id; funnel_rotation nenhuma no save, mas SEM card cai em fallback_user_id,
+        e sem ele a tarefa nao nasce). card_source 'trigger' = o card que INICIOU o fluxo (fluxo
+        que nao veio de card = ERRO); 'funnel' (padrao da tela) = o card DESTA conversa no funil funnel_id
+        (OBRIGATORIO neste modo; funil ausente ou inexistente = erro; conversa sem card naquele funil = tarefa so na
+        conversa, passo verde "sem card"). Regra torta = passo VERMELHO com o campo a consertar. Uma tarefa por
+        PASSAGEM do bloco (repeticao do mesmo passo nao duplica). Freio de 1 tarefa por segundo por conta (passo com
+        vaga futura fica verde "nasce as HH:MM:SS"). Quem agendou = o Fluxo (booking_source 'fluxo'); o historico do
+        card diz "Fluxo X criou uma tarefa ..." / "Fluxo X nao criou a tarefa: motivo".
     Sistema (SO flow conversation e flow action): send_webhook({url,headers?,body?}), start_flow({flow_id}
       — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save mas IGNORADO
       EM SILENCIO na execucao, e o fluxo para ali [2026-08-18].
@@ -1042,7 +1060,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   card_source (acoes de card): 'funnel' (default, acha o card pelo funnel_id) | 'trigger' (usa o card
     que DISPAROU o flow em card_created/card_moved/card_won/card_lost/card_opened/card_snoozed). Com 'trigger' o funnel_id e
     ignorado — EXCETO create_kanban_item/move_kanban_stage (funil = DESTINO). Vale pra move_kanban_stage,
-    set_won/set_lost/set_open, snooze_kanban_item (sem card-gatilho = ERRO, nao pula), assign_agent_card, add_card_note, add_card_checklist, add_card_offer e
+    set_won/set_lost/set_open, snooze_kanban_item (sem card-gatilho = ERRO, nao pula), create_account_task (idem: ERRO), assign_agent_card, add_card_note, add_card_checklist, add_card_offer e
     update_attribute (attr_source:'card').
   Handles: "success" (sem handle error — falha vira warning e o flow continua).
 

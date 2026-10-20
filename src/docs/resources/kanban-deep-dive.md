@@ -16,7 +16,7 @@ Container de etapas. Conta pode ter vários funis (ex: "Vendas", "Pós-venda", "
 | `archived` | Boolean — funis arquivados não aparecem na UI ativa |
 | `active` | Boolean — controla se aceita movimentação |
 | `settings` | jsonb — config customizada (ex: cores, automações) |
-| `settings.agents` | agentes do funil. Grave `[{"id": <id do agente>}]` — cada item é um OBJETO, nunca número solto (ids de `lionchat_agents_list`); o sistema completa nome, e-mail, cargo e foto — é o que o editor do funil, o card e a conversa mostram. Agente de outra conta fica sem nome e sem acesso. `settings` é substituído INTEIRO no update: leia o funil antes e reenvie goals+agents+teams+automations. |
+| `settings.agents` | agentes do funil. Grave `[{"id": <id do agente>}]` — cada item é um OBJETO, nunca número solto (ids de `lionchat_agents_list`); o sistema completa nome, e-mail, cargo e foto — é o que o editor do funil, o card e a conversa mostram. Agente de outra conta fica sem nome e sem acesso. `settings` é substituído INTEIRO no update: leia o funil antes e reenvie goals+agents+teams+automations. `settings.removed_stages` (lista das etapas já excluídas, usada para redirecionar cards) é do SERVIDOR: se você mandar essa chave ela é ignorada, sem erro, e o servidor a mantém sozinho. |
 
 ### Stages (Etapas) — dentro de `funnel.stages`
 
@@ -55,10 +55,54 @@ Stages NÃO são tabela separada. São armazenadas como jsonb dentro do Funnel:
   da mesma posição, senão pra primeira. **Confira o `funnel_stage` da resposta**: pode ser diferente
   do que você mandou. Leia `funnels_show` antes e use o slug exato.
 - `funnels_update` que tira do `stages` uma etapa com card responde **422 `STAGE_HAS_ITEMS`** com
-  `stages: {"<slug>": <quantos cards>}`. Primeiro mova os cards com `lionchat_funnels_create_2`
-  (`POST /funnels/{id}/migrate_stage`, `from_stage`, `to_stage` ou `to_funnel_id`) e só então
-  reenvie o funil sem a etapa. Não existe parâmetro de destino no `update` de propósito.
+  `stages: {"<slug>": <quantos cards>}`. **Para EXCLUIR uma etapa que tem cards, use
+  `lionchat_funnels_remove_stage`** (`POST /funnels/{id}/remove_stage`, ver "Excluir etapa" abaixo): ela move
+  os cards para o destino EM SILÊNCIO e apaga a etapa. **Não** use a receita antiga (mover com `migrate_stage` e depois reenviar
+  o funil sem aquela etapa) — o `migrate_stage` (`lionchat_funnels_create_2`) NÃO exclui a etapa: move os
+  cards DISPARANDO tudo o que está ligado ao destino (automações do funil, regras, fluxos, webhooks, conversões)
+  e a etapa de origem continua no funil, só vazia. Usar `migrate_stage` para "limpar antes de excluir" dispara
+  automação e aviso ao cliente por card movido.
 - Funil apagado continua sendo erro (o card não é criado).
+
+### Excluir etapa (20/10/2026) — `lionchat_funnels_remove_stage`
+
+`POST /funnels/{id}/remove_stage` com `from_stage` (CHAVE da etapa a excluir), `to_funnel_id` (obrigatório; pode ser o
+próprio funil) e `to_stage` (CHAVE do destino). Os cards **mudam de etapa e não são apagados**; nada dispara (nenhuma
+automação do funil, regra, fluxo, webhook, conversão nem aviso ao cliente). Desde 20/10/2026 o card passa a contar o
+tempo na etapa nova **a partir da exclusão** (`stage_entered_at` = o instante da exclusão; antes mantinha a data): é o
+que mantém os relatórios de meses passados mostrando cada card onde ele estava ("etapa removida"). Exige
+administrador ou a permissão "gerenciar funis" (sem ela: **401**; vale também para o `migrate_stage`).
+
+**Como a IA deve usar:**
+
+1. `lionchat_funnels_show` para pegar as chaves; conte os cards com `lionchat_funnels_stage_report` (id do funil + a
+   chave em `stage`, com `show_won`, `show_lost` e `show_snoozed` = `true` — sem isso o relatório conta só os abertos
+   não adiados e a etapa parece ter menos cards do que vai mover).
+2. Diga ao usuário quantos cards vão para onde e que a etapa será excluída; **peça o OK uma vez**.
+3. Chame com `confirm: true` — **toda** chamada leva `confirm: true`, inclusive a primeira. A ferramenta trabalha em
+   pedidos curtos (cerca de 8 segundos de cards por pedido, lotes de 125): **repita a chamada, sem perguntar de novo,
+   até vir `done: true`**.
+
+**Respostas:**
+
+| Resposta | Significa |
+|---|---|
+| `200 {done: true, moved, stage_removed: true, funnel}` | Terminou. `moved` é o TOTAL da exclusão inteira |
+| `200 {done: true, moved: 0}` (sem `stage_removed`) | A etapa já estava excluída para o mesmo destino (fim normal, por exemplo repetição do pedido) |
+| `200 {done: false, moved, remaining, reason}` | Ainda falta. `moved` é só deste pedido. `remaining` = cards que faltam; **nulo** = a contagem não coube no tempo (não é erro, repita); **100001** = "mais de 100 mil" |
+
+`reason` quando `done: false`: `tempo` = repita agora; `travado` ou `faxina` = o banco estava ocupado, espere ~30 s e
+repita; `destino_excluido` = a etapa de destino deixou de existir, pergunte ao usuário outro destino; `assumido` =
+OUTRA pessoa assumiu a exclusão desta etapa (vêm `holder_name` e `to_stage_name`, que podem ser nulos): avise quem está
+excluindo e para onde (sem nome, diga só "outra pessoa está excluindo esta etapa") e **pare, não repita**. Duas
+respostas seguidas com `moved: 0` e `done: false` = algo está preso: **pare e avise**.
+
+**Erros:** `422 {error, code}` com `code` = `DESTINATION_NOT_FOUND`, `SAME_STAGE`, `LAST_STAGE` (o funil precisa ficar
+com pelo menos uma etapa), `ORIGIN_NOT_FOUND`, `STAGE_ALREADY_REMOVED_BY_OTHER`, `FINAL_SAVE_FAILED` (os cards já
+foram movidos mas o funil não pôde ser salvo) e `FUNNEL_INVALID` — o texto de `error` já vem no idioma da conta,
+mostre-o ao usuário. `409 STAGE_REMOVAL_IN_PROGRESS` = outra pessoa está excluindo esta etapa agora (`holder_name` e
+`to_stage_name` podem ser nulos): avise e pare. **Qualquer Salvar do funil (com ou sem `stages`) também pode dar `409 FUNNEL_BUSY`**
+(o funil está sendo alterado agora, por outra pessoa ou por uma exclusão de etapa): espere alguns instantes e repita.
 
 ### KanbanConfig (Configuração Global do Kanban) — CRÍTICO
 
@@ -524,6 +568,7 @@ PUT /api/v1/accounts/43/funnels/43
 | `send_webhook` | `{webhook_url}` | POST com payload completo do card (fire-and-forget) |
 | `apply_checklist_template` | `{template_id}` | Template de `kanban_config.checklist_templates`; aditivo (appenda) — cada aplicação vira um grupo (carimba `group_id`/`group_name` nos itens) |
 | `update_checklist` | `{checklist_updates: [{checklist_item_id, completed, text}]}` | Não aparece na UI — só via API |
+| `create_task` (20/10/2026) | `{title, description?, task_type, agenda_id?, priority?, occupies_agenda?, due: {amount, unit: 'hours'\|'days', at?: 'HH:MM', business_days?: true}, responsible: {mode: 'card_owner'\|'fixed'\|'funnel_rotation'\|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}` | Cria uma tarefa COMUM da Agenda presa ao card (ver "Tarefa automática do card" abaixo). Exige a Agenda unificada ligada na conta |
 
 **Regras críticas (gravar diferente disso = automação perdida ou morta):**
 
@@ -533,6 +578,32 @@ PUT /api/v1/accounts/43/funnels/43
 - Trigger `card_created` + ação `duplicate_item` funciona (backend tem anti-loop), mas a UI esconde essa combinação.
 
 Use para: "ao ganhar um card de Vendas → criar automaticamente em Pós-Venda na etapa Agendar Instalação" (`status_change`/`won` + `duplicate_item`).
+
+#### Tarefa automática do card — ação `create_task` (20/10/2026)
+
+- `title` é obrigatório (texto; aceita variáveis do card). `task_type`: um dos 7 de fábrica ou um tipo ativo da conta.
+  `agenda_id` nulo = a agenda padrão da conta. `priority`: `none|low|medium|high|urgent`.
+- **Prazo (`due`)**: `unit: 'hours'` aceita `amount` de 1 a 720; `unit: 'days'` aceita 0 a 365, com `at` ("HH:MM") e
+  `business_days: true` (dias úteis) **só em dias**. Dia útil = segunda a sexta **sem feriado de dia inteiro** da agenda
+  da tarefa (feriado de meio período não conta). O fuso é o da agenda da tarefa. Prazo que já passou nasce atrasado,
+  nunca é empurrado.
+- **Responsável (`responsible.mode`)**: `card_owner` (primeiro responsável do card; senão o da conversa; senão a reserva `fallback_user_id`,
+  obrigatória), `fixed` (exige `user_id`), `funnel_rotation` (rodízio de quem acessa o funil) e `team_rotation` (exige
+  `team_id`).
+- **Formato conferido no Salvar**: regra `create_task` NOVA ou alterada é conferida uma a uma; regra torta recebe 422 que
+  diz a posição da regra e o campo a consertar, e as demais regras do funil não são afetadas.
+- **Uma tarefa por acontecimento** (repetir o gatilho do mesmo acontecimento não duplica). Card importado por planilha
+  não cria; card importado e movido depois por uma pessoa cria.
+- A tarefa nasce **presa ao card** (campo `kanban_item_id` da tarefa; `occupies_agenda` diz se ela bloqueia o horário).
+  Ao **excluir o card** (`lionchat_kanban_items_destroy`), só é apagada a tarefa presa a ESTE card que seja
+  SIMPLES: sem conversa, sem contato, sem agendamento, sem sessão de programa, sem anexo, que não veio do Google
+  Agenda e que não é somente leitura. Toda outra tarefa presa ao card apenas se SOLTA (continua na agenda, na
+  conversa e no contato), e a tarefa que só aponta para o card por `linked_kanban_item_id` também só se solta.
+  **A tarefa AUTOMÁTICA de um card que TEM conversa grava a conversa** (o servidor associa a conversa do card à
+  tarefa), portanto NÃO é "simples": ao excluir esse card ela sobrevive e fica na conversa. Só a tarefa automática
+  de card SEM conversa morre com o card. Conversa e contato nunca são apagados. Antes de excluir, avise o usuário
+  de que as tarefas simples presas ao card também somem.
+- Excluir etapa com `remove_stage` **não** dispara esta ação (nem nenhuma outra); `migrate_stage` dispara.
 
 ### Sistema 2: AutomationRule global — eventos da conta
 
