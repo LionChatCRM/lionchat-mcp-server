@@ -31604,7 +31604,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/lead_forms/{lead_form_id}/responses",
   "title": "Listar Respostas do Formulario",
-  "description": "Lista as respostas (25 por pagina, colunas leves — as respostas em si NAO vem na lista, use o show). Filtra por status e janela de dias.",
+  "description": "Lista as respostas (25 por pagina, colunas leves — as respostas em si NAO vem na lista, use o show). Filtra por status e janela de dias. Cada linha traz filled_by: null (o cliente pelo link) ou {id, name}/{id, removed: true} (a equipe preencheu pela conversa — essas respostas ficam fora do funil e dos contadores, desde 20/10/2026).",
   "category": "Formularios",
   "params": [
    {
@@ -31669,7 +31669,7 @@
     "description": "ID da resposta"
    }
   ],
-  "returns": "{id, status, contact ({id, name, phone} | {id: null, name, phone, pending: true} | null), current_node_label, started_at, completed_at, abandoned_at, created_at, answers: [{label, value_label, at, download_url?}] ordenado por at, milestones: [{node_id, name, at}], effects: [{node_id, label, state: pending|done|error, error, status (HTTP), url_short, at}], conversation: {id, display_id}|null, utm_params}. ATENÇÃO em answers: (1) o bloco de Ações grava entradas sintéticas com chave \"<node_id>::<n>\" e o fim degradado grava \"_walk_ended\" — nem toda chave é id de bloco; (2) no bloco de Agendamento value_label é o ID da reserva, não a data (use lionchat_contacts_form_entries_show, que mostra a data); (3) envio de WhatsApp pulado por falta de telefone aparece como entrada vazia do bloco de mensagem. Motivos possíveis em effects.error: invalid_method, invalid_url, http_<código> (http_0 = falha de transporte sem código), timeout, ssrf_blocked, result_too_large, stale, effect_failed, effect_runs_exceeded, budget_exceeded, no_ai_key, ai_error.",
+  "returns": "{id, status, filled_by ({id, name} | {id, removed: true} | null — null = o cliente pelo link; preenchimento pela equipe na conversa desde 20/10/2026), contact ({id, name, phone} | {id: null, name, phone, pending: true} | null), current_node_label, started_at, completed_at, abandoned_at, created_at, answers: [{label, value_label, at, download_url?}] ordenado por at, milestones: [{node_id, name, at}], effects: [{node_id, label, state: pending|done|error, error, status (HTTP), url_short, at}], conversation: {id, display_id}|null, utm_params}. ATENÇÃO em answers: (1) o bloco de Ações grava entradas sintéticas com chave \"<node_id>::<n>\" e o fim degradado grava \"_walk_ended\" — nem toda chave é id de bloco; (2) no bloco de Agendamento value_label é o ID da reserva, não a data (use lionchat_contacts_form_entries_show, que mostra a data); (3) envio de WhatsApp pulado por falta de telefone aparece como entrada vazia do bloco de mensagem. Motivos possíveis em effects.error: invalid_method, invalid_url, http_<código> (http_0 = falha de transporte sem código), timeout, ssrf_blocked, result_too_large, stale, effect_failed, effect_runs_exceeded, budget_exceeded, no_ai_key, ai_error.",
   "common_use_cases": [
    "Ler o que o lead respondeu",
    "Investigar por que a consulta externa/IA falhou (effects)",
@@ -32107,7 +32107,7 @@
     "description": "ID do contato"
    }
   ],
-  "returns": "{payload: [{source: 'lead_form'|'meta_lead'|'custom_webhook'|'flow', id, title (nome do formulário/fluxo/integração), status ('received' nas origens de fora; status da resposta no formulário), at (ISO), count (nº de campos gravados), conversation: {id, display_id} | null}], meta: {total, truncated}}",
+  "returns": "{payload: [{source: 'lead_form'|'meta_lead'|'custom_webhook'|'flow', id, title (nome do formulário/fluxo/integração), status ('received' nas origens de fora; status da resposta no formulário), at (ISO), count (nº de campos gravados), conversation: {id, display_id} | null, filled_by: {id, name} | {id, removed: true} | null (só 'lead_form'; preenchido pela equipe na conversa)}], meta: {total, truncated}}",
   "common_use_cases": [
    "Responder 'de onde veio este lead e o que ele preencheu?'",
    "Achar a resposta do formulário pra abrir com lionchat_contacts_form_entries_show",
