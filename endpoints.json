@@ -12604,6 +12604,40 @@
   ]
  },
  {
+  "id": "lionchat_companies_import_status",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/import_status/{import_id}",
+  "title": "Andamento da Importacao de Empresas",
+  "description": "Acompanha a importacao de empresas em massa que ja foi enviada (lionchat_companies_bulk_create ou o botao 'Importar empresas' da tela). O import_id e o codigo devolvido na hora de importar — a importacao roda em segundo plano, entao consulte de tempos em tempos ate o status virar 'completed' ou 'failed'. errors = linhas que NAO entraram (sem nome, mais de uma empresa com o mesmo nome sem CNPJ e sem site), com o numero da linha da planilha (o titulo e a linha 1, entao o item N da lista e a linha N+1). skipped = campos que ficaram em branco por valor invalido, com o motivo; a empresa entrou mesmo assim. O registro vive 24 horas: depois disso volta 404 mesmo que a importacao tenha dado certo, entao 404 nao significa fracasso. Exige o modulo Empresas ligado e administrador ou cargo com 'Exportar e importar contatos'. ENTERPRISE-only.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "import_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "Codigo da importacao (UUID) devolvido por lionchat_companies_bulk_create"
+   }
+  ],
+  "returns": "{ status: 'queued'|'processing'|'completed'|'failed', total, processed, created, updated, error_count, errors: [{row, message}], skipped_fields, skipped: [{row, field, message}], blank_rows, error_message? } — e { error } com 404 se o codigo nao existe ou ja passou de 24 horas",
+  "common_use_cases": [
+   "Avisar quando a lista de empresas terminou de entrar",
+   "Descobrir quantas empresas foram criadas e quantas foram atualizadas",
+   "Ver quais linhas nao entraram e por que"
+  ],
+  "related_tools": [
+   "lionchat_companies_list",
+   "lionchat_companies_search"
+  ]
+ },
+ {
   "id": "lionchat_offers_list",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/offers",
