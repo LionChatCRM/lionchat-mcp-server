@@ -276,6 +276,24 @@ e se está atrasada.
   um. Compromisso de agenda que o usuário não enxerga aparece na sessão como `oculta: true`.
 - O relatório de Agendamentos tem o bloco `treatments` (vale o período escolhido: programas, sessões do período e quem parou no meio — ver `reports-guide`).
 
+## 7.1. Tarefa automática do card — de que agenda ela é (20/10/2026)
+
+A regra "Criar tarefa" do funil (`create_task`) e o item "Criar tarefa" do bloco Ações do fluxo (`create_account_task`)
+criam uma tarefa COMUM da Agenda, presa ao card (`kanban_item_id`). Para a agenda:
+
+- `agenda_id` da regra **nulo = a agenda padrão da conta**. A tarefa na agenda padrão é gravada com `agenda_id`
+  nulo (a mesma regra do resto deste guia: nulo = principal; ao filtrar a principal, inclua os nulos).
+- O **fuso do prazo é o da agenda da tarefa** (o fuso resolvido da agenda; sem agenda padrão, o da conta).
+- **Dia útil** (`due.business_days: true`, só com `unit: 'days'`) = segunda a sexta **sem feriado de DIA INTEIRO que
+  vale para aquela agenda**. Feriado de meio período não conta (o dia ainda tem expediente). Feriado "para todas as
+  agendas" (`all_agendas`) vale para qualquer agenda; o regional vale só para as agendas marcadas nele. Cadastre
+  com `lionchat_agenda_holidays_*`. **Só o prazo da tarefa automática lê feriado**: os horários livres do Booking
+  continuam sem saber de feriado, e feriado nunca impede alguém de marcar.
+- A Agenda unificada (`unified_agenda`) precisa estar ligada na conta; desligada, a regra do funil registra "não
+  criou" no histórico do card e o item do fluxo fica com erro visível no passo.
+- `occupies_agenda: false` (padrão da regra) cria a tarefa como lembrete que **não bloqueia o horário**; `true`
+  bloqueia como um compromisso.
+
 ---
 
 ## 8. Erros comuns

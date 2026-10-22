@@ -570,13 +570,50 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `send_conversion` (novo 2026-09-01; `event_names` 2026-09-02; `messaging_event_names` 2026-09-10) | `{ destinations: ['meta'\|'ga4'\|'google_ads'], event_names: { meta?, google_ads?, ga4? }, messaging_event_names: { meta? }, event_name (reserva), value? }` | Manda o evento de conversão pro Meta (CAPI), Google Ads e/ou GA4 — o mesmo caminho do Funil, de dentro do fluxo. Aba Sistema (só flow `conversation`). Ver bloco próprio abaixo |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
 | `set_booking_situation` (novo 2026-09-14) | `{ situation: 'cancelled' \| 'completed' \| 'attended' \| 'no_show' \| 'confirmed' }` | Muda a situação do agendamento **que disparou o fluxo** (gatilho de agendamento do bloco Início, ou fluxo ligado na configuração do tipo de agendamento). Aba **Agenda** (só flow `conversation`, só com a Agenda ligada na conta). Disparado por outra coisa: **não faz efeito e o passo fica com erro visível** (não há como adivinhar o agendamento). Já no estado pedido = passo PULADO, sem escrita (sem evento, sem laço). `cancelled` cancela o **agendamento** (desarma lembretes, invalida o link de gerenciar). Origem gravada = `fluxo`, ator = o próprio flow. Sem `rescheduled`/`snoozed`: o bloco não mexe em data |
+| `create_account_task` (novo 2026-10-20) | `{ title, description?, task_type, agenda_id?, priority?, occupies_agenda?, due: {amount, unit: 'hours' \| 'days', at?, business_days?}, responsible: {mode: 'card_owner' \| 'fixed' \| 'funnel_rotation' \| 'team_rotation', user_id?, team_id?, fallback_user_id?}, card_source: 'funnel' \| 'trigger', funnel_id? }` | "Criar tarefa": cria uma tarefa COMUM da Agenda, presa ao card do fluxo (ou só à conversa, se não houver card). Os campos de `title` a `responsible` são os MESMOS da ação `create_task` da automação do funil (ver `kanban-deep-dive`). Aba **Agenda**; exige a Agenda unificada ligada na conta. **NÃO roda em fluxo `ai_tool` nem em fluxo de grupo** (o motor recusa com erro visível no passo; o save aceita, a tela esconde o item). Detalhes logo abaixo |
 | `update_attribute` | `{ attr_source: 'contact'\|'conversation'\|'card', attr_key, attr_value }` | Seta custom_attribute (ver abaixo) |
 | `assign_captain` (ou `assign_captain_assistant`) | `{ assistant_id }` | Atribui IA Captain |
 | `deactivate_captain` | `{}` | Tira a IA da conversa |
 
 **Handles que SAEM:** `success`. Não tem handle `error` — falhas viram warning silencioso e o flow continua.
 
-**`card_source` (blocos de card) — opcional:** as ações de card aceitam `card_source`: `'funnel'` (default — procura o card pelo `funnel_id`) ou `'trigger'` (usa o card que DISPAROU o flow, em flows iniciados por `card_created`/`card_moved`/`card_won`/`card_lost`/`card_opened`/`card_snoozed`). Com `'trigger'`, `funnel_id` deixa de ser obrigatório — EXCETO em `move_kanban_stage`/`create_kanban_item`, cujo funil/etapa são o DESTINO. Sem card-gatilho disponível, a ação é pulada (não cai no fallback de funil). Aplica-se a `move_kanban_stage`, `set_won`/`set_lost`/`set_open`, `snooze_kanban_item` (esta, sem card-gatilho, dá ERRO em vez de pular), `assign_agent_card`, `add_card_note`, `add_card_checklist`, `add_card_offer`, `update_attribute` (com `attr_source: 'card'`) e às condições `card_attr_equals`/`card_attr_contains` (gravando `card_source` na própria regra).
+**`card_source` (blocos de card) — opcional:** as ações de card aceitam `card_source`: `'funnel'` (default — procura o card pelo `funnel_id`) ou `'trigger'` (usa o card que DISPAROU o flow, em flows iniciados por `card_created`/`card_moved`/`card_won`/`card_lost`/`card_opened`/`card_snoozed`). Com `'trigger'`, `funnel_id` deixa de ser obrigatório — EXCETO em `move_kanban_stage`/`create_kanban_item`, cujo funil/etapa são o DESTINO. Sem card-gatilho disponível, a ação é pulada (não cai no fallback de funil). Aplica-se a `move_kanban_stage`, `set_won`/`set_lost`/`set_open`, `snooze_kanban_item` (esta, sem card-gatilho, dá ERRO em vez de pular), `assign_agent_card`, `add_card_note`, `add_card_checklist`, `add_card_offer`, `create_account_task` (aqui sem card-gatilho = ERRO; ver abaixo), `update_attribute` (com `attr_source: 'card'`) e às condições `card_attr_equals`/`card_attr_contains` (gravando `card_source` na própria regra).
+
+**`create_account_task` — Criar tarefa (2026-10-20):**
+
+```json
+{ "key": "create_account_task", "config": {
+  "title": "Ligar para {{contact.name}}", "description": "", "task_type": "call", "agenda_id": null,
+  "priority": "none", "occupies_agenda": false,
+  "due": { "amount": 3, "unit": "days", "at": "09:00", "business_days": true },
+  "responsible": { "mode": "card_owner", "fallback_user_id": 12 },
+  "card_source": "trigger", "funnel_id": ""
+} }
+```
+
+- **Os campos da regra** (`title`, `description`, `task_type`, `agenda_id`, `priority`, `due`, `responsible`,
+  `occupies_agenda`) têm o mesmo formato e os mesmos limites da ação `create_task` do funil: `title` obrigatório; `due`
+  em horas (1 a 720) ou dias (0 a 365, com `at` "HH:MM" e `business_days` só em dias); `responsible.mode` com a chave
+  obrigatória do modo (`fallback_user_id`, `user_id` ou `team_id`; `funnel_rotation` não pede nenhuma no save,
+  mas no fluxo SEM card o rodízio do funil não tem funil e cai na pessoa reserva `fallback_user_id` — sem reserva a
+  tarefa não nasce, com o motivo no histórico: mande `fallback_user_id` se o fluxo puder rodar sem card). Regra torta =
+  passo VERMELHO com a frase do campo a consertar, sem tarefa.
+- **De onde vem o card (`card_source`)**: `'trigger'` = o card que INICIOU o fluxo (gatilhos `card_created`,
+  `card_moved`, `card_won`, `card_lost`, `card_opened`, `card_snoozed`); fluxo que não nasceu de card = ERRO
+  visível, nunca pulado. `'funnel'` (o padrão da tela) = o card DESSA conversa no funil `funnel_id` (**obrigatório**
+  neste modo; funil sem `funnel_id` ou que não existe mais = erro). Conversa sem card naquele funil não é erro: a
+  tarefa nasce SÓ na conversa e o passo diz "sem card". Variáveis `{{ }}` em `title` e `description` resolvem pelo
+  resolvedor do FLUXO.
+- **Uma tarefa por passagem do bloco**: repetir o MESMO passo (nova tentativa do sistema) não duplica; uma nova
+  passagem pelo bloco (o fluxo rodando de novo) cria outra tarefa.
+- **Ritmo**: há um freio de 1 tarefa por segundo por conta. Passo com vaga futura já fica verde ("nasce às
+  HH:MM:SS"); se depois a tarefa for reprovada (responsável que saiu da conta, dado inválido), o aviso vai para a
+  linha do card ("Fluxo X não criou a tarefa", só com card) e para o log — o passo não muda.
+- **Histórico do card**: "Fluxo X criou uma tarefa (tipo) para Fulana" / "Fluxo X não criou a tarefa: motivo".
+  A tarefa grava o Fluxo como quem agendou (`booking_source` `fluxo`).
+- O interruptor de emergência da automação do funil NÃO vale para o fluxo; a Agenda unificada desligada vale (erro
+  visível no passo).
+- **Fluxo `ai_tool` e fluxo de grupo**: não use este item (recusado na execução, com erro visível no passo).
 
 **`send_conversion` — Enviar conversão (2026-09-01):**
 

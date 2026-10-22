@@ -663,6 +663,39 @@ uma entrada por vez; quem entrar enquanto os balões da pessoa anterior saem nã
 
 ---
 
+## 18. Tarefa de acompanhamento ao ganhar um card (`create_account_task`)
+
+**Caso:** quando um card é marcado como GANHO, criar para o responsável do card uma tarefa "Ligar para <cliente>" daqui a
+3 dias úteis, às 09:00 (pula sábado, domingo e feriado de dia inteiro da agenda). Usa o item "Criar tarefa" do bloco
+Ações (aba Agenda). Pré-requisito: Agenda unificada ligada na conta. Não funciona em fluxo `ai_tool` nem de grupo.
+
+```json
+{
+  "nodes": [
+    { "id": "n1", "type": "start", "position": { "x": 50, "y": 300 }, "data": { "label": "Início", "items": [{ "key": "card_won", "config": { "funnel_ids": ["1"] } }] } },
+    { "id": "n2", "type": "action", "position": { "x": 370, "y": 300 }, "data": { "label": "Tarefa de pós-venda", "items": [
+      { "key": "create_account_task", "config": {
+        "title": "Ligar para {{contact.name}} (pós-venda)", "description": "", "task_type": "call", "agenda_id": null,
+        "priority": "medium", "occupies_agenda": false,
+        "due": { "amount": 3, "unit": "days", "at": "09:00", "business_days": true },
+        "responsible": { "mode": "card_owner", "fallback_user_id": 12 },
+        "card_source": "trigger", "funnel_id": ""
+      } }
+    ] } }
+  ],
+  "edges": [
+    { "id": "e1", "source": "n1", "target": "n2", "sourceHandle": "success", "type": "deletable", "animated": true }
+  ]
+}
+```
+
+Notas:
+- `card_source: "trigger"` usa o card que ganhou; sem `funnel_id`. Para agir sobre o card da conversa em outro funil
+  (fluxo disparado por mensagem, por exemplo), use `card_source: "funnel"` com `funnel_id` preenchido.
+- `fallback_user_id` (12 aqui) é a pessoa que recebe quando o card não tem responsável: troque por um id de
+  `agents_list`. `task_type` é um dos 7 de fábrica ou uma `key` de `account_task_types_list`.
+- Para a tarefa aparecer SÓ no card (sem bloquear o horário da Agenda) deixe `occupies_agenda` em `false`.
+
 ## Como usar este catálogo
 
 1. **Identifique o pattern mais próximo** do que o cliente pediu

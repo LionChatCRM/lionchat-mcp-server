@@ -191,8 +191,26 @@ Feature flag específica (ex: `feature_kanban`, `feature_captain`) está OFF.
 
 ### KanbanItem
 - `"STAGE_HAS_ITEMS"` (no `funnels_update`) — você tentou remover uma etapa que ainda tem card;
-  `stages` na resposta diz quantos. Mova com `migrate_stage` antes. (Card criado em etapa
-  inexistente NÃO dá erro: é redirecionado — confira o `funnel_stage` devolvido.)
+  `stages` na resposta diz quantos. **Para excluir a etapa, use `lionchat_funnels_remove_stage`** (move os cards
+  em silêncio e apaga a etapa; repita a chamada com `confirm: true` até `done: true`; ver "Excluir etapa" no
+  `kanban-deep-dive.md`). Não use `migrate_stage` para isso: ele só move os cards (disparando automações) e não
+  exclui a etapa. (Card criado em etapa inexistente NÃO dá erro: é redirecionado — confira o `funnel_stage`
+  devolvido.)
+- **`401` em `lionchat_funnels_create_2` (`migrate_stage`) ou `lionchat_funnels_remove_stage`** — o usuário não é
+  administrador e não tem a permissão "gerenciar funis". Não repita nem tente outro caminho: diga ao usuário
+  que precisa dessa permissão (ou de um administrador) para mover etapa inteira ou excluir etapa.
+- **`409 STAGE_REMOVAL_IN_PROGRESS`** (`remove_stage`) — outra pessoa está excluindo a mesma etapa agora. Avise
+  "outra pessoa está excluindo esta etapa" (com `holder_name`, se vier) e pare; não repita. O mesmo vale para
+  `200 {done: false, reason: "assumido"}` no meio da exclusão.
+- **`409 FUNNEL_BUSY`** (`funnels_update`) — o funil está sendo alterado agora (outra pessoa ou
+  uma exclusão de etapa). Espere alguns instantes e repita o Salvar.
+- **`remove_stage` devolve `done: false`** — leia `reason`: `tempo` repita agora; `travado`/`faxina` espere
+  ~30 s e repita; `destino_excluido` pergunte outro destino ao usuário; `assumido` avise e pare. Duas respostas
+  seguidas com `moved: 0` e `done: false` = algo preso: pare e avise. `remaining` nulo não é erro;
+  100001 significa "mais de 100 mil".
+- **422 em `lionchat_tasks_update` (ou `_create`) com `kanban_item_id`** — a tarefa é um agendamento, uma sessão
+  de programa ou um evento do Google, que não podem ser presos a um card; ou o card não existe, é de outra
+  conta ou a pessoa não o enxerga. Só tarefa comum se prende a card.
 - `"conversation_display_id must exist"` — conversa não existe ou foi deletada
 - `"position must be a positive integer"` — não pode ser negativo
 

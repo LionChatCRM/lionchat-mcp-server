@@ -2447,7 +2447,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/funnels",
   "title": "Criar Funil (Kanban)",
-  "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa; pra \"criar um kanban\" use ESTA ferramenta. Cria um funil novo JA COM AS ETAPAS via funnel.stages. Obrigatorios: funnel.name. Limite de 2 funis no plano free. Retorna o funil criado com ID atribuido.",
+  "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa; pra \"criar um kanban\" use ESTA ferramenta. Cria um funil novo JA COM AS ETAPAS via funnel.stages. Obrigatorios: funnel.name. Limite de 2 funis no plano free. Retorna o funil criado com ID atribuido. `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. Regras create_task em settings.automations seguem o formato descrito em lionchat_funnels_update.",
   "category": "Funis",
   "params": [
    {
@@ -2483,7 +2483,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id, enabled, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value (id da etapa p/ stage_moved; 'won'|'lost'|'snoozed' p/ status_change ('snoozed' desde 11/10/2026: roda quando o card e ADIADO); vazio p/ card_created), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (ex.: move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations)."
+    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id, enabled, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value (id da etapa p/ stage_moved; 'won'|'lost'|'snoozed' p/ status_change ('snoozed' desde 11/10/2026: roda quando o card e ADIADO); vazio p/ card_created), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (ex.: move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations). `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. "
    },
    {
     "name": "funnel.global_custom_attributes",
@@ -2503,7 +2503,8 @@
   ],
   "related_tools": [
    "lionchat_funnels_create_1",
-   "lionchat_funnels_create_2"
+   "lionchat_funnels_create_2",
+   "lionchat_funnels_remove_stage"
   ]
  },
  {
@@ -2682,7 +2683,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/funnels/{id}",
   "title": "Atualizar Funil (Kanban)",
-  "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa. Atualiza funil. Atualiza campos do funil existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: funnel.name, funnel.stages, funnel.settings.",
+  "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa. Atualiza funil. Atualiza campos do funil existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: funnel.name, funnel.stages, funnel.settings. Regra com action 'create_task' (cria uma tarefa presa ao card quando o gatilho acontece): action_config = {title (texto, obrigatorio), description, task_type, agenda_id, priority, occupies_agenda (true|false), due: {amount, unit: 'hours'|'days', at: 'HH:MM' (so em dias), business_days: true (so em dias)}, responsible: {mode: 'card_owner'|'fixed'|'funnel_rotation'|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}. Cada regra create_task NOVA ou alterada e conferida uma a uma: regra torta recebe 422 que diz a posicao da regra e o campo a consertar; as demais regras do funil nao sao afetadas. `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. Reenviar funnel.stages SEM uma etapa que tem cards e recusado com 422 STAGE_HAS_ITEMS: use lionchat_funnels_remove_stage. Se o funil estiver sendo alterado naquele instante por outra pessoa ou por uma exclusao de etapa em andamento, o Salvar responde 409 com code FUNNEL_BUSY (o funil esta sendo alterado agora): espere alguns instantes e repita.",
   "category": "Funis",
   "params": [
    {
@@ -2704,14 +2705,14 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Etapas do kanban. Objeto com uma chave (slug) por etapa, e CADA ETAPA E UM OBJETO com name TEXTO: {\"novo_lead\": {\"name\": \"Novo Lead\", \"color\": \"#3B82F6\", \"position\": 1, \"description\": \"opcional\"}}. position define a ordem das colunas. Etapa como texto, numero ou null derruba a lista de funis e o Kanban da conta. No update o objeto SUBSTITUI as etapas: etapa que nao vier e REMOVIDA (recusado com 422 STAGE_HAS_ITEMS se tiver cards) — leia com lionchat_funnels_show e reenvie todas."
+    "description": "Etapas do kanban. Objeto com uma chave (slug) por etapa, e CADA ETAPA E UM OBJETO com name TEXTO: {\"novo_lead\": {\"name\": \"Novo Lead\", \"color\": \"#3B82F6\", \"position\": 1, \"description\": \"opcional\"}}. position define a ordem das colunas. Etapa como texto, numero ou null derruba a lista de funis e o Kanban da conta. No update o objeto SUBSTITUI as etapas: etapa que nao vier e REMOVIDA, mas so se estiver VAZIA: com cards a resposta e 422 STAGE_HAS_ITEMS, e a exclusao correta e lionchat_funnels_remove_stage. Leia com lionchat_funnels_show e reenvie todas as etapas."
    },
    {
     "name": "funnel.settings",
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id (formato 'automation_<timestamp_ms>'), enabled: true, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value SEMPRE preenchido ('card_created' literal p/ card_created; chave da etapa de destino no hash funnel.stages p/ stage_moved; 'won'|'lost'|'snoozed' p/ status_change ('snoozed' desde 11/10/2026: roda quando o card e ADIADO)), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; update_checklist->{checklist_updates:[{checklist_item_id,completed,text}]}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. Regras: trigger_value vazio ou enabled=false fazem a UI descartar a automacao no proximo salvar do usuario; stage_moved + move_to_stage nunca executa (anti-loop); notify_team hoje so registra em log (nao notifica ninguem); update_checklist nao aparece na UI (so via API). ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations)."
+    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id (formato 'automation_<timestamp_ms>'), enabled: true, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value SEMPRE preenchido ('card_created' literal p/ card_created; chave da etapa de destino no hash funnel.stages p/ stage_moved; 'won'|'lost'|'snoozed' p/ status_change ('snoozed' desde 11/10/2026: roda quando o card e ADIADO)), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; update_checklist->{checklist_updates:[{checklist_item_id,completed,text}]}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. Regras: trigger_value vazio ou enabled=false fazem a UI descartar a automacao no proximo salvar do usuario; stage_moved + move_to_stage nunca executa (anti-loop); notify_team hoje so registra em log (nao notifica ninguem); update_checklist nao aparece na UI (so via API). ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations). Regra com action 'create_task' (cria uma tarefa presa ao card quando o gatilho acontece): action_config = {title (texto, obrigatorio), description, task_type, agenda_id, priority, occupies_agenda (true|false), due: {amount, unit: 'hours'|'days', at: 'HH:MM' (so em dias), business_days: true (so em dias)}, responsible: {mode: 'card_owner'|'fixed'|'funnel_rotation'|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}. Cada regra create_task NOVA ou alterada e conferida uma a uma: regra torta recebe 422 que diz a posicao da regra e o campo a consertar; as demais regras do funil nao sao afetadas. `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. "
    }
   ],
   "returns": "funil atualizado Inclui resolved_agents: [{id, name, avatar_url, via: 'agent'|'team'}] — quem efetivamente participa do funil (2026-07-21).",
@@ -2720,7 +2721,10 @@
    "Alteração de status/estado",
    "Atualização em massa via automação"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_funnels_show",
+   "lionchat_funnels_remove_stage"
+  ]
  },
  {
   "id": "lionchat_funnels_destroy",
@@ -2861,7 +2865,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/funnels/{id}/migrate_stage",
   "title": "Transferir Cards Entre Etapas do Funil (Kanban)",
-  "description": "Funil = kanban. Transfere os cards de uma etapa para outra.",
+  "description": "Funil = kanban. Move os cards de uma etapa para outra DISPARANDO tudo o que esta ligado a etapa de destino (automacoes do funil, regras, fluxos, webhooks, eventos de conversao). não exclui a etapa: a etapa de origem continua no funil, so fica vazia. Exige o cargo de administrador ou a permissao de gerenciar funis (sem ela: 401). to_funnel_id e obrigatorio (use o proprio id do funil para mover dentro dele). Para EXCLUIR a etapa movendo os cards em silencio (sem disparar nada), use lionchat_funnels_remove_stage.",
   "category": "Funis",
   "params": [
    {
@@ -2900,9 +2904,61 @@
    "Importação manual via API"
   ],
   "related_tools": [
+   "lionchat_funnels_remove_stage",
    "lionchat_funnels_create",
    "lionchat_funnels_create_1"
   ]
+ },
+ {
+  "id": "lionchat_funnels_remove_stage",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/funnels/{id}/remove_stage",
+  "title": "Excluir Etapa do Funil com Cards (Kanban)",
+  "description": "Funil = kanban. EXCLUI uma etapa do funil e move os cards dela, EM SILENCIO, para a etapa de destino: o card muda de lugar mas nada dispara (nenhuma automacao do funil, regra, fluxo, webhook, evento de conversao nem aviso ao cliente). A etapa de origem e APAGADA do funil; os cards NAO sao apagados, so mudam de etapa. Exige o cargo de administrador ou a permissao de gerenciar funis (sem ela: 401). Para mover cards DISPARANDO o que esta ligado a etapa de destino, sem excluir a etapa, use lionchat_funnels_create_2 (migrate_stage). COMO USAR: a ferramenta trabalha em pedidos curtos (cada pedido move ate cerca de 8 segundos de cards, em lotes de 125). Antes de tudo, diga ao usuario quantos cards vao para onde (leia a contagem com lionchat_funnels_stage_report, passando o id do funil e a chave da etapa em `stage`, com show_won, show_lost e show_snoozed = true: sem isso o relatorio conta so os abertos nao adiados e a etapa parece ter menos cards do que vai mover) e que a etapa sera excluida, e peça o OK UMA vez. TODA chamada desta ferramenta, inclusive a PRIMEIRA (logo depois do OK do usuario), leva `confirm: true`; sem ele o conector recusa. Se o conector recusar por falta de `confirm`, reenvie com `confirm: true` sem perguntar de novo ao usuario. Depois do primeiro OK, repita a chamada (sempre com confirm: true), SEM perguntar de novo ao usuario a cada lote, ate vir done: true. RESPOSTAS: (1) 200 {done: true, moved: <TOTAL movido na exclusao inteira>, stage_removed: true, funnel: {...}} = terminou, a etapa foi excluida. (2) 200 {done: true, moved: 0} (sem stage_removed) = a etapa ja estava excluida para o mesmo destino (fim normal; por exemplo uma repeticao do pedido). (3) 200 {done: false, moved: <so deste pedido>, remaining: <cards que faltam, ou nulo>, reason} = ainda nao terminou. `remaining` pode vir nulo (a contagem nao coube no tempo do pedido) e nao e erro: repita mesmo assim; pode vir 100001, que quer dizer \"mais de 100 mil\" (nao e a contagem exata). Por `reason`: 'tempo' = acabou o tempo deste pedido, repita agora; 'travado' ou 'faxina' = o banco estava ocupado, espere cerca de 30 segundos e repita; 'destino_excluido' = a etapa de destino deixou de existir, pergunte ao usuario outro destino; 'assumido' = OUTRA PESSOA assumiu a exclusao desta etapa (vem tambem holder_name e to_stage_name): avise o usuario quem esta excluindo e para onde, e PARE, nao repita (se `holder_name` ou `to_stage_name` vier nulo, diga so \"outra pessoa esta excluindo esta etapa\", sem nome). Se duas respostas seguidas vierem com moved: 0 e done: false, PARE e avise o usuario (algo esta preso), nao fique repetindo. ERROS: 422 {error, code} com code = DESTINATION_NOT_FOUND (destino nao encontrado nesta conta), SAME_STAGE (destino igual a origem), LAST_STAGE (o funil precisa ficar com pelo menos uma etapa), ORIGIN_NOT_FOUND (a etapa a excluir nao existe neste funil), STAGE_ALREADY_REMOVED_BY_OTHER (outra pessoa ja excluiu a etapa), FINAL_SAVE_FAILED (os cards ja foram movidos mas o funil nao pode ser salvo; o `error` diz o motivo), FUNNEL_INVALID (o funil nao pode ser salvo; o `error` diz o motivo); o texto de `error` ja vem no idioma da conta, mostre-o ao usuario. 409 STAGE_REMOVAL_IN_PROGRESS = outra pessoa esta excluindo esta etapa agora (vem holder_name e to_stage_name, os dois podem ser nulos): avise o usuario \"outra pessoa esta excluindo esta etapa\" (com o nome, se vier) e pare. 401 = sem a permissao de gerenciar funis. Use lionchat_funnels_show antes para pegar as chaves das etapas (from_stage e to_stage sao as CHAVES das etapas, nao os nomes).",
+  "category": "Funis",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do funil de origem (o que tem a etapa a excluir)"
+   },
+   {
+    "name": "from_stage",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "CHAVE da etapa a excluir (a chave do objeto funnel.stages, nao o nome exibido)"
+   },
+   {
+    "name": "to_funnel_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do funil de destino dos cards (pode ser o mesmo funil)"
+   },
+   {
+    "name": "to_stage",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "CHAVE da etapa de destino dos cards, dentro do funil de destino"
+   }
+  ],
+  "returns": "{ done: true, moved: N, stage_removed: true, funnel: {...} } ao terminar; { done: true, moved: 0 } se a etapa ja estava excluida para o mesmo destino; { done: false, moved: N, remaining: N|null, reason: 'tempo'|'faxina'|'travado'|'destino_excluido'|'assumido', holder_name?, to_stage_name? } quando ainda falta (repita, salvo 'assumido'); 422 { error, code }; 409 { error, code: 'STAGE_REMOVAL_IN_PROGRESS', holder_name, to_stage_name }; 401 sem permissao.",
+  "common_use_cases": [
+   "Excluir uma etapa que ainda tem cards, mandando os cards para outra etapa sem disparar automacoes",
+   "Juntar duas etapas do funil numa so",
+   "Tirar uma etapa que nao e mais usada, repetindo a chamada ate done: true"
+  ],
+  "related_tools": [
+   "lionchat_funnels_show",
+   "lionchat_funnels_stage_report",
+   "lionchat_funnels_update",
+   "lionchat_funnels_create_2"
+  ],
+  "confirm_required": true
  },
  {
   "id": "lionchat_funnels_archive",
@@ -3409,7 +3465,7 @@
   "method": "DELETE",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}",
   "title": "Excluir Item",
-  "description": "Exclui item. Remove item Kanban permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
+  "description": "Exclui o card (item do Kanban) PERMANENTEMENTE, e nao tem como desfazer. O card e o que mora dentro dele somem. Quanto as TAREFAS presas a este card, so as tarefas SIMPLES sao apagadas (as que nao tem conversa, contato, agendamento, sessao de programa, anexo, nao vieram do Google Agenda e nao sao somente leitura). As demais tarefas presas ao card NAO sao apagadas: apenas se SOLTAM do card e continuam existindo na agenda, na conversa e no contato (tarefas que apenas apontam para o card por linked_kanban_item_id tambem so se soltam). A conversa e o contato do card NAO sao apagados. Quem pede a exclusao e uma pessoa (a regra vale para a exclusao pelo painel, em lote ou por esta ferramenta); expurgos de sistema nao apagam tarefa. Confirme com o usuario antes, dizendo que as tarefas simples presas ao card tambem somem.",
   "category": "Itens",
   "params": [
    {
@@ -3420,16 +3476,16 @@
     "description": "ID"
    }
   ],
-  "returns": "204 No Content",
+  "returns": "200 sem corpo (head ok)",
   "common_use_cases": [
    "Limpeza de dados obsoletos",
    "Deduplicação manual",
    "Remoção após confirmação do cliente"
   ],
   "related_tools": [
-   "lionchat_kanban_items_list",
-   "lionchat_kanban_items_create",
-   "lionchat_kanban_items_show"
+   "lionchat_kanban_items_show",
+   "lionchat_kanban_items_tasks_list",
+   "lionchat_kanban_items_list"
   ]
  },
  {
@@ -4463,8 +4519,8 @@
   "id": "lionchat_kanban_items_destroy_1",
   "method": "DELETE",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/unlink_conversation",
-  "title": "Desvincular Conversa",
-  "description": "Remove vinculo de conversa. Remove item Kanban permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
+  "title": "Desvincular Conversa do Card",
+  "description": "Desvincula UMA conversa do card (rota unlink_conversation). NAO exclui o card, NAO apaga a conversa, as mensagens nem as tarefas: so desfaz o vinculo entre este card e a conversa informada em conversation_display_id (o numero da conversa que aparece na tela). Se a conversa nao estava vinculada ao card, a resposta e 422. Para excluir o card use lionchat_kanban_items_destroy.",
   "category": "Itens",
   "params": [
    {
@@ -4482,16 +4538,16 @@
     "description": "Display ID"
    }
   ],
-  "returns": "204 No Content",
+  "returns": "o card (objeto) sem a conversa vinculada; 400 se faltar conversation_display_id; 422 se nao foi possivel desvincular.",
   "common_use_cases": [
    "Limpeza de dados obsoletos",
    "Deduplicação manual",
    "Remoção após confirmação do cliente"
   ],
   "related_tools": [
+   "lionchat_kanban_items_show",
    "lionchat_kanban_items_list",
-   "lionchat_kanban_items_create",
-   "lionchat_kanban_items_show"
+   "lionchat_kanban_items_destroy"
   ]
  },
  {
@@ -8801,7 +8857,7 @@
     "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
    }
   ],
-  "returns": "LISTA PURA (array no topo, SEM embrulho meta/payload) — a resposta JA E a lista de tarefas da agenda. Cada tarefa traz todos os campos da tarefa (id, title, description, task_type, status, scheduled_at, completed, recurrence_*), mais assignees [{id, name, agenda_color}], assignee_ids, conversation_display_id, conversation_contact_name, contact_name/contact_phone/contact_email, meeting_url, calendar_color, is_readonly, is_private, guest_emails, attendee_rsvp e booking_id; o compromisso que veio do Booking traz tambem booking_reschedule_url e booking_calendar_url (16/10: link \"salvar na minha agenda\" para mandar ao cliente; nulo quando o compromisso foi cancelado, concluido ou ja passou). Lista vazia = []. Com filtro de data (date_start/date_end) devolve TUDO do periodo sem paginar (teto de 10.000). Sem filtro de data, pagina por `page`/`per_page` — mas a resposta NAO traz numero de paginas nem total: pagina cheia sugere que ha mais.",
+  "returns": "LISTA PURA (array no topo, SEM embrulho meta/payload) — a resposta JA E a lista de tarefas da agenda. Cada tarefa traz todos os campos da tarefa (id, title, description, task_type, status, scheduled_at, completed, recurrence_*), mais assignees [{id, name, agenda_color}], assignee_ids, conversation_display_id, conversation_contact_name, contact_name/contact_phone/contact_email, meeting_url, calendar_color, is_readonly, is_private, guest_emails, attendee_rsvp e booking_id; o compromisso que veio do Booking traz tambem booking_reschedule_url e booking_calendar_url (16/10: link \"salvar na minha agenda\" para mandar ao cliente; nulo quando o compromisso foi cancelado, concluido ou ja passou). Lista vazia = []. Com filtro de data (date_start/date_end) devolve TUDO do periodo sem paginar (teto de 10.000). Sem filtro de data, pagina por `page`/`per_page` — mas a resposta NAO traz numero de paginas nem total: pagina cheia sugere que ha mais. Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
    "Buscar com filtros antes de outra operação",
@@ -8817,7 +8873,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/account_tasks",
   "title": "Criar Tarefa",
-  "description": "Cria uma tarefa/compromisso. Obrigatorios: title, scheduled_at. Requer feature unified_agenda + LionLab PRO. Para task_type video_call ou meeting, o link do Google Meet é gerado automaticamente após ~5s (campo meeting_url). Reuniões com convidados NÃO suportam recorrência. **Tratamento em sessoes (15/09):** com tipo `sessions_enabled`, o agendamento pelo painel/API nasce como sessao do tratamento do contato (proxima a marcar; cheio = sessao extra ate 60; concluido = ciclo novo) e a tarefa devolve `tratamento` {id, sessao, total, titulo} (nulo em compromisso comum). `treatment.*` cria o plano; `agenda_treatment_id` + `treatment_session_number` marcam uma sessao pedida.",
+  "description": "Cria uma tarefa/compromisso. Obrigatorios: title, scheduled_at. Requer feature unified_agenda + LionLab PRO. Para task_type video_call ou meeting, o link do Google Meet é gerado automaticamente após ~5s (campo meeting_url). Reuniões com convidados NÃO suportam recorrência. **Tratamento em sessoes (15/09):** com tipo `sessions_enabled`, o agendamento pelo painel/API nasce como sessao do tratamento do contato (proxima a marcar; cheio = sessao extra ate 60; concluido = ciclo novo) e a tarefa devolve `tratamento` {id, sessao, total, titulo} (nulo em compromisso comum). `treatment.*` cria o plano; `agenda_treatment_id` + `treatment_session_number` marcam uma sessao pedida. **Presa a card (20/10):** `kanban_item_id` prende a tarefa a um card do Kanban e `occupies_agenda` diz se ela bloqueia o horario. Tentar prender a card um agendamento, uma sessao de programa ou um evento do Google devolve 422 (errors.kanban_item_id); card inexistente, de outra conta ou que a pessoa nao ve tambem e 422.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -8980,9 +9036,23 @@
     "location": "body",
     "required": false,
     "description": "'Marcar proxima': numero da sessao pedida (1..N); sessao ja marcada = 422 'Essa sessao ja foi marcada'"
+   },
+   {
+    "name": "kanban_item_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "ID do card do Kanban a que a tarefa fica PRESA (a tarefa aparece na aba Tarefas do card e some junto com ele se for simples; veja lionchat_kanban_items_destroy). A pessoa precisa ver o card; card de outra conta ou invisivel = 422. Agendamento (Booking), sessao de programa/tratamento e evento importado do Google NAO podem ser presos a card (422). Diferente de linked_kanban_item_id. (enviar null para soltar)"
+   },
+   {
+    "name": "occupies_agenda",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Ocupa a agenda: true (padrao) = o horario da tarefa conta como ocupado na agenda e no Google Agenda; false = e so um lembrete, nao bloqueia o horario. Agendamento do Booking e evento importado do Google SEMPRE ocupam (o servidor forca true)."
    }
   ],
-  "returns": "tarefa/agenda criado (com novo ID)",
+  "returns": "tarefa/agenda criado (com novo ID) Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
   "common_use_cases": [
    "Cadastro inicial de tarefa/agenda",
    "Automação a partir de evento externo",
@@ -9009,7 +9079,7 @@
     "description": "ID da tarefa"
    }
   ],
-  "returns": "tarefa/agenda (objeto completo com associações; compromisso do Booking traz booking_reschedule_url e booking_calendar_url — link \"salvar na minha agenda\", nulo quando não dá mais para salvar)",
+  "returns": "tarefa/agenda (objeto completo com associações; compromisso do Booking traz booking_reschedule_url e booking_calendar_url — link \"salvar na minha agenda\", nulo quando não dá mais para salvar) Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
   "common_use_cases": [
    "Ver dados completos antes de editar",
    "Verificar estado atual antes de uma ação",
@@ -9022,7 +9092,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/account_tasks/{id}",
   "title": "Atualizar Tarefa",
-  "description": "Atualiza uma tarefa. Campos alterados em video_call/meeting disparam sync com Google Calendar. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, description, task_type, priority, scheduled_at, duration_minutes. **Tratamento em sessoes (15/09):** com tipo `sessions_enabled`, o agendamento pelo painel/API nasce como sessao do tratamento do contato (proxima a marcar; cheio = sessao extra ate 60; concluido = ciclo novo) e a tarefa devolve `tratamento` {id, sessao, total, titulo} (nulo em compromisso comum). `treatment.*` cria o plano; `agenda_treatment_id` + `treatment_session_number` marcam uma sessao pedida. **Compromisso de Booking (17/09):** tarefa com `booking_id` tem responsavel FIXO (o profissional do tipo de evento) — `assignee_ids` e IGNORADO (200, o resto da edicao vale). Para mudar quem atende, edite o tipo de evento. **Presenca nao conclui:** mandar `attendance` NAO muda `status`; nao conclua a tarefa so porque a presenca foi marcada (concluir compromisso de Booking encerra lembretes/pos-atendimento e dispara o gatilho de fluxo 'agendamento concluido'). A resposta traz `selo` com o rotulo resultante.",
+  "description": "Atualiza uma tarefa. Campos alterados em video_call/meeting disparam sync com Google Calendar. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, description, task_type, priority, scheduled_at, duration_minutes. **Tratamento em sessoes (15/09):** com tipo `sessions_enabled`, o agendamento pelo painel/API nasce como sessao do tratamento do contato (proxima a marcar; cheio = sessao extra ate 60; concluido = ciclo novo) e a tarefa devolve `tratamento` {id, sessao, total, titulo} (nulo em compromisso comum). `treatment.*` cria o plano; `agenda_treatment_id` + `treatment_session_number` marcam uma sessao pedida. **Compromisso de Booking (17/09):** tarefa com `booking_id` tem responsavel FIXO (o profissional do tipo de evento) — `assignee_ids` e IGNORADO (200, o resto da edicao vale). Para mudar quem atende, edite o tipo de evento. **Presenca nao conclui:** mandar `attendance` NAO muda `status`; nao conclua a tarefa so porque a presenca foi marcada (concluir compromisso de Booking encerra lembretes/pos-atendimento e dispara o gatilho de fluxo 'agendamento concluido'). A resposta traz `selo` com o rotulo resultante. **Presa a card (20/10):** `kanban_item_id` prende a tarefa a um card do Kanban e `occupies_agenda` diz se ela bloqueia o horario. Tentar prender a card um agendamento, uma sessao de programa ou um evento do Google devolve 422 (errors.kanban_item_id); card inexistente, de outra conta ou que a pessoa nao ve tambem e 422.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -9192,9 +9262,23 @@
     "location": "body",
     "required": false,
     "description": "'Marcar proxima': numero da sessao pedida (1..N); sessao ja marcada = 422 'Essa sessao ja foi marcada'"
+   },
+   {
+    "name": "kanban_item_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "ID do card do Kanban a que a tarefa fica PRESA (a tarefa aparece na aba Tarefas do card e some junto com ele se for simples; veja lionchat_kanban_items_destroy). A pessoa precisa ver o card; card de outra conta ou invisivel = 422. Agendamento (Booking), sessao de programa/tratamento e evento importado do Google NAO podem ser presos a card (422). Diferente de linked_kanban_item_id. (enviar null para soltar)"
+   },
+   {
+    "name": "occupies_agenda",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Ocupa a agenda: true (padrao) = o horario da tarefa conta como ocupado na agenda e no Google Agenda; false = e so um lembrete, nao bloqueia o horario. Agendamento do Booking e evento importado do Google SEMPRE ocupam (o servidor forca true)."
    }
   ],
-  "returns": "tarefa/agenda atualizado",
+  "returns": "tarefa/agenda atualizado Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
   "common_use_cases": [
    "Edição parcial de tarefa/agenda",
    "Alteração de status/estado",
@@ -9324,7 +9408,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/account_tasks/{id}/update_future",
   "title": "Atualizar Futuras",
-  "description": "Atualiza esta e todas as futuras instâncias de tarefa recorrente. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, scheduled_at. **Compromisso de Booking (17/09):** tarefa com `booking_id` tem responsavel FIXO (o profissional do tipo de evento) — `assignee_ids` e IGNORADO (200, o resto da edicao vale). Para mudar quem atende, edite o tipo de evento. **Presenca nao conclui:** mandar `attendance` NAO muda `status`; nao conclua a tarefa so porque a presenca foi marcada (concluir compromisso de Booking encerra lembretes/pos-atendimento e dispara o gatilho de fluxo 'agendamento concluido'). A resposta traz `selo` com o rotulo resultante.",
+  "description": "Atualiza esta e todas as futuras instâncias de tarefa recorrente. Atualiza campos do tarefa/agenda existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, scheduled_at. **Compromisso de Booking (17/09):** tarefa com `booking_id` tem responsavel FIXO (o profissional do tipo de evento) — `assignee_ids` e IGNORADO (200, o resto da edicao vale). Para mudar quem atende, edite o tipo de evento. **Presenca nao conclui:** mandar `attendance` NAO muda `status`; nao conclua a tarefa so porque a presenca foi marcada (concluir compromisso de Booking encerra lembretes/pos-atendimento e dispara o gatilho de fluxo 'agendamento concluido'). A resposta traz `selo` com o rotulo resultante. **Presa a card (20/10):** `kanban_item_id` prende a tarefa a um card do Kanban e `occupies_agenda` diz se ela bloqueia o horario. Tentar prender a card um agendamento, uma sessao de programa ou um evento do Google devolve 422 (errors.kanban_item_id); card inexistente, de outra conta ou que a pessoa nao ve tambem e 422. Na serie, `kanban_item_id` e `occupies_agenda` valem para esta e todas as ocorrencias futuras.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -9361,9 +9445,23 @@
     "location": "body",
     "required": false,
     "description": "Presenca: attended (compareceu) ou no_show (faltou). E um CARIMBO, nao um status — nao substitui `status`, e marcar falta NAO devolve o horario para a agenda."
+   },
+   {
+    "name": "kanban_item_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "ID do card do Kanban a que a tarefa fica PRESA (a tarefa aparece na aba Tarefas do card e some junto com ele se for simples; veja lionchat_kanban_items_destroy). A pessoa precisa ver o card; card de outra conta ou invisivel = 422. Agendamento (Booking), sessao de programa/tratamento e evento importado do Google NAO podem ser presos a card (422). Diferente de linked_kanban_item_id. (enviar null para soltar)"
+   },
+   {
+    "name": "occupies_agenda",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Ocupa a agenda: true (padrao) = o horario da tarefa conta como ocupado na agenda e no Google Agenda; false = e so um lembrete, nao bloqueia o horario. Agendamento do Booking e evento importado do Google SEMPRE ocupam (o servidor forca true)."
    }
   ],
-  "returns": "tarefa/agenda atualizado",
+  "returns": "tarefa/agenda atualizado Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
   "common_use_cases": [
    "Edição parcial de tarefa/agenda",
    "Alteração de status/estado",
@@ -9415,7 +9513,7 @@
     "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
    }
   ],
-  "returns": "Objeto com QUATRO listas separadas, sem meta e sem payload: { overdue: [...], today: [...], tomorrow: [...], next_7_days: [...] }. Traz APENAS tarefas em aberto (status pendente ou adiada — concluida/cancelada nao aparece) e nao ocultas, ja filtradas pela permissao de quem chama (administrador ve todas; agente ve so as que criou ou em que e responsavel). Agrupamento pela data agendada: overdue = antes de hoje 00:00 (ordenado da mais recente para a mais antiga), today = hoje, tomorrow = amanha, next_7_days = ate 7 dias a frente. Cada item e a tarefa completa (serializacao do modelo AccountTask, ja com assignees/assignee_ids, completed, dados de recorrencia, conversation_display_id, nome/telefone/email do contato, meeting_url e links de booking). Sem paginacao (teto de 10 mil por grupo).",
+  "returns": "Objeto com QUATRO listas separadas, sem meta e sem payload: { overdue: [...], today: [...], tomorrow: [...], next_7_days: [...] }. Traz APENAS tarefas em aberto (status pendente ou adiada — concluida/cancelada nao aparece) e nao ocultas, ja filtradas pela permissao de quem chama (administrador ve todas; agente ve so as que criou ou em que e responsavel). Agrupamento pela data agendada: overdue = antes de hoje 00:00 (ordenado da mais recente para a mais antiga), today = hoje, tomorrow = amanha, next_7_days = ate 7 dias a frente. Cada item e a tarefa completa (serializacao do modelo AccountTask, ja com assignees/assignee_ids, completed, dados de recorrencia, conversation_display_id, nome/telefone/email do contato, meeting_url e links de booking). Sem paginacao (teto de 10 mil por grupo). Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
    "Buscar com filtros antes de outra operação",
@@ -9458,7 +9556,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/tasks",
   "title": "Tarefas do Card",
-  "description": "Lista tarefas de todas as conversas vinculadas ao card (primária + linked). Lista tarefas/agenda paginados (per_page padrão 25, máximo 100). Filtros disponíveis: scope, page. Retorna meta (contadores) + payload (array de tarefa/agenda). **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
+  "description": "Lista as TAREFAS DO CARD (aba Tarefas do card): as tarefas PRESAS a este card (kanban_item_id) MAIS as tarefas sem card das conversas dele (principal + vinculadas). Tarefa presa a OUTRO card nao aparece aqui, mesmo na mesma conversa. Respeita a visibilidade da Agenda de quem chama. Paginada (per_page padrao 10, maximo 100). Filtro opcional scope: active (pendentes+adiadas) ou done (concluidas+canceladas). Cada tarefa traz `selo` (17/09): o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -9483,7 +9581,7 @@
     "description": "Página"
    }
   ],
-  "returns": "Lista pura (array), sem embrulho: a resposta E o array de tarefas do card, juntando as tarefas de TODAS as conversas vinculadas a ele. Cada tarefa traz os campos do registro mais `assignees` (id, nome, cor na agenda), `assignee_ids`, `completed`, dados de recorrencia (recurrence_type/count/group_id), `conversation_display_id`, `conversation_contact_name` e dados do contato (contact_name, contact_phone, contact_email). Paginada: 10 por pagina por padrao (parametros `page` e `per_page`, teto 100) e o total NAO vem no corpo. Filtro opcional `scope`: active (pendentes+adiadas) ou done (concluidas+canceladas).",
+  "returns": "Lista pura (array), sem embrulho: a resposta E o array de tarefas do card, juntando as tarefas presas ao card com as sem card das conversas dele. Cada tarefa traz os campos do registro mais `assignees` (id, nome, cor na agenda), `assignee_ids`, `completed`, dados de recorrencia (recurrence_type/count/group_id), `conversation_display_id`, `conversation_contact_name` e dados do contato (contact_name, contact_phone, contact_email). Paginada: 10 por pagina por padrao (parametros `page` e `per_page`, teto 100) e o total NAO vem no corpo. Filtro opcional `scope`: active (pendentes+adiadas) ou done (concluidas+canceladas). Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
    "Buscar com filtros antes de outra operação",
@@ -9500,7 +9598,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/{id}/next_task",
   "title": "Próxima Tarefa do Card",
-  "description": "Retorna a PROXIMA tarefa pendente ou adiada do card (a de menor scheduled_at), considerando a conversa principal e as vinculadas. Devolve UM OBJETO de tarefa — nao ha meta/payload nem paginacao — e `{}` (objeto vazio) quando nao ha nenhuma. Nao procure um array: procurar array aqui faz voce responder \"esse card nao tem proxima tarefa\" quando tem. ATENCAO: esta rota NAO filtra por privacidade de tarefa — pode devolver tarefa de OUTRO atendente, ao contrario do campo `next_task` que vem dentro do proprio card (esse so mostra tarefa de quem esta consultando). **`selo` (17/09):** cada tarefa traz o rotulo UNICO que o painel mostra ao lado dela, so de leitura — `cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`. Junta `status`, `attendance` e remarcacao (pelo painel ou pelo cliente no link). Para dizer o que aconteceu com o compromisso, leia `selo`: `status: pending` sozinho NAO significa que nada aconteceu (a pessoa pode ter faltado).",
+  "description": "Retorna a PROXIMA tarefa pendente ou adiada do card (a de menor scheduled_at), pela mesma regra da aba Tarefas do card: tarefas presas ao card (kanban_item_id) mais as sem card das conversas dele, inclusive card sem conversa. Devolve UM OBJETO de tarefa — nao ha meta/payload nem paginacao — e `{}` (objeto vazio) quando nao ha nenhuma. Nao procure um array: procurar array aqui faz voce responder \"esse card nao tem proxima tarefa\" quando tem. Segue a MESMA regua de privacidade do campo `next_task` que vem dentro do proprio card: administrador ve todas; atendente so ve tarefa de que e dono ou responsavel. `selo` (17/09): cada tarefa traz o rotulo UNICO que o painel mostra, so de leitura (`cancelled` > `no_show` / `attended` > `completed` > `snoozed` > `rescheduled` > `pending`); `status: pending` sozinho NAO significa que nada aconteceu.",
   "category": "Agenda / Tarefas",
   "params": [
    {
@@ -9511,7 +9609,7 @@
     "description": "ID do card Kanban"
    }
   ],
-  "returns": "A tarefa (objeto unico, mesmo formato de uma tarefa da agenda) ou `{}` quando nao ha nenhuma pendente/adiada. Sem meta, sem payload e sem paginacao.",
+  "returns": "A tarefa (objeto unico, mesmo formato de uma tarefa da agenda) ou `{}` quando nao ha nenhuma pendente/adiada. Sem meta, sem payload e sem paginacao. Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
    "Buscar com filtros antes de outra operação",
@@ -12503,6 +12601,40 @@
   ],
   "related_tools": [
    "lionchat_companies_update"
+  ]
+ },
+ {
+  "id": "lionchat_companies_import_status",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/companies/import_status/{import_id}",
+  "title": "Andamento da Importacao de Empresas",
+  "description": "Acompanha a importacao de empresas em massa que ja foi enviada (lionchat_companies_bulk_create ou o botao 'Importar empresas' da tela). O import_id e o codigo devolvido na hora de importar — a importacao roda em segundo plano, entao consulte de tempos em tempos ate o status virar 'completed' ou 'failed'. errors = linhas que NAO entraram (sem nome, mais de uma empresa com o mesmo nome sem CNPJ e sem site), com o numero da linha da planilha (o titulo e a linha 1, entao o item N da lista e a linha N+1). skipped = campos que ficaram em branco por valor invalido, com o motivo; a empresa entrou mesmo assim. O registro vive 24 horas: depois disso volta 404 mesmo que a importacao tenha dado certo, entao 404 nao significa fracasso. Exige o modulo Empresas ligado e administrador ou cargo com 'Exportar e importar contatos'. ENTERPRISE-only.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "import_id",
+    "type": "string",
+    "location": "path",
+    "required": true,
+    "description": "Codigo da importacao (UUID) devolvido por lionchat_companies_bulk_create"
+   }
+  ],
+  "returns": "{ status: 'queued'|'processing'|'completed'|'failed', total, processed, created, updated, error_count, errors: [{row, message}], skipped_fields, skipped: [{row, field, message}], blank_rows, error_message? } — e { error } com 404 se o codigo nao existe ou ja passou de 24 horas",
+  "common_use_cases": [
+   "Avisar quando a lista de empresas terminou de entrar",
+   "Descobrir quantas empresas foram criadas e quantas foram atualizadas",
+   "Ver quais linhas nao entraram e por que"
+  ],
+  "related_tools": [
+   "lionchat_companies_list",
+   "lionchat_companies_search"
   ]
  },
  {
@@ -31506,7 +31638,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/lead_forms/{lead_form_id}/responses",
   "title": "Listar Respostas do Formulario",
-  "description": "Lista as respostas (25 por pagina, colunas leves — as respostas em si NAO vem na lista, use o show). Filtra por status e janela de dias.",
+  "description": "Lista as respostas (25 por pagina, colunas leves — as respostas em si NAO vem na lista, use o show). Filtra por status e janela de dias. Cada linha traz filled_by: null (o cliente pelo link) ou {id, name}/{id, removed: true} (a equipe preencheu pela conversa — essas respostas ficam fora do funil e dos contadores, desde 20/10/2026).",
   "category": "Formularios",
   "params": [
    {
@@ -31571,7 +31703,7 @@
     "description": "ID da resposta"
    }
   ],
-  "returns": "{id, status, contact ({id, name, phone} | {id: null, name, phone, pending: true} | null), current_node_label, started_at, completed_at, abandoned_at, created_at, answers: [{label, value_label, at, download_url?}] ordenado por at, milestones: [{node_id, name, at}], effects: [{node_id, label, state: pending|done|error, error, status (HTTP), url_short, at}], conversation: {id, display_id}|null, utm_params}. ATENÇÃO em answers: (1) o bloco de Ações grava entradas sintéticas com chave \"<node_id>::<n>\" e o fim degradado grava \"_walk_ended\" — nem toda chave é id de bloco; (2) no bloco de Agendamento value_label é o ID da reserva, não a data (use lionchat_contacts_form_entries_show, que mostra a data); (3) envio de WhatsApp pulado por falta de telefone aparece como entrada vazia do bloco de mensagem. Motivos possíveis em effects.error: invalid_method, invalid_url, http_<código> (http_0 = falha de transporte sem código), timeout, ssrf_blocked, result_too_large, stale, effect_failed, effect_runs_exceeded, budget_exceeded, no_ai_key, ai_error.",
+  "returns": "{id, status, filled_by ({id, name} | {id, removed: true} | null — null = o cliente pelo link; preenchimento pela equipe na conversa desde 20/10/2026), contact ({id, name, phone} | {id: null, name, phone, pending: true} | null), current_node_label, started_at, completed_at, abandoned_at, created_at, answers: [{label, value_label, at, download_url?}] ordenado por at, milestones: [{node_id, name, at}], effects: [{node_id, label, state: pending|done|error, error, status (HTTP), url_short, at}], conversation: {id, display_id}|null, utm_params}. ATENÇÃO em answers: (1) o bloco de Ações grava entradas sintéticas com chave \"<node_id>::<n>\" e o fim degradado grava \"_walk_ended\" — nem toda chave é id de bloco; (2) no bloco de Agendamento value_label é o ID da reserva, não a data (use lionchat_contacts_form_entries_show, que mostra a data); (3) envio de WhatsApp pulado por falta de telefone aparece como entrada vazia do bloco de mensagem. Motivos possíveis em effects.error: invalid_method, invalid_url, http_<código> (http_0 = falha de transporte sem código), timeout, ssrf_blocked, result_too_large, stale, effect_failed, effect_runs_exceeded, budget_exceeded, no_ai_key, ai_error.",
   "common_use_cases": [
    "Ler o que o lead respondeu",
    "Investigar por que a consulta externa/IA falhou (effects)",
@@ -32009,7 +32141,7 @@
     "description": "ID do contato"
    }
   ],
-  "returns": "{payload: [{source: 'lead_form'|'meta_lead'|'custom_webhook'|'flow', id, title (nome do formulário/fluxo/integração), status ('received' nas origens de fora; status da resposta no formulário), at (ISO), count (nº de campos gravados), conversation: {id, display_id} | null}], meta: {total, truncated}}",
+  "returns": "{payload: [{source: 'lead_form'|'meta_lead'|'custom_webhook'|'flow', id, title (nome do formulário/fluxo/integração), status ('received' nas origens de fora; status da resposta no formulário), at (ISO), count (nº de campos gravados), conversation: {id, display_id} | null, filled_by: {id, name} | {id, removed: true} | null (só 'lead_form'; preenchido pela equipe na conversa)}], meta: {total, truncated}}",
   "common_use_cases": [
    "Responder 'de onde veio este lead e o que ele preencheu?'",
    "Achar a resposta do formulário pra abrir com lionchat_contacts_form_entries_show",

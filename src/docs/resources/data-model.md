@@ -298,7 +298,9 @@ Funnel
 ├── account_id (FK)
 ├── name
 ├── stages (jsonb: hash com slug_etapa => { name, color, position, description, checklist_templates })
-├── settings (jsonb: { agents: [], goals: [], automations: [{trigger_type, action, action_config, enabled}] })
+├── settings (jsonb: { agents: [], goals: [], automations: [{trigger_type, action, action_config, enabled}] };
+│     `automations[].action` inclui `create_task` (20/10/2026). `settings.removed_stages` = etapas já excluídas,
+│     mantida só pelo servidor — enviada pela API é ignorada)
 ├── global_custom_attributes (jsonb array — NENHUMA tela lê este campo do funil; os campos da aba do card
 │     são os do KanbanConfig acima)
 ├── meta_events_config (jsonb: won/lost/stages → Meta Pixel/CAPI events; cada bloco: enabled, name,
@@ -345,6 +347,14 @@ KanbanItemSnooze (kanban_item_snoozes — 11/10/2026: ate quando o card esta ADI
 ├── snoozed_until (datetime)
 ├── snoozed_by_id (quem adiou; nulo = automacao, macro ou fluxo)
 └── created_at / updated_at
+
+KanbanStageRemoval (kanban_stage_removals — 20/10/2026: a exclusão de etapa EM ANDAMENTO; sem chave estrangeira)
+├── account_id, funnel_id (funil de ORIGEM), stage_key (a etapa excluída)
+├── to_funnel_id, to_stage (destino dos cards; nulos quando a etapa estava vazia e saiu pelo Salvar do funil)
+├── user_id (quem pediu), status (running | done), moved_count
+├── started_at / last_seen_at / finished_at
+└── Um só `running` por etapa: é ele que dá o 409 STAGE_REMOVAL_IN_PROGRESS a quem tenta excluir a mesma etapa
+    ao mesmo tempo. A IA NÃO lê nem grava esta tabela; ela só chama `lionchat_funnels_remove_stage` e repete
 
 Item do checklist (elemento do array jsonb `checklist`)
 ├── id (uuid string)
@@ -504,8 +514,21 @@ AccountTask (agenda interna)
 ├── meeting_url (string, sala de reunião call/meeting)
 ├── guest_emails (jsonb array, convidados extras — máx 20)
 ├── conversation_id / contact_id / linked_kanban_item_id (FK opcionais)
+├── kanban_item_id (FK opcional → KanbanItem, 20/10/2026) — a tarefa PRESA ao card (aparece na aba Tarefas do card).
+│   NÃO confunda com `linked_kanban_item_id` (card apenas relacionado, não dono da tarefa). A API devolve também
+│   `kanban_item_title` (só leitura). Agendamento (Booking), sessão de programa e evento do Google NÃO podem ser
+│   presos a card (422). Apagar o card apaga só a tarefa SIMPLES presa a ele (sem conversa, contato, agendamento, sessão de programa,
+│   anexo, que não veio do Google e não é somente leitura); as outras se soltam e ficam. A tarefa automática de card
+│   COM conversa grava a conversa e por isso sobrevive à exclusão do card (fica na conversa)
+├── occupies_agenda (boolean, padrão true, 20/10/2026) — se a tarefa bloqueia o horário na Agenda; false = lembrete
+│   que não bloqueia (o padrão da regra "Criar tarefa" é false)
+├── automation_event_key (string, só leitura, 20/10/2026) — chave de "uma tarefa por acontecimento" da tarefa
+│   automática (`card:<id>:rule:...` no funil, `flow:<sessão>:<bloco>:<item>:<passagem>` no fluxo); índice único por
+│   conta. Tarefa criada por gente fica com ela nula
 ├── booked_by (polimórfico User/Contact/Captain::Assistant) / booked_by_name / booking_source
 │   (painel|link|ia|sistema|fluxo) — QUEM agendou e por onde (14/09)
+│   Tarefa AUTOMÁTICA (20/10): pela automação do funil, `booked_by` = o Funil e `booking_source` = `sistema`;
+│   pelo bloco "Criar tarefa" de um fluxo, `booked_by` = o Fluxo e `booking_source` = `fluxo`
 ├── attendance (enum attended=0 / no_show=1, NULO = nada registrado — CARIMBO, não muda status)
 │   / attendance_by (polimórfico) / attendance_source — quem marcou Compareceu/Faltou (14/09)
 ├── selo (SÓ LEITURA, calculado — 17/09): o rótulo ÚNICO que a tela mostra ao lado da tarefa, juntando

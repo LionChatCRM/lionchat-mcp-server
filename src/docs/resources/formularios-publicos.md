@@ -451,7 +451,7 @@ em `responses_show.milestones`.
 
 **`lionchat_lead_forms_responses_list`** aceita `status` (`in_progress`, `completed`,
 `abandoned`), `days` e `page` (até 10.000). A lista nunca traz as respostas em si — só `{id, status,
-contact, current_node_label, answered_count, created_at, completed_at}` e `meta: {current_page,
+contact, current_node_label, answered_count, created_at, completed_at, filled_by}` e `meta: {current_page,
 per_page: 25, total_count}`. **`contact` pode vir `{id: null, name, phone, pending: true}`** — é
 quem ainda está preenchendo (o contato só nasce nos três momentos); nome e telefone saem do que a
 pessoa já digitou. `answered_count` conta todas as chaves de `answers`, inclusive as sintéticas.
@@ -479,6 +479,24 @@ falha de transporte sem código), `timeout`, `ssrf_blocked`, `result_too_large`,
 `no_ai_key`, `ai_error`. (Os motivos `busy` e `unresolved_variable`, citados antes, não existem no
 código.)
 
+### Preenchimento pela equipe, dentro da conversa — 20/10/2026 (entra com o próximo deploy do app)
+
+No painel, a barra lateral da conversa ganhou o quadro **Formulários**: o atendente (SDR) abre qualquer formulário
+publicado e ligado numa janela e preenche durante a ligação. Essa resposta é **da equipe**:
+
+- `filled_by` (lista, show e Preenchimentos do contato): `null` = o próprio cliente pelo link; `{id, name}` = o
+  atendente que preencheu; `{id, removed: true}` = o atendente foi apagado (o selo continua).
+- Contato e conversa ficam **fixos**: os da conversa. Telefone digitado nunca troca de contato nem cria ficha; se já
+  for de outra ficha (com ou sem o nono dígito) não é gravado.
+- Todos os blocos rodam como no link (atributos, etiquetas, marco, API, IA, WhatsApp, contrato, agenda). A única
+  diferença: os fluxos **"Formulário concluído"** e **"Formulário abandonado"** NÃO disparam — o pulo fica registrado
+  com o motivo `filled_by_team`. "Marco do formulário" dispara.
+- Fica **fora** de `lionchat_lead_forms_stats` (funil, conclusão) e dos contadores da lista (`responses_count`,
+  `completed_count`), e do relatório de formulários. Aparece em `responses_list`/`responses_show` com o selo.
+- Não há ferramenta do MCP para começar esse preenchimento — ele só existe na janela do painel.
+- Atributo gravado por QUALQUER formulário (link ou equipe) acorda o mesmo que a edição manual: automação "atributo
+  alterado", fluxos de atributo e webhook (desde 20/10/2026).
+
 ## Preenchimentos do contato (`lionchat_contacts_form_entries_list` / `_show`) — 21/08 (entra com o próximo deploy do app depois de 21/08/2026)
 
 A aba "Preenchimentos" da ficha junta, numa lista só ordenada por data, tudo que a pessoa preencheu
@@ -488,7 +506,7 @@ FlowBuilder cria pro gatilho de um fluxo (`flow`, com o nome do fluxo). É a ún
 "o que esta PESSOA preencheu" — as outras são por formulário/integração, e duas delas são só de
 administrador; esta é liberada a qualquer agente.
 
-- **Lista**: `{payload: [{source, id, title, status, at, count, conversation}], meta: {total,
+- **Lista**: `{payload: [{source, id, title, status, at, count, conversation, filled_by}], meta: {total,
   truncated}}`. `id` é o id do registro NA ORIGEM — só identifica junto com `source`. `status` é
   `in_progress|completed|abandoned` no nosso formulário e `received` nas demais. `count` = respostas
   (nosso) ou campos vinculados e gravados (de fora). `conversation` só existe em `lead_form`. Sem
