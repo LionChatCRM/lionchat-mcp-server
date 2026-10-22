@@ -570,7 +570,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `send_conversion` (novo 2026-09-01; `event_names` 2026-09-02; `messaging_event_names` 2026-09-10) | `{ destinations: ['meta'\|'ga4'\|'google_ads'], event_names: { meta?, google_ads?, ga4? }, messaging_event_names: { meta? }, event_name (reserva), value? }` | Manda o evento de conversão pro Meta (CAPI), Google Ads e/ou GA4 — o mesmo caminho do Funil, de dentro do fluxo. Aba Sistema (só flow `conversation`). Ver bloco próprio abaixo |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
 | `set_booking_situation` (novo 2026-09-14) | `{ situation: 'cancelled' \| 'completed' \| 'attended' \| 'no_show' \| 'confirmed' }` | Muda a situação do agendamento **que disparou o fluxo** (gatilho de agendamento do bloco Início, ou fluxo ligado na configuração do tipo de agendamento). Aba **Agenda** (só flow `conversation`, só com a Agenda ligada na conta). Disparado por outra coisa: **não faz efeito e o passo fica com erro visível** (não há como adivinhar o agendamento). Já no estado pedido = passo PULADO, sem escrita (sem evento, sem laço). `cancelled` cancela o **agendamento** (desarma lembretes, invalida o link de gerenciar). Origem gravada = `fluxo`, ator = o próprio flow. Sem `rescheduled`/`snoozed`: o bloco não mexe em data |
-| `create_account_task` (novo 2026-10-20) | `{ title, description?, task_type, agenda_id?, priority?, occupies_agenda?, due: {amount, unit: 'hours' \| 'days', at?, business_days?}, responsible: {mode: 'card_owner' \| 'fixed' \| 'funnel_rotation' \| 'team_rotation', user_id?, team_id?, fallback_user_id?}, card_source: 'funnel' \| 'trigger', funnel_id? }` | "Criar tarefa": cria uma tarefa COMUM da Agenda, presa ao card do fluxo (ou só à conversa, se não houver card). Os campos de `title` a `responsible` são os MESMOS da ação `create_task` da automação do funil (ver `kanban-deep-dive`). Aba **Agenda**; exige a Agenda unificada ligada na conta. **NÃO roda em fluxo `ai_tool` nem em fluxo de grupo** (o motor recusa com erro visível no passo; o save aceita, a tela esconde o item). Detalhes logo abaixo |
+| `create_account_task` (novo 2026-10-20) | `{ title, description?, task_type, agenda_id?, priority?, occupies_agenda?, duration_minutes?, due: {amount, unit: 'hours' \| 'days', at?, business_days?}, responsible: {mode: 'card_owner' \| 'fixed' \| 'funnel_rotation' \| 'team_rotation', user_id?, team_id?, fallback_user_id?}, card_source: 'funnel' \| 'trigger', funnel_id? }` | "Criar tarefa": cria uma tarefa COMUM da Agenda, presa ao card do fluxo (ou só à conversa, se não houver card). Os campos de `title` a `responsible` são os MESMOS da ação `create_task` da automação do funil (ver `kanban-deep-dive`). Aba **Agenda**; exige a Agenda unificada ligada na conta. **NÃO roda em fluxo `ai_tool` nem em fluxo de grupo** (o motor recusa com erro visível no passo; o save aceita, a tela esconde o item). Detalhes logo abaixo |
 | `update_attribute` | `{ attr_source: 'contact'\|'conversation'\|'card', attr_key, attr_value }` | Seta custom_attribute (ver abaixo) |
 | `assign_captain` (ou `assign_captain_assistant`) | `{ assistant_id }` | Atribui IA Captain |
 | `deactivate_captain` | `{}` | Tira a IA da conversa |
@@ -584,7 +584,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 ```json
 { "key": "create_account_task", "config": {
   "title": "Ligar para {{contact.name}}", "description": "", "task_type": "call", "agenda_id": null,
-  "priority": "none", "occupies_agenda": false,
+  "priority": "none", "occupies_agenda": false, "duration_minutes": 45,
   "due": { "amount": 3, "unit": "days", "at": "09:00", "business_days": true },
   "responsible": { "mode": "card_owner", "fallback_user_id": 12 },
   "card_source": "trigger", "funnel_id": ""
@@ -592,12 +592,13 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 ```
 
 - **Os campos da regra** (`title`, `description`, `task_type`, `agenda_id`, `priority`, `due`, `responsible`,
-  `occupies_agenda`) têm o mesmo formato e os mesmos limites da ação `create_task` do funil: `title` obrigatório; `due`
+  `occupies_agenda`, `duration_minutes`) têm o mesmo formato e os mesmos limites da ação `create_task` do funil: `title` obrigatório; `due`
   em horas (1 a 720) ou dias (0 a 365, com `at` "HH:MM" e `business_days` só em dias); `responsible.mode` com a chave
   obrigatória do modo (`fallback_user_id`, `user_id` ou `team_id`; `funnel_rotation` não pede nenhuma no save,
   mas no fluxo SEM card o rodízio do funil não tem funil e cai na pessoa reserva `fallback_user_id` — sem reserva a
   tarefa não nasce, com o motivo no histórico: mande `fallback_user_id` se o fluxo puder rodar sem card). Regra torta =
   passo VERMELHO com a frase do campo a consertar, sem tarefa.
+- **Duração**: `duration_minutes` (22/10/2026): minutos que a tarefa ocupa, inteiro de 1 a 1440; ausente ou `null` = o tempo do TIPO (Tarefa/Follow-up/Prazo 15, Ligação/Personalizado 30, Reunião/Call 60, tipo criado pela conta 30). Com `occupies_agenda: true` o horário ocupado vai do prazo até o fim da duração.
 - **De onde vem o card (`card_source`)**: `'trigger'` = o card que INICIOU o fluxo (gatilhos `card_created`,
   `card_moved`, `card_won`, `card_lost`, `card_opened`, `card_snoozed`); fluxo que não nasceu de card = ERRO
   visível, nunca pulado. `'funnel'` (o padrão da tela) = o card DESSA conversa no funil `funnel_id` (**obrigatório**

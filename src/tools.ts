@@ -497,7 +497,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-20)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-22)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -1001,12 +1001,13 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         mexe em data.
     Tarefa (aba Agenda; exige a Agenda unificada ligada na conta; NAO roda em fluxo ai_tool nem em fluxo de grupo —
       o save aceita, o motor recusa com ERRO visivel no passo e a tela esconde o item):
-      create_account_task({title, description?, task_type, agenda_id?, priority?, occupies_agenda?,
+      create_account_task({title, description?, task_type, agenda_id?, priority?, occupies_agenda?, duration_minutes?,
         due:{amount, unit:'hours'|'days', at?:'HH:MM', business_days?:true},
         responsible:{mode:'card_owner'|'fixed'|'funnel_rotation'|'team_rotation', user_id?, team_id?, fallback_user_id?},
         card_source:'funnel'|'trigger', funnel_id?}) — NOVO 20/10/2026 ("Criar tarefa"): cria uma tarefa COMUM da
-        Agenda presa ao card do fluxo (ou so a conversa, se nao houver card). Os campos de title a occupies_agenda
-        sao os MESMOS da acao create_task do funil (settings.automations): title obrigatorio; due em horas (1 a 720)
+        Agenda presa ao card do fluxo (ou so a conversa, se nao houver card). Os campos de title a duration_minutes
+        sao os MESMOS da acao create_task do funil (settings.automations): title obrigatorio; duration_minutes (22/10/2026) = minutos que a tarefa ocupa, 1 a 1440, ausente = o tempo do tipo (Tarefa 15,
+        Ligacao 30, Reuniao 60); due em horas (1 a 720)
         ou dias (0 a 365; at e business_days SO em dias; dia util = segunda a sexta sem feriado de DIA INTEIRO da
         agenda da tarefa); responsible.mode exige a chave do modo (card_owner -> fallback_user_id; fixed -> user_id;
         team_rotation -> team_id; funnel_rotation nenhuma no save, mas SEM card cai em fallback_user_id,

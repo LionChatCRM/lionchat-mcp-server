@@ -568,7 +568,7 @@ PUT /api/v1/accounts/43/funnels/43
 | `send_webhook` | `{webhook_url}` | POST com payload completo do card (fire-and-forget) |
 | `apply_checklist_template` | `{template_id}` | Template de `kanban_config.checklist_templates`; aditivo (appenda) — cada aplicação vira um grupo (carimba `group_id`/`group_name` nos itens) |
 | `update_checklist` | `{checklist_updates: [{checklist_item_id, completed, text}]}` | Não aparece na UI — só via API |
-| `create_task` (20/10/2026) | `{title, description?, task_type, agenda_id?, priority?, occupies_agenda?, due: {amount, unit: 'hours'\|'days', at?: 'HH:MM', business_days?: true}, responsible: {mode: 'card_owner'\|'fixed'\|'funnel_rotation'\|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}` | Cria uma tarefa COMUM da Agenda presa ao card (ver "Tarefa automática do card" abaixo). Exige a Agenda unificada ligada na conta |
+| `create_task` (20/10/2026) | `{title, description?, task_type, agenda_id?, priority?, occupies_agenda?, duration_minutes?, due: {amount, unit: 'hours'\|'days', at?: 'HH:MM', business_days?: true}, responsible: {mode: 'card_owner'\|'fixed'\|'funnel_rotation'\|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}` | Cria uma tarefa COMUM da Agenda presa ao card (ver "Tarefa automática do card" abaixo). Exige a Agenda unificada ligada na conta |
 
 **Regras críticas (gravar diferente disso = automação perdida ou morta):**
 
@@ -592,6 +592,7 @@ Use para: "ao ganhar um card de Vendas → criar automaticamente em Pós-Venda n
   `business_days: true` (dias úteis) **só em dias**. Dia útil = segunda a sexta **sem feriado de dia inteiro** da agenda
   da tarefa (feriado de meio período não conta). O fuso é o da agenda da tarefa. Prazo que já passou nasce atrasado,
   nunca é empurrado.
+- **Duração**: `duration_minutes` (22/10/2026): minutos que a tarefa ocupa, inteiro de 1 a 1440; ausente ou `null` = o tempo do TIPO (Tarefa/Follow-up/Prazo 15, Ligação/Personalizado 30, Reunião/Call 60, tipo criado pela conta 30). Com `occupies_agenda: true` o horário ocupado vai do prazo até o fim da duração.
 - **Responsável (`responsible.mode`)**: `card_owner` (primeiro responsável do card; senão o da conversa; senão a reserva `fallback_user_id`,
   obrigatória), `fixed` (exige `user_id`), `funnel_rotation` (rodízio de quem acessa o funil) e `team_rotation` (exige
   `team_id`).

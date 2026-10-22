@@ -292,7 +292,8 @@ criam uma tarefa COMUM da Agenda, presa ao card (`kanban_item_id`). Para a agend
 - A Agenda unificada (`unified_agenda`) precisa estar ligada na conta; desligada, a regra do funil registra "não
   criou" no histórico do card e o item do fluxo fica com erro visível no passo.
 - `occupies_agenda: false` (padrão da regra) cria a tarefa como lembrete que **não bloqueia o horário**; `true`
-  bloqueia como um compromisso.
+  bloqueia como um compromisso, do prazo até o fim da duração. `duration_minutes` (22/10/2026, 1 a 1440) escolhe a
+  duração; ausente = o tempo do tipo (Tarefa 15, Ligação 30, Reunião 60, tipo da conta 30).
 
 ---
 
