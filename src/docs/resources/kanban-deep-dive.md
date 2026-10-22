@@ -561,9 +561,9 @@ PUT /api/v1/accounts/43/funnels/43
 | action | action_config | Observação |
 |---|---|---|
 | `move_to_stage` | `{stage}` | NUNCA executa com trigger `stage_moved` (anti-loop do backend) |
-| `assign_agent` | `{agent_id}` | Agente precisa ter acesso ao funil, senão é ignorado |
+| `assign_agent` | `{agent_id}` | Agente precisa ter acesso ao funil, senão é ignorado. **Não use com gatilho `won`/`lost`**: a automação roda com o card já fechado e card fechado não aceita responsável novo — não faz nada (a tela não oferece mais desde 22/10) |
 | `create_note` | `{note_text}` | Cria nota no card com autor "Sistema" |
-| `notify_team` | `{message}` | HOJE só registra em log interno — não notifica ninguém de verdade |
+| `notify_team` | `{message}` | HOJE só registra em log interno — não notifica ninguém de verdade. **Não use** (a tela não oferece mais desde 22/10) |
 | `duplicate_item` | `{funnel_id, stage}` | Cria cópia noutro funil/etapa; título ganha sufixo "(cópia)" |
 | `send_webhook` | `{webhook_url}` | POST com payload completo do card (fire-and-forget) |
 | `apply_checklist_template` | `{template_id}` | Template de `kanban_config.checklist_templates`; aditivo (appenda) — cada aplicação vira um grupo (carimba `group_id`/`group_name` nos itens) |
@@ -576,6 +576,11 @@ PUT /api/v1/accounts/43/funnels/43
 - Nomes de trigger/action fora das tabelas acima (ex.: `status_changed`, `duplicate_to_funnel`, `send_message`, `set_priority` — NÃO existem) são salvos mas NUNCA disparam, sem erro nenhum.
 - `id` no formato `automation_<timestamp_ms>` — a UI usa pra editar/remover a automação.
 - Trigger `card_created` + ação `duplicate_item` funciona (backend tem anti-loop), mas a UI esconde essa combinação.
+- **A ordem da lista `automations` é a ordem de execução**: quando várias regras disparam no mesmo acontecimento (ex.:
+  duas em `won`), elas rodam de cima para baixo. Para mudar a ordem, reenvie a lista inteira na ordem desejada (no
+  painel, desde 22/10, a pessoa segura e arrasta cada regra). Mudar a ordem não mexe na configuração de nenhuma regra.
+- `assign_agent` com `status_change` `won`/`lost` e `notify_team` são aceitos pelo servidor mas **não fazem nada**: não
+  grave regras novas com eles. Regra antiga que já os tenha aparece no painel com um aviso amarelo.
 
 Use para: "ao ganhar um card de Vendas → criar automaticamente em Pós-Venda na etapa Agendar Instalação" (`status_change`/`won` + `duplicate_item`).
 
