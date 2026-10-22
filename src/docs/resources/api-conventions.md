@@ -484,6 +484,16 @@ GET /search/conversations?q=pix&conversation_filters=[{"attribute_key":"status",
 - `kanban_card` — por card vinculado (funil/etapa/prioridade/status)
 Combináveis com E/OU e salváveis como segmento (custom_filters).
 
+### Segmento de contatos é da CONTA (2026-10-22)
+
+`custom_filters` com `filter_type: contact` (segmento) passou a ser da conta inteira: todos veem e usam (quem tem o
+menu Contatos no cargo). Criar, editar e apagar segmento = administrador ou cargo com `contact_manage`,
+`campaign_manage` ou `automation_manage` — sem isso, 401. Quem criou não ganha direito extra; a resposta traz
+`user_id`/`user_name` ("criado por", pode vir nulo) e `can_manage`. Pastas de conversa (`conversation`) e relatórios
+(`report`) continuam pessoais. `filter_type` é IGNORADO no update (não dá para trocar o tipo). Regra vazia ou
+incompleta = 422. Segmento usado por campanha programada não pode ser apagado (422 citando a campanha). Segmento serve
+de público de campanha (`{type: 'Segment', id}`) — ver a receita de campanha nas instruções.
+
 ### Exportação de contatos (2026-06-10)
 
 `POST /contacts/export` (chega por e-mail) agora sai COMPLETO: cadastral achatado (16 colunas),

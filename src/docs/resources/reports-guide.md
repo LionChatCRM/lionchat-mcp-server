@@ -34,7 +34,11 @@ Quando o usuário disser "o relatório está errado / não bate", quase sempre �
    também uma linha com `id: null` = "Sem atendente", e a planilha de agentes (`lionchat_reports_list_7`,
    CSV) traz a linha **"Sem atendente"** no FIM da lista. Ela **não é um atendente** — nunca inclua no
    ranking nem cruze o `id: null` com `lionchat_agents_list`. Antes disso o balde era descartado do CSV:
-   na conta 19 ficavam de fora 4.222 conversas e 580 resoluções.
+   na conta 19 ficavam de fora 4.222 conversas e 580 resoluções. **Desde 19/10/2026** "Sem atendente" = conversas
+   que chegaram no período e NÃO foram atribuídas a ninguém até o FIM do período (a mesma regra para o período de
+   hoje e para um mês fechado); quem foi atendido dentro do período não entra mais. O resumo por agente aceita
+   `team_id` e cada linha traz `csat_satisfaction_score` (% de notas 4 e 5 no período, ou `null`) e
+   `csat_response_count`.
 4. **A contagem de conversas por atendente usa o responsável ATUAL** — reatribuir conversa antiga move
    o histórico de um atendente pro outro. Já resoluções/tempos usam quem era o dono NA HORA do evento.
    Os dois cards podem divergir legitimamente em conta que reatribui.
@@ -341,6 +345,12 @@ Retorna SOMENTE estes campos (nem satisfação, nem média, nem taxa de resposta
 >
 > **Taxa de resposta** = `total_count / total_sent_messages_count`.
 > No exemplo: 80/210 = **38%**.
+>
+> **Desde 19/10/2026:** a pesquisa enviada e NÃO respondida deixou de ser apagada (antes a taxa ficava perto de
+> 100%). `total_sent_messages_count` respeita `inbox_id`/`team_id`/`user_ids` e o recorte do não-administrador.
+> Campo NOVO `response_rate_answered_count` = respostas às pesquisas enviadas no período SEM o filtro de nota — é o
+> numerador que a TELA usa para a taxa; prefira `response_rate_answered_count / total_sent_messages_count` quando o
+> campo vier.
 
 **Filtros aceitos (expostos na tool desde 2026-07-24):** `user_ids[]`, `inbox_id`, `team_id`, `rating`, `since`/`until` (unix segundos). Agora dá pra recortar CSAT por caixa/atendente direto.
 
@@ -360,6 +370,12 @@ Retorna:
 ```
 > O `hit_rate` já vem calculado como string (ex.: `"95.5%"`, ou `"100%"` quando não há falhas).
 > Não divida nada — apenas exiba o valor.
+>
+> **Desde 19/10/2026:** `hit_rate` = cumpridos / (cumpridos + estourados) dos SLAs aplicados no período que JÁ
+> tiveram desfecho; vem **`null`** quando nenhum teve desfecho (diga "sem desfecho ainda", nunca "100%"). Os que
+> ainda estão correndo vêm no campo NOVO `number_of_sla_in_progress`. `number_of_sla_misses` (e a lista/CSV) =
+> conversas cujo ESTOURO aconteceu no período, mesmo com o SLA aplicado antes — por isso taxa e violações não fecham
+> entre si.
 
 **Filtros aceitos (expostos na tool desde 2026-07-24):** `inbox_id`, `team_id`, `sla_policy_id`, `label_list[]`, `assigned_agent_id`, `since`/`until` (unix segundos).
 
@@ -837,11 +853,14 @@ dia"*. Em vez de garimpar dado em dez ferramentas, **leia o relatório salvo e e
 | Pergunta | Bloco |
 |---|---|
 | "Quantos agendamentos aconteceram no período?" | `stage_entries` |
-| "Como está o funil hoje / quantos estão em cada etapa?" | `funnel_stages` |
+| "Como está (ou estava) o funil / quantos estão em cada etapa?" | `funnel_stages` |
 
-`funnel_stages` conta quem **está** na etapa; card que entrou e depois saiu some dele. Medido em
-produção: **25% de diferença**. `stage_entries` lê o histórico de movimentação e conta **card
-distinto** (quem volta pra etapa conta uma vez só).
+`funnel_stages` conta quem **estava** na etapa no FIM do período (período até hoje = agora; 19/10/2026); card que
+entrou e depois saiu antes do fim some dele. Medido em produção: **25% de diferença**. Num período passado ele pode
+trazer as linhas extras "Etapa desconhecida"/"Etapa removida" (cards sem histórico daquela época / etapa apagada
+depois) — mostre-as com esse nome. `stage_entries` lê o histórico de movimentação e conta **card distinto** (quem
+volta pra etapa conta uma vez só); no modo `measure: value` também é um valor por card (o da última entrada no
+período).
 
 **Limite do `stage_entries`**: o histórico só existe a partir de **12/07/2026** e tem retenção de
 365 dias. Período que alcance antes disso devolve MENOS do que aconteceu — avise em vez de

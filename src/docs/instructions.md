@@ -317,6 +317,11 @@ teams, conversations_summary) exigem as DUAS pontas; nos demais, `since` ou `unt
 5. Acompanhar com lionchat_campaigns_statistics (sent/delivered/read/failed)
 ```
 Estrutura do audience: `[{type:'Label', id}, {type:'Funnel', id, stages:[], include_won, include_lost}, {type:'ConversationAttribute', key, value}]`.
+Segmento de contatos como público (22/10/2026): `{type:'Segment', id}` no audience e na exclusão
+(`trigger_rules.exclusion`). O id vem de `lionchat_custom_filters_list` com `filter_type: contact` (o segmento é da
+CONTA). Vale para WhatsApp oficial, QR Code e Campanha de Fluxo; SMS e TopSend recusam (422). A regra do segmento é
+lida na HORA do disparo: segmento apagado ou com regra quebrada = a campanha NÃO envia nada e o motivo fica em
+`trigger_rules.audience_error`; na estimativa vem `estimated_count: null` com `segment_unavailable`.
 QR Code aceita `template_params` com `delay_min/delay_max/variations` (anti-bloqueio) e `bulk_actions`.
 
 ### Criar campanha de FLUXO (dispara um flow, não uma mensagem) — novo 28/07/2026
