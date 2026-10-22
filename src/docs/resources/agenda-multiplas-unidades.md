@@ -297,6 +297,27 @@ criam uma tarefa COMUM da Agenda, presa ao card (`kanban_item_id`). Para a agend
 
 ---
 
+## 7.2. Lista de tarefas abertas — aba "Tarefas" da Agenda (22/10/2026)
+
+A Agenda ganhou a aba **Tarefas**, entre Calendário e Disparos: as tarefas abertas em lista, separadas por
+período. A ferramenta é `lionchat_tasks_task_list` (`GET account_tasks/task_list`). Use-a para "o que está
+atrasado?", "quantas tarefas a fulana tem em aberto?" e "o que falta fazer esta semana?".
+
+- **Aberta** = pendente ou adiada E sem "Compareceu"/"Faltou". Concluídas e canceladas não entram.
+- **Grupos**, no dia da conta: `overdue` (antes de hoje, da mais recente para a mais antiga), `today`,
+  `tomorrow`, `next_7_days` e `later`.
+- **Quem vê o quê e filtros**: os MESMOS do calendário (`lionchat_tasks_list`): `assignee_id`, `task_type`,
+  `status` (0 pendente, 3 adiada), `priority`, `agenda_id`, `q`. Quem não gerencia a agenda da equipe vê só as
+  próprias, com ou sem `assignee_id`.
+- **50 por grupo**. Para quantidade, leia `totals` (a contagem real), nunca o tamanho da lista. Para ir além das
+  50: `group=overdue&page=2` devolve só aquele grupo naquela página.
+- **Busca `q`** (vale também no calendário): título, descrição, responsável e, com 3 letras ou mais, o CLIENTE
+  (nome, telefone, e-mail). Termo que casa mais de 1.000 clientes procura só nos campos da tarefa.
+- O "Meu Dia" (`lionchat_tasks_list_1`) continua existindo como estava: sem filtros, sem páginas e sem `later`.
+- Cargo com a Agenda escondida recebe 401 aqui.
+- **Prioridade**: o filtro `priority` passou a funcionar em 22/10 (antes o servidor o ignorava, inclusive no
+  calendário).
+
 ## 8. Erros comuns
 
 | Sintoma | Causa |

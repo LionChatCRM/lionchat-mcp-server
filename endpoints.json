@@ -8815,6 +8815,13 @@
     "description": "Status"
    },
    {
+    "name": "priority",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Prioridade (22/10): urgent | high | medium | low | none. Antes de 22/10 este filtro era ignorado pelo servidor."
+   },
+   {
     "name": "user_id",
     "type": "integer",
     "location": "query",
@@ -8833,7 +8840,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Busca"
+    "description": "Busca (22/10): titulo, descricao e nome do responsavel; com 3 letras ou mais, tambem o CLIENTE da tarefa (nome, telefone, e-mail ou identificador, pela ficha da tarefa ou pela conversa dela). Termo que casa mais de 1.000 clientes procura so nos campos da tarefa."
    },
    {
     "name": "date_start",
@@ -8865,7 +8872,8 @@
   ],
   "related_tools": [
    "lionchat_tasks_list_1",
-   "lionchat_tasks_list_2"
+   "lionchat_tasks_list_2",
+   "lionchat_tasks_task_list"
   ]
  },
  {
@@ -9521,7 +9529,93 @@
   ],
   "related_tools": [
    "lionchat_tasks_list",
-   "lionchat_tasks_list_2"
+   "lionchat_tasks_list_2",
+   "lionchat_tasks_task_list"
+  ]
+ },
+ {
+  "id": "lionchat_tasks_task_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/account_tasks/task_list",
+  "title": "Lista de tarefas abertas (aba Tarefas da Agenda)",
+  "description": "Tarefas ABERTAS (pendentes e adiadas, sem 'Compareceu'/'Faltou') em grupos por periodo, no DIA DA CONTA: overdue (antes de hoje, da mais recente para a mais antiga), today, tomorrow, next_7_days e later (depois disso). E a mesma lista da aba 'Tarefas' da Agenda (22/10): a melhor ferramenta para 'o que esta atrasado?' ou 'o que falta fazer?'. Usa a MESMA regra de quem ve o que e os MESMOS filtros do calendario (lionchat_tasks_list). Pagina de 50 por grupo: sem `group` vem a 1a pagina dos cinco; com `group` + `page`, so aquele grupo naquela pagina. Diferente de lionchat_tasks_list_1 (Meu Dia), que nao tem filtros, nao pagina e nao tem o grupo 'later'. Cargo com a Agenda oculta recebe 401. **`selo`:** cada tarefa traz o rotulo que o painel mostra (pending, snoozed, rescheduled).",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "group",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Pede SO um grupo: overdue | today | tomorrow | next_7_days | later. Ausente ou desconhecido = os cinco, pagina 1."
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Pagina do grupo pedido em `group` (50 por pagina). So vale junto de `group`; invalida vira 1."
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Busca (22/10): titulo, descricao e nome do responsavel; com 3 letras ou mais, tambem o CLIENTE da tarefa (nome, telefone, e-mail ou identificador, pela ficha da tarefa ou pela conversa dela). Termo que casa mais de 1.000 clientes procura so nos campos da tarefa."
+   },
+   {
+    "name": "task_type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Tipo da tarefa"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Situacao dentro das abertas: 0 = pendente, 3 = adiada. Concluida (1) e cancelada (2) nunca aparecem aqui (devolvem grupos vazios)."
+   },
+   {
+    "name": "priority",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Prioridade (22/10): urgent | high | medium | low | none. Antes de 22/10 este filtro era ignorado pelo servidor."
+   },
+   {
+    "name": "assignee_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Tarefas de UMA pessoa. So muda alguma coisa para quem pode ver a agenda da equipe (administrador ou cargo com 'Gerenciar agenda da equipe'); os demais veem sempre as proprias."
+   },
+   {
+    "name": "user_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "ID de quem criou a tarefa"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Recorta por AGENDA (unidade). SEM este parametro a lista ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
+   }
+  ],
+  "returns": "Objeto: { overdue: [...], today: [...], tomorrow: [...], next_7_days: [...], later: [...], totals: { overdue: N, ... }, page: N, per_page: 50 }. Com `group`, so aquele grupo + totals dele. `totals` e a contagem REAL do grupo (use-a para 'quantas atrasadas?'; a lista traz no maximo 50). Cada tarefa vem no mesmo formato de lionchat_tasks_list (assignees, contact_name, conversation_contact_name, kanban_item_title, selo, tratamento...).",
+  "common_use_cases": [
+   "Quantas e quais tarefas estao atrasadas (de toda a equipe ou de uma pessoa)",
+   "Lista do que falta fazer hoje, amanha e na semana",
+   "Achar a tarefa de um cliente pelo nome ou telefone"
+  ],
+  "related_tools": [
+   "lionchat_tasks_list",
+   "lionchat_tasks_list_1",
+   "lionchat_tasks_show",
+   "lionchat_tasks_toggle"
   ]
  },
  {
