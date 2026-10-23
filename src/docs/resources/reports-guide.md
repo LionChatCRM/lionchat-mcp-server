@@ -872,6 +872,9 @@ Colunas: Ligações · Atendidas · Não atendidas · **Não concluídas** · Te
 
 - "Não concluídas" são as que ficaram presas (tocando, em andamento, falhou, cancelada). **Não as
   chame de "não atendidas"** — são coisas diferentes e a soma das três tem que fechar com o total.
+- **LionCalls, desde 23/10/2026:** ligação RECEBIDA que alguém atendeu no CELULAR do número (fora do painel) conta como
+  **Atendida**, com duração zero e sem gravação. Antes dessa data ela entrava em "Não atendidas" — ao comparar períodos
+  que atravessam 23/10, avise que a regra mudou.
 - Tempo médio já vem calculado sobre as ATENDIDAS. Não recalcule dividindo pelo total.
 - **Ligação sem atendente tem linha própria** e pode ser boa parte do volume (23% numa conta real).
   Não a esconda ao resumir por pessoa.
