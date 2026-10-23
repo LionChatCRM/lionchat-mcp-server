@@ -842,17 +842,35 @@ automática. Ver a seção de variáveis de conta acima.
 2. `reports_list_*` (agent_overview) com `since=7d_ago`, `until=now`
 3. Sintetize: agente X com Y resoluções, tempo médio Z
 
-### "Enviar mensagem com anexo (imagem/arquivo)"
-1. `upload_create` (a partir de arquivo OU de uma URL) → resposta traz `file_url` e `blob_id`
+### "Enviar mensagem com anexo (foto, vídeo, áudio, PDF, documento)"
+1. `upload_create` com `external_url` (link público de DOWNLOAD do arquivo) → resposta traz `file_url` e `blob_id`.
+   Pelo conector o arquivo sempre vai POR LINK — não existe envio direto do computador.
 2. `conversations_messages_create` passando o `blob_id` (signed_id) dentro do array `attachments`:
    ```json
    { "content": "Segue o documento", "message_type": "outgoing", "attachments": ["<blob_id>"] }
    ```
    Cada item de `attachments` é o `blob_id` retornado pelo upload. Pode mandar vários.
 3. O mesmo padrão vale pra anexar mídia num card do Kanban (use o `blob_id` no campo de anexo do card).
-4. **Anexo de MENSAGEM aceita QUALQUER tipo de arquivo (novo 15/08)** — só o TAMANHO reprova. Se
-   houver dúvida sobre um arquivo grande, confira antes com `lionchat_upload_limits_show` (segue
-   sendo a fonte dos tetos).
+4. **Tipos aceitos por link (23/10/2026):** foto, vídeo, áudio e documentos (PDF, Word, Excel, CSV, ZIP...). Até
+   23/10 o link só aceitava foto e vídeo — se uma resposta antiga sua disse que PDF não dava, isso mudou. Áudio e
+   documento respeitam o teto por tipo (`lionchat_upload_limits_show`).
+5. **Link que abre uma PÁGINA é recusado** ("O link abre uma página, não o arquivo"): é o caso do link de
+   visualização do Google Drive (`.../file/d/<ID>/view`). Use o download direto
+   `https://drive.google.com/uc?export=download&id=<ID>` — e o arquivo precisa estar com acesso "qualquer pessoa com o
+   link". Na dúvida, confira antes com `lionchat_upload_validate` (`valid=true` = vai funcionar).
+6. Funciona igual na conversa de um **grupo** do WhatsApp (caixa QR Code): a mensagem com anexo chega no grupo.
+
+### "Mandar um relatório em PDF todo dia num grupo do WhatsApp"
+1. Leia os números com as ferramentas de relatório (`lionchat_reports_summary`, `lionchat_custom_dashboards_widget_data`,
+   `lionchat_conversations_meta`...) e monte o PDF do seu lado.
+2. Publique o PDF num link de download público (ex.: pasta do Google Drive com acesso "qualquer pessoa com o link" —
+   o link de visualização não serve, veja o item 5 acima).
+3. Ache a conversa do grupo: `lionchat_conversations_list` na caixa WhatsApp QR Code (grupo só existe nela) ou busca
+   pelo nome do grupo.
+4. `upload_create` com o link → `conversations_messages_create` na conversa do grupo com o `blob_id` em `attachments`.
+5. **O conector não agenda nada**: "todo dia" depende de uma tarefa agendada do lado de quem usa o conector. Se texto
+   basta, prefira `lionchat_report_alerts_create` — o próprio servidor manda o resumo diário de um relatório
+   personalizado no grupo, sem depender de ninguém (siga o fluxo seguro da descrição: criar desligado, prévia, ligar).
 
 ## Cuidados com tools de criação
 

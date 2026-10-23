@@ -2045,7 +2045,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Arquivos anexos"
+    "description": "Lista de blob_id devolvidos por lionchat_upload_create (arquivo por link: foto, vídeo, áudio, PDF, documento). Funciona também na conversa de um grupo do WhatsApp (caixa QR Code)"
    },
    {
     "name": "content_attributes",
@@ -12999,8 +12999,8 @@
   "id": "lionchat_upload_create",
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/upload",
-  "title": "Upload de Arquivo",
-  "description": "Upload de arquivo ou busca por URL. Retorna file_url e blob_id. Cria novo upload. Valida unicidade quando aplicável. Retorna o upload criado com ID atribuído.",
+  "title": "Subir Arquivo por Link",
+  "description": "Sobe um arquivo POR LINK (external_url) e devolve file_url e blob_id. Pelo conector o arquivo SEMPRE vai por link — não há envio direto do computador. Aceita foto, vídeo, áudio e documentos (PDF, Word, Excel, CSV, ZIP...); até 23/10/2026 o link só aceitava foto e vídeo. Link que abre uma PÁGINA é recusado ('O link abre uma página, não o arquivo') — ex.: Google Drive .../file/d/<ID>/view; use o download direto https://drive.google.com/uc?export=download&id=<ID> (arquivo com acesso 'qualquer pessoa com o link'). Áudio e documento acima do teto do tipo (lionchat_upload_limits_show) são recusados. Use o blob_id no array attachments de lionchat_conversations_messages_create — funciona também na conversa de um GRUPO do WhatsApp (caixa QR Code). Na dúvida, confira o link antes com lionchat_upload_validate.",
   "category": "Upload",
   "params": [
    {
@@ -13015,16 +13015,20 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "URL externa do arquivo"
+    "description": "Link PÚBLICO de download do arquivo (http/https). Link de página de visualização é recusado"
    }
   ],
-  "returns": "upload criado (com novo ID)",
+  "returns": "{file_url, blob_id}",
   "common_use_cases": [
-   "Cadastro inicial de upload",
-   "Automação a partir de evento externo",
-   "Importação manual via API"
+   "Mandar PDF, áudio ou documento numa conversa ou grupo do WhatsApp (blob_id em attachments)",
+   "Anexar foto ou vídeo por link numa mensagem",
+   "Enviar todo dia um relatório em PDF num grupo"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_conversations_messages_create",
+   "lionchat_upload_validate",
+   "lionchat_upload_limits_show"
+  ]
  },
  {
   "id": "lionchat_inboxes_public_contacts_create",
@@ -32541,7 +32545,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates/media_library",
   "title": "Biblioteca de Mídia dos Modelos (caixa oficial)",
-  "description": "SÓ LEITURA. Lista os arquivos de mídia de modelo JÁ anexados nesta caixa WhatsApp Cloud (tudo que já subiu por upload_media/upload_header_media), pra reaproveitar como mídia padrão de cabeçalho sem subir de novo — o MCP não faz upload de arquivo, então esta é a ÚNICA forma de obter uma url NOSSA aceita por lionchat_inboxes_whatsapp_templates_header_media. Até 60 itens, mais novos primeiro, sem repetir o mesmo arquivo (dedup por checksum). kind filtra ANTES do teto.",
+  "description": "SÓ LEITURA. Lista os arquivos de mídia de modelo JÁ anexados nesta caixa WhatsApp Cloud (tudo que já subiu por upload_media/upload_header_media), pra reaproveitar como mídia padrão de cabeçalho sem subir de novo — o conector não sobe arquivo direto do computador, então esta é a ÚNICA forma de obter uma url NOSSA aceita por lionchat_inboxes_whatsapp_templates_header_media. Até 60 itens, mais novos primeiro, sem repetir o mesmo arquivo (dedup por checksum). kind filtra ANTES do teto.",
   "category": "Templates WhatsApp",
   "params": [
    {
@@ -34921,7 +34925,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/upload/validate",
   "title": "Testar uma URL de mídia (sem gravar nada)",
-  "description": "SÓ LEITURA na prática: baixa a URL pra validar tipo, tamanho e segurança (SSRF) com a MESMA lista de aceite que o FlowBuilder usa ao enviar mídia por URL — e descarta. Não cria arquivo. Como o MCP não faz upload, é o jeito de conferir se um link de foto/vídeo/áudio/documento vai funcionar num fluxo, campanha ou mensagem ANTES de usar. Sempre 200: valid=true com media_kind/content_type/size_mb/limit_mb, ou valid=false com error_key: 'web_page' (o link é uma página, não o arquivo), 'too_large' (com size_mb/limit_mb), 'unsupported', 'fetch_failed', 'invalid', 'unexpected'.",
+  "description": "SÓ LEITURA na prática: baixa a URL pra validar tipo, tamanho e segurança (SSRF) com a MESMA lista de aceite que o FlowBuilder usa ao enviar mídia por URL — e descarta. Não cria arquivo. Como pelo conector o arquivo só sobe POR LINK (lionchat_upload_create com external_url, mesma lista de aceite), é o jeito de conferir se um link de foto/vídeo/áudio/documento vai funcionar num fluxo, campanha ou mensagem ANTES de usar. Sempre 200: valid=true com media_kind/content_type/size_mb/limit_mb, ou valid=false com error_key: 'web_page' (o link é uma página, não o arquivo), 'too_large' (com size_mb/limit_mb), 'unsupported', 'fetch_failed', 'invalid', 'unexpected'.",
   "category": "Upload",
   "params": [
    {

@@ -78,8 +78,8 @@ baixar na tela do documento. O código de 6 dígitos de quem assina por e-mail c
   assinada vira anexo da mensagem na conversa de quem assinou por WhatsApp, então aparece nas ferramentas de mensagens
   da conversa (`conversations_messages_*`).
 - **Só pela tela, de propósito** (existem na API, mas NÃO como ferramenta): importar um Word (`import_docx`),
-  pré-visualizar modelo ou rascunho (`preview`, `preview_draft`) e baixar PDF (`download`). O conector não envia
-  arquivo nem recebe PDF — não prometa "vou gerar a prévia" ou "vou baixar o assinado"; oriente a tela.
+  pré-visualizar modelo ou rascunho (`preview`, `preview_draft`) e baixar PDF (`download`). Nesta área o conector
+  não sobe o Word do modelo nem baixa o PDF — não prometa "vou gerar a prévia" ou "vou baixar o assinado"; oriente a tela.
 - **Assinar no painel** ("eu também assino", 08/09): `lionchat_signature_envelopes_sign_as_sender` assina como o
   REMETENTE (a pessoa do token) — nunca no lugar do cliente. Manda `signature_image` (PNG em base64 com prefixo
   `data:image/png;base64,...`), opcional `location {latitude, longitude, accuracy}` (vai pra prova) e

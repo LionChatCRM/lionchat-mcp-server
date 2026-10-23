@@ -489,8 +489,9 @@ publicado e ligado numa janela e preenche durante a ligação. Essa resposta é 
 - Contato e conversa ficam **fixos**: os da conversa. Telefone digitado nunca troca de contato nem cria ficha; se já
   for de outra ficha (com ou sem o nono dígito) não é gravado.
 - Todos os blocos rodam como no link (atributos, etiquetas, marco, API, IA, WhatsApp, contrato, agenda). A única
-  diferença: os fluxos **"Formulário concluído"** e **"Formulário abandonado"** NÃO disparam — o pulo fica registrado
-  com o motivo `filled_by_team`. "Marco do formulário" dispara.
+  diferença: o fluxo **"Formulário abandonado"** NÃO dispara — o pulo fica registrado com o motivo `filled_by_team`.
+  **"Formulário concluído"** dispara como no link (desde 23/10/2026; de 20 a 23/10 ele também era pulado, e esses
+  pulos antigos seguem no histórico). "Marco do formulário" dispara.
 - Fica **fora** de `lionchat_lead_forms_stats` (funil, conclusão) e dos contadores da lista (`responses_count`,
   `completed_count`), e do relatório de formulários. Aparece em `responses_list`/`responses_show` com o selo.
 - Não há ferramenta do MCP para começar esse preenchimento — ele só existe na janela do painel.
