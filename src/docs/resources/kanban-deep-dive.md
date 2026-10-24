@@ -644,9 +644,35 @@ Use para: ações cross-cutting que envolvem conversa/contato/label, ou regras c
 
 ## Bulk operations
 
-- `POST /api/v2/kanban/items/bulk_actions` — operações em massa (mover, atribuir, arquivar)
-- `POST /api/v2/kanban/items/import` — importar CSV de cards
-- `GET /api/v2/kanban/items/export` — exportar funil completo
+- `POST /api/v1/accounts/{account_id}/bulk_actions` — operações em massa (mover, atribuir, arquivar) — `lionchat_kanban_bulk_bulk_actions`
+- `POST /api/v1/accounts/{account_id}/kanban_items/import` — importar planilha de cards (só pela tela: exige o arquivo)
+- `GET /api/v1/accounts/{account_id}/kanban_items/export` — exportar funil completo — `lionchat_kanban_items_export`
+
+### Importar cards com campos personalizados (2026-10-23)
+
+A importação de cards (Kanban > botão azul **+** > **Importar itens**) liga colunas da planilha a **campos do card** e a
+**atributos do contato**, no mesmo formato da importação de contatos. O conector não sobe o arquivo, então oriente a
+pessoa a importar pela tela; o que segue serve para explicar o que ela vai ver e para ler o resultado.
+
+- **O que pode ser importado** vem da prévia (`lionchat_kanban_items_create_3`, campo `attribute_fields`): campos do card
+  da conta (sem nome protegido nem secreto; dois campos com o mesmo nome = vale o primeiro) e atributos do contato (sem os
+  do sistema — rastreio, identificadores do WhatsApp — nem secretos). **Atributos do contato só aparecem para quem também
+  pode importar contatos** (administrador ou cargo "Exportar e importar contatos").
+- **Como o card grava** (`item_details.custom_attributes`, nasce com o card): data `DD/MM/AAAA` ou `DD/MM/AA` vira
+  `AAAA-MM-DD`; número com ou sem milhar (`1.500`, `1.234,56`) vira texto (`"1500"`); hora vira `HH:MM`; campo de LISTA
+  aceita várias opções na mesma célula separadas por `;` e só grava opção que existe. Os demais tipos gravam o texto como
+  está na planilha.
+- **Contato**: mesma conversão da importação de contatos. Vai só para o **contato principal do card** (numa linha com
+  vários contatos). Contato novo nasce com os atributos; contato que **já existe** tem o valor **substituído** — conta como
+  alteração (fluxo "Atributo do contato muda", webhook `contact_updated`). Célula vazia nunca apaga.
+- **Resultado** (`lionchat_kanban_items_import_status`): `attributes_applied: true` confirma que os campos foram aplicados;
+  `skipped` lista os valores que **não** entraram (`row`, `field`, `message`) e `skipped_count` dá o total. O card nasce
+  do mesmo jeito — só aquele valor fica de fora (formato que não converte, opção fora da lista, texto longo demais, ou
+  linha sem telefone válido, que não tem contato para receber o atributo). `row` é a linha da planilha (cabeçalho = 1).
+- **Armadilhas**: `422` = escolha de campo com formato errado, campo que não existe mais/é do sistema, ou coluna que a
+  planilha não tem (a mensagem lista quais); `403` = atributo de contato sem a permissão de importar contatos. Sem
+  `attributes_applied` no resultado de uma importação que ligou campos = o servidor estava sendo atualizado e os cards
+  nasceram sem eles (preencher nos cards, ou excluir e importar de novo — reimportar cria cards novos).
 
 ## Custom attributes em cards — TRÊS LUGARES POSSÍVEIS
 

@@ -4184,7 +4184,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/import_preview",
   "title": "Preview Importação",
-  "description": "Pre-visualiza um import de cards (colunas e amostra).",
+  "description": "Pre-visualiza um import de cards: colunas, primeiras linhas, total, valores unicos por coluna (ate 50) e, desde 2026-10-23, attribute_fields = os campos personalizados que PODEM ser importados (card: campos do card da conta, sem nome protegido nem secreto; contact: atributos do contato sem os do sistema nem secretos — vem vazio para quem nao pode importar contatos). Use o key de cada item como destino no attribute_mappings do lionchat_kanban_items_import.",
   "category": "Itens",
   "params": [
    {
@@ -4195,7 +4195,7 @@
     "description": "Arquivo CSV"
    }
   ],
-  "returns": "{ columns, sample_values }",
+  "returns": "{ columns, preview_rows, total_rows, unique_values: {coluna: [valores]}, attribute_fields: { card: [{key: 'card:<nome>', name, type, is_list, options}], contact: [{key: 'contact:<chave>', attribute_key, name, type, is_list, options}] } }",
   "common_use_cases": [
    "Cadastro inicial de item Kanban",
    "Automação a partir de evento externo",
@@ -4212,7 +4212,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/import",
   "title": "Importar Items",
-  "description": "Importa cards em massa (job async). REGRA DO DDI (18/08): telefone sem codigo do pais e considerado invalido e o card e criado SEM contato e SEM conversa, EM SILENCIO (diferente do import de contatos, que da erro na linha). Oriente a planilha a vir com DDI. PARAMETROS CONFERIDOS (18/09/2026): o servidor le `mappings` (plural) e exige `inbox_id` — o antigo `mapping` era ignorado. Opcionais da API (fora deste conector): default_stage_id, stage_mappings (texto JSON {\"<valor da planilha>\": \"<id da etapa>\"}), auto_create_stages ('true'), agent_mode ('mapping' | 'round_robin'), agent_mappings (texto JSON {\"<valor da planilha>\": <id do agente>}). VIA MCP NAO RODA: exige upload do arquivo — oriente o usuario a importar pela tela do Kanban.",
+  "description": "Importa cards em massa (job async). REGRA DO DDI (18/08): telefone sem codigo do pais e considerado invalido e o card e criado SEM contato e SEM conversa, EM SILENCIO (diferente do import de contatos, que da erro na linha). Oriente a planilha a vir com DDI. PARAMETROS CONFERIDOS (18/09/2026): o servidor le `mappings` (plural) e exige `inbox_id` — o antigo `mapping` era ignorado. Opcionais da API (fora deste conector): default_stage_id, stage_mappings (texto JSON {\"<valor da planilha>\": \"<id da etapa>\"}), auto_create_stages ('true'), agent_mode ('mapping' | 'round_robin'), agent_mappings (texto JSON {\"<valor da planilha>\": <id do agente>}). CAMPOS PERSONALIZADOS (2026-10-23, tambem fora deste conector): attribute_mappings (texto JSON {\"card:<nome do campo do card>\": \"<coluna>\", \"contact:<chave do atributo do contato>\": \"<coluna>\"} — destino -> coluna, a mesma coluna pode ir para o card e para o contato) e value_mappings (texto JSON {\"<destino>\": {\"<valor da planilha>\": \"<opcao da lista>\" | \"\"}}, o de-para de campo de lista; \"\" = nao gravar). Os destinos validos sao os que lionchat_kanban_items_create_3 (previa) devolve em attribute_fields. Formato errado, campo que nao existe/protegido/secreto ou coluna que a planilha nao tem = 422 com a lista; contact: sem a permissao de importar contatos = 403. Card: data DD/MM/AAAA vira AAAA-MM-DD, numero vira texto ('1.500' = 1500), lista aceita varias opcoes por ';'. Contato: vai so para o contato principal do card; contato que ja existe tem o valor SUBSTITUIDO (dispara fluxo 'Atributo do contato muda' e webhook contact_updated); celula vazia nunca apaga. Valor que nao entra aparece em skipped no lionchat_kanban_items_import_status. VIA MCP NAO RODA: exige upload do arquivo — oriente o usuario a importar pela tela do Kanban.",
   "category": "Itens",
   "params": [
    {
@@ -28979,7 +28979,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/import_status/{import_id}",
   "title": "Andamento da Importacao",
-  "description": "Acompanha a importacao de cards em massa que ja foi enviada. O import_id e o codigo devolvido pela chamada de importacao (lionchat_kanban_items_import) — a importacao roda em segundo plano, entao consulte aqui de tempos em tempos ate o status virar 'completed' ou 'failed'. O registro vive 1 hora: depois disso volta 404 mesmo que a importacao tenha dado certo, entao 404 nao significa fracasso.",
+  "description": "Acompanha a importacao de cards em massa que ja foi enviada. O import_id e o codigo devolvido pela chamada de importacao (lionchat_kanban_items_import) — a importacao roda em segundo plano, entao consulte aqui de tempos em tempos ate o status virar 'completed' ou 'failed'. O registro vive 1 hora: depois disso volta 404 mesmo que a importacao tenha dado certo, entao 404 nao significa fracasso. Quando a importacao ligou campos personalizados (2026-10-23): attributes_applied: true confirma que o servidor aplicou os campos (ausente = servidor antigo, os cards nasceram sem eles), e skipped lista ate 50 valores que NAO entraram ({row, field, message}, motivo no idioma da conta) com o total em skipped_count — o card nasce do mesmo jeito, so aquele valor fica de fora. row e a linha da PLANILHA (cabecalho = 1), tambem em errors.",
   "category": "Itens",
   "params": [
    {
@@ -28997,7 +28997,7 @@
     "description": "Codigo da importacao (UUID) devolvido pela chamada de importacao de cards"
    }
   ],
-  "returns": "{ status: 'queued'|'processing'|'completed'|'failed', total, processed, created, contacts_created, contacts_pending_validation, error_count, errors: [...] } — e { error } com 404 se o codigo nao existe ou ja passou de 1 hora",
+  "returns": "{ status: 'queued'|'processing'|'completed'|'failed', total, processed, created, contacts_created, contacts_pending_validation, error_count, errors: [{row, error}], attributes_applied?, skipped_count?, skipped?: [{row, field, message}] } — e { error } com 404 se o codigo nao existe ou ja passou de 1 hora",
   "common_use_cases": [
    "Avisar quando a planilha de cards terminou de subir",
    "Descobrir quantas linhas deram erro e por que",
