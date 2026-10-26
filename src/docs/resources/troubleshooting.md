@@ -847,8 +847,8 @@ celular (mãe e filho), recebem um lembrete para cada consulta — cada um com o
 horário, o profissional e o link daquela consulta. A regra antiga ("um lembrete por dia", de 09/09)
 saiu do sistema; linhas antigas do histórico com `skip_reason = outra_consulta_no_mesmo_dia` são dela.
 
-**Eles não saem juntos.** Sai o da consulta mais cedo e, ~10 minutos depois, o da seguinte (três
-consultas = três rodadas). Ao consultar `lionchat_eclinica_reminder_history_list`:
+**Eles não saem juntos.** Sai o da consulta mais cedo e, ~2 minutos depois, o da seguinte (a rotina roda de
+minuto em minuto desde 26/10/2026; o irmão espera 120 s depois do primeiro). Ao consultar `lionchat_eclinica_reminder_history_list`:
 - `pending` com `fire_at` já no passado, há poucos minutos, e um irmão do mesmo contato/dia `fired` =
   está esperando a vez. **Normal — não reprocessar, não reportar como erro.**
 - `failed` com `fail_reason = fluxo_ainda_em_andamento_com_este_contato` = o fluxo do aviso anterior

@@ -318,6 +318,22 @@ atrasado?", "quantas tarefas a fulana tem em aberto?" e "o que falta fazer esta 
 - **Prioridade**: o filtro `priority` passou a funcionar em 22/10 (antes o servidor o ignorava, inclusive no
   calendário).
 
+### 7.3. Subaba "Concluídas" e datas de desfecho (23/10/2026)
+
+- **`group=completed`** em `lionchat_tasks_task_list` = a subaba "Concluídas": tarefa concluída OU marcada
+  "Compareceu"/"Faltou". Cancelada fica de fora (só no calendário). Não vem junto dos cinco grupos: só quando
+  pedida. Ordem: a mais recentemente concluída primeiro; as concluídas antes de 23/10 (sem data de conclusão) vão
+  para o fim, pela data da tarefa. 50 por página, `totals.completed` = a contagem real.
+- **Datas de desfecho** em toda tarefa (calendário, `show` e lista): `completed_at` (quando foi concluída),
+  `cancelled_at` (quando foi cancelada) e `attendance_marked_at` (quando marcaram Compareceu/Faltou). Gravadas pelo
+  servidor no momento da mudança, nunca aceitas do cliente. Reabrir, adiar ou limpar a presença APAGA a data
+  (é a data do desfecho atual, não um histórico). Nada antes de 23/10 foi preenchido: tarefa antiga vem com nulo.
+- **`concluida_no_prazo`** (true/false/nulo): só no tipo Tarefa. `true` = concluída até o horário marcado
+  (`scheduled_at`; adiar vale a data nova). Nulo = não se aplica (outro tipo, não concluída, ou concluída antes de
+  existir a data). Consulta e reunião não têm prazo: só se dão como feitas depois que acontecem.
+- **Busca `q`** (vale na lista e no calendário) passou a achar também pelo NOME DO CARD da tarefa e, com 3 letras
+  ou mais, por QUEM FEZ: quem criou, o dono antigo da tarefa e o "Agendado por".
+
 ## 8. Erros comuns
 
 | Sintoma | Causa |

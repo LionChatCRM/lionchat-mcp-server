@@ -156,7 +156,7 @@ Webhooks embutidos NÃO aparecem na listagem de integrações standalone; exclui
 **Gatilhos de AGENDAMENTO — Booking NATIVO do LionChat (2026-08-20):** `booking_created` (alguém marcou pelo link público, pela IA ou pelo painel), `booking_cancelled` (paciente cancelou pelo link, IA cancelou ou a equipe cancelou na Agenda), `booking_rescheduled` (a data/hora mudou — link do paciente, IA, editar/adiar na Agenda), `booking_completed` (equipe concluiu na Agenda; exige a Agenda unificada ligada na conta). **Não é e-Clínica.** Config (tudo opcional, vazio = todos): `booking_event_type_ids` (array de ids de tipo de agendamento, **STRING**), `agent_ids` (array de ids de usuário — o RESPONSÁVEL da tarefa), `create_conversation` (boolean, padrão `false`: só dispara para quem já tem conversa numa caixa do flow; `true` = cria a conversa na 1ª caixa do flow). Exemplo: `{ "key": "booking_created", "config": { "booking_event_type_ids": ["44"], "agent_ids": [], "create_conversation": true } }`. São INERTES a evento de conversa (quem dispara é o `Booking::FlowTriggerDispatcher`, por CONTA — caixa do flow só define onde a conversa é criada/reusada). Variáveis no flow: `{{booking.date}}` (DD/MM/AAAA), `{{booking.time}}`, `{{booking.weekday}}`, `{{booking.datetime}}` (ISO), `{{booking.type}}`, `{{booking.type_format}}` (presencial/videochamada), `{{booking.duration}}`, `{{booking.agent}}`, `{{booking.status}}` (confirmado/cancelado/remarcado/concluído), `{{booking.description}}`, `{{booking.cancel_url}}`, `{{booking.reschedule_url}}`, `{{booking.confirm_url}}`, `{{booking.calendar_url}}` (16/10: página onde o cliente salva o compromisso na agenda DELE, sem e-mail; no remarcado já sai com a hora nova — é o jeito de avisar a mudança, pedindo para apagar o compromisso antigo), `{{booking.color}}`, `{{booking.id}}`; só no remarcado: `{{booking.previous_date}}`, `{{booking.previous_time}}`, `{{booking.previous_datetime}}`; `{{booking.meeting_url}}` NÃO vem no criado (nasce vazio). Data/hora vêm da TAREFA da Agenda (sempre atuais). Regras: o evento mais novo SUBSTITUI a rodada ativa do mesmo flow na mesma conversa (2ª consulta do mesmo paciente, ou cancelado chegando com o criado ainda esperando resposta); excluir a tarefa, reabrir cancelada ou desfazer conclusão NÃO disparam; adiar (snooze) conta como remarcado; tipo com confirmação/lembrete próprios ligados + `booking_created` = o paciente pode receber duas mensagens (a tela avisa). Colisão entre flows é por CONTA: mesmo kind + tipos se cruzando + agentes se cruzando (vazio = todos). Há também `{{booking.event}}` (`created`|`cancelled`|`rescheduled`|`completed` — bom pra condição; não aparece no seletor da tela, mas resolve); `{{trigger.type}}` = a chave do gatilho (ex.: `booking_created`), `{{trigger.kind}}` = `created`|`cancelled`|`rescheduled`|`completed` e `{{trigger.booking_id}}`. SÓ flow de conversa **individual** (a tela nem oferece em flow de grupo); **nunca dispara flow `ai_tool`**. Em caixa WhatsApp OFICIAL, conversa criada nova (ou parada há mais de 24h) está FORA da janela — texto livre no 1º bloco cai em `window_closed`/erro; comece por template.
 
 **TRAVA DE GATILHO DUPLICADO (2026-06-16) — leia ANTES de ativar/criar flow ativo:** o sistema BLOQUEIA ter dois flows ATIVOS com o MESMO gatilho na MESMA inbox e mesmo `conversation_mode` (evita o evento disparar dois flows). Colisão = mesmo tipo de gatilho + config cruzando (mesmas keywords/funil/labels/url/etc) + inbox compartilhada + mesmo modo. EXCEÇÕES que podem coexistir: `webhook_received`, `manual_trigger` e `campaign_trigger` (este último porque não dispara por evento — é só uma autorização para a campanha).
-- **`date_trigger` separa por HORÁRIO (24/09/2026):** dois flows no mesmo campo de data, mesma direção e mesmos dias NÃO colidem se os dois tiverem horário FIXO diferente (ex.: "1 dia depois às 08:00" e "às 14:00"). Horário vindo de atributo/fórmula continua colidindo (só existe na hora do disparo); `send_time` vazio conta como 09:00 e "8:00" = "08:00". A entrega é de 10 em 10 minutos — horários a menos de 10 min podem sair juntos.
+- **`date_trigger` separa por HORÁRIO (24/09/2026):** dois flows no mesmo campo de data, mesma direção e mesmos dias NÃO colidem se os dois tiverem horário FIXO diferente (ex.: "1 dia depois às 08:00" e "às 14:00"). Horário vindo de atributo/fórmula continua colidindo (só existe na hora do disparo); `send_time` vazio conta como 09:00 e "8:00" = "08:00". A entrega é de minuto em minuto (desde 26/10/2026) — horários no mesmo minuto saem juntos.
 - Ao **ativar** (`flows_toggle` inativo→ativo) ou **criar já ativo**: qualquer conflito é barrado.
 - Ao **editar** um flow já ativo: só conflito NOVO é barrado (duplicados que já existiam são preservados).
 - A API responde **422** com `{ "error_code": "flow_trigger_conflict", "conflicts": [{ flow_id, flow_name, trigger_type, inbox_id, inbox_name }] }`.
@@ -460,9 +460,34 @@ campanha"):
   (origem unificada), `ctwa_*` (anúncio click-to-WhatsApp: `ctwa_ad_id`, `ctwa_ad_title`, `ctwa_campaign_name`,
   `ctwa_adset_name`...), `meta_lead_*` (formulário Meta Lead Ads), `lt_*` (LionTrack: UTMs, página, dispositivo).
   Veja a lista real com `lionchat_custom_attributes_list` (`attribute_model: conversation_attribute` — com o sufixo; só `conversation` devolve a lista VAZIA —, `include_system: true` — as chaves de campanha são atributos de sistema).
-- **Valores fechados** de `origin_kind` (e `origin_first_kind`/`origin_last_kind`): `paid_ad` (Anúncio),
-  `lead_form` (Formulário), `organic` (Orgânico), `direct` (Direto), `referral` (Indicação), `manual` (Origem
-  cadastrada). O painel mostra o rótulo em português, mas a comparação é pelo VALOR — `"Anúncio"` nunca casa.
+- **Valores fechados** de `origin_kind` (e `origin_first_kind`/`origin_last_kind`): `paid_ad` (Anúncio (clique)),
+  `lead_form` (Anúncio (formulário)), `organic` (Orgânico), `direct` (Direto), `referral` (Indicação),
+  `agendamento` (Página de agendamento), `formulario` (Formulário do site), `manual` (Origem cadastrada). O painel
+  mostra o rótulo em português, mas a comparação é pelo VALOR — `"Anúncio"` nunca casa.
+- **Desde 26/10/2026, o formulário do mesmo anúncio continua formulário:** quando a pessoa preenche o formulário do
+  Meta e depois clica no MESMO anúncio para abrir o WhatsApp, a conversa fica com `origin_kind: "lead_form"` (antes
+  virava `paid_ad`). Conversas anteriores a 26/10 não mudam.
+
+**"Veio de anúncio pago" — chave `origin_paid` (25/10/2026). USE ESTA para "só lead de anúncio":**
+`origin_kind equal paid_ad` deixa de fora quem veio pelo FORMULÁRIO do anúncio (`lead_form`) — foi o defeito real da
+Cast (conta 137, fluxo 590: a IA nunca ligou para os leads de formulário de 08/10 a 24/10). A chave `origin_paid` junta
+as duas portas do anúncio. Forma que a tela grava (reabre no card "Veio de anúncio pago", Sim/Não):
+
+```json
+{ "id": "c1", "valueType": "attr_config", "attrSource": "conversation", "attrScope": "origin_paid",
+  "attr_key": "origin_paid", "operator": "equal", "value": "", "values": ["paid"] }
+```
+
+- Sim = `operator: "equal"`; Não = `operator: "not_equal"` (inclui conversa sem origem e origem cadastrada a mão).
+- Valores possíveis (calculados na hora, nunca gravados): `paid` (`paid_ad` ou `lead_form`), `not_paid` (orgânico,
+  direto, indicação, página de agendamento, formulário do site), `unknown` (`manual` ou tipo desconhecido — nunca é
+  tratado como pago), `unclassified` (sem origem ainda).
+- É chave VIRTUAL: não existe em `custom_attributes`, não aparece em `lionchat_custom_attributes_list`, não serve em
+  `{{conversation.custom_attribute.origin_paid}}` nem como gatilho "atributo mudou". Só em condição (fluxo e
+  automação) e no filtro de conversas.
+- A mesma pergunta existe na automação (condição `origin_paid`, operadores `equal_to`/`not_equal_to`), no filtro de
+  conversas (`lionchat_conversations_filter`) e no relatório de origem (`paid` e `by_paid` em
+  `lionchat_lead_origin_reports`).
 - `origin_platform` (e first/last): `facebook`, `instagram`, `google`, `tiktok`, `linkedin`, `youtube`,
   `whatsapp`, `email`, `messenger`, `audience_network` (Rede de parceiros da Meta, desde 29/09/2026), `direct` — e, para origem cadastrada pelo cliente em Configurações > Origens de Lead,
   `custom:<slug>` (slug = nome parametrizado, ex.: "Indicação de amigo" → `custom:indicacao-de-amigo`;
@@ -472,7 +497,8 @@ campanha"):
   "operator": "equal", "value": "paid_ad", "valueType": "variable" }` — reabre no card "Variável", não no de
   campanha. Prefira o formato `attr_config` acima quando o cliente vai editar pela tela.
 - Caso real (Cast, 01/09): flow "Ativar IA" só para lead de anúncio = condição `origin_kind equal paid_ad`
-  na saída `cond_0` + ação `assign_captain` nessa saída; `default` sem nada.
+  na saída `cond_0` + ação `assign_captain` nessa saída; `default` sem nada. **Desde 25/10 use `origin_paid equal paid`
+  (seção acima)**: `origin_kind equal paid_ad` não pega o lead do formulário do anúncio.
 
 - **`attrScope: "lead_origin"` (02/09/2026):** preset "Origem do lead" da aba Conversas — mesmo shape do `campaign_attr`, ja nasce com `attr_key: "origin_platform"`. Valores: plataformas fixas (`facebook`, `google`...) ou origem cadastrada como `custom:<slug>`. O motor ignora `attrScope`; sem ele a regra reabre como "Atributo de campanha" (falha macia).
 

@@ -525,8 +525,14 @@ ONDE vieram os leads, cruzando os campos `origin_*` das conversas com os leads �
 viraram conversa). É um relatório de LEITURA puro — não cria nem altera nada.
 
 **Filtros (query, todos opcionais):** `since` / `until` (ISO 8601; default = 30 dias atrás → agora),
-`funnel_id`, `platform`, `kind`, `campaign`, `adset`, `inbox_id`, `assignee_id`, `group_by`.
+`funnel_id`, `platform`, `kind`, `paid`, `campaign`, `adset`, `inbox_id`, `assignee_id`, `group_by`.
 `campaign`/`adset` aceitam `__none__` para filtrar so os leads SEM aquele nome (campanha/conjunto vazio).
+
+**`paid` e `by_paid` (25/10/2026) — "veio de anúncio pago?":** junta o clique no anúncio (`paid_ad`) e o formulário
+do anúncio (`lead_form`), que `kind` separa. Valores: `paid`, `not_paid` (orgânico, direto, indicação, página de
+agendamento, formulário do site), `unknown` (origem cadastrada a mão ou tipo desconhecido) e `unclassified` (sem
+origem). Valor fora da lista é ignorado (como se o filtro não viesse). Para "quantos leads vieram de anúncio?",
+use `by_paid` ou `paid=paid` — somar só `kind=paid_ad` esquece os de formulário.
 
 **`inbox_id` e `assignee_id` (06/10/2026)** — recortam por caixa de entrada e por responsável da conversa.
 **Em conta com mais de uma loja/unidade, SEM `inbox_id` o relatório soma TODAS as caixas** — foi o que fez a
@@ -543,8 +549,10 @@ mesma conta misturar duas lojas e não bater com o relatório da Meta. Com qualq
   a venda de uma conversa iniciada pela propria empresa mora aqui). Desde 16/10/2026 a conversa criada pelo nosso
   lado (automação, fluxo, formulário) nasce com a origem que a ficha do contato já tinha; antes ela caía aqui
   até o cliente responder. Vale só de hoje pra frente: as conversas antigas nesse caso continuam sem origem.
-- Arrays de quebra: `by_platform`, `by_kind`, `by_campaign`, `by_adset`, `by_creative`. Cada linha
+- Arrays de quebra: `by_platform`, `by_kind`, `by_campaign`, `by_adset`, `by_creative` e `by_paid` (25/10/2026,
+  sempre as quatro linhas `paid`/`not_paid`/`unknown`/`unclassified`, somando o mesmo total do topo). Cada linha
   tem `{value, conversations, won, conversion_rate}`.
+- Rótulos de `kind` no painel (25/10/2026): `paid_ad` = "Anúncio (clique)", `lead_form` = "Anúncio (formulário)".
 
 **Conceitos importantes:**
 - `won` = cards parados em etapas de GANHO do funil (fechados como sucesso).
