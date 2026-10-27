@@ -683,7 +683,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -1448,7 +1448,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/conversations/filter",
   "title": "Filtrar Conversas",
-  "description": "Filtra conversas com condicoes avancadas (payload de condicoes, mesmas da tela). Ordenacao fixa last_activity_at DESC, 25/pagina.\n\nCHAVES FILTRAVEIS (attribute_key -> operadores): status, chat_type, priority (equal_to/not_equal_to); assignee_id, inbox_id, team_id, campaign_id, captain_assistant_id, labels (equal_to/not_equal_to/is_present/is_not_present); display_id (equal_to/not_equal_to/contains/does_not_contain); created_at, last_activity_at (is_greater_than/is_less_than/days_before — valor de data); browser_language, conversation_language, referer, mail_subject; card_funnel_stage (conversa POR CARD do Kanban — valor 'funnel:<id>' ou 'stage:<id>:<chave_etapa>'); origin_paid (25/10/2026, equal_to/not_equal_to — 'veio de anuncio pago?': valores paid, not_paid, unknown, unclassified; paid = clique no anuncio OU formulario do anuncio; not_equal_to paid inclui a conversa sem origem); QUALQUER outra chave = atributo personalizado (use custom_attribute_type na condicao: 'conversation_attribute' ou 'contact_attribute'). 'contact_attribute' le a FICHA DO CONTATO da conversa (funciona desde 24/09/2026 — antes era ignorado): e o jeito de achar lead de formulario da Meta por meta_lead_form_name/meta_lead_ad_name/origin_first_*, que so existem no contato. A chave precisa de atributo DE CONTATO cadastrado. 'company_attribute' (atributo de EMPRESA) NAO vale aqui: 422 (desde 2026-10-16) — filtre contatos com lionchat_contacts_filter.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422 'Operador invalido' (ex: labels NAO aceita 'includes' — use equal_to). [2026-07-25] O operador contains em display_id agora funciona de verdade (busca por trecho do numero da conversa; antes dava erro de banco). NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas.",
+  "description": "Filtra conversas com condicoes avancadas (payload de condicoes, mesmas da tela). Ordenacao fixa last_activity_at DESC, 25/pagina.\n\nCHAVES FILTRAVEIS (attribute_key -> operadores): status, chat_type, priority (equal_to/not_equal_to); assignee_id, inbox_id, team_id, campaign_id, captain_assistant_id, labels (equal_to/not_equal_to/is_present/is_not_present); display_id (equal_to/not_equal_to/contains/does_not_contain); created_at, last_activity_at (is_greater_than/is_less_than/days_before — valor de data); browser_language, conversation_language, referer, mail_subject; card_funnel_stage (conversa POR CARD do Kanban — valor 'funnel:<id>' ou 'stage:<id>:<chave_etapa>'); origin_paid (25/10/2026, equal_to/not_equal_to — 'veio de anuncio pago?': valores paid, not_paid, unknown, unclassified; paid = clique no anuncio OU formulario do anuncio; not_equal_to paid inclui a conversa sem origem); QUALQUER outra chave = atributo personalizado (use custom_attribute_type na condicao: 'conversation_attribute' ou 'contact_attribute'). 'contact_attribute' le a FICHA DO CONTATO da conversa (funciona desde 24/09/2026 — antes era ignorado): e o jeito de achar lead de formulario da Meta por meta_lead_form_name/meta_lead_ad_name/origin_first_*, que so existem no contato. A chave precisa de atributo DE CONTATO cadastrado. 'company_attribute' (atributo de EMPRESA) NAO vale aqui: 422 (desde 2026-10-16) — filtre contatos com lionchat_contacts_filter.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422 'Operador invalido' (ex: labels NAO aceita 'includes' — use equal_to). [2026-07-25] O operador contains em display_id agora funciona de verdade (busca por trecho do numero da conversa; antes dava erro de banco). NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas. [27/10/2026] assignee_id aceita o valor 'current_user' (= quem esta perguntando); texto em assignee_id que nao seja numero nem 'current_user' = 422.",
   "category": "Conversas",
   "params": [
    {
@@ -1501,7 +1501,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -2200,7 +2200,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -3844,7 +3844,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -8546,7 +8546,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -8633,7 +8633,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados (mesmo formato de conversations_filter). JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados (mesmo formato de conversations_filter). JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "date_basis",
@@ -11248,7 +11248,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/automation_rules",
   "title": "Criar Regra de Automacao",
-  "description": "Cria uma regra de automacao. event_name validos: conversation_created, conversation_updated, conversation_resolved, message_created, conversation_opened, webhook, kanban_item_created, kanban_item_stage_changed. conditions: [{attribute_key, filter_operator, query_operator, values[]}]. actions: [{action_name, action_params[]}]. Aceita active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
+  "description": "Cria uma regra de automacao. event_name validos: conversation_created, conversation_updated, conversation_resolved, message_created, conversation_opened, webhook, kanban_item_created, kanban_item_stage_changed. conditions: [{attribute_key, filter_operator, query_operator, values[]}]. actions: [{action_name, action_params[]}]. Aceita active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500). [27/10/2026] conditions NAO aceitam 'current_user' em assignee_id (422): automacao nao tem \"quem esta vendo\" — use o id do agente.",
   "category": "Regras de Automacao",
   "params": [
    {
@@ -11346,7 +11346,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/automation_rules/{id}",
   "title": "Atualizar Regra",
-  "description": "Atualiza uma regra de automacao (PUT, substituicao completa). Campos: name, event_name, conditions, actions, active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
+  "description": "Atualiza uma regra de automacao (PUT, substituicao completa). Campos: name, event_name, conditions, actions, active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500). [27/10/2026] conditions NAO aceitam 'current_user' em assignee_id (422 quando as conditions mudam): automacao nao tem \"quem esta vendo\" — use o id do agente.",
   "category": "Regras de Automacao",
   "params": [
    {
@@ -11857,7 +11857,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/custom_filters",
   "title": "Listar Filtros",
-  "description": "Lista os filtros salvos por filter_type (padrao conversation). Desde 22/10/2026: filter_type contact (segmentos) lista os segmentos da CONTA inteira (precisa do menu Contatos no cargo), ordenados por nome; conversation (pastas) e report continuam so os do usuario atual. Cada item traz user_id/user_name (\"criado por\", pode vir nulo) e can_manage (se quem pergunta pode editar/apagar).",
+  "description": "Lista os filtros salvos por filter_type (padrao conversation). Desde 22/10/2026: filter_type contact (segmentos) lista os segmentos da CONTA inteira (precisa do menu Contatos no cargo), ordenados por nome; conversation (pastas) traz as do usuario atual MAIS as compartilhadas da conta (campo shared, desde 27/10/2026); report continua so os do usuario atual. Em pasta compartilhada criada por OUTRA pessoa, user_id e user_name vem nulos. Cada item traz user_id/user_name (\"criado por\", pode vir nulo) e can_manage (se quem pergunta pode editar/apagar).",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -11865,7 +11865,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "conversation (pastas, so as suas), contact (segmentos, da CONTA) ou report"
+    "description": "conversation (pastas: as suas + as compartilhadas da conta), contact (segmentos, da CONTA) ou report"
    }
   ],
   "returns": "array de filtros (sem meta/payload)",
@@ -11885,15 +11885,36 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/custom_filters",
   "title": "Criar Filtro",
-  "description": "Cria um filtro personalizado. Cria novo filtro personalizado. Obrigatórios: name, filter_type, query. Valida unicidade quando aplicável. Retorna o filtro personalizado criado com ID atribuído. Desde 22/10/2026 o segmento (filter_type contact) e da CONTA: criar exige administrador ou cargo com contact_manage, campaign_manage ou automation_manage (sem isso, 401). filter_type aceita o nome ou o numero. Regra vazia ou incompleta = 422. Teto de 1.000 segmentos por conta.",
+  "description": "Cria um filtro personalizado. Cria novo filtro personalizado. Obrigatórios: name, filter_type, query. Valida unicidade quando aplicável. Retorna o filtro personalizado criado com ID atribuído. Desde 22/10/2026 o segmento (filter_type contact) e da CONTA: criar exige administrador ou cargo com contact_manage, campaign_manage ou automation_manage (sem isso, 401). filter_type aceita o nome ou o numero. Regra vazia ou incompleta = 422. Teto de 1.000 segmentos por conta. PASTA COMPARTILHADA (27/10/2026): pasta de conversa (filter_type conversation) com shared true aparece para TODA a conta; so administrador cria, edita, compartilha ou apaga (sem isso, 401). Cada pessoa ve dentro dela so as conversas que ja pode ver. shared nulo = 422; compartilhada sem nenhuma condicao = 422; segmento e relatorio nao podem ser compartilhados (422). Para mostrar a cada pessoa as conversas DELA use assignee_id com o valor 'current_user' (\"Quem esta vendo\").",
   "category": "Filtros Personalizados",
   "params": [
    {
-    "name": "custom_filter",
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome da pasta/segmento"
+   },
+   {
+    "name": "filter_type",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "'conversation' (pasta de conversas), 'contact' (segmento de contatos) ou 'report' — aceita o nome ou o numero"
+   },
+   {
+    "name": "query",
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Wrapper {name, filter_type, query}. filter_type: 'conversation' ou 'contact'. query = {\"payload\": [{\"attribute_key\": \"status\", \"filter_operator\": \"equal_to\", \"values\": [\"open\"], \"query_operator\": \"and\"}, {\"attribute_key\": \"assignee_id\", \"filter_operator\": \"equal_to\", \"values\": [5], \"query_operator\": null}], \"sort_by\": \"...\"} — payload e LISTA de condicoes (mesmo formato de lionchat_conversations_filter / lionchat_contacts_filter); values e SEMPRE lista; query_operator liga a condicao com a SEGUINTE e a ULTIMA vai null. sort_by e opcional (so pasta de conversa)."
+    "description": "query = {\"payload\": [{\"attribute_key\": \"status\", \"filter_operator\": \"equal_to\", \"values\": [\"open\"], \"query_operator\": \"and\"}, {\"attribute_key\": \"assignee_id\", \"filter_operator\": \"equal_to\", \"values\": [5], \"query_operator\": null}], \"sort_by\": \"...\"} — payload e LISTA de condicoes (mesmo formato de lionchat_conversations_filter / lionchat_contacts_filter); values e SEMPRE lista; query_operator liga a condicao com a SEGUINTE e a ULTIMA vai null. sort_by e opcional (so pasta de conversa)."
+   },
+   {
+    "name": "shared",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "So pasta de conversa e so administrador: true = a pasta aparece para toda a conta. Omitido = pasta pessoal."
    }
   ],
   "returns": "filtro personalizado criado (com novo ID)",
@@ -11914,7 +11935,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/custom_filters/{id}",
   "title": "Detalhe do Filtro",
-  "description": "Retorna detalhes. Retorna detalhes completos de UM filtro personalizado específico pelo ID. Inclui campos relacionais quando aplicável.",
+  "description": "Retorna detalhes. Retorna detalhes completos de UM filtro personalizado específico pelo ID. Inclui campos relacionais quando aplicável. Pasta compartilhada (shared true) pode ser lida por qualquer membro da conta.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -11942,7 +11963,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/custom_filters/{id}",
   "title": "Atualizar Filtro",
-  "description": "Atualiza filtro. Atualiza campos do filtro personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, query. filter_type e IGNORADO no update (nao da para trocar o tipo). Segmento (contact) so pode ser editado por administrador ou cargo com contact_manage, campaign_manage ou automation_manage — sem isso, 401 (veja can_manage no list/show).",
+  "description": "Atualiza filtro. Atualiza campos do filtro personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, query, shared. filter_type e IGNORADO no update (nao da para trocar o tipo). Segmento (contact) so pode ser editado por administrador ou cargo com contact_manage, campaign_manage ou automation_manage — sem isso, 401 (veja can_manage no list/show). PASTA COMPARTILHADA (27/10/2026): so administrador edita (401). So mande shared para MUDAR o compartilhamento: shared false numa compartilhada a transforma em pasta pessoal DE QUEM MANDOU (some para os outros). Em compartilhada, query.sort_by muda a ordem padrao de TODOS. shared nulo = 422; compartilhada sem condicao = 422. Dois administradores editando juntos: vale a ultima gravacao.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -11953,11 +11974,25 @@
     "description": "ID do filtro"
    },
    {
-    "name": "custom_filter",
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Novo nome"
+   },
+   {
+    "name": "query",
     "type": "object",
     "location": "body",
-    "required": true,
-    "description": "Wrapper {name, filter_type, query}. filter_type: 'conversation' ou 'contact'. query = {\"payload\": [{\"attribute_key\": \"status\", \"filter_operator\": \"equal_to\", \"values\": [\"open\"], \"query_operator\": \"and\"}, {\"attribute_key\": \"assignee_id\", \"filter_operator\": \"equal_to\", \"values\": [5], \"query_operator\": null}], \"sort_by\": \"...\"} — payload e LISTA de condicoes (mesmo formato de lionchat_conversations_filter / lionchat_contacts_filter); values e SEMPRE lista; query_operator liga a condicao com a SEGUINTE e a ULTIMA vai null. sort_by e opcional (so pasta de conversa). No update, query SUBSTITUI inteira: mande as condicoes E o sort_by (leia antes com lionchat_custom_filters_show)."
+    "required": false,
+    "description": "query = {\"payload\": [{\"attribute_key\": \"status\", \"filter_operator\": \"equal_to\", \"values\": [\"open\"], \"query_operator\": \"and\"}, {\"attribute_key\": \"assignee_id\", \"filter_operator\": \"equal_to\", \"values\": [5], \"query_operator\": null}], \"sort_by\": \"...\"} — payload e LISTA de condicoes (mesmo formato de lionchat_conversations_filter / lionchat_contacts_filter); values e SEMPRE lista; query_operator liga a condicao com a SEGUINTE e a ULTIMA vai null. sort_by e opcional (so pasta de conversa). No update, query SUBSTITUI inteira: mande as condicoes E o sort_by (leia antes com lionchat_custom_filters_show)."
+   },
+   {
+    "name": "shared",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "So administrador e so pasta de conversa: true compartilha com a conta; false volta a ser pasta pessoal de quem mandou."
    }
   ],
   "returns": "filtro personalizado atualizado",
@@ -11978,7 +12013,7 @@
   "method": "DELETE",
   "path": "/api/v1/accounts/{account_id}/custom_filters/{id}",
   "title": "Deletar Filtro",
-  "description": "Remove filtro. Remove filtro personalizado permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes. Segmento (contact) so pode ser apagado por administrador ou cargo com contact_manage, campaign_manage ou automation_manage (401). Segmento usado por campanha programada (no publico ou no 'Nao enviar para') NAO e apagado: 422 com message citando a campanha.",
+  "description": "Remove filtro. Remove filtro personalizado permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes. Segmento (contact) so pode ser apagado por administrador ou cargo com contact_manage, campaign_manage ou automation_manage (401). Segmento usado por campanha programada (no publico ou no 'Nao enviar para') NAO e apagado: 422 com message citando a campanha. Pasta compartilhada: so administrador apaga, e ela some para TODA a conta.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -12488,7 +12523,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -12970,7 +13005,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",

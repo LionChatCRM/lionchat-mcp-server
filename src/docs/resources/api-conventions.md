@@ -489,10 +489,27 @@ Combináveis com E/OU e salváveis como segmento (custom_filters).
 `custom_filters` com `filter_type: contact` (segmento) passou a ser da conta inteira: todos veem e usam (quem tem o
 menu Contatos no cargo). Criar, editar e apagar segmento = administrador ou cargo com `contact_manage`,
 `campaign_manage` ou `automation_manage` — sem isso, 401. Quem criou não ganha direito extra; a resposta traz
-`user_id`/`user_name` ("criado por", pode vir nulo) e `can_manage`. Pastas de conversa (`conversation`) e relatórios
-(`report`) continuam pessoais. `filter_type` é IGNORADO no update (não dá para trocar o tipo). Regra vazia ou
+`user_id`/`user_name` ("criado por", pode vir nulo) e `can_manage`. Relatórios (`report`) continuam pessoais; pastas de
+conversa (`conversation`) são pessoais até um administrador compartilhar (seção seguinte). `filter_type` é IGNORADO no update (não dá para trocar o tipo). Regra vazia ou
 incompleta = 422. Segmento usado por campanha programada não pode ser apagado (422 citando a campanha). Segmento serve
 de público de campanha (`{type: 'Segment', id}`) — ver a receita de campanha nas instruções.
+
+### Pasta de conversa compartilhada (2026-10-27)
+
+Pasta de conversa (`filter_type: conversation`) com `shared: true` aparece para TODA a conta, com o ícone de
+compartilhar. Só administrador cria, edita, compartilha, descompartilha ou apaga (sem isso, 401); o atendente vê e
+usa, mas não edita. Cada pessoa vê dentro dela SÓ as conversas que já pode ver — a pasta não abre acesso. Regras:
+
+- Só mande `shared` para MUDAR o compartilhamento. `shared: false` numa compartilhada a transforma em pasta pessoal de
+  quem mandou (some para os outros). `shared` nulo = 422. Segmento e relatório não podem ser compartilhados (422).
+- Compartilhada precisa de pelo menos uma condição (422 sem nenhuma).
+- `query.sort_by` de uma compartilhada é a ordem PADRÃO de todos. A troca de ordem feita dentro da pasta pela tela vale
+  só para quem trocou e não é gravada.
+- Em compartilhada criada por outra pessoa, `user_id`/`user_name` vêm nulos.
+- "Quem está vendo": condição `{"attribute_key": "assignee_id", "filter_operator": "equal_to", "values": ["current_user"]}`
+  mostra a cada pessoa as conversas DELA. Vale também em `lionchat_conversations_filter` e nos `conversation_filters` das
+  buscas. Texto em `assignee_id` que não seja número nem `current_user` = 422. Automação NÃO aceita `current_user` (422).
+- Apagar uma compartilhada tira a pasta de todos. Pessoa removida da conta não leva a compartilhada que criou.
 
 ### Exportação de contatos (2026-06-10)
 
