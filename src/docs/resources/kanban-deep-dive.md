@@ -933,3 +933,57 @@ depois não trava outro salvamento.
   `co_participant_changed` (antes e depois, com nome e quem marcou).
 - Números: `coParticipantRanking`, `sharedSalesSummary`/`sharedSalesBySeller` (com `include_shared_sales=true`) no
   relatório agregado e a lista `lionchat_kanban_items_shared_sales` — ver `lionchat://docs/filtros-e-relatorios` §4.
+
+---
+
+## Analisar com IA — a IA sugere o que mudar nos cards (2026-10-28)
+
+A mesma análise do botão **Analisar com IA** do Kanban (topo do quadro e menu da coluna). A IA lê os cards **abertos e
+adiados** das etapas escolhidas de UM funil, com as conversas deles, e sugere: mudar de etapa (também para trás), levar
+para outro funil, pôr/tirar etiqueta e marcar ganho/perdido. **Nada muda sem aplicar, e aplicar não tem como desfazer.**
+
+### Ferramentas
+
+1. `lionchat_kanban_ai_analyses_setup` — o que a janela mostra: etapas com a contagem de cards, se cada etapa e o funil
+   têm descrição, `selection` (quantos cards entram e `estimated_cost_usd`), funis de destino, etiquetas, motivos de
+   ganho/perda, `has_openai_key` e `latest_run` (análise viva do funil).
+2. `lionchat_kanban_ai_analyses_create` — cria a análise. Os cards são escolhidos AQUI (até 200, os parados há mais tempo).
+3. `lionchat_kanban_ai_analyses_show` — andamento (`status`, contadores, custo).
+4. `lionchat_kanban_ai_analyses_items` — a lista de sugestões (só depois de `ready`).
+5. `lionchat_kanban_ai_analyses_apply` — aplica o que o usuário escolheu. Pede `confirm: true`.
+6. `lionchat_kanban_ai_analyses_reanalyze` — analisa de novo UM card cuja linha travou.
+
+### Passo a passo
+
+1. `setup` com `funnel_id` (e `stages` para saber o total e o custo). Mostre ao usuário as etapas e quantos cards cada
+   uma tem. Dica: marcar VÁRIAS etapas numa análise só evita ler a mesma conversa duas vezes.
+2. Pergunte o que a IA pode fazer (`options`) e quais cards (todos, `stale_days` ou `no_reply_days`).
+3. `create`. Depois chame `show` a cada 5 a 10 segundos até `status = ready` (ou `failed`, com `error_code`).
+4. `items`: mostre as sugestões agrupadas por etapa — card, ação, força ("Alta" >= 70%, "Média" 50-70%), motivo e o que
+   a ação dispara (`hints`: conversão, regras do funil, fluxos; aviso de WhatsApp QR).
+5. **Antes de aplicar, confirme com o usuário** quais cards e ações, quantas mudanças em quantos cards, e diga que **não
+   tem como desfazer**: fica como se uma pessoa tivesse feito à mão, e automações, fluxos e conversões do funil disparam.
+6. `apply` com `items: [{ item_id, actions: [ids] }]` e `confirm: true`. Os `actions` são os `id` das `suggestions`
+   daquele item (`stage`, `funnel`, `outcome`, `label_add:...`, `label_remove:...`) — nunca invente: ação que não foi
+   sugerida para o item volta em `ignored`.
+7. `show` até `status = finished`; `items` traz `done`, `apply_code` e `return_code` de cada card.
+
+### Regras que você PRECISA saber
+
+- **Quem pode:** administrador ou cargo com a permissão `kanban_ai_analyze` ("Analisar funil com IA"), com o recurso de
+  plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404
+  `funnel_not_visible`. Sem o recurso = `feature_disabled`.
+- **Custo:** usa a chave da OpenAI DA CONTA (`no_openai_key` sem ela). Costuma ficar abaixo de um centavo de dólar a cada
+  dezenas de cards — mostre o `estimated_cost_usd` do `setup` antes de criar.
+- **Uma análise por vez por funil** (`funnel_busy`, 409) e no máximo duas rodando por conta (`account_busy`). Criar uma
+  análise nova **substitui a lista anterior** do mesmo funil que tiver etapa em comum (ela vira `superseded`).
+- **A lista vale 24 horas** (`expires_at`); depois vira `expired` e é preciso analisar de novo.
+- **O que vem marcado** (`checked: true`): sugestões de força Alta de etapa, funil e perdido. Ganho, Média e etiqueta vêm
+  sempre desmarcados, com o motivo em `unchecked_reason`. Na dúvida, proponha aplicar só as marcadas.
+- **Linha travada** (`locked`: `client_wrote` = o cliente escreveu depois da análise; `card_changed` = o card mudou):
+  não aplique. Chame `reanalyze` com o `item_id` e depois `items` de novo.
+- **Linha que voltou** (`return_code`): `interrupted` (sistema reiniciou), `card_busy` e `apply_failed` podem ser
+  aplicadas de novo; `agent_no_access` (o responsável não acessa o funil de destino) exige dar o acesso antes.
+- **"Por que não sugeriu nada?"** A IA só sugere quando responde a mesma coisa com as opções em duas ordens e com pelo
+  menos 50% de certeza. Card sem conversa, ou com pouca conversa, costuma ficar como está (`counts.no_change`). Escrever
+  a descrição das etapas e do funil melhora o resultado (o `setup` diz quais não têm).

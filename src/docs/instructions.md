@@ -92,6 +92,13 @@ Account (conta/empresa)
 - Adiar: `lionchat_kanban_items_snooze`. Abrir antes da data: `lionchat_kanban_items_unsnooze`. Regras em
   `lionchat://docs/kanban-deep-dive`, seção "Card adiado".
 
+### Analisar com IA (desde 28/10/2026)
+- A IA lê os cards abertos e adiados das etapas escolhidas de um funil e sugere mudar de etapa ou de funil, pôr/tirar
+  etiqueta e marcar ganho/perdido. Ferramentas `lionchat_kanban_ai_analyses_*`: `setup` -> `create` -> `show` até
+  `ready` -> `items` -> `apply` (com `confirm: true`) -> `show` até `finished`.
+- **Aplicar NÃO tem como desfazer**: confirme com o usuário quais cards e ações antes. Regras em
+  `lionchat://docs/kanban-deep-dive`, seção "Analisar com IA".
+
 ### AccountUser.role (string)
 - `agent` (atendente comum)
 - `administrator` (admin/dono)

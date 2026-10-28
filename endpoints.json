@@ -14918,7 +14918,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Array de permissoes (array de strings). Valores aceitos (24): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, conversation_assigned_manage (Ver conversas dos colegas: so as que JA TEM responsavel, nas caixas de que a pessoa e membro; nunca a fila sem dono — 02/10/2026), contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09), agenda_manage (Gerenciar a Agenda). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu). O editor da tela marca junto as que uma inclui: conversation_manage inclui as 4 outras de conversa; conversation_team_manage inclui conversation_participating_manage; kanban_manage inclui kanban_view. Mande a lista ja completa."
+    "description": "Array de permissoes (array de strings). Valores aceitos (25): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, conversation_assigned_manage (Ver conversas dos colegas: so as que JA TEM responsavel, nas caixas de que a pessoa e membro; nunca a fila sem dono — 02/10/2026), contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, kanban_ai_analyze (Analisar funil com IA: o botao \"Analisar com IA\" do Kanban; tambem precisa do recurso de plano kanban_ai_analysis, 28/10/2026), campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09), agenda_manage (Gerenciar a Agenda). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu). O editor da tela marca junto as que uma inclui: conversation_manage inclui as 4 outras de conversa; conversation_team_manage inclui conversation_participating_manage; kanban_manage inclui kanban_view. Mande a lista ja completa."
    },
    {
     "name": "hidden_menus",
@@ -15003,7 +15003,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Permissoes (array de strings). Valores aceitos (24): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, conversation_assigned_manage (Ver conversas dos colegas: so as que JA TEM responsavel, nas caixas de que a pessoa e membro; nunca a fila sem dono — 02/10/2026), contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09), agenda_manage (Gerenciar a Agenda). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu). O editor da tela marca junto as que uma inclui: conversation_manage inclui as 4 outras de conversa; conversation_team_manage inclui conversation_participating_manage; kanban_manage inclui kanban_view. Mande a lista ja completa."
+    "description": "Permissoes (array de strings). Valores aceitos (25): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, conversation_assigned_manage (Ver conversas dos colegas: so as que JA TEM responsavel, nas caixas de que a pessoa e membro; nunca a fila sem dono — 02/10/2026), contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, kanban_ai_analyze (Analisar funil com IA: o botao \"Analisar com IA\" do Kanban; tambem precisa do recurso de plano kanban_ai_analysis, 28/10/2026), campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09), agenda_manage (Gerenciar a Agenda). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu). O editor da tela marca junto as que uma inclui: conversation_manage inclui as 4 outras de conversa; conversation_team_manage inclui conversation_participating_manage; kanban_manage inclui kanban_view. Mande a lista ja completa."
    },
    {
     "name": "hidden_menus",
@@ -29226,6 +29226,285 @@
   "related_tools": [
    "lionchat_kanban_sales_reconciliation_apply",
    "lionchat_kanban_sales_reconciliation_preview"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_setup",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses/setup",
+  "title": "Preparar análise do funil com IA",
+  "description": "Mostra o que a janela \"Analisar com IA\" do Kanban mostra, SEM criar nada: as etapas do funil com quantos cards abertos e adiados cada uma tem (e se a etapa tem descrição), `selection` (quantos cards entram com as etapas e o filtro pedidos, o limite de 200, `over_limit` e `estimated_cost_usd`), os dias de \"parados\" aceitos (7, 14, 30), os funis de destino que a pessoa vê (com as etapas), as etiquetas com descrição, quantos motivos de ganho/perda a conta tem, `has_openai_key` e `latest_run` (a análise viva do funil: analisando, ou lista pronta/aplicando dentro das 24 h). Chame ANTES de `lionchat_kanban_ai_analyses_create` e mostre ao usuário as etapas, o total de cards e o custo estimado. Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "stages",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "query_name": "stages[]",
+    "description": "Chaves (slugs) das etapas, para calcular o total de cards e o custo. Ex.: [\"novo\", \"proposta\"]"
+   },
+   {
+    "name": "filters_stale_days",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "query_name": "filters[stale_days]",
+    "description": "Só os cards parados na etapa há N dias: 7, 14 ou 30"
+   },
+   {
+    "name": "filters_no_reply_days",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "query_name": "filters[no_reply_days]",
+    "description": "Só os cards sem resposta do cliente há N dias (1 a 365)"
+   }
+  ],
+  "returns": "{ funnel: { id, name, description_present }, stages: [{ key, name, description_present, count }], selection: { stages, filters, total, limit, over_limit, analyzed, exact_total, estimated_cost_usd }, stale_days_options, target_funnels: [{ id, name, stages: [{ key, name }] }], labels: [{ id, title, description, description_present }], reasons: { won, lost }, has_openai_key, latest_run }",
+  "common_use_cases": [
+   "Saber quantos cards abertos cada etapa tem antes de analisar",
+   "Mostrar ao usuário o custo estimado da análise",
+   "Descobrir se o funil já tem uma análise rodando ou uma lista pronta"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_create",
+   "lionchat_kanban_ai_analyses_show",
+   "lionchat_kanban_ai_analyses_items",
+   "lionchat_kanban_ai_analyses_apply",
+   "lionchat_kanban_ai_analyses_reanalyze"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses",
+  "title": "Analisar funil com IA",
+  "description": "Cria a análise do \"Analisar com IA\": a IA (modelo de decisões da OpenAI, com a chave DA CONTA) lê os cards ABERTOS e ADIADOS das etapas escolhidas, com as conversas, e sugere mudar de etapa (também para trás), levar para outro funil, pôr/tirar etiqueta e marcar ganho/perdido. NÃO muda nenhum card: só monta a lista de sugestões. Até 200 cards somando as etapas (os parados há mais tempo primeiro), escolhidos NESTA chamada. Roda em segundo plano: depois chame `lionchat_kanban_ai_analyses_show` a cada 5 a 10 segundos até `status = ready`. Uma análise por vez por funil (409 `funnel_busy`) e no máximo duas por conta (`account_busy`); criar uma nova SUBSTITUI a lista anterior do mesmo funil que tiver etapa em comum. Antes de criar, mostre ao usuário o total e o custo estimado do `lionchat_kanban_ai_analyses_setup`. Outras recusas: `no_openai_key`, `no_cards`, `invalid_stage`, `invalid_options`, `feature_disabled`. Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "stages",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Chaves (slugs) das etapas a analisar (uma ou mais). Ex.: [\"novo\", \"proposta\"]"
+   },
+   {
+    "name": "filters",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Quais cards: omitir = todos os abertos e adiados; { \"stale_days\": 7 } (7, 14 ou 30) = só os parados na etapa há N dias; { \"no_reply_days\": 10 } (1 a 365) = só os sem resposta do cliente há N dias"
+   },
+   {
+    "name": "options",
+    "type": "object",
+    "location": "body",
+    "required": true,
+    "description": "O que a IA pode sugerir (pelo menos um): { \"move_stage\": true (mudar de etapa neste funil), \"outcome\": true (ganho/perdido), \"move_funnel\": true + \"target_funnels\": { \"<id do funil>\": \"<chave da etapa de chegada>\" } (só funis ativos que a pessoa vê), \"labels_add\": [títulos das etiquetas que pode PÔR], \"labels_remove\": [títulos das que pode TIRAR] }"
+   }
+  ],
+  "returns": "{ id, funnel_id, stages, status (analyzing|ready|applying|finished|expired|superseded|failed), user_id, options, filters, selected_count, analyzed_count, suggested_count, skipped_count, failed_count, processed_count, input_tokens, llm_calls, cost_usd, error_code, expires_at, created_at, finished_at, apply: { requested, done, pending, returned } } — nasce com status analyzing",
+  "common_use_cases": [
+   "Revisar de uma vez os cards parados de uma ou mais etapas",
+   "Achar leads que já deviam estar em outra etapa ou já são perdidos",
+   "Sugerir etiquetas pela conversa de cada card"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_setup",
+   "lionchat_kanban_ai_analyses_show",
+   "lionchat_kanban_ai_analyses_items",
+   "lionchat_kanban_ai_analyses_apply",
+   "lionchat_kanban_ai_analyses_reanalyze"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses/{id}",
+  "title": "Andamento da análise com IA",
+  "description": "Andamento de uma análise do \"Analisar com IA\": `status`, quantos cards já foram analisados, quantos têm sugestão, tokens e custo (`cost_usd`) e, depois de aplicar, o progresso em `apply`. Chame a cada 5 a 10 segundos: depois do create até `ready` (ou `failed`), e depois do apply até `finished`. `error_code` de análise que não terminou: `no_openai_key`, `openai_rejected` (a OpenAI recusou a chave da conta), `nothing_analyzed`, `interrupted` (parou no meio; crie outra). A lista vale 24 h (`expires_at`): depois vira `expired`; uma análise nova do funil com etapa em comum a deixa `superseded`. Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da análise (o `id` devolvido pelo create)"
+   }
+  ],
+  "returns": "{ id, funnel_id, stages, status (analyzing|ready|applying|finished|expired|superseded|failed), user_id, options, filters, selected_count, analyzed_count, suggested_count, skipped_count, failed_count, processed_count, input_tokens, llm_calls, cost_usd, error_code, expires_at, created_at, finished_at, apply: { requested, done, pending, returned } }",
+  "common_use_cases": [
+   "Esperar a análise ficar pronta",
+   "Acompanhar a aplicação até terminar",
+   "Ver quanto a análise custou"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_setup",
+   "lionchat_kanban_ai_analyses_create",
+   "lionchat_kanban_ai_analyses_items",
+   "lionchat_kanban_ai_analyses_apply",
+   "lionchat_kanban_ai_analyses_reanalyze"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_items",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses/{id}/items",
+  "title": "Sugestões da análise com IA",
+  "description": "A lista de sugestões de uma análise pronta (422 `list_analyzing` antes). Vem uma linha por card QUE TEM sugestão (ou que voltou ou foi aplicado); o resto é contado em `counts` (`no_change` = lidos sem motivo para mudar). Cada sugestão traz `id` (o que vai no apply: `stage`, `funnel`, `outcome`, `label_add:...`, `label_remove:...`), `kind`, `value`, `label`, `force` (`high` = Alta, confiança >= 70%; `medium` = Média, 50 a 70%), `checked` (vem marcada: Alta de etapa, funil e perdido; ganho, Média e etiqueta vêm desmarcadas, com o motivo em `unchecked_reason`) e o que a ação dispara (`hints`: conversão, regras do funil, fluxos). Linha com `locked` (`client_wrote` = o cliente escreveu depois da análise; `card_changed` = o card mudou) NÃO deve ser aplicada: use `lionchat_kanban_ai_analyses_reanalyze`. `return_code` = voltou para a lista: `interrupted`, `card_busy` e `apply_failed` podem ser aplicadas de novo; `agent_no_access` = o responsável não acessa o funil de destino. Mostre as sugestões ao usuário agrupadas por etapa, com a força e o motivo. Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da análise (o `id` devolvido pelo create)"
+   }
+  ],
+  "returns": "{ id, funnel_id, stages, status (analyzing|ready|applying|finished|expired|superseded|failed), user_id, options, filters, selected_count, analyzed_count, suggested_count, skipped_count, failed_count, processed_count, input_tokens, llm_calls, cost_usd, error_code, expires_at, created_at, finished_at, apply: { requested, done, pending, returned } } + items: [{ id (item_id do apply), kanban_item_id, stage, card: { title, value, current_stage, status, contact_name, conversation_display_id, linked_display_ids, whatsapp_qr }, days_without_reply, suggestions: [...], locked, return_code, requested, requested_actions, done, apply_code, applied_actions }], counts: { analyzed, no_change, with_suggestion, by_analysis_code, ... }",
+  "common_use_cases": [
+   "Mostrar ao usuário o que a IA sugeriu",
+   "Saber quais cards voltaram ou travaram",
+   "Conferir o que foi aplicado"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_setup",
+   "lionchat_kanban_ai_analyses_create",
+   "lionchat_kanban_ai_analyses_show",
+   "lionchat_kanban_ai_analyses_apply",
+   "lionchat_kanban_ai_analyses_reanalyze"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_apply",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses/{id}/apply",
+  "title": "Aplicar sugestões da análise com IA",
+  "description": "Aplica as sugestões ESCOLHIDAS pelo usuário de uma lista pronta. NÃO TEM COMO DESFAZER: fica como se uma pessoa tivesse feito à mão, e as automações, os fluxos e as conversões do funil disparam normalmente. ANTES de chamar, confirme com o usuário quais cards e quais ações, quantas mudanças em quantos cards, e diga que não volta; só então reenvie com `confirm: true`. Mande em `items` o `id` de cada linha (de `lionchat_kanban_ai_analyses_items`) com os `id` das sugestões escolhidas daquela linha. Ação que não foi sugerida para o item, linha travada ou já pedida volta em `ignored` com o motivo (`not_found`, `already_requested`, `locked`, `invalid_actions`). Roda em segundo plano: depois chame `lionchat_kanban_ai_analyses_show` até `finished` e `lionchat_kanban_ai_analyses_items` para ver `done`/`apply_code`/`return_code` de cada card. Lista vencida, substituída ou terminada é recusada (`list_expired`, `list_superseded`, `list_finished`). Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "confirm_required": true,
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da análise (o `id` devolvido pelo create)"
+   },
+   {
+    "name": "items",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Lista de { \"item_id\": <id da linha>, \"actions\": [\"stage\", \"outcome\", ...] } — os `id` das sugestões daquela linha que o usuário escolheu"
+   }
+  ],
+  "returns": "{ accepted: [item_id, ...], ignored: [{ item_id, reason }], run: { id, funnel_id, stages, status (analyzing|ready|applying|finished|expired|superseded|failed), user_id, options, filters, selected_count, analyzed_count, suggested_count, skipped_count, failed_count, processed_count, input_tokens, llm_calls, cost_usd, error_code, expires_at, created_at, finished_at, apply: { requested, done, pending, returned } } }",
+  "common_use_cases": [
+   "Aplicar as sugestões que o usuário aprovou",
+   "Aplicar só um card da lista"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_setup",
+   "lionchat_kanban_ai_analyses_create",
+   "lionchat_kanban_ai_analyses_show",
+   "lionchat_kanban_ai_analyses_items",
+   "lionchat_kanban_ai_analyses_reanalyze"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_reanalyze",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses/{id}/reanalyze",
+  "title": "Reanalisar um card da análise com IA",
+  "description": "Analisa de novo UM card de uma lista ainda válida — use quando a linha veio travada (`locked`: o cliente escreveu ou o card mudou depois da análise). Custa uma chamada à IA. Um card por vez por lista: com outro sendo reanalisado volta 409 `reanalyze_wait` (espere e tente de novo). Card já pedido ou aplicado = 422 `reanalyze_not_allowed`; 503 `reanalyze_unavailable` = tente em instantes. Responde `{ item_id, status: \"queued\" }`: depois de alguns segundos chame `lionchat_kanban_ai_analyses_items` de novo para ver a sugestão nova. Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da análise (o `id` devolvido pelo create)"
+   },
+   {
+    "name": "item_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "O `id` da linha (de `lionchat_kanban_ai_analyses_items`), não o id do card"
+   }
+  ],
+  "returns": "{ item_id, status: \"queued\" }",
+  "common_use_cases": [
+   "Atualizar a sugestão de um card em que o cliente escreveu depois da análise"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_setup",
+   "lionchat_kanban_ai_analyses_create",
+   "lionchat_kanban_ai_analyses_show",
+   "lionchat_kanban_ai_analyses_items",
+   "lionchat_kanban_ai_analyses_apply"
   ]
  },
  {
