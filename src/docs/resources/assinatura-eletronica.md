@@ -17,7 +17,7 @@ Feature `document_signing` (ligada por conta; 403 `feature_disabled` quando desl
 
 | Balde (`status` na listagem) | Estados | Significado |
 |---|---|---|
-| `aguardando` | `draft`, `sent` | criado sem entrega (draft) ou enviado e ainda não aberto |
+| `aguardando` | `draft`, `sent`, `awaiting_data` | criado sem entrega (draft), enviado e ainda não aberto, ou "aguardando formulário" (a pessoa ainda não preencheu os dados — o contrato ainda não existe) |
 | `visualizado` | `viewed`, `partially_signed` | abriu o link / parte das pessoas já assinou |
 | `assinado` | `signed_pending_seal`, `signed` | todos assinaram; selando / documento final pronto |
 | `encerrado` | `refused`, `cancelled`, `expired` | recusado / cancelado pela equipe / prazo venceu |
@@ -27,10 +27,12 @@ Participante: `pending` → `viewed` → `verified` (confirmou o código) → `s
 
 ## Linha do tempo (`events[].kind`)
 `created` · `delivered` (link entregue a uma pessoa) · `sent` · `opened` (cada abertura) · `code_requested` ·
-`code_verified` · `signed` (com `ip`, `device`, `location`; `panel: true` = assinou no painel) · `all_signed` ·
+`code_verified` · `signed` (com `ip`, `device`, `location`; `panel: true` = assinou no painel; desde 28/10
+`signature_method` `drawn` = desenhada ou `typed` = o nome digitado numa letra de assinatura, com `typed_name`) · `all_signed` ·
 `sealed` (documento final gerado, `sealed_sha256`) · `refused` · `cancelled` · `expired` · `delivery_failed`
 (motivo em `delivery.failed[]`) · `reminded` · `resent` · `copy_sent` / `copy_failed` (a via assinada de cada pessoa,
-estado em `delivery.copies[]`). Tudo append-only — é o relatório de evidências. `delivery.failed[]` também mostra a
+estado em `delivery.copies[]`) · `data_filled` (27/10: a pessoa preencheu o formulário e o contrato foi gerado com os
+dados dela). Tudo append-only — é o relatório de evidências. `delivery.failed[]` também mostra a
 recusa que a Meta manda depois (caixa oficial fora da janela de 24 h, motivo `window_expired`) e some sozinha se a
 mensagem acabar entregue.
 
@@ -45,6 +47,29 @@ Quando o documento final fica pronto, cada pessoa que assinou pelo link (testemu
 pelo mesmo canal do link: anexada numa mensagem na conversa dela (WhatsApp) ou no e-mail (acima de 10 MB vai sem anexo,
 pedindo que peça a via a quem enviou). Quem assinou no painel não recebe. Não há ferramenta para mandar de novo: oriente
 baixar na tela do documento. O código de 6 dígitos de quem assina por e-mail chega no próprio e-mail.
+
+## Os dois jeitos de mandar (27/10)
+- **Contrato pronto** (padrão, `collection: 'ready'`): o contrato sai agora com a ficha. Se faltar dado, mande junto
+  `contact_data: { 'contact.marital_status': 'casado' }` — vai para a ficha e para o contrato (erro de um campo volta
+  `422 dados_invalidos` com `field_errors`). Para saber o que falta antes: `GET .../signature_documents/:id/fill_fields?contact_id=`.
+- **Formulário para a pessoa preencher** (`collection: 'form'`, exige `contact_id`): o link vai SÓ para o titular, ele
+  preenche os dados dele (em branco) e o contrato nasce com o que ele digitou; o que ele digita atualiza a ficha. O
+  contrato fica `awaiting_data` até lá. O link de quem preenche é o `participants[].public_url` do titular na resposta.
+- Nos dois: `message` (até 1.000 caracteres) vai junto do link.
+- `fill_fields` devolve cada campo que se preenche pela ficha (`value` e `missing`) e `blocked` = o que falta e NÃO se
+  preenche por ali (telefone, dados da conta) — com algo em `blocked` o contrato pronto volta `variaveis_sem_valor`;
+  `blocked_in_form` é o mesmo para o jeito formulário (lá o nome também é perguntado).
+- **Como o formulário pergunta** (`roles_layout.field_prompts` no modelo): `{"contact.cpf": {"label": "Qual é o seu
+  CPF?", "description": "Igual ao documento", "placeholder": "000.000.000-00"}}` — texto até 200 caracteres; sem
+  pergunta, o formulário mostra o nome do campo; pergunta de variável que o modelo não usa é descartada ao salvar.
+- Modelo de **Word** com campo sem escolha no mapeamento: o envio volta `422 campos_sem_escolha` (`missing` = os
+  rótulos do Word) antes de gastar a vaga do mês — ajuste o mapeamento pela tela.
+
+## Como a pessoa assina (28/10)
+Na página do link (e no "Assinar agora" do painel) há duas abas: **Desenhar** (com o dedo ou o mouse) e **Digitar**
+(o nome já vem escrito, pode ser corrigido, e aparece em três letras de assinatura). Os dois valem igual — quem prova
+a autoria é o código de uso único. A folha de assinaturas e o relatório de evidências dizem "Assinatura desenhada à
+mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não dizem nada.
 
 ## Como mandar um contrato (receita)
 1. `lionchat_signature_documents_list` → escolha o modelo (ou crie um `text` com `signature_documents_create`;
@@ -82,8 +107,9 @@ baixar na tela do documento. O código de 6 dígitos de quem assina por e-mail c
   não sobe o Word do modelo nem baixa o PDF — não prometa "vou gerar a prévia" ou "vou baixar o assinado"; oriente a tela.
 - **Assinar no painel** ("eu também assino", 08/09): `lionchat_signature_envelopes_sign_as_sender` assina como o
   REMETENTE (a pessoa do token) — nunca no lugar do cliente. Manda `signature_image` (PNG em base64 com prefixo
-  `data:image/png;base64,...`), opcional `location {latitude, longitude, accuracy}` (vai pra prova) e
-  `remember_drawing`. 422: `nao_e_sua` (não é o remetente deste contrato), `ja_assinado`, `sem_desenho`. Era a
+  `data:image/png;base64,...`), opcional `location {latitude, longitude, accuracy}` (vai pra prova),
+  `remember_drawing` e (28/10) `signature_method` (`drawn` ou `typed`) + `typed_name` — a folha de assinaturas diz
+  "Assinatura desenhada à mão" ou "Assinatura digitada: <nome>"; sem o campo, não diz nada. 422: `nao_e_sua` (não é o remetente deste contrato), `ja_assinado`, `sem_desenho`. Era a
   última que faltava? o contrato fecha e o PDF final é gerado em seguida. Os que esperam você: `status=falta_eu`.
 - **Envio por outros caminhos**: ação `send_signature_document` no FlowBuilder, na Macro e na Automação;
   bloco `generate_contract` no Formulário público (gera pelas respostas e manda o link). Gatilhos do Flow

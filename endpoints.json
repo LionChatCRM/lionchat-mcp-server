@@ -1444,6 +1444,40 @@
   ]
  },
  {
+  "id": "lionchat_conversations_bulk_destroy",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/conversations/bulk_destroy",
+  "title": "Excluir Conversas em Lote",
+  "description": "APAGA DE VEZ varias conversas (mensagens e anexos juntos), numa acao de fundo. Irreversivel: exige confirm:true depois de listar ao usuario QUAIS conversas vao sair. So administrador ou cargo com 'Excluir conversa' (conversation_delete); a permissao e conferida conversa a conversa e as que o usuario nao pode excluir sao puladas em silencio. Responde 200 na hora (o trabalho segue em segundo plano). Ate 300 ids por chamada (acima = 422 bulk_ids_limit_exceeded).",
+  "category": "Conversas",
+  "confirm_required": true,
+  "params": [
+   {
+    "name": "ids",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "display_id das conversas (o numero que aparece na tela), ate 300"
+   },
+   {
+    "name": "batch_id",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Identificador do lote (opcional); volta no aviso de fim bulk_action.finished"
+   }
+  ],
+  "returns": "200 sem corpo; o fim chega pelo evento bulk_action.finished",
+  "common_use_cases": [
+   "Limpar conversas de teste ou de spam escolhidas pelo usuario"
+  ],
+  "related_tools": [
+   "lionchat_conversations_destroy",
+   "lionchat_conversations_filter",
+   "lionchat_conversations_list"
+  ]
+ },
+ {
   "id": "lionchat_conversations_filter",
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/conversations/filter",
@@ -15848,7 +15882,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/dashboard_apps",
   "title": "Criar Dashboard App",
-  "description": "Cria um dashboard app. Body exige wrapper dashboard_app.",
+  "description": "Cria um dashboard app. Body exige wrapper dashboard_app. So administrador (desde 27/10; os outros recebem 401).",
   "category": "Dashboard Apps",
   "params": [
    {
@@ -15926,7 +15960,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/dashboard_apps/{id}",
   "title": "Atualizar Dashboard App",
-  "description": "Atualiza um app do dashboard. Atualiza campos do dashboard app existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, content.",
+  "description": "Atualiza um app do dashboard. Atualiza campos do dashboard app existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, content. So administrador (desde 27/10; os outros recebem 401).",
   "category": "Dashboard Apps",
   "params": [
    {
@@ -15983,7 +16017,7 @@
   "method": "DELETE",
   "path": "/api/v1/accounts/{account_id}/dashboard_apps/{id}",
   "title": "Excluir Dashboard App",
-  "description": "Remove um app do dashboard. Remove dashboard app permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
+  "description": "Remove um app do dashboard. Remove dashboard app permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes. So administrador (desde 27/10; os outros recebem 401).",
   "category": "Dashboard Apps",
   "params": [
    {
@@ -18907,7 +18941,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Token de validacao Hotmart (hottok) (dentro de hotmart_webhook)"
+    "description": "Token de validacao Hotmart (hottok) (dentro de hotmart_webhook) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "inbox_id",
@@ -19214,7 +19248,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Token de validacao Kiwify (dentro de kiwify_webhook)"
+    "description": "Token de validacao Kiwify (dentro de kiwify_webhook) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "inbox_id",
@@ -19521,7 +19555,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Token de validacao Ticto (dentro de ticto_webhook)"
+    "description": "Token de validacao Ticto (dentro de ticto_webhook) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "inbox_id",
@@ -19828,7 +19862,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Segredo de validacao Eduzz (dentro de eduzz_webhook)"
+    "description": "Segredo de validacao Eduzz (dentro de eduzz_webhook) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "inbox_id",
@@ -20135,7 +20169,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Chave de validacao Monetizze (dentro de monetizze_webhook)"
+    "description": "Chave de validacao Monetizze (dentro de monetizze_webhook) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "inbox_id",
@@ -34118,7 +34152,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Token do webhook da Greenn (valida a assinatura do que chega)"
+    "description": "Token do webhook da Greenn (valida a assinatura do que chega) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "active",
@@ -35824,7 +35858,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo."
    }
   ],
   "returns": "o modelo criado (id, name, kind, body, variables, roles_layout, progress)",
@@ -35886,7 +35920,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo."
    }
   ],
   "returns": "o modelo atualizado",
@@ -35941,11 +35975,45 @@
   ]
  },
  {
+  "id": "lionchat_signature_documents_fill_fields",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/signature_documents/{id}/fill_fields",
+  "title": "O que o Contrato Pede e a Ficha Tem",
+  "description": "Antes de enviar: cada campo do modelo que se preenche pela ficha (dados cadastrais, endereco, e-mail, atributo personalizado de contato) com o valor que a ficha do contato JA tem e missing=true no que falta. Use para completar no envio com contact_data (jeito ready) ou decidir mandar o formulario (collection=form). blocked = o que falta e NAO se preenche por aqui (ex.: telefone, dados da conta) — com isso o envio pronto volta variaveis_sem_valor; blocked_in_form = o mesmo no jeito formulario (no formulario o nome tambem e perguntado). Sem contact_id ou contato de outra conta = 422 sem_contato.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do modelo"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "Ficha do titular"
+   }
+  ],
+  "returns": "{fields: [{variable, label, description, placeholder, type, options[{id,label}], value, missing}], blocked: [nomes], blocked_in_form: [nomes]}",
+  "common_use_cases": [
+   "Saber o que falta na ficha antes de mandar o contrato",
+   "Completar os dados que faltam no proprio envio (contact_data)"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_create",
+   "lionchat_signature_documents_show",
+   "lionchat_contacts_update_cadastral"
+  ]
+ },
+ {
   "id": "lionchat_signature_envelopes_list",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes",
   "title": "Listar Contratos Enviados",
-  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde. Por empresa: company_id (contratos de todos os contatos dela).",
+  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent/awaiting_data — awaiting_data = esperando a pessoa preencher o formulario), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde. Por empresa: company_id (contratos de todos os contatos dela).",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -36015,7 +36083,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}",
   "title": "Detalhes do Contrato (linha do tempo)",
-  "description": "Um contrato com quem assina e a LINHA DO TEMPO completa (events): created, delivered, sent, opened, code_requested, code_verified, signed (com ip, device, location e panel=true quando foi assinado no painel), all_signed, sealed (documento final gerado, com hash), refused, expired, cancelled, delivery_failed, reminded, resent. E o relatorio de evidencias em dados; os PDFs (original, assinado, evidencias) so saem pela tela/API de download.",
+  "description": "Um contrato com quem assina e a LINHA DO TEMPO completa (events): created, delivered, sent, opened, code_requested, code_verified, signed (com ip, device, location, panel=true quando foi assinado no painel e, desde 28/10, signature_method drawn|typed + typed_name), data_filled (a pessoa preencheu o formulario e o contrato foi gerado), all_signed, sealed (documento final gerado, com hash), refused, expired, cancelled, delivery_failed, reminded, resent. E o relatorio de evidencias em dados; os PDFs (original, assinado, evidencias) so saem pela tela/API de download.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -36026,7 +36094,7 @@
     "description": "ID do contrato"
    }
   ],
-  "returns": "contrato (com delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, copies = a via assinada de cada pessoa) + events: [{kind, occurred_at, ip, device, location, participant_id, panel}] + original_sha256/sealed_sha256",
+  "returns": "contrato (com delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, copies = a via assinada de cada pessoa) + events: [{kind, occurred_at, ip, device, location, participant_id, panel, signature_method, typed_name}] + original_sha256/sealed_sha256",
   "common_use_cases": [
    "Conferir quando e de onde a pessoa abriu e assinou",
    "Ver por que um contrato nao foi entregue (delivery.failed) ou foi recusado"
@@ -36042,7 +36110,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes",
   "title": "Enviar Contrato para Assinar",
-  "description": "Cria o contrato DAQUELA pessoa a partir de um modelo e ENTREGA o link (na conversa de WhatsApp da pessoa — uma conversa POR assinante — ou por e-mail). O PDF e gerado com os dados da ficha; variavel do modelo sem valor na ficha = 422 variaveis_sem_valor com a lista do que falta (preencha a ficha e tente de novo). Sem inbox_id e com o contato conversando em MAIS de uma caixa de WhatsApp = 422 escolher_caixa com inboxes[] — repita mandando inbox_id. Ninguem recebeu = 422 entrega_falhou (o contrato fica como rascunho; use resend). Recebeu parcialmente = 201 com delivery_failures[]. Consome 1 vaga do limite mensal (veja signature_envelopes_limits). Modelo com sender_signs cria sozinho o participante do remetente (o usuario do token), que assina NO PAINEL (nao ha ferramenta pra assinar por ele).",
+  "description": "Cria o contrato DAQUELA pessoa a partir de um modelo e ENTREGA o link (na conversa de WhatsApp da pessoa — uma conversa POR assinante — ou por e-mail). O PDF e gerado com os dados da ficha; variavel do modelo sem valor na ficha = 422 variaveis_sem_valor com a lista do que falta (preencha a ficha e tente de novo). Sem inbox_id e com o contato conversando em MAIS de uma caixa de WhatsApp = 422 escolher_caixa com inboxes[] — repita mandando inbox_id. Ninguem recebeu = 422 entrega_falhou (o contrato fica como rascunho; use resend). Recebeu parcialmente = 201 com delivery_failures[]. Consome 1 vaga do limite mensal (veja signature_envelopes_limits). Modelo com sender_signs cria sozinho o participante do remetente (o usuario do token), que assina NO PAINEL (nao ha ferramenta pra assinar por ele). DOIS JEITOS (27/10): collection='ready' (padrao) = o contrato sai agora com a ficha; o que faltar pode ir em contact_data (grava na ficha E no contrato; erro de um campo = 422 dados_invalidos com field_errors). Para saber antes o que a ficha tem e o que falta: lionchat_signature_documents_fill_fields. collection='form' (exige contact_id) = o titular recebe um formulario em branco, preenche os dados dele (atualiza a ficha) e o contrato nasce com o que ele digitou; o contrato fica awaiting_data ate la e o link e o participants[].public_url do titular. message (ate 1.000 caracteres) vai junto do link nos dois jeitos. Modelo de Word com campo sem escolha no mapeamento = 422 campos_sem_escolha (missing = os rotulos do Word): ajuste o modelo pela tela.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -36079,19 +36147,42 @@
     "location": "body",
     "required": true,
     "description": "Quem assina (array). Cada item: {name (obrigatorio), role: signer|witness (titular|testemunha; NAO mande sender — o remetente e criado sozinho quando o modelo tem sender_signs), phone (+55DDDNUMERO, quando delivery_channel=whatsapp), email (quando delivery_channel=email), delivery_channel: whatsapp|email (padrao whatsapp), cpf (opcional; invalido = 422 cpf_invalido), contact_id (ficha da pessoa; recomendado no titular)}. Cada pessoa recebe o proprio link e assina com codigo de uso unico."
+   },
+   {
+    "name": "collection",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Jeito de coletar os dados: ready (padrao, contrato pronto com a ficha) | form (a pessoa preenche pelo link; exige contact_id). Outro valor = 422 coleta_invalida"
+   },
+   {
+    "name": "message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto proprio que vai junto do link (ate 1.000 caracteres; acima = 422 mensagem_longa)"
+   },
+   {
+    "name": "contact_data",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "So no jeito ready: o que voce completa da ficha antes de gerar, {variavel: valor} com as variaveis do modelo (ex.: {\"contact.cpf\": \"52998224725\", \"contact.marital_status\": \"casado\"}). Grava na ficha e no contrato; tudo valido ou nada gravado. Telefone nao se preenche por aqui. Formato torto (nao objeto de textos, mais de 50 chaves, valor acima de 4 KB) = 422 contact_data_invalido"
    }
   ],
-  "returns": "201: o contrato (status sent) com participants[] (public_url de cada um), events[] e delivery_failures[]; 422: {error, detail, missing, inboxes, envelope}",
+  "returns": "201: o contrato (status sent) com participants[] (public_url de cada um), events[] e delivery_failures[]; 422: {error, detail, missing, inboxes, envelope}; 422 dados_invalidos traz field_errors {variavel: motivo} (invalid_cpf, invalid_option, email_em_uso, campo_desconhecido...); variaveis_sem_valor e campos_sem_escolha trazem missing (chaves) e missing_labels (nomes de gente)",
   "common_use_cases": [
    "Mandar o contrato padrao pra um cliente assinar pelo WhatsApp",
    "Mandar com testemunha (participants com role witness e o telefone dela)",
-   "Reenviar um contrato que ficou como rascunho por falha de entrega (use resend)"
+   "Reenviar um contrato que ficou como rascunho por falha de entrega (use resend)",
+   "Mandar um formulario para a pessoa preencher os proprios dados (collection=form) e o contrato sair com eles"
   ],
   "related_tools": [
    "lionchat_signature_documents_list",
    "lionchat_signature_envelopes_limits",
    "lionchat_signature_envelopes_show",
-   "lionchat_signature_envelopes_resend"
+   "lionchat_signature_envelopes_resend",
+   "lionchat_signature_documents_fill_fields"
   ]
  },
  {
@@ -36124,7 +36215,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/sign_as_sender",
   "title": "Remetente Assina o Contrato pelo Painel",
-  "description": "A assinatura do REMETENTE (a pessoa do token), quando o modelo tem 'eu tambem assino' (roles_layout.sender_signs). Nao serve pra assinar no lugar do cliente: titular e testemunha assinam pelo link publico deles. Manda o desenho da assinatura como PNG em base64 com o prefixo data:image/png;base64,... (o mesmo rabisco da tela; remember_drawing guarda pra proxima vez). Recusas 422: nao_e_sua (o usuario do token nao e o remetente deste contrato), ja_assinado, sem_desenho. Quando era a ultima assinatura que faltava, o contrato fecha e o PDF final e gerado em seguida (status signed_pending_seal -> signed). Ache os contratos que esperam a sua assinatura com status=falta_eu em lionchat_signature_envelopes_list.",
+  "description": "A assinatura do REMETENTE (a pessoa do token), quando o modelo tem 'eu tambem assino' (roles_layout.sender_signs). Nao serve pra assinar no lugar do cliente: titular e testemunha assinam pelo link publico deles. Manda o desenho da assinatura como PNG em base64 com o prefixo data:image/png;base64,... (o mesmo rabisco da tela; remember_drawing guarda pra proxima vez). Recusas 422: nao_e_sua (o usuario do token nao e o remetente deste contrato), ja_assinado, sem_desenho. Quando era a ultima assinatura que faltava, o contrato fecha e o PDF final e gerado em seguida (status signed_pending_seal -> signed). Ache os contratos que esperam a sua assinatura com status=falta_eu em lionchat_signature_envelopes_list. JEITO (28/10): signature_method drawn (desenhada) ou typed (o nome digitado numa letra de assinatura) + typed_name — a folha de assinaturas e o relatorio de evidencias dizem 'Assinatura desenhada a mao' ou 'Assinatura digitada: <nome>'. Sem o campo, nao dizem nada. A imagem e sempre o PNG.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -36154,6 +36245,20 @@
     "location": "body",
     "required": false,
     "description": "true = guarda o desenho nas preferencias do usuario pra reaproveitar no proximo contrato"
+   },
+   {
+    "name": "signature_method",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "drawn (desenhada) | typed (nome digitado numa letra de assinatura). Outro valor = nada gravado"
+   },
+   {
+    "name": "typed_name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "So com signature_method=typed: o nome escrito (ate 120 caracteres) que aparece na folha de assinaturas"
    }
   ],
   "returns": "o contrato atualizado com participants[] e events[] (o seu participante vira signed); 422: {error: nao_e_sua | ja_assinado | sem_desenho}",
