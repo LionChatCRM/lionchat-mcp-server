@@ -96,6 +96,9 @@ Account (conta/empresa)
 - A IA lê os cards abertos e adiados das etapas escolhidas de um funil e sugere mudar de etapa ou de funil, pôr/tirar
   etiqueta e marcar ganho/perdido. Ferramentas `lionchat_kanban_ai_analyses_*`: `setup` -> `create` -> `show` até
   `ready` -> `items` -> `apply` (com `confirm: true`) -> `show` até `finished`.
+- Quantos cards: `filters.limit` (1 a 1.000, padrão 200). A análise PULA os cards que a IA leu nos últimos 7 dias sem
+  fala nova do cliente; `filters.include_read: true` lê de novo (e gasta crédito de novo). "Por que não mudou nada?":
+  `items` com `no_change: true`.
 - **Aplicar NÃO tem como desfazer**: confirme com o usuário quais cards e ações antes. Regras em
   `lionchat://docs/kanban-deep-dive`, seção "Analisar com IA".
 

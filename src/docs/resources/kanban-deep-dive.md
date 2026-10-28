@@ -947,9 +947,12 @@ para outro funil, pôr/tirar etiqueta e marcar ganho/perdido. **Nada muda sem ap
 1. `lionchat_kanban_ai_analyses_setup` — o que a janela mostra: etapas com a contagem de cards, se cada etapa e o funil
    têm descrição, `selection` (quantos cards entram e `estimated_cost_usd`), funis de destino, etiquetas, motivos de
    ganho/perda, `has_openai_key` e `latest_run` (análise viva do funil).
-2. `lionchat_kanban_ai_analyses_create` — cria a análise. Os cards são escolhidos AQUI (até 200, os parados há mais tempo).
+2. `lionchat_kanban_ai_analyses_create` — cria a análise. Os cards são escolhidos AQUI: até `filters.limit` (1 a 1.000,
+   padrão 200), os parados há mais tempo, PULANDO os que a IA leu nos últimos 7 dias (a não ser que o cliente tenha
+   escrito depois); `filters.include_read: true` lê de novo os já lidos.
 3. `lionchat_kanban_ai_analyses_show` — andamento (`status`, contadores, custo).
-4. `lionchat_kanban_ai_analyses_items` — a lista de sugestões (só depois de `ready`).
+4. `lionchat_kanban_ai_analyses_items` — a lista de sugestões (só depois de `ready`). Com `no_change: true` traz também
+   `no_change_items`: os cards que a IA leu e deixou como estão, cada um com `lines` dizendo o porquê.
 5. `lionchat_kanban_ai_analyses_apply` — aplica o que o usuário escolheu. Pede `confirm: true`.
 6. `lionchat_kanban_ai_analyses_reanalyze` — analisa de novo UM card cuja linha travou.
 
@@ -957,7 +960,9 @@ para outro funil, pôr/tirar etiqueta e marcar ganho/perdido. **Nada muda sem ap
 
 1. `setup` com `funnel_id` (e `stages` para saber o total e o custo). Mostre ao usuário as etapas e quantos cards cada
    uma tem. Dica: marcar VÁRIAS etapas numa análise só evita ler a mesma conversa duas vezes.
-2. Pergunte o que a IA pode fazer (`options`) e quais cards (todos, `stale_days` ou `no_reply_days`).
+2. Pergunte o que a IA pode fazer (`options`), quais cards (todos, `stale_days` ou `no_reply_days`) e QUANTOS
+   (`filters.limit`, 1 a 1.000; mostre o `estimated_cost_usd` e o `estimated_minutes` do `setup` com o mesmo número). Se o
+   `setup` disser `already_read` > 0, avise que esses serão pulados; para repetir nos mesmos cards, `include_read: true`.
 3. `create`. Depois chame `show` a cada 5 a 10 segundos até `status = ready` (ou `failed`, com `error_code`).
 4. `items`: mostre as sugestões agrupadas por etapa — card, ação, força ("Alta" >= 70%, "Média" 50-70%), motivo e o que
    a ação dispara (`hints`: conversão, regras do funil, fluxos; aviso de WhatsApp QR).
@@ -967,6 +972,12 @@ para outro funil, pôr/tirar etiqueta e marcar ganho/perdido. **Nada muda sem ap
    daquele item (`stage`, `funnel`, `outcome`, `label_add:...`, `label_remove:...`) — nunca invente: ação que não foi
    sugerida para o item volta em `ignored`.
 7. `show` até `status = finished`; `items` traz `done`, `apply_code` e `return_code` de cada card.
+8. **"Por que a IA não mudou nada?"** — chame `items` com `no_change: true` e explique pelos `no_change_items[].lines`:
+   `kind` (`stage`, `funnel`, `outcome`, `label`) + `state`: `same` = confirmou o que já está (com `confidence` em %),
+   `doubt` = as duas ordens discordaram (`value` x `other_value`), `weak` = pensou em `value` mas abaixo de 50%,
+   `other_funnel` = achou que o card é de outro funil (anulou a etapa), `not_chosen` = sugeriu um funil que não estava
+   entre os destinos, `add_no` / `remove_keeps` = etiqueta com a chance (`probability`). `lines: null` = análise antiga,
+   sem detalhes.
 
 ### Regras que você PRECISA saber
 
