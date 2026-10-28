@@ -497,7 +497,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-22)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-28)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -959,12 +959,19 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       add_sla({sla_policy_id}) — NOVO 24/07: aplica politica de SLA na conversa (id de sla_list;
         aceita variavel Liquid). NO-OP se a conversa JA tem SLA (nunca troca/reinicia); politica
         inexistente nao quebra o fluxo
-      send_signature_document({document_id, inbox_id?}) — NOVO 04/09: manda um MODELO de contrato
-        (assinatura eletronica; id de lionchat_signature_documents_list) pra pessoa desta conversa; o
-        link sai NESTA conversa (ou por e-mail se a ficha nao tem telefone). O PDF e gerado com os
-        dados da ficha: variavel do modelo sem valor na ficha = o bloco fica com ERRO e o motivo
-        ('variaveis_sem_valor: contact.cpf'), nunca verde por engano. A mesma acao existe em macro e
-        automacao (send_signature_document, action_params [document_id]). Exige document_signing.
+      send_signature_document({document_id, inbox_id?, collection?, message?, send_link?}) — NOVO 04/09:
+        manda um MODELO de contrato (assinatura eletronica; id de lionchat_signature_documents_list) pra
+        pessoa desta conversa; o link sai NESTA conversa (ou por e-mail se a ficha nao tem telefone). O
+        PDF e gerado com os dados da ficha: variavel do modelo sem valor na ficha = o bloco fica com ERRO
+        e o motivo ('variaveis_sem_valor: contact.cpf'), nunca verde por engano. (28/10) Chaves NOVAS e
+        opcionais: collection 'ready' (padrao, contrato pronto com a ficha) | 'form' (a pessoa preenche os
+        dados dela pelo link antes do contrato nascer); message = texto que vai junto do link (aceita
+        {{variaveis}} do fluxo); send_link:false = so GERA o contrato, nao manda nada — o link vira
+        variavel pro cliente mandar no proprio bloco de mensagem ou modelo do WhatsApp. Depois do bloco
+        ficam {{contrato.*}} (as mesmas dos gatilhos signature_*) + {{contrato.link}} (endereco de
+        assinatura do titular), e a condicao signature_status passa a falar DESTE contrato. Bloco salvo
+        sem as chaves novas manda o link como sempre. A mesma acao existe em macro e automacao
+        (send_signature_document, action_params [document_id]). Exige document_signing.
     Contato: add_label({labels:[...]}), remove_label({labels:[...]}),  // etiqueta NO CONTATO
       update_attribute({attr_source:'contact'|'conversation'|'card', attr_key, attr_value})
         — campos EXATOS (NAO entity/key/value). Somar/subtrair via Liquid no attr_value:

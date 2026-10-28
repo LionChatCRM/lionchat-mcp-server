@@ -10,14 +10,14 @@ Feature `document_signing` (ligada por conta; 403 `feature_disabled` quando desl
 | Camada | O que é | Ferramentas |
 |---|---|---|
 | **Modelo** (`signature_documents`) | O contrato padrão, escrito uma vez com `{{variáveis}}` da ficha. `kind`: `text` (escrito no editor — o único que a API cria), `file` (PDF pronto, igual pra todos) ou `word` (.docx que sai idêntico com os campos mapeados) — os dois últimos só pela tela (upload). | `lionchat_signature_documents_list/show/create/update/destroy/field_catalog` |
-| **Contrato** (`signature_envelopes`) | Cada ENVIO a uma pessoa: PDF próprio com os dados dela, prazo, linha do tempo. | `lionchat_signature_envelopes_list/show/create/resend/cancel/limits` |
+| **Contrato** (`signature_envelopes`) | Cada ENVIO a uma pessoa: PDF próprio com os dados dela, prazo, linha do tempo. | `lionchat_signature_envelopes_list/show/create/resend/cancel/limits`; documentos de quem assina: `_proofs` / `_approve_proofs` / `_reject_proofs` |
 | **Participante** | Quem assina dentro de um contrato: `signer` (titular, pode ser mais de um), `witness` (testemunha, opcional), `sender` (o remetente, quando o modelo tem "eu também assino" — assina NO PAINEL, sem link). Cada um tem link e código próprios. | dentro do contrato (`participants[]`) |
 
 ## Estados do contrato (`status`) e os baldes de filtro
 
 | Balde (`status` na listagem) | Estados | Significado |
 |---|---|---|
-| `aguardando` | `draft`, `sent`, `awaiting_data` | criado sem entrega (draft), enviado e ainda não aberto, ou "aguardando formulário" (a pessoa ainda não preencheu os dados — o contrato ainda não existe) |
+| `aguardando` | `draft`, `sent`, `awaiting_data`, `awaiting_approval` | criado sem entrega (draft), enviado e ainda não aberto, "aguardando formulário" (a pessoa ainda não preencheu os dados — o contrato ainda não existe) ou (28/10) "aguardando aprovação dos documentos" (todos assinaram, falta a equipe aprovar os documentos pedidos) |
 | `visualizado` | `viewed`, `partially_signed` | abriu o link / parte das pessoas já assinou |
 | `assinado` | `signed_pending_seal`, `signed` | todos assinaram; selando / documento final pronto |
 | `encerrado` | `refused`, `cancelled`, `expired` | recusado / cancelado pela equipe / prazo venceu |
@@ -32,7 +32,10 @@ Participante: `pending` → `viewed` → `verified` (confirmou o código) → `s
 `sealed` (documento final gerado, `sealed_sha256`) · `refused` · `cancelled` · `expired` · `delivery_failed`
 (motivo em `delivery.failed[]`) · `reminded` · `resent` · `copy_sent` / `copy_failed` (a via assinada de cada pessoa,
 estado em `delivery.copies[]`) · `data_filled` (27/10: a pessoa preencheu o formulário e o contrato foi gerado com os
-dados dela). Tudo append-only — é o relatório de evidências. `delivery.failed[]` também mostra a
+dados dela) · (28/10) `proof_sent` (a pessoa mandou um documento pedido: `kind`, `document_type`) ·
+`awaiting_approval` (o contrato passou a esperar a equipe, ou a pessoa reenviou depois de reprovada) · `proofs_approved`
+/ `proofs_rejected` (com `reason` e quem decidiu). `code_requested`/`code_verified` com `method: "whatsapp"` = a pessoa
+confirmou mandando a frase pelo WhatsApp, não pelo código. Tudo append-only — é o relatório de evidências. `delivery.failed[]` também mostra a
 recusa que a Meta manda depois (caixa oficial fora da janela de 24 h, motivo `window_expired`) e some sozinha se a
 mensagem acabar entregue.
 
@@ -71,6 +74,43 @@ Na página do link (e no "Assinar agora" do painel) há duas abas: **Desenhar** 
 a autoria é o código de uso único. A folha de assinaturas e o relatório de evidências dizem "Assinatura desenhada à
 mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não dizem nada.
 
+## Documentos de quem assina (28/10)
+- No modelo, `roles_layout.required_proofs`: lista com `id_document` (documento com foto — a pessoa escolhe RG, CNH ou
+  CPF), `selfie_with_document` e `address_proof` (comprovante, foto ou PDF). `[]` = nenhum. Outro valor = 422. O
+  contrato guarda uma cópia ao nascer: mudar o modelo depois não muda contrato já enviado (`required_proofs` vem no
+  `list` e no `show` do contrato).
+- A pessoa manda os documentos na página, antes de assinar. Com algum documento pedido, o contrato NÃO fecha quando
+  todos assinam: fica `awaiting_approval` e quem enviou recebe aviso no sininho.
+- `lionchat_signature_envelopes_proofs` mostra, por pessoa, os documentos mandados (tipo, formato, quando — nunca o
+  arquivo) e a revisão (`pending`/`approved`/`rejected`, motivo, quem, quando) e o `last_proof_event_id`.
+- **Os arquivos NÃO saem por ferramenta** (documento de identidade e selfie são dado sensível): para olhar, oriente a
+  tela — botão amarelo "Ver documentos" no contrato ou na aba Contratos da ficha. Aprovar sem alguém ter olhado o
+  arquivo na tela não faz sentido: pergunte ao usuário se ele já conferiu.
+- `lionchat_signature_envelopes_approve_proofs` (`participant_id`, `seen_event_id` = o `last_proof_event_id` que a pessoa
+  viu): com todos aprovados o contrato fecha e cada um recebe a via. `lionchat_signature_envelopes_reject_proofs`
+  (`participant_id`, `reason` obrigatório, `seen_event_id`): a pessoa recebe no canal dela o pedido de documento novo com
+  o motivo. As duas MANDAM mensagem ao cliente — confirme com o usuário antes. 422: `fora_do_momento` (contrato não está
+  esperando aprovação), `sem_documentos`, `motivo_obrigatorio`, `documentos_mudaram` (a pessoa mandou outro depois do
+  que foi visto — leia `_proofs` de novo). Quem pode: administrador ou `signature_manage`.
+
+## Confirmar pelo WhatsApp (28/10)
+Quem recebe o link pelo WhatsApp pode confirmar que é ela mandando uma frase pronta (com um código `CT-XXXXXX`) para o
+WhatsApp do contrato, em vez de digitar o código de 6 dígitos — resolve a caixa oficial com a janela de 24 h fechada.
+Só vale do telefone da pessoa e na caixa do contrato. A mensagem aparece na conversa, mas a IA, os fluxos e as
+automações não respondem a ela. Não há ferramenta: é só a página da pessoa.
+
+## Link do contrato para divulgar (28/10)
+- No modelo, `roles_layout.public_link: {enabled: true, inbox_id: <caixa de WhatsApp da conta>}`. A leitura devolve
+  `{enabled, inbox_id, path}` — o endereço é o domínio da instalação + `path` (`/contrato/<código>`). Mande
+  `regenerate: true` para trocar o código (o endereço antigo para de funcionar). Salvar sem `regenerate` mantém o
+  mesmo endereço; desligar e religar também.
+- Só para modelo com UM assinante principal e sem `sender_signs` (422 com `public_link` no texto do erro), e só caixa de
+  WhatsApp (oficial ou QR Code).
+- Quem abre o endereço manda a mensagem pronta pelo WhatsApp; o contrato dela nasce sozinho no jeito Formulário, na
+  conversa dela (`additional_attributes.link_padrao: true`). Se o modelo tem testemunha, o formulário pergunta nome e
+  WhatsApp de cada uma. A mesma pessoa pedindo de novo em 24 h recebe o mesmo contrato.
+- **Limite do mês:** o contrato do link só conta depois que a pessoa confirma que é ela. Quem abre e some não gasta vaga.
+
 ## Como mandar um contrato (receita)
 1. `lionchat_signature_documents_list` → escolha o modelo (ou crie um `text` com `signature_documents_create`;
    variáveis em `signature_documents_field_catalog`).
@@ -98,6 +138,8 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
 - **Fila única de conversão do Word**: uma conversão por vez em toda a instalação (todas as contas); pela tela espera-se até 10 s, automação/macro/fluxo/formulário até 2 s.
   Passou disso o envio/prévia volta `422 fila_cheia` — é só repetir em instantes (o modelo está bom).
 - **Limite mensal** (`signature_envelopes_limits`): cada contrato criado consome 1 vaga; cancelar não devolve.
+  Exceção (28/10): o contrato que nasce do link do modelo só conta depois que a pessoa confirma. O teto por conta é
+  ajustado pelo operador da plataforma (fora do MCP).
 - **PDFs** (original, assinado, evidências) e o **QR de conferência** só existem pela tela/download autenticado —
   não há ferramenta que devolva os bytes. O `sealed_sha256` é o hash do documento final. Exceção desde 15/10: a via
   assinada vira anexo da mensagem na conversa de quem assinou por WhatsApp, então aparece nas ferramentas de mensagens
@@ -111,7 +153,9 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
   `remember_drawing` e (28/10) `signature_method` (`drawn` ou `typed`) + `typed_name` — a folha de assinaturas diz
   "Assinatura desenhada à mão" ou "Assinatura digitada: <nome>"; sem o campo, não diz nada. 422: `nao_e_sua` (não é o remetente deste contrato), `ja_assinado`, `sem_desenho`. Era a
   última que faltava? o contrato fecha e o PDF final é gerado em seguida. Os que esperam você: `status=falta_eu`.
-- **Envio por outros caminhos**: ação `send_signature_document` no FlowBuilder, na Macro e na Automação;
+- **Envio por outros caminhos**: ação `send_signature_document` no FlowBuilder (28/10: `collection` `ready`/`form`,
+  `message` junto do link e `send_link: false` para só gerar; o contrato criado vira `{{contrato.*}}`, com
+  `{{contrato.link}}`, para os blocos seguintes), na Macro e na Automação;
   bloco `generate_contract` no Formulário público (gera pelas respostas e manda o link). Gatilhos do Flow
   `signature_*` (8 acontecimentos) trazem `{{contrato.*}}` — ver `lionchat_flows_schema_reference`.
 

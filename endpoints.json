@@ -36110,7 +36110,7 @@
     "description": "ID do modelo"
    }
   ],
-  "returns": "modelo + envelopes: [{id, title, status, contact_id, contact_name, sent_at, completed_at, expires_at, participants[]}]",
+  "returns": "modelo (roles_layout com required_proofs e public_link {enabled, inbox_id, path}) + envelopes: [{id, title, status, contact_id, contact_name, sent_at, completed_at, expires_at, participants[]}]",
   "common_use_cases": [
    "Ver o texto e as variaveis do modelo antes de editar",
    "Conferir quem ja recebeu este contrato"
@@ -36162,7 +36162,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo. required_proofs (28/10): documentos que a pessoa manda antes de assinar — lista com id_document (documento com foto; ela escolhe RG, CNH ou CPF), selfie_with_document e address_proof (comprovante, foto ou PDF); [] = nenhum; outro valor = 422. Com algum, o contrato so fecha depois de a equipe aprovar (status awaiting_approval). public_link (28/10): link do contrato para divulgar — {enabled: true, inbox_id: <caixa de WhatsApp da conta>} (regenerate: true troca o endereco; o antigo para de funcionar). So para modelo com 1 assinante principal e sem sender_signs (422 com 'public_link' no texto). A leitura devolve {enabled, inbox_id, path} — o endereco e o dominio da instalacao + path (/contrato/<codigo>); salvar sem regenerate mantem o mesmo endereco."
    }
   ],
   "returns": "o modelo criado (id, name, kind, body, variables, roles_layout, progress)",
@@ -36224,7 +36224,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo. required_proofs (28/10): documentos que a pessoa manda antes de assinar — lista com id_document (documento com foto; ela escolhe RG, CNH ou CPF), selfie_with_document e address_proof (comprovante, foto ou PDF); [] = nenhum; outro valor = 422. Com algum, o contrato so fecha depois de a equipe aprovar (status awaiting_approval). public_link (28/10): link do contrato para divulgar — {enabled: true, inbox_id: <caixa de WhatsApp da conta>} (regenerate: true troca o endereco; o antigo para de funcionar). So para modelo com 1 assinante principal e sem sender_signs (422 com 'public_link' no texto). A leitura devolve {enabled, inbox_id, path} — o endereco e o dominio da instalacao + path (/contrato/<codigo>); salvar sem regenerate mantem o mesmo endereco."
    }
   ],
   "returns": "o modelo atualizado",
@@ -36317,7 +36317,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes",
   "title": "Listar Contratos Enviados",
-  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent/awaiting_data — awaiting_data = esperando a pessoa preencher o formulario), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde. Por empresa: company_id (contratos de todos os contatos dela).",
+  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent/awaiting_data/awaiting_approval — awaiting_data = esperando a pessoa preencher o formulario; awaiting_approval = todos assinaram e a equipe ainda nao aprovou os documentos pedidos), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde. Por empresa: company_id (contratos de todos os contatos dela).",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -36370,7 +36370,7 @@
     "description": "Recorta pelos contatos de uma EMPRESA (aba Contratos da pagina da empresa). Empresa de outra conta = 404."
    }
   ],
-  "returns": "payload: [{id, title, status, signature_document_id, document_name, contact_id, contact_name, conversation_id, sent_at, completed_at, expires_at, participants[{id, name, role, status, delivery_channel, phone, email, signed_at, viewed_at, public_url, signs_in_panel}], delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, has_signed_document, pending_for_me}], meta: {page, per_page, has_more, counts}",
+  "returns": "payload: [{id, title, status, signature_document_id, document_name, contact_id, contact_name, conversation_id, sent_at, completed_at, expires_at, participants[{id, name, role, status, delivery_channel, phone, email, signed_at, viewed_at, public_url, signs_in_panel}], delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, has_signed_document, pending_for_me, required_proofs[]}], meta: {page, per_page, has_more, counts}",
   "common_use_cases": [
    "Ver o status dos contratos de um cliente (assinou? abriu? expirou?)",
    "Relatorio de um modelo: quantos aguardando/assinados, quem falta",
@@ -36387,7 +36387,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}",
   "title": "Detalhes do Contrato (linha do tempo)",
-  "description": "Um contrato com quem assina e a LINHA DO TEMPO completa (events): created, delivered, sent, opened, code_requested, code_verified, signed (com ip, device, location, panel=true quando foi assinado no painel e, desde 28/10, signature_method drawn|typed + typed_name), data_filled (a pessoa preencheu o formulario e o contrato foi gerado), all_signed, sealed (documento final gerado, com hash), refused, expired, cancelled, delivery_failed, reminded, resent. E o relatorio de evidencias em dados; os PDFs (original, assinado, evidencias) so saem pela tela/API de download.",
+  "description": "Um contrato com quem assina e a LINHA DO TEMPO completa (events): created, delivered, sent, opened, code_requested, code_verified, signed (com ip, device, location, panel=true quando foi assinado no painel e, desde 28/10, signature_method drawn|typed + typed_name), data_filled (a pessoa preencheu o formulario e o contrato foi gerado), all_signed, sealed (documento final gerado, com hash), refused, expired, cancelled, delivery_failed, reminded, resent; (28/10) proof_sent (a pessoa mandou um documento pedido), awaiting_approval, proofs_approved / proofs_rejected (com o motivo); code_requested/code_verified com method=whatsapp = confirmou mandando a frase pelo WhatsApp em vez do codigo. E o relatorio de evidencias em dados; os PDFs (original, assinado, evidencias) so saem pela tela/API de download.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -36398,7 +36398,7 @@
     "description": "ID do contrato"
    }
   ],
-  "returns": "contrato (com delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, copies = a via assinada de cada pessoa) + events: [{kind, occurred_at, ip, device, location, participant_id, panel, signature_method, typed_name}] + original_sha256/sealed_sha256",
+  "returns": "contrato (com delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, copies = a via assinada de cada pessoa) + events: [{kind, occurred_at, ip, device, location, participant_id, panel, signature_method, typed_name, method}] + required_proofs[] + original_sha256/sealed_sha256",
   "common_use_cases": [
    "Conferir quando e de onde a pessoa abriu e assinou",
    "Ver por que um contrato nao foi entregue (delivery.failed) ou foi recusado"
@@ -36406,7 +36406,8 @@
   "related_tools": [
    "lionchat_signature_envelopes_list",
    "lionchat_signature_envelopes_resend",
-   "lionchat_signature_envelopes_cancel"
+   "lionchat_signature_envelopes_cancel",
+   "lionchat_signature_envelopes_proofs"
   ]
  },
  {
@@ -36606,7 +36607,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes/limits",
   "title": "Limite Mensal de Contratos",
-  "description": "Quantos contratos a conta ja mandou no mes e o teto do plano ({used, limit, unlimited}). Contrato cancelado/expirado NAO devolve a vaga.",
+  "description": "Quantos contratos a conta ja mandou no mes e o teto do plano ({used, limit, unlimited}). Contrato cancelado/expirado NAO devolve a vaga. (28/10) O contrato que nasce do link do modelo (roles_layout.public_link) so conta depois que a pessoa confirma que e ela; quem abre o link e some nao gasta vaga.",
   "category": "Assinatura eletronica",
   "params": [],
   "returns": "{used, limit, unlimited}",
@@ -36615,6 +36616,118 @@
   ],
   "related_tools": [
    "lionchat_signature_envelopes_create"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_proofs",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/proofs",
+  "title": "Documentos de Quem Assina (Contrato)",
+  "description": "Os documentos que o modelo pede (required_proofs) e, por pessoa que assina pelo link, o que ela mandou (kind id_document/selfie_with_document/address_proof, formato, document_type rg/cnh/cpf, quando) e a revisao da equipe (pending/approved/rejected, motivo, quem, quando). NUNCA devolve o arquivo: documento de identidade e selfie so se olham na tela (botao amarelo \"Ver documentos\" no contrato ou na aba Contratos da ficha). last_proof_event_id = o ultimo documento mandado (use como seen_event_id ao aprovar/reprovar). Administrador ou signature_manage.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   }
+  ],
+  "returns": "{required[], awaiting_approval, people: [{participant_id, name, role, signed, proofs: [{kind, content_type, document_type, sent_at}], review: {status, decision, reason, by, at}, last_proof_event_id}]}",
+  "common_use_cases": [
+   "Saber se o contrato esta esperando a aprovacao dos documentos e de quem",
+   "Ver o motivo de uma reprovacao e se a pessoa ja mandou de novo"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_approve_proofs",
+   "lionchat_signature_envelopes_reject_proofs",
+   "lionchat_signature_envelopes_show"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_approve_proofs",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/approve_proofs",
+  "title": "Aprovar Documentos de Quem Assina",
+  "description": "Aprova os documentos de UMA pessoa num contrato que esta awaiting_approval. Com todos aprovados o contrato fecha, o documento final e gerado e cada pessoa recebe a via (MANDA mensagem ao cliente) — confirme com o usuario antes e pergunte se ele ja conferiu os arquivos na tela (eles nao saem por ferramenta). 422: fora_do_momento (contrato nao esta esperando aprovacao), sem_documentos, documentos_mudaram (a pessoa mandou outro depois do que foi visto — leia _proofs de novo). Administrador ou signature_manage.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   },
+   {
+    "name": "participant_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "participant_id da pessoa (de _proofs)"
+   },
+   {
+    "name": "seen_event_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "last_proof_event_id que foi conferido; se a pessoa mandou outro depois, volta 422 documentos_mudaram"
+   }
+  ],
+  "returns": "o mesmo de _proofs + status do contrato",
+  "common_use_cases": [
+   "A equipe conferiu os documentos na tela e pediu para aprovar"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_proofs",
+   "lionchat_signature_envelopes_reject_proofs"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_reject_proofs",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/reject_proofs",
+  "title": "Reprovar Documentos de Quem Assina",
+  "description": "Reprova os documentos de UMA pessoa com o motivo: ela recebe no canal dela (WhatsApp ou e-mail) o pedido de documento novo com o motivo escrito (MANDA mensagem ao cliente — confirme o texto com o usuario antes). Ela troca o que for preciso, toca Enviar e a equipe e avisada de novo. 422: motivo_obrigatorio, fora_do_momento, sem_documentos, documentos_mudaram. Administrador ou signature_manage.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   },
+   {
+    "name": "participant_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "participant_id da pessoa (de _proofs)"
+   },
+   {
+    "name": "reason",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Motivo que a pessoa vai ler (ex.: \"a foto da CNH ficou desfocada, mande de novo\")"
+   },
+   {
+    "name": "seen_event_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "last_proof_event_id que foi conferido"
+   }
+  ],
+  "returns": "o mesmo de _proofs + status do contrato",
+  "common_use_cases": [
+   "Documento ilegivel ou do tipo errado: pedir outro a pessoa"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_proofs",
+   "lionchat_signature_envelopes_approve_proofs"
   ]
  },
  {
