@@ -888,6 +888,16 @@ data marcada, **abre sozinho** e volta para a coluna (disparando o fluxo "Card a
   sem card no funil, tempo inválido) — nunca passa verde sem adiar.
 - Fluxo: ação `snooze_kanban_item`, gatilhos `card_opened` ("Card aberto") e `card_snoozed` ("Card adiado") e
   condição `kanban_snoozed`. Ver o resource do FlowBuilder.
+- Fluxo, **card parado (NOVO 28/10/2026)**: gatilhos de prazo `card_open_in_stage` ("Card aberto na etapa") e
+  `card_open_in_funnel` ("Card aberto no funil"). Config `{ "funnel_ids": ["12"], "funnel_stages": ["12:novo_lead"],
+  "duration_value": 1, "duration_unit": "hours" }` (`funnel_stages` só na etapa; vazio = qualquer funil/etapa;
+  `minutes`|`hours`|`days`, de 15 minutos a 365 dias). Relógio da etapa = tempo desde que o card ENTROU na etapa atual
+  (o segundo número "1d" do card; trocar de funil também recomeça); do funil = idade do card (o primeiro número "2d";
+  trocar de funil não recomeça). Conta card aberto ou adiado, nunca ganho/perdido. Dispara uma vez por entrada na etapa
+  (etapa) ou uma vez por card (funil), só para quem cruza o prazo com o fluxo ligado (card que já passou do prazo ao ligar
+  não dispara; mudar prazo/etapa/funil do gatilho = gatilho novo). Conferência de 5 em 5 minutos (pode chegar ~5 min
+  depois). Inicia só o fluxo dono do gatilho, em cada conversa do card; o card que disparou é o "card do gatilho"
+  (`card_source: 'trigger'`, condições "Card na etapa" e "Card adiado"). Dois fluxos iguais na mesma caixa disparam os dois.
 
 **Onde o adiado aparece e como filtrar:**
 

@@ -698,7 +698,25 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     foi ADIADO; card_opened = um card adiado ABRIU (pela data, por alguem ou por automacao) ou um card
     ganho/perdido foi REABERTO — card NOVO nao dispara (isso e card_created). Pela data o fluxo sai pela fila
     de disparos agendados (depois dos lembretes; em caixa QR Code no ritmo da caixa), uma vez por card;
-    {{trigger.kanban.previous_status}} (snoozed/won/lost) separa os casos. page_track (LionTrack, so flow
+    {{trigger.kanban.previous_status}} (snoozed/won/lost) separa os casos.
+    card_open_in_stage/card_open_in_funnel (NOVOS 28/10/2026, gatilhos de PRAZO — 'lead parado'): disparam o
+    fluxo UMA vez quando o card cruza o prazo. card_open_in_stage = {funnel_ids:[] STRINGS, funnel_stages:
+    ['<funil>:<chave_etapa>'], duration_value:Integer, duration_unit:'minutes'|'hours'|'days'}; card_open_in_funnel
+    = o mesmo SEM funnel_stages. funnel_ids vazio = qualquer funil; funnel_stages vazio = qualquer etapa. Prazo de
+    15 minutos a 365 dias (servidor recusa fora disso, 422); duration_value aceita inteiro ou texto de inteiro.
+    Relogio: in_stage = tempo desde que o card ENTROU na etapa atual (o 2o numero '1d' do card; trocar de funil
+    tambem recomeca); in_funnel = idade do card desde a criacao (o 1o numero '2d'; trocar de funil NAO recomeca).
+    Conta card ABERTO ou ADIADO, nunca ganho/perdido. UMA vez por entrada na etapa (in_stage) / uma vez por card
+    (in_funnel). So dispara quem CRUZA o prazo com o fluxo ligado: card que ja passou do prazo ao ligar o fluxo
+    nunca dispara; mudar prazo/etapa/funil do gatilho = gatilho novo (so cruzamentos depois disparam). Relogio
+    corrido; conferencia de 5 em 5 minutos (pode chegar ~5 min depois do prazo). Inicia SO o fluxo dono do
+    gatilho, em cada conversa do card (card sem conversa nao dispara); o card que disparou e o card do gatilho
+    (card_source 'trigger'; condicoes Card na etapa/Card adiado olham para ele). Dois fluxos com o mesmo gatilho
+    na mesma caixa sao permitidos (sem checagem de conflito): os dois disparam. Exemplo: avisar grupo de WhatsApp
+    quando o lead passa mais de 1 hora na etapa do vendedor = Inicio card_open_in_stage 1 hour -> (condicao
+    opcional) -> bloco update_group (operacao enviar mensagem) com {{agent.name}} e o link
+    https://<host>/app/accounts/<id_conta>/conversations/{{conversation.id}}.
+    page_track (LionTrack, so flow
     individual): {track_type:'visited_page'|'event_fired', urls:[...], operator:'contains'|'exact'|
     'starts_with', event_names:[...], event_operator:'equals'|'contains', cooldown_hours (default 24,
     minimo 1 — nao re-dispara pro mesmo contato dentro da janela)}.
@@ -1066,7 +1084,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         [x]" / "Meta: erro (...)" — o [evento] no fim diz qual nome foi pra cada destino.
         Falha de um destino nunca derruba o fluxo. Dry-run nao dispara.
   card_source (acoes de card): 'funnel' (default, acha o card pelo funnel_id) | 'trigger' (usa o card
-    que DISPAROU o flow em card_created/card_moved/card_won/card_lost/card_opened/card_snoozed). Com 'trigger' o funnel_id e
+    que DISPAROU o flow em card_created/card_moved/card_won/card_lost/card_opened/card_snoozed/card_open_in_stage/card_open_in_funnel). Com 'trigger' o funnel_id e
     ignorado — EXCETO create_kanban_item/move_kanban_stage (funil = DESTINO). Vale pra move_kanban_stage,
     set_won/set_lost/set_open, snooze_kanban_item (sem card-gatilho = ERRO, nao pula), create_account_task (idem: ERRO), assign_agent_card, add_card_note, add_card_checklist, add_card_offer e
     update_attribute (attr_source:'card').
@@ -1291,7 +1309,7 @@ trigger.* (variaveis do GATILHO que iniciou o flow — no autocomplete de TODO b
     won/lost/open/snoozed; rotulo "Situacao do card mudou" desde 11/10/2026), conversation_
     attributes_changed, card_attributes_changed, contact_attribute_changed, group_participant_joined/left,
     webhook_received, date_trigger, manual (sidebar), kanban_manual (botao do card), campaign (Campanha de
-    Fluxo), page_track, activated_by_flow (fluxo chamou fluxo), lead_form (os 3 gatilhos de formulario —
+    Fluxo), page_track, card_open_in_stage/card_open_in_funnel (type = a propria chave do gatilho de prazo), activated_by_flow (fluxo chamou fluxo), lead_form (os 3 gatilhos de formulario —
     trigger.kind diz completed/milestone/abandoned), booking_created/booking_cancelled/booking_rescheduled/
     booking_completed, whatsapp_form_answered. Compare SEMPRE com esses codigos numa condicao.
   trigger.name (rotulo legivel, pra escrever pro cliente), trigger.activated_at (ISO) — desde 20/08
@@ -1308,7 +1326,7 @@ trigger.* (variaveis do GATILHO que iniciou o flow — no autocomplete de TODO b
   Cada uma so tem valor quando o gatilho fornece — fora disso resolve vazio.
   FATOS do gatilho viraram variaveis (08/09/2026, no ar desde 10/09): {{trigger.<bloco>.<campo>}}, so
     quando o Inicio tem o gatilho que os preenche — card_created/card_moved/card_won/card_lost/
-    card_opened/card_snoozed/card_attribute_changed: trigger.kanban.title, trigger.kanban.funnel_name, trigger.kanban.stage_name,
+    card_opened/card_snoozed/card_open_in_stage/card_open_in_funnel/card_attribute_changed: trigger.kanban.title, trigger.kanban.funnel_name, trigger.kanban.stage_name,
     trigger.kanban.stage (codigo da etapa); card_moved: trigger.kanban.previous_stage_name/previous_stage;
     card_won/card_lost/card_opened/card_snoozed: trigger.kanban.status (won/lost/open/snoozed);
     card_opened: trigger.kanban.previous_status (snoozed = voltou do adiamento; won/lost = reabriram); label_added/label_removed: trigger.label.name;
