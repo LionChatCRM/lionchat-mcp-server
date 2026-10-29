@@ -34,7 +34,11 @@ Quando o usuário disser "o relatório está errado / não bate", quase sempre �
    também uma linha com `id: null` = "Sem atendente", e a planilha de agentes (`lionchat_reports_list_7`,
    CSV) traz a linha **"Sem atendente"** no FIM da lista. Ela **não é um atendente** — nunca inclua no
    ranking nem cruze o `id: null` com `lionchat_agents_list`. Antes disso o balde era descartado do CSV:
-   na conta 19 ficavam de fora 4.222 conversas e 580 resoluções.
+   na conta 19 ficavam de fora 4.222 conversas e 580 resoluções. **Desde 19/10/2026** "Sem atendente" = conversas
+   que chegaram no período e NÃO foram atribuídas a ninguém até o FIM do período (a mesma regra para o período de
+   hoje e para um mês fechado); quem foi atendido dentro do período não entra mais. O resumo por agente aceita
+   `team_id` e cada linha traz `csat_satisfaction_score` (% de notas 4 e 5 no período, ou `null`) e
+   `csat_response_count`.
 4. **A contagem de conversas por atendente usa o responsável ATUAL** — reatribuir conversa antiga move
    o histórico de um atendente pro outro. Já resoluções/tempos usam quem era o dono NA HORA do evento.
    Os dois cards podem divergir legitimamente em conta que reatribui.
@@ -341,6 +345,12 @@ Retorna SOMENTE estes campos (nem satisfação, nem média, nem taxa de resposta
 >
 > **Taxa de resposta** = `total_count / total_sent_messages_count`.
 > No exemplo: 80/210 = **38%**.
+>
+> **Desde 19/10/2026:** a pesquisa enviada e NÃO respondida deixou de ser apagada (antes a taxa ficava perto de
+> 100%). `total_sent_messages_count` respeita `inbox_id`/`team_id`/`user_ids` e o recorte do não-administrador.
+> Campo NOVO `response_rate_answered_count` = respostas às pesquisas enviadas no período SEM o filtro de nota — é o
+> numerador que a TELA usa para a taxa; prefira `response_rate_answered_count / total_sent_messages_count` quando o
+> campo vier.
 
 **Filtros aceitos (expostos na tool desde 2026-07-24):** `user_ids[]`, `inbox_id`, `team_id`, `rating`, `since`/`until` (unix segundos). Agora dá pra recortar CSAT por caixa/atendente direto.
 
@@ -360,6 +370,12 @@ Retorna:
 ```
 > O `hit_rate` já vem calculado como string (ex.: `"95.5%"`, ou `"100%"` quando não há falhas).
 > Não divida nada — apenas exiba o valor.
+>
+> **Desde 19/10/2026:** `hit_rate` = cumpridos / (cumpridos + estourados) dos SLAs aplicados no período que JÁ
+> tiveram desfecho; vem **`null`** quando nenhum teve desfecho (diga "sem desfecho ainda", nunca "100%"). Os que
+> ainda estão correndo vêm no campo NOVO `number_of_sla_in_progress`. `number_of_sla_misses` (e a lista/CSV) =
+> conversas cujo ESTOURO aconteceu no período, mesmo com o SLA aplicado antes — por isso taxa e violações não fecham
+> entre si.
 
 **Filtros aceitos (expostos na tool desde 2026-07-24):** `inbox_id`, `team_id`, `sla_policy_id`, `label_list[]`, `assigned_agent_id`, `since`/`until` (unix segundos).
 
@@ -509,8 +525,14 @@ ONDE vieram os leads, cruzando os campos `origin_*` das conversas com os leads �
 viraram conversa). É um relatório de LEITURA puro — não cria nem altera nada.
 
 **Filtros (query, todos opcionais):** `since` / `until` (ISO 8601; default = 30 dias atrás → agora),
-`funnel_id`, `platform`, `kind`, `campaign`, `adset`, `inbox_id`, `assignee_id`, `group_by`.
+`funnel_id`, `platform`, `kind`, `paid`, `campaign`, `adset`, `inbox_id`, `assignee_id`, `group_by`.
 `campaign`/`adset` aceitam `__none__` para filtrar so os leads SEM aquele nome (campanha/conjunto vazio).
+
+**`paid` e `by_paid` (25/10/2026) — "veio de anúncio pago?":** junta o clique no anúncio (`paid_ad`) e o formulário
+do anúncio (`lead_form`), que `kind` separa. Valores: `paid`, `not_paid` (orgânico, direto, indicação, página de
+agendamento, formulário do site), `unknown` (origem cadastrada a mão ou tipo desconhecido) e `unclassified` (sem
+origem). Valor fora da lista é ignorado (como se o filtro não viesse). Para "quantos leads vieram de anúncio?",
+use `by_paid` ou `paid=paid` — somar só `kind=paid_ad` esquece os de formulário.
 
 **`inbox_id` e `assignee_id` (06/10/2026)** — recortam por caixa de entrada e por responsável da conversa.
 **Em conta com mais de uma loja/unidade, SEM `inbox_id` o relatório soma TODAS as caixas** — foi o que fez a
@@ -527,8 +549,10 @@ mesma conta misturar duas lojas e não bater com o relatório da Meta. Com qualq
   a venda de uma conversa iniciada pela propria empresa mora aqui). Desde 16/10/2026 a conversa criada pelo nosso
   lado (automação, fluxo, formulário) nasce com a origem que a ficha do contato já tinha; antes ela caía aqui
   até o cliente responder. Vale só de hoje pra frente: as conversas antigas nesse caso continuam sem origem.
-- Arrays de quebra: `by_platform`, `by_kind`, `by_campaign`, `by_adset`, `by_creative`. Cada linha
+- Arrays de quebra: `by_platform`, `by_kind`, `by_campaign`, `by_adset`, `by_creative` e `by_paid` (25/10/2026,
+  sempre as quatro linhas `paid`/`not_paid`/`unknown`/`unclassified`, somando o mesmo total do topo). Cada linha
   tem `{value, conversations, won, conversion_rate}`.
+- Rótulos de `kind` no painel (25/10/2026): `paid_ad` = "Anúncio (clique)", `lead_form` = "Anúncio (formulário)".
 
 **Conceitos importantes:**
 - `won` = cards parados em etapas de GANHO do funil (fechados como sucesso).
@@ -837,11 +861,14 @@ dia"*. Em vez de garimpar dado em dez ferramentas, **leia o relatório salvo e e
 | Pergunta | Bloco |
 |---|---|
 | "Quantos agendamentos aconteceram no período?" | `stage_entries` |
-| "Como está o funil hoje / quantos estão em cada etapa?" | `funnel_stages` |
+| "Como está (ou estava) o funil / quantos estão em cada etapa?" | `funnel_stages` |
 
-`funnel_stages` conta quem **está** na etapa; card que entrou e depois saiu some dele. Medido em
-produção: **25% de diferença**. `stage_entries` lê o histórico de movimentação e conta **card
-distinto** (quem volta pra etapa conta uma vez só).
+`funnel_stages` conta quem **estava** na etapa no FIM do período (período até hoje = agora; 19/10/2026); card que
+entrou e depois saiu antes do fim some dele. Medido em produção: **25% de diferença**. Num período passado ele pode
+trazer as linhas extras "Etapa desconhecida"/"Etapa removida" (cards sem histórico daquela época / etapa apagada
+depois) — mostre-as com esse nome. `stage_entries` lê o histórico de movimentação e conta **card distinto** (quem
+volta pra etapa conta uma vez só); no modo `measure: value` também é um valor por card (o da última entrada no
+período).
 
 **Limite do `stage_entries`**: o histórico só existe a partir de **12/07/2026** e tem retenção de
 365 dias. Período que alcance antes disso devolve MENOS do que aconteceu — avise em vez de
@@ -853,6 +880,9 @@ Colunas: Ligações · Atendidas · Não atendidas · **Não concluídas** · Te
 
 - "Não concluídas" são as que ficaram presas (tocando, em andamento, falhou, cancelada). **Não as
   chame de "não atendidas"** — são coisas diferentes e a soma das três tem que fechar com o total.
+- **LionCalls, desde 23/10/2026:** ligação RECEBIDA que alguém atendeu no CELULAR do número (fora do painel) conta como
+  **Atendida**, com duração zero e sem gravação. Antes dessa data ela entrava em "Não atendidas" — ao comparar períodos
+  que atravessam 23/10, avise que a regra mudou.
 - Tempo médio já vem calculado sobre as ATENDIDAS. Não recalcule dividindo pelo total.
 - **Ligação sem atendente tem linha própria** e pode ser boa parte do volume (23% numa conta real).
   Não a esconda ao resumir por pessoa.

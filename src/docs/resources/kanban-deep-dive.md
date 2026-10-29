@@ -561,14 +561,14 @@ PUT /api/v1/accounts/43/funnels/43
 | action | action_config | Observação |
 |---|---|---|
 | `move_to_stage` | `{stage}` | NUNCA executa com trigger `stage_moved` (anti-loop do backend) |
-| `assign_agent` | `{agent_id}` | Agente precisa ter acesso ao funil, senão é ignorado |
+| `assign_agent` | `{agent_id}` | Agente precisa ter acesso ao funil, senão é ignorado. **Não use com gatilho `won`/`lost`**: a automação roda com o card já fechado e card fechado não aceita responsável novo — não faz nada (a tela não oferece mais desde 22/10) |
 | `create_note` | `{note_text}` | Cria nota no card com autor "Sistema" |
-| `notify_team` | `{message}` | HOJE só registra em log interno — não notifica ninguém de verdade |
+| `notify_team` | `{message}` | HOJE só registra em log interno — não notifica ninguém de verdade. **Não use** (a tela não oferece mais desde 22/10) |
 | `duplicate_item` | `{funnel_id, stage}` | Cria cópia noutro funil/etapa; título ganha sufixo "(cópia)" |
 | `send_webhook` | `{webhook_url}` | POST com payload completo do card (fire-and-forget) |
 | `apply_checklist_template` | `{template_id}` | Template de `kanban_config.checklist_templates`; aditivo (appenda) — cada aplicação vira um grupo (carimba `group_id`/`group_name` nos itens) |
 | `update_checklist` | `{checklist_updates: [{checklist_item_id, completed, text}]}` | Não aparece na UI — só via API |
-| `create_task` (20/10/2026) | `{title, description?, task_type, agenda_id?, priority?, occupies_agenda?, due: {amount, unit: 'hours'\|'days', at?: 'HH:MM', business_days?: true}, responsible: {mode: 'card_owner'\|'fixed'\|'funnel_rotation'\|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}` | Cria uma tarefa COMUM da Agenda presa ao card (ver "Tarefa automática do card" abaixo). Exige a Agenda unificada ligada na conta |
+| `create_task` (20/10/2026) | `{title, description?, task_type, agenda_id?, priority?, occupies_agenda?, duration_minutes?, due: {amount, unit: 'hours'\|'days', at?: 'HH:MM', business_days?: true}, responsible: {mode: 'card_owner'\|'fixed'\|'funnel_rotation'\|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}` | Cria uma tarefa COMUM da Agenda presa ao card (ver "Tarefa automática do card" abaixo). Exige a Agenda unificada ligada na conta |
 
 **Regras críticas (gravar diferente disso = automação perdida ou morta):**
 
@@ -576,6 +576,11 @@ PUT /api/v1/accounts/43/funnels/43
 - Nomes de trigger/action fora das tabelas acima (ex.: `status_changed`, `duplicate_to_funnel`, `send_message`, `set_priority` — NÃO existem) são salvos mas NUNCA disparam, sem erro nenhum.
 - `id` no formato `automation_<timestamp_ms>` — a UI usa pra editar/remover a automação.
 - Trigger `card_created` + ação `duplicate_item` funciona (backend tem anti-loop), mas a UI esconde essa combinação.
+- **A ordem da lista `automations` é a ordem de execução**: quando várias regras disparam no mesmo acontecimento (ex.:
+  duas em `won`), elas rodam de cima para baixo. Para mudar a ordem, reenvie a lista inteira na ordem desejada (no
+  painel, desde 22/10, a pessoa segura e arrasta cada regra). Mudar a ordem não mexe na configuração de nenhuma regra.
+- `assign_agent` com `status_change` `won`/`lost` e `notify_team` são aceitos pelo servidor mas **não fazem nada**: não
+  grave regras novas com eles. Regra antiga que já os tenha aparece no painel com um aviso amarelo.
 
 Use para: "ao ganhar um card de Vendas → criar automaticamente em Pós-Venda na etapa Agendar Instalação" (`status_change`/`won` + `duplicate_item`).
 
@@ -587,6 +592,7 @@ Use para: "ao ganhar um card de Vendas → criar automaticamente em Pós-Venda n
   `business_days: true` (dias úteis) **só em dias**. Dia útil = segunda a sexta **sem feriado de dia inteiro** da agenda
   da tarefa (feriado de meio período não conta). O fuso é o da agenda da tarefa. Prazo que já passou nasce atrasado,
   nunca é empurrado.
+- **Duração**: `duration_minutes` (22/10/2026): minutos que a tarefa ocupa, inteiro de 1 a 1440; ausente ou `null` = o tempo do TIPO (Tarefa/Follow-up/Prazo 15, Ligação/Personalizado 30, Reunião/Call 60, tipo criado pela conta 30). Com `occupies_agenda: true` o horário ocupado vai do prazo até o fim da duração.
 - **Responsável (`responsible.mode`)**: `card_owner` (primeiro responsável do card; senão o da conversa; senão a reserva `fallback_user_id`,
   obrigatória), `fixed` (exige `user_id`), `funnel_rotation` (rodízio de quem acessa o funil) e `team_rotation` (exige
   `team_id`).
@@ -638,9 +644,35 @@ Use para: ações cross-cutting que envolvem conversa/contato/label, ou regras c
 
 ## Bulk operations
 
-- `POST /api/v2/kanban/items/bulk_actions` — operações em massa (mover, atribuir, arquivar)
-- `POST /api/v2/kanban/items/import` — importar CSV de cards
-- `GET /api/v2/kanban/items/export` — exportar funil completo
+- `POST /api/v1/accounts/{account_id}/bulk_actions` — operações em massa (mover, atribuir, arquivar) — `lionchat_kanban_bulk_bulk_actions`
+- `POST /api/v1/accounts/{account_id}/kanban_items/import` — importar planilha de cards (só pela tela: exige o arquivo)
+- `GET /api/v1/accounts/{account_id}/kanban_items/export` — exportar funil completo — `lionchat_kanban_items_export`
+
+### Importar cards com campos personalizados (2026-10-23)
+
+A importação de cards (Kanban > botão azul **+** > **Importar itens**) liga colunas da planilha a **campos do card** e a
+**atributos do contato**, no mesmo formato da importação de contatos. O conector não sobe o arquivo, então oriente a
+pessoa a importar pela tela; o que segue serve para explicar o que ela vai ver e para ler o resultado.
+
+- **O que pode ser importado** vem da prévia (`lionchat_kanban_items_create_3`, campo `attribute_fields`): campos do card
+  da conta (sem nome protegido nem secreto; dois campos com o mesmo nome = vale o primeiro) e atributos do contato (sem os
+  do sistema — rastreio, identificadores do WhatsApp — nem secretos). **Atributos do contato só aparecem para quem também
+  pode importar contatos** (administrador ou cargo "Exportar e importar contatos").
+- **Como o card grava** (`item_details.custom_attributes`, nasce com o card): data `DD/MM/AAAA` ou `DD/MM/AA` vira
+  `AAAA-MM-DD`; número com ou sem milhar (`1.500`, `1.234,56`) vira texto (`"1500"`); hora vira `HH:MM`; campo de LISTA
+  aceita várias opções na mesma célula separadas por `;` e só grava opção que existe. Os demais tipos gravam o texto como
+  está na planilha.
+- **Contato**: mesma conversão da importação de contatos. Vai só para o **contato principal do card** (numa linha com
+  vários contatos). Contato novo nasce com os atributos; contato que **já existe** tem o valor **substituído** — conta como
+  alteração (fluxo "Atributo do contato muda", webhook `contact_updated`). Célula vazia nunca apaga.
+- **Resultado** (`lionchat_kanban_items_import_status`): `attributes_applied: true` confirma que os campos foram aplicados;
+  `skipped` lista os valores que **não** entraram (`row`, `field`, `message`) e `skipped_count` dá o total. O card nasce
+  do mesmo jeito — só aquele valor fica de fora (formato que não converte, opção fora da lista, texto longo demais, ou
+  linha sem telefone válido, que não tem contato para receber o atributo). `row` é a linha da planilha (cabeçalho = 1).
+- **Armadilhas**: `422` = escolha de campo com formato errado, campo que não existe mais/é do sistema, ou coluna que a
+  planilha não tem (a mensagem lista quais); `403` = atributo de contato sem a permissão de importar contatos. Sem
+  `attributes_applied` no resultado de uma importação que ligou campos = o servidor estava sendo atualizado e os cards
+  nasceram sem eles (preencher nos cards, ou excluir e importar de novo — reimportar cria cards novos).
 
 ## Custom attributes em cards — TRÊS LUGARES POSSÍVEIS
 
@@ -856,6 +888,16 @@ data marcada, **abre sozinho** e volta para a coluna (disparando o fluxo "Card a
   sem card no funil, tempo inválido) — nunca passa verde sem adiar.
 - Fluxo: ação `snooze_kanban_item`, gatilhos `card_opened` ("Card aberto") e `card_snoozed` ("Card adiado") e
   condição `kanban_snoozed`. Ver o resource do FlowBuilder.
+- Fluxo, **card parado (NOVO 28/10/2026)**: gatilhos de prazo `card_open_in_stage` ("Card aberto na etapa") e
+  `card_open_in_funnel` ("Card aberto no funil"). Config `{ "funnel_ids": ["12"], "funnel_stages": ["12:novo_lead"],
+  "duration_value": 1, "duration_unit": "hours" }` (`funnel_stages` só na etapa; vazio = qualquer funil/etapa;
+  `minutes`|`hours`|`days`, de 15 minutos a 365 dias). Relógio da etapa = tempo desde que o card ENTROU na etapa atual
+  (o segundo número "1d" do card; trocar de funil também recomeça); do funil = idade do card (o primeiro número "2d";
+  trocar de funil não recomeça). Conta card aberto ou adiado, nunca ganho/perdido. Dispara uma vez por entrada na etapa
+  (etapa) ou uma vez por card (funil), só para quem cruza o prazo com o fluxo ligado (card que já passou do prazo ao ligar
+  não dispara; mudar prazo/etapa/funil do gatilho = gatilho novo). Conferência de 5 em 5 minutos (pode chegar ~5 min
+  depois). Inicia só o fluxo dono do gatilho, em cada conversa do card; o card que disparou é o "card do gatilho"
+  (`card_source: 'trigger'`, condições "Card na etapa" e "Card adiado"). Dois fluxos iguais na mesma caixa disparam os dois.
 
 **Onde o adiado aparece e como filtrar:**
 
@@ -901,3 +943,68 @@ depois não trava outro salvamento.
   `co_participant_changed` (antes e depois, com nome e quem marcou).
 - Números: `coParticipantRanking`, `sharedSalesSummary`/`sharedSalesBySeller` (com `include_shared_sales=true`) no
   relatório agregado e a lista `lionchat_kanban_items_shared_sales` — ver `lionchat://docs/filtros-e-relatorios` §4.
+
+---
+
+## Analisar com IA — a IA sugere o que mudar nos cards (2026-10-28)
+
+A mesma análise do botão **Analisar com IA** do Kanban (topo do quadro e menu da coluna). A IA lê os cards **abertos e
+adiados** das etapas escolhidas de UM funil, com as conversas deles, e sugere: mudar de etapa (também para trás), levar
+para outro funil, pôr/tirar etiqueta e marcar ganho/perdido. **Nada muda sem aplicar, e aplicar não tem como desfazer.**
+
+### Ferramentas
+
+1. `lionchat_kanban_ai_analyses_setup` — o que a janela mostra: etapas com a contagem de cards, se cada etapa e o funil
+   têm descrição, `selection` (quantos cards entram e `estimated_cost_usd`), funis de destino, etiquetas, motivos de
+   ganho/perda, `has_openai_key` e `latest_run` (análise viva do funil).
+2. `lionchat_kanban_ai_analyses_create` — cria a análise. Os cards são escolhidos AQUI: até `filters.limit` (1 a 1.000,
+   padrão 200), os parados há mais tempo, PULANDO os que a IA leu nos últimos 7 dias (a não ser que o cliente tenha
+   escrito depois); `filters.include_read: true` lê de novo os já lidos.
+3. `lionchat_kanban_ai_analyses_show` — andamento (`status`, contadores, custo).
+4. `lionchat_kanban_ai_analyses_items` — a lista de sugestões (só depois de `ready`). Com `no_change: true` traz também
+   `no_change_items`: os cards que a IA leu e deixou como estão, cada um com `lines` dizendo o porquê.
+5. `lionchat_kanban_ai_analyses_apply` — aplica o que o usuário escolheu. Pede `confirm: true`.
+6. `lionchat_kanban_ai_analyses_reanalyze` — analisa de novo UM card cuja linha travou.
+
+### Passo a passo
+
+1. `setup` com `funnel_id` (e `stages` para saber o total e o custo). Mostre ao usuário as etapas e quantos cards cada
+   uma tem. Dica: marcar VÁRIAS etapas numa análise só evita ler a mesma conversa duas vezes.
+2. Pergunte o que a IA pode fazer (`options`), quais cards (todos, `stale_days` ou `no_reply_days`) e QUANTOS
+   (`filters.limit`, 1 a 1.000; mostre o `estimated_cost_usd` e o `estimated_minutes` do `setup` com o mesmo número). Se o
+   `setup` disser `already_read` > 0, avise que esses serão pulados; para repetir nos mesmos cards, `include_read: true`.
+3. `create`. Depois chame `show` a cada 5 a 10 segundos até `status = ready` (ou `failed`, com `error_code`).
+4. `items`: mostre as sugestões agrupadas por etapa — card, ação, força ("Alta" >= 70%, "Média" 50-70%), motivo e o que
+   a ação dispara (`hints`: conversão, regras do funil, fluxos; aviso de WhatsApp QR).
+5. **Antes de aplicar, confirme com o usuário** quais cards e ações, quantas mudanças em quantos cards, e diga que **não
+   tem como desfazer**: fica como se uma pessoa tivesse feito à mão, e automações, fluxos e conversões do funil disparam.
+6. `apply` com `items: [{ item_id, actions: [ids] }]` e `confirm: true`. Os `actions` são os `id` das `suggestions`
+   daquele item (`stage`, `funnel`, `outcome`, `label_add:...`, `label_remove:...`) — nunca invente: ação que não foi
+   sugerida para o item volta em `ignored`.
+7. `show` até `status = finished`; `items` traz `done`, `apply_code` e `return_code` de cada card.
+8. **"Por que a IA não mudou nada?"** — chame `items` com `no_change: true` e explique pelos `no_change_items[].lines`:
+   `kind` (`stage`, `funnel`, `outcome`, `label`) + `state`: `same` = confirmou o que já está (com `confidence` em %),
+   `doubt` = as duas ordens discordaram (`value` x `other_value`), `weak` = pensou em `value` mas abaixo de 50%,
+   `other_funnel` = achou que o card é de outro funil (anulou a etapa), `not_chosen` = sugeriu um funil que não estava
+   entre os destinos, `add_no` / `remove_keeps` = etiqueta com a chance (`probability`). `lines: null` = análise antiga,
+   sem detalhes.
+
+### Regras que você PRECISA saber
+
+- **Quem pode:** administrador ou cargo com a permissão `kanban_ai_analyze` ("Analisar funil com IA"), com o recurso de
+  plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404
+  `funnel_not_visible`. Sem o recurso = `feature_disabled`.
+- **Custo:** usa a chave da OpenAI DA CONTA (`no_openai_key` sem ela). Costuma ficar abaixo de um centavo de dólar a cada
+  dezenas de cards — mostre o `estimated_cost_usd` do `setup` antes de criar.
+- **Uma análise por vez por funil** (`funnel_busy`, 409) e no máximo duas rodando por conta (`account_busy`). Criar uma
+  análise nova **substitui a lista anterior** do mesmo funil que tiver etapa em comum (ela vira `superseded`).
+- **A lista vale 24 horas** (`expires_at`); depois vira `expired` e é preciso analisar de novo.
+- **O que vem marcado** (`checked: true`): sugestões de força Alta de etapa, funil e perdido. Ganho, Média e etiqueta vêm
+  sempre desmarcados, com o motivo em `unchecked_reason`. Na dúvida, proponha aplicar só as marcadas.
+- **Linha travada** (`locked`: `client_wrote` = o cliente escreveu depois da análise; `card_changed` = o card mudou):
+  não aplique. Chame `reanalyze` com o `item_id` e depois `items` de novo.
+- **Linha que voltou** (`return_code`): `interrupted` (sistema reiniciou), `card_busy` e `apply_failed` podem ser
+  aplicadas de novo; `agent_no_access` (o responsável não acessa o funil de destino) exige dar o acesso antes.
+- **"Por que não sugeriu nada?"** A IA só sugere quando responde a mesma coisa com as opções em duas ordens e com pelo
+  menos 50% de certeza. Card sem conversa, ou com pouca conversa, costuma ficar como está (`counts.no_change`). Escrever
+  a descrição das etapas e do funil melhora o resultado (o `setup` diz quais não têm).

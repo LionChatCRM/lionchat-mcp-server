@@ -292,9 +292,47 @@ criam uma tarefa COMUM da Agenda, presa ao card (`kanban_item_id`). Para a agend
 - A Agenda unificada (`unified_agenda`) precisa estar ligada na conta; desligada, a regra do funil registra "não
   criou" no histórico do card e o item do fluxo fica com erro visível no passo.
 - `occupies_agenda: false` (padrão da regra) cria a tarefa como lembrete que **não bloqueia o horário**; `true`
-  bloqueia como um compromisso.
+  bloqueia como um compromisso, do prazo até o fim da duração. `duration_minutes` (22/10/2026, 1 a 1440) escolhe a
+  duração; ausente = o tempo do tipo (Tarefa 15, Ligação 30, Reunião 60, tipo da conta 30).
 
 ---
+
+## 7.2. Lista de tarefas abertas — aba "Tarefas" da Agenda (22/10/2026)
+
+A Agenda ganhou a aba **Tarefas**, entre Calendário e Disparos: as tarefas abertas em lista, separadas por
+período. A ferramenta é `lionchat_tasks_task_list` (`GET account_tasks/task_list`). Use-a para "o que está
+atrasado?", "quantas tarefas a fulana tem em aberto?" e "o que falta fazer esta semana?".
+
+- **Aberta** = pendente ou adiada E sem "Compareceu"/"Faltou". Concluídas e canceladas não entram.
+- **Grupos**, no dia da conta: `overdue` (antes de hoje, da mais recente para a mais antiga), `today`,
+  `tomorrow`, `next_7_days` e `later`.
+- **Quem vê o quê e filtros**: os MESMOS do calendário (`lionchat_tasks_list`): `assignee_id`, `task_type`,
+  `status` (0 pendente, 3 adiada), `priority`, `agenda_id`, `q`. Quem não gerencia a agenda da equipe vê só as
+  próprias, com ou sem `assignee_id`.
+- **50 por grupo**. Para quantidade, leia `totals` (a contagem real), nunca o tamanho da lista. Para ir além das
+  50: `group=overdue&page=2` devolve só aquele grupo naquela página.
+- **Busca `q`** (vale também no calendário): título, descrição, responsável e, com 3 letras ou mais, o CLIENTE
+  (nome, telefone, e-mail). Termo que casa mais de 1.000 clientes procura só nos campos da tarefa.
+- O "Meu Dia" (`lionchat_tasks_list_1`) continua existindo como estava: sem filtros, sem páginas e sem `later`.
+- Cargo com a Agenda escondida recebe 401 aqui.
+- **Prioridade**: o filtro `priority` passou a funcionar em 22/10 (antes o servidor o ignorava, inclusive no
+  calendário).
+
+### 7.3. Subaba "Concluídas" e datas de desfecho (23/10/2026)
+
+- **`group=completed`** em `lionchat_tasks_task_list` = a subaba "Concluídas": tarefa concluída OU marcada
+  "Compareceu"/"Faltou". Cancelada fica de fora (só no calendário). Não vem junto dos cinco grupos: só quando
+  pedida. Ordem: a mais recentemente concluída primeiro; as concluídas antes de 23/10 (sem data de conclusão) vão
+  para o fim, pela data da tarefa. 50 por página, `totals.completed` = a contagem real.
+- **Datas de desfecho** em toda tarefa (calendário, `show` e lista): `completed_at` (quando foi concluída),
+  `cancelled_at` (quando foi cancelada) e `attendance_marked_at` (quando marcaram Compareceu/Faltou). Gravadas pelo
+  servidor no momento da mudança, nunca aceitas do cliente. Reabrir, adiar ou limpar a presença APAGA a data
+  (é a data do desfecho atual, não um histórico). Nada antes de 23/10 foi preenchido: tarefa antiga vem com nulo.
+- **`concluida_no_prazo`** (true/false/nulo): só no tipo Tarefa. `true` = concluída até o horário marcado
+  (`scheduled_at`; adiar vale a data nova). Nulo = não se aplica (outro tipo, não concluída, ou concluída antes de
+  existir a data). Consulta e reunião não têm prazo: só se dão como feitas depois que acontecem.
+- **Busca `q`** (vale na lista e no calendário) passou a achar também pelo NOME DO CARD da tarefa e, com 3 letras
+  ou mais, por QUEM FEZ: quem criou, o dono antigo da tarefa e o "Agendado por".
 
 ## 8. Erros comuns
 

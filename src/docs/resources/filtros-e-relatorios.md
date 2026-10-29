@@ -197,15 +197,28 @@ SEM mudar nenhum número antigo (Ganhos e Receita continuam do vendedor):
 |---|---|---|
 | `any` (PADRÃO) | criado no período **OU** fechado no período | É a régua histórica e a mais larga. **Omitir mantém exatamente os números de sempre.** É a certa pra RECEITA: com qualquer outra, venda fechada no período de um lead antigo some (medido 07/08: 17% dos ganhos da frota) |
 | `created` | só quando o card nasceu | "quantos leads entraram" |
-| `moved` | só quando entrou na etapa atual (mesma expressão do `stage_date_*` da seção 3) | "o que se mexeu no período" |
+| `moved` | quando entrou numa etapa (período até hoje: a etapa atual, mesma expressão do `stage_date_*` da seção 3; período que já terminou: qualquer entrada registrada no período, mesmo que o card tenha andado de novo depois) | "o que se mexeu no período" |
 | `closed` | só ganhos/perdidos no período | **a pergunta de receita** — é a régua certa pra "quanto vendemos em julho" |
 
 **Ganho/perda pela DATA DO FECHAMENTO (23/09/2026).** Com a régua `any` o relatório traz também cards que
 nasceram no período mas fecharam DEPOIS dele. Por isso, para "quanto ganhamos/perdemos em julho", leia
-`wonInPeriod`/`wonValueInPeriod` e `lostInPeriod`/`lostValueInPeriod` (este último é campo NOVO) — **nunca**
-`statusDistribution`, que é a foto do status de HOJE (serve só para "negócios abertos agora"). Desde 23/09 os
+`wonInPeriod`/`wonValueInPeriod` e `lostInPeriod`/`lostValueInPeriod` (este último é campo NOVO). Desde 23/09 os
 motivos de ganho/perda, os perdidos recentes, a receita por semana e o ranking de vendedores também contam só
 o que FECHOU no período — antes somavam por status de hoje e divergiam do quadro de Ganhos na mesma tela.
+
+**Situação no FIM do período (19/10/2026).** Num período que JÁ TERMINOU (pelo dia da conta), tudo que é
+SITUAÇÃO sai como o card estava no último instante do período: `statusDistribution` (aberto/ganho/perdido/adiado),
+`itemsByStage`/`itemsByStageSlug` (o "Funil — ocupação por etapa"), `stageMetrics.valueByStage`, `forecast`,
+`topDeals`, `staleCards`, `agingAnalysis` e `stageVelocityData` (só abertos) e os "parados" por etapa. Período que
+vai até HOJE = o estado de agora (números de sempre). Por isso `statusDistribution.won` passa a bater com
+`wonInPeriod`. Campo NOVO `periodEndState` `{past, unknownStageCount, removedStageCount}`: se `unknownStageCount > 0`,
+avise que esses cards aparecem como "Etapa desconhecida" (sem histórico daquela época — o histórico de etapas
+começou em julho de 2026); as chaves cruas `:etapa_desconhecida`/`:etapa_removida` NUNCA devem ser mostradas ao
+cliente — traduza para "Etapa desconhecida"/"Etapa removida". Card ganho/perdido conta no funil onde a venda
+aconteceu (também quando foi transferido depois). `taskMetrics.overdue`/`upcoming7days` vêm `null` num período
+passado — NÃO diga "nenhuma atrasada", diga que esse número só existe para períodos que vão até hoje. Ciclo de vendas
+e "Tempo médio" só com ganhos do período; checklist e follow-up só com o que fechou no período (follow-up = ações
+feitas por pessoa até ganhar/perder, não dias).
 
 O relatório de UMA etapa — tool `lionchat_funnels_stage_report` (`GET /funnels/:id/stage_report`, o
 painel que abre dentro do quadro) — tem as MESMAS 4 opções de régua, mesmo parâmetro `date_basis` e as
@@ -216,7 +229,9 @@ que as duas telas não batem, a resposta é: escolha a MESMA régua nas duas.
 
 Ela devolve números calculados no SERVIDOR (total de cards da etapa, faixa de valores, ganhos/perdidos,
 distribuição por prioridade, ranking de vendedores da etapa) — antes a tela só somava os cards já
-carregados na coluna.
+carregados na coluna. Num período que JÁ TERMINOU (19/10/2026) ela responde quantos cards ESTAVAM na etapa no fim do
+período, e os botões `show_*`/`statuses`/`stages` valem pela situação naquele dia (um card aberto no fim do período e
+ganho depois aparece com o padrão "só abertos").
 
 **Parâmetros de `lionchat_funnels_stage_report`:**
 

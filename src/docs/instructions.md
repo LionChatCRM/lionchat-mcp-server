@@ -92,6 +92,16 @@ Account (conta/empresa)
 - Adiar: `lionchat_kanban_items_snooze`. Abrir antes da data: `lionchat_kanban_items_unsnooze`. Regras em
   `lionchat://docs/kanban-deep-dive`, seção "Card adiado".
 
+### Analisar com IA (desde 28/10/2026)
+- A IA lê os cards abertos e adiados das etapas escolhidas de um funil e sugere mudar de etapa ou de funil, pôr/tirar
+  etiqueta e marcar ganho/perdido. Ferramentas `lionchat_kanban_ai_analyses_*`: `setup` -> `create` -> `show` até
+  `ready` -> `items` -> `apply` (com `confirm: true`) -> `show` até `finished`.
+- Quantos cards: `filters.limit` (1 a 1.000, padrão 200). A análise PULA os cards que a IA leu nos últimos 7 dias sem
+  fala nova do cliente; `filters.include_read: true` lê de novo (e gasta crédito de novo). "Por que não mudou nada?":
+  `items` com `no_change: true`.
+- **Aplicar NÃO tem como desfazer**: confirme com o usuário quais cards e ações antes. Regras em
+  `lionchat://docs/kanban-deep-dive`, seção "Analisar com IA".
+
 ### AccountUser.role (string)
 - `agent` (atendente comum)
 - `administrator` (admin/dono)
@@ -187,6 +197,9 @@ Detalhes completos em `lionchat://docs/api-conventions` → "Wrapper de body".
 - **funnel.stages** keys: snake_case slug; cada etapa é OBJETO com `name` texto
 - **Lista de objetos é lista de objetos**: onde o formato pede `[{id: 5}]`, número solto (`[5]`) ou objeto
   único no lugar da lista quebra a leitura — às vezes a tela da conta inteira (incidente 18/09, funil).
+- **Chave que volta escondida** (`••••••••` ou `[REDACTED]`): é o valor de leitura, não a chave. Desde 27/10 mandar
+  esse valor de volta MANTÉM a chave gravada (chave da TopSend da conta, Hotmart, Kiwify, Ticto, Eduzz, Monetizze e
+  Greenn). Só mande o campo quando for trocar por uma chave nova de verdade.
 
 ### Gravação: TROCA inteira × SOMA (conferido no código em 18/09/2026)
 
@@ -291,7 +304,7 @@ POST /api/v1/accounts/{account_id}/kanban_items
 ```
 
 - `conversation_display_id` é **opcional** (card sem conversa vinculada é válido).
-- As ferramentas `lionchat_kanban_v2_*` cobrem anexos de card/nota e automações do Kanban (controllers criados em 07/2026 — a orientação antiga de ignorá-las está obsoleta). Upload de anexo via MCP segue sem suporte (limitação de file upload).
+- As ferramentas `lionchat_kanban_v2_*` cobrem anexos de card/nota e automações do Kanban (controllers criados em 07/2026 — a orientação antiga de ignorá-las está obsoleta). Arquivo do computador não sobe pelo MCP (não há envio direto de arquivo); arquivo **por link** sobe com `lionchat_upload_create` (`external_url`).
 
 ### Relatório de produtividade
 ```
@@ -317,6 +330,11 @@ teams, conversations_summary) exigem as DUAS pontas; nos demais, `since` ou `unt
 5. Acompanhar com lionchat_campaigns_statistics (sent/delivered/read/failed)
 ```
 Estrutura do audience: `[{type:'Label', id}, {type:'Funnel', id, stages:[], include_won, include_lost}, {type:'ConversationAttribute', key, value}]`.
+Segmento de contatos como público (22/10/2026): `{type:'Segment', id}` no audience e na exclusão
+(`trigger_rules.exclusion`). O id vem de `lionchat_custom_filters_list` com `filter_type: contact` (o segmento é da
+CONTA). Vale para WhatsApp oficial, QR Code e Campanha de Fluxo; SMS e TopSend recusam (422). A regra do segmento é
+lida na HORA do disparo: segmento apagado ou com regra quebrada = a campanha NÃO envia nada e o motivo fica em
+`trigger_rules.audience_error`; na estimativa vem `estimated_count: null` com `segment_unavailable`.
 QR Code aceita `template_params` com `delay_min/delay_max/variations` (anti-bloqueio) e `bulk_actions`.
 
 ### Criar campanha de FLUXO (dispara um flow, não uma mensagem) — novo 28/07/2026
@@ -392,7 +410,7 @@ Antes de QUALQUER ação que escreve, modifica, apaga ou envia, pare e avalie se
 
 **Como confirmar:** descreva o efeito em linguagem do usuário e aguarde o "sim". Ex.: *"Vou apagar o contato #312 — isso remove as 4 conversas dele também. Confirma?"*. Se faltar dado, peça só o que falta (1-2 perguntas), nunca um questionário.
 
-**Ferramentas com trava dura de confirmação.** Algumas ferramentas **recusam a chamada** sem `confirm: true` — a recusa vem do conector, antes de tocar no sistema. Não é erro: é o pedido de OK. O caminho é sempre o mesmo — descreva ao usuário exatamente o que será criado/alterado/apagado, aguarde o "sim", e só então reenvie a MESMA chamada com `confirm: true`. Nunca mande `confirm: true` na primeira tentativa "pra economizar uma volta": a trava existe justamente porque a descrição sozinha não segurava. Hoje: `lionchat_custom_dashboards_create`, `_update` e `_destroy` (relatório personalizado aparece na tela do cliente; alterar substitui a lista de blocos e apagar não tem desfazer).
+**Ferramentas com trava dura de confirmação.** Algumas ferramentas **recusam a chamada** sem `confirm: true` — a recusa vem do conector, antes de tocar no sistema. Não é erro: é o pedido de OK. O caminho é sempre o mesmo — descreva ao usuário exatamente o que será criado/alterado/apagado, aguarde o "sim", e só então reenvie a MESMA chamada com `confirm: true`. Nunca mande `confirm: true` na primeira tentativa "pra economizar uma volta": a trava existe justamente porque a descrição sozinha não segurava. Hoje: `lionchat_custom_dashboards_create`, `_update` e `_destroy` (relatório personalizado aparece na tela do cliente; alterar substitui a lista de blocos e apagar não tem desfazer) e `lionchat_conversations_bulk_destroy` (27/10: apaga de vez até 300 conversas com mensagens e anexos — liste ao usuário quais saem antes do OK).
 
 **Aja sem perguntar apenas em operações idempotentes:** leitura, busca, resumo, classificação.
 
@@ -429,6 +447,7 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 
 | Intenção do usuário | Tool certa | Cuidado |
 |---|---|---|
+| Criar **pasta de conversas para a conta toda** ("Urgentes do time", "Minhas abertas" para cada um) | `lionchat_custom_filters_create` com `filter_type: conversation` + `shared: true` | Só administrador (401). Pelo menos uma condição. Para cada pessoa ver as conversas DELA use `assignee_id` com `values: ["current_user"]`. `shared: false` depois devolve a pasta a quem mandou. Detalhe no resource api-conventions |
 | Listar / ver não lidas | `lionchat_conversations_list` (`conversation_type: 'unread'`) ou `lionchat_conversations_meta` | NÃO use `lionchat_conversations_unread` — é AÇÃO DE ESCRITA (marca como não-lida) |
 | Ver **uma empresa** (quem trabalha la, anotacoes, conversas) e ligar/tirar contatos | `lionchat_companies_show` + `lionchat_companies_contacts_list` / `_create` / `_destroy`, `lionchat_companies_notes_list`, `lionchat_companies_conversations_list` | Ligar pela ficha: `lionchat_contacts_update` com `company_id` (null tira). Cargo da pessoa = `additional_attributes.job_title`. Escolher a empresa troca o texto `company_name` pelo nome dela |
 | Criar / preencher **campo personalizado da empresa** ("Segmento", "Data de fundacao") | `lionchat_custom_attributes_create` com `attribute_model: company_attribute` + `lionchat_companies_update` com `company.custom_attributes {chave: valor}` | So com o modulo Empresas ligado; tipo segredo recusado. Chave que nao existe como atributo de empresa = 422 e nada do pedido grava: crie a definicao ANTES. MESCLA; `null` limpa. Desde 2026-10-16 vira variavel `{{contact.company.custom_attribute.CHAVE}}`, condicao do fluxo (`attrSource: company`), condicao de automacao e filtro de contatos (`custom_attribute_type: company_attribute`) e a IA le — detalhe no resource data-model |
@@ -442,11 +461,12 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | Criar contato | `lionchat_contacts_create` base (path `/contacts`) | NÃO use as variantes `_1` … `_9` |
 | Pausar a IA agora (botão de pânico) | `lionchat_captain_assistants_update` (`paused: true`, top-level) | — |
 | Criar/editar **formulário público de captação** (página de captura própria) | `lionchat_lead_forms_create` / `_update` | Leia `lionchat://docs/formularios-publicos` ANTES — o desenho vai em `form_data` e só entra no ar depois do `publish` (que valida o desenho e pode voltar 422 com a lista de pendências). Caixa de WhatsApp vinculada (`inbox_id`) é obrigatória pra publicar. Escrita é só de administrador |
-| **Mandar um contrato pra assinar** / ver quem assinou / reenviar / cancelar / criar ou editar o modelo escrito | `lionchat_signature_envelopes_create` / `_list` / `_show` / `_resend` / `_cancel`; `lionchat_signature_documents_list` / `_create` / `_update`; `lionchat_signature_envelopes_sign_as_sender` (o remetente assina pelo painel) | Leia `lionchat://docs/assinatura-eletronica` ANTES. Modelo `text` a API cria e edita (texto com `{{contact.*}}`); PDF/Word só pela tela. Campo do modelo sem valor na ficha bloqueia o envio (422 `variaveis_sem_valor` com a lista); `422 escolher_caixa` = repita com `inbox_id`. Cada contrato consome 1 vaga do limite mensal. Modelo Word: `422 fila_cheia` = muita gente convertendo agora, repita em instantes; `422 conversor_indisponivel` = o serviço de conversão está fora (não é o arquivo) — avise o operador. Remetente assina pelo painel com `_sign_as_sender` (PNG em base64). Importar Word, pré-visualizar e baixar PDF: só pela tela (o conector não envia arquivo nem recebe PDF) |
+| **Mandar um contrato pra assinar** / ver quem assinou / reenviar / cancelar / criar ou editar o modelo escrito | `lionchat_signature_envelopes_create` / `_list` / `_show` / `_resend` / `_cancel`; `lionchat_signature_documents_list` / `_create` / `_update`; `lionchat_signature_envelopes_sign_as_sender` (o remetente assina pelo painel) | Leia `lionchat://docs/assinatura-eletronica` ANTES. Modelo `text` a API cria e edita (texto com `{{contact.*}}`); PDF/Word só pela tela. Campo do modelo sem valor na ficha bloqueia o envio (422 `variaveis_sem_valor` com a lista); `422 escolher_caixa` = repita com `inbox_id`. Cada contrato consome 1 vaga do limite mensal. Modelo Word: `422 fila_cheia` = muita gente convertendo agora, repita em instantes; `422 conversor_indisponivel` = o serviço de conversão está fora (não é o arquivo) — avise o operador. Remetente assina pelo painel com `_sign_as_sender` (PNG em base64; `signature_method` drawn/typed + `typed_name`). Dois jeitos de mandar (27/10): `collection: 'ready'` (completa o que falta com `contact_data`; veja antes `lionchat_signature_documents_fill_fields`) ou `collection: 'form'` (a pessoa preenche pelo link); `message` vai junto. Documentos pedidos (28/10, `roles_layout.required_proofs`): contrato fica `awaiting_approval` até a equipe aprovar — `lionchat_signature_envelopes_proofs` / `_approve_proofs` / `_reject_proofs` (as duas últimas mandam mensagem ao cliente: confirme antes; os arquivos só pela tela). Link do contrato para divulgar: `roles_layout.public_link`. Importar Word, pré-visualizar e baixar PDF: só pela tela (nesta área o conector não sobe o Word do modelo nem baixa o PDF) |
 | **Testar um formulário** antes de publicar | `lionchat_lead_forms_test_run` | Roda o RASCUNHO no motor real e desfaz tudo no fim — zero rastro. Mande `answers: [{node_id, value}]` (até 60) pra reproduzir um caminho; a resposta traz o bloco atual + o log do percurso |
 | Conferir se um site **aceita ser exibido dentro do formulário** (bloco Página externa) | `lionchat_lead_forms_check_embed` | Body `{url}`; devolve `{status: allowed\|blocked\|unknown, reason}`. Grave o veredito em `embed_allowed` do bloco. Admin-only |
 | Ver **tudo que uma pessoa preencheu** (nosso formulário, anúncio do Meta, Webhook Universal, fluxo) | `lionchat_contacts_form_entries_list` / `_show` | Por CONTATO, sem paginação (teto 250 por origem, `meta.truncated`). O detalhe de Meta/webhook mostra SÓ os campos vinculados e gravados — nunca o payload cru. `show` exige `source` + `id` da mesma linha |
-| Anexar arquivo a uma mensagem | `lionchat_upload_create` primeiro, depois usar o retorno em `lionchat_conversations_messages_create` | Confira `lionchat_upload_limits` se o arquivo for grande |
+| Anexar **arquivo** a uma mensagem — foto, vídeo, áudio, PDF, Word, Excel, CSV, ZIP (inclusive na conversa de um **grupo** do WhatsApp) | `lionchat_upload_create` com `external_url` (link PÚBLICO de download do arquivo) → o `blob_id` devolvido vai no array `attachments` de `lionchat_conversations_messages_create` | Pelo conector o arquivo SEMPRE vai por link (não há envio direto do computador). Link que abre uma PÁGINA (ex.: Drive `.../view`) é recusado — use o download direto (Drive: `https://drive.google.com/uc?export=download&id=<ID>`); confira antes com `lionchat_upload_validate`. Teto por tipo em `lionchat_upload_limits_show`. Até 23/10/2026 o link só aceitava foto e vídeo |
+| Mandar um **relatório todo dia num grupo** do WhatsApp | Em texto: `lionchat_report_alerts_create` (resumo diário de um relatório personalizado, enviado pelo próprio servidor). Em PDF: gere o PDF, publique num link de download e siga a linha acima | O conector não agenda nada: "todo dia" em PDF depende de uma tarefa agendada do lado de quem usa o conector. Grupo só existe em caixa WhatsApp QR Code — ache a conversa do grupo com `lionchat_conversations_list`/busca. Receita em `lionchat://docs/best-practices` |
 | Marcar conversa como **lida** | `lionchat_conversations_update_last_seen` | NÃO use `unread` (esse marca como NÃO-lida) |
 | Criar/gerenciar **campanha** (disparo WhatsApp/SMS) | `lionchat_campaigns_*` (criar, estatísticas) | SEMPRE rode `campaigns_estimate_audience` antes de criar e mostre a contagem. Disparo em massa = confirmação obrigatória (seção 7b) |
 | Criar **flow normal** (responde mensagens na caixa) | `lionchat_flows_create` | Ler design-guide antes (seção 11). Escolha `conversation_mode`: `individual` (1-a-1, default) ou `group` (grupo WhatsApp — só aqui existe o node `update_group`; sem LionTrack). Imutável após criar |
@@ -478,6 +498,7 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | **Migrar conversas** de uma caixa WhatsApp pra outra (ex.: QR Code → Oficial) | `lionchat_inboxes_inbox_migration_list` (prévia) → `_execute` → acompanhar status | Admin-only e IRREVERSÍVEL: sempre mostre os números da prévia e confirme (seção 7a). Grupos não vão pro canal oficial — ficam na caixa de origem |
 | Qualquer coisa de Ligação WP (Wavoip) | **INTEGRAÇÃO REMOVIDA em 12/08/2026** — não há tool nem tela | A Wavoip saiu do produto: a aba "Ligação WP" **não existe mais**. NUNCA orientar o usuário a "Configurações da caixa → Ligação WP". Para voz em caixa QR Code, o caminho hoje é o **LionCalls**. As ligações antigas seguem no histórico (`provider: "wavoip"`); as gravações delas ficavam no servidor da Wavoip e vão sumir — ao tentar ouvir, o painel mostra "Esta gravação não está mais disponível", e isso é esperado, não é defeito. |
 | Restringir agendas que a IA oferece | `lionchat_captain_assistants_update` (`config.booking_event_type_ids: [Int]`) | binding de agenda por cenário NÃO é settable via API |
+| **Tarefas atrasadas / o que falta fazer** (da equipe ou de uma pessoa) | `lionchat_tasks_task_list` (`assignee_id`, `q`, `priority`, `group` + `page`) | Só tarefas ABERTAS, em grupos `overdue`/`today`/`tomorrow`/`next_7_days`/`later` no dia da conta; 50 por grupo — conte por `totals`. Mesma regra de quem vê o quê do calendário. Ver `lionchat://docs/agenda-multiplas-unidades` §7.2 |
 | **Programa de sessões** de um contato ("em que sessão ele está", ajustar total, encerrar/reabrir) | `lionchat_agenda_treatments_list` (por `contact_id`) / `_show` / `_update` | NÃO existe create: o programa nasce junto do agendamento (na TELA chama-se "programa"; na API segue `treatment`). Marcar TODAS de uma vez: `plano_sugerido` + `marcar_todas` de um tipo com `sessions_enabled` (`tasks_create` modo booking, `treatment: {...}` por pessoa; "marcar próxima" = `agenda_treatment_id` + `treatment_session_number`). Faltar CONSOME a sessão. Ver `lionchat://docs/agenda-multiplas-unidades` §7 |
 | Configurar o Copiloto (modelo/temperatura/prompt base) | `lionchat_copilot_settings_update` | admin-only; copiloto tem motor próprio (padrão temp 0.3) |
 | **Resetar/testar do zero a IA** numa conversa | `lionchat_conversations_captain_history_reset` (POST, sem body) | Cria pílula de marco na conversa; a partir dali TODA leitura autônoma da IA (respostas, resumo, follow-up) considera só mensagens pós-marco. Não apaga nada; o atendente segue vendo tudo. Enterprise-only |

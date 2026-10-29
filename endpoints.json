@@ -683,7 +683,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -1444,11 +1444,45 @@
   ]
  },
  {
+  "id": "lionchat_conversations_bulk_destroy",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/conversations/bulk_destroy",
+  "title": "Excluir Conversas em Lote",
+  "description": "APAGA DE VEZ varias conversas (mensagens e anexos juntos), numa acao de fundo. Irreversivel: exige confirm:true depois de listar ao usuario QUAIS conversas vao sair. So administrador ou cargo com 'Excluir conversa' (conversation_delete); a permissao e conferida conversa a conversa e as que o usuario nao pode excluir sao puladas em silencio. Responde 200 na hora (o trabalho segue em segundo plano). Ate 300 ids por chamada (acima = 422 bulk_ids_limit_exceeded).",
+  "category": "Conversas",
+  "confirm_required": true,
+  "params": [
+   {
+    "name": "ids",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "display_id das conversas (o numero que aparece na tela), ate 300"
+   },
+   {
+    "name": "batch_id",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Identificador do lote (opcional); volta no aviso de fim bulk_action.finished"
+   }
+  ],
+  "returns": "200 sem corpo; o fim chega pelo evento bulk_action.finished",
+  "common_use_cases": [
+   "Limpar conversas de teste ou de spam escolhidas pelo usuario"
+  ],
+  "related_tools": [
+   "lionchat_conversations_destroy",
+   "lionchat_conversations_filter",
+   "lionchat_conversations_list"
+  ]
+ },
+ {
   "id": "lionchat_conversations_filter",
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/conversations/filter",
   "title": "Filtrar Conversas",
-  "description": "Filtra conversas com condicoes avancadas (payload de condicoes, mesmas da tela). Ordenacao fixa last_activity_at DESC, 25/pagina.\n\nCHAVES FILTRAVEIS (attribute_key -> operadores): status, chat_type, priority (equal_to/not_equal_to); assignee_id, inbox_id, team_id, campaign_id, captain_assistant_id, labels (equal_to/not_equal_to/is_present/is_not_present); display_id (equal_to/not_equal_to/contains/does_not_contain); created_at, last_activity_at (is_greater_than/is_less_than/days_before — valor de data); browser_language, conversation_language, referer, mail_subject; card_funnel_stage (conversa POR CARD do Kanban — valor 'funnel:<id>' ou 'stage:<id>:<chave_etapa>'); QUALQUER outra chave = atributo personalizado (use custom_attribute_type na condicao: 'conversation_attribute' ou 'contact_attribute'). 'contact_attribute' le a FICHA DO CONTATO da conversa (funciona desde 24/09/2026 — antes era ignorado): e o jeito de achar lead de formulario da Meta por meta_lead_form_name/meta_lead_ad_name/origin_first_*, que so existem no contato. A chave precisa de atributo DE CONTATO cadastrado. 'company_attribute' (atributo de EMPRESA) NAO vale aqui: 422 (desde 2026-10-16) — filtre contatos com lionchat_contacts_filter.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422 'Operador invalido' (ex: labels NAO aceita 'includes' — use equal_to). [2026-07-25] O operador contains em display_id agora funciona de verdade (busca por trecho do numero da conversa; antes dava erro de banco). NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas.",
+  "description": "Filtra conversas com condicoes avancadas (payload de condicoes, mesmas da tela). Ordenacao fixa last_activity_at DESC, 25/pagina.\n\nCHAVES FILTRAVEIS (attribute_key -> operadores): status, chat_type, priority (equal_to/not_equal_to); assignee_id, inbox_id, team_id, campaign_id, captain_assistant_id, labels (equal_to/not_equal_to/is_present/is_not_present); display_id (equal_to/not_equal_to/contains/does_not_contain); created_at, last_activity_at (is_greater_than/is_less_than/days_before — valor de data); browser_language, conversation_language, referer, mail_subject; card_funnel_stage (conversa POR CARD do Kanban — valor 'funnel:<id>' ou 'stage:<id>:<chave_etapa>'); origin_paid (25/10/2026, equal_to/not_equal_to — 'veio de anuncio pago?': valores paid, not_paid, unknown, unclassified; paid = clique no anuncio OU formulario do anuncio; not_equal_to paid inclui a conversa sem origem); QUALQUER outra chave = atributo personalizado (use custom_attribute_type na condicao: 'conversation_attribute' ou 'contact_attribute'). 'contact_attribute' le a FICHA DO CONTATO da conversa (funciona desde 24/09/2026 — antes era ignorado): e o jeito de achar lead de formulario da Meta por meta_lead_form_name/meta_lead_ad_name/origin_first_*, que so existem no contato. A chave precisa de atributo DE CONTATO cadastrado. 'company_attribute' (atributo de EMPRESA) NAO vale aqui: 422 (desde 2026-10-16) — filtre contatos com lionchat_contacts_filter.\n\nCada condicao: {attribute_key, filter_operator, values[], query_operator:'and'|'or', custom_attribute_type?}. Operador fora da lista da chave = 422 'Operador invalido' (ex: labels NAO aceita 'includes' — use equal_to). [2026-07-25] O operador contains em display_id agora funciona de verdade (busca por trecho do numero da conversa; antes dava erro de banco). NOTA 18/08: data FIXA com is_greater_than/is_less_than corta o dia no FUSO DA CONTA (padrao America/Sao_Paulo), nao mais em UTC — mesmo criterio das datas relativas. [27/10/2026] assignee_id aceita o valor 'current_user' (= quem esta perguntando); texto em assignee_id que nao seja numero nem 'current_user' = 422.",
   "category": "Conversas",
   "params": [
    {
@@ -1501,7 +1535,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -1953,7 +1987,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages",
   "title": "Listar Mensagens",
-  "description": "Lista mensagens de uma conversa (mais recentes primeiro). Lista mensagens paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, before_id. Retorna meta (contadores) + payload (array de mensagem).",
+  "description": "Lista mensagens de uma conversa (mais recentes primeiro). Lista mensagens paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, before_id. Retorna meta (contadores) + payload (array de mensagem). Cada mensagem traz original_sent_at (20/10/2026): unix s da hora em que foi ENVIADA quando chegou atrasada mais de 2 min (WhatsApp oficial e QR Code, mensagens de 20/10/2026 em diante); null no resto. created_at continua sendo a hora de CHEGADA e a ordem da lista nao muda.",
   "category": "Mensagens",
   "params": [
    {
@@ -2045,7 +2079,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Arquivos anexos"
+    "description": "Lista de blob_id devolvidos por lionchat_upload_create (arquivo por link: foto, vídeo, áudio, PDF, documento). Funciona também na conversa de um grupo do WhatsApp (caixa QR Code)"
    },
    {
     "name": "content_attributes",
@@ -2200,7 +2234,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -2429,7 +2463,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/funnels",
   "title": "Listar Funis (Kanbans)",
-  "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa. Lista todos os funis com contagem de itens por etapa (cache 5min). NAO e paginado. ACESSO (2026-06): retorna SO os funis visiveis pro usuario do token (admin, permissao kanban, funil aberto ou participante). Funil nao-visivel da 404 no show.",
+  "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa. Lista todos os funis com contagem de itens por etapa (stage_items_count, contada na hora em todo pedido desde 2026-10-23; os dados dos funis ficam lembrados 5 min). NAO e paginado. ACESSO (2026-06): retorna SO os funis visiveis pro usuario do token (admin, permissao kanban, funil aberto ou participante). Funil nao-visivel da 404 no show.",
   "category": "Funis",
   "params": [],
   "returns": "array de funis (cada um com stage_items_count); sem meta/paginacao Inclui resolved_agents: [{id, name, avatar_url, via: 'agent'|'team'}] — quem efetivamente participa do funil (2026-07-21).",
@@ -2483,7 +2517,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id, enabled, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value (id da etapa p/ stage_moved; 'won'|'lost'|'snoozed' p/ status_change ('snoozed' desde 11/10/2026: roda quando o card e ADIADO); vazio p/ card_created), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (ex.: move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations). `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. "
+    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id, enabled, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value (id da etapa p/ stage_moved; 'won'|'lost'|'snoozed' p/ status_change ('snoozed' desde 11/10/2026: roda quando o card e ADIADO); vazio p/ card_created), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (ex.: move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations). `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. ORDEM E ACOES MORTAS (22/10/2026): a ordem de automations[] e a ordem de execucao — regras do mesmo acontecimento (ex.: duas em status_change 'won') rodam de cima para baixo; para reordenar, reenvie a lista inteira na ordem nova (a configuracao de cada regra nao muda). NAO grave assign_agent com status_change 'won'/'lost' (a regra roda com o card ja fechado e card fechado nao aceita responsavel: nao faz nada) nem notify_team (so escreve log, nao avisa ninguem). O servidor aceita os dois, mas a regra fica morta e o painel mostra um aviso amarelo nela. "
    },
    {
     "name": "funnel.global_custom_attributes",
@@ -2683,7 +2717,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/funnels/{id}",
   "title": "Atualizar Funil (Kanban)",
-  "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa. Atualiza funil. Atualiza campos do funil existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: funnel.name, funnel.stages, funnel.settings. Regra com action 'create_task' (cria uma tarefa presa ao card quando o gatilho acontece): action_config = {title (texto, obrigatorio), description, task_type, agenda_id, priority, occupies_agenda (true|false), due: {amount, unit: 'hours'|'days', at: 'HH:MM' (so em dias), business_days: true (so em dias)}, responsible: {mode: 'card_owner'|'fixed'|'funnel_rotation'|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}. Cada regra create_task NOVA ou alterada e conferida uma a uma: regra torta recebe 422 que diz a posicao da regra e o campo a consertar; as demais regras do funil nao sao afetadas. `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. Reenviar funnel.stages SEM uma etapa que tem cards e recusado com 422 STAGE_HAS_ITEMS: use lionchat_funnels_remove_stage. Se o funil estiver sendo alterado naquele instante por outra pessoa ou por uma exclusao de etapa em andamento, o Salvar responde 409 com code FUNNEL_BUSY (o funil esta sendo alterado agora): espere alguns instantes e repita.",
+  "description": "FUNIL = KANBAN (pipeline/board) — no LionChat sao a mesma coisa. Atualiza funil. Atualiza campos do funil existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: funnel.name, funnel.stages, funnel.settings. Regra com action 'create_task' (cria uma tarefa presa ao card quando o gatilho acontece): action_config = {title (texto, obrigatorio), description, task_type, agenda_id, priority, occupies_agenda (true|false), duration_minutes (22/10/2026: minutos que a tarefa ocupa, inteiro de 1 a 1440; ausente ou null = o tempo do TIPO: Tarefa/Follow-up/Prazo 15, Ligacao/Personalizado 30, Reuniao/Call 60, tipo da conta 30), due: {amount, unit: 'hours'|'days', at: 'HH:MM' (so em dias), business_days: true (so em dias)}, responsible: {mode: 'card_owner'|'fixed'|'funnel_rotation'|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}. Cada regra create_task NOVA ou alterada e conferida uma a uma: regra torta recebe 422 que diz a posicao da regra e o campo a consertar; as demais regras do funil nao sao afetadas. `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. Reenviar funnel.stages SEM uma etapa que tem cards e recusado com 422 STAGE_HAS_ITEMS: use lionchat_funnels_remove_stage. Se o funil estiver sendo alterado naquele instante por outra pessoa ou por uma exclusao de etapa em andamento, o Salvar responde 409 com code FUNNEL_BUSY (o funil esta sendo alterado agora): espere alguns instantes e repita.",
   "category": "Funis",
   "params": [
    {
@@ -2712,7 +2746,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id (formato 'automation_<timestamp_ms>'), enabled: true, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value SEMPRE preenchido ('card_created' literal p/ card_created; chave da etapa de destino no hash funnel.stages p/ stage_moved; 'won'|'lost'|'snoozed' p/ status_change ('snoozed' desde 11/10/2026: roda quando o card e ADIADO)), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; update_checklist->{checklist_updates:[{checklist_item_id,completed,text}]}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. Regras: trigger_value vazio ou enabled=false fazem a UI descartar a automacao no proximo salvar do usuario; stage_moved + move_to_stage nunca executa (anti-loop); notify_team hoje so registra em log (nao notifica ninguem); update_checklist nao aparece na UI (so via API). ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations). Regra com action 'create_task' (cria uma tarefa presa ao card quando o gatilho acontece): action_config = {title (texto, obrigatorio), description, task_type, agenda_id, priority, occupies_agenda (true|false), due: {amount, unit: 'hours'|'days', at: 'HH:MM' (so em dias), business_days: true (so em dias)}, responsible: {mode: 'card_owner'|'fixed'|'funnel_rotation'|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}. Cada regra create_task NOVA ou alterada e conferida uma a uma: regra torta recebe 422 que diz a posicao da regra e o campo a consertar; as demais regras do funil nao sao afetadas. `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. "
+    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id (formato 'automation_<timestamp_ms>'), enabled: true, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value SEMPRE preenchido ('card_created' literal p/ card_created; chave da etapa de destino no hash funnel.stages p/ stage_moved; 'won'|'lost'|'snoozed' p/ status_change ('snoozed' desde 11/10/2026: roda quando o card e ADIADO)), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; update_checklist->{checklist_updates:[{checklist_item_id,completed,text}]}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. Regras: trigger_value vazio ou enabled=false fazem a UI descartar a automacao no proximo salvar do usuario; stage_moved + move_to_stage nunca executa (anti-loop); notify_team hoje so registra em log (nao notifica ninguem); update_checklist nao aparece na UI (so via API). ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations). Regra com action 'create_task' (cria uma tarefa presa ao card quando o gatilho acontece): action_config = {title (texto, obrigatorio), description, task_type, agenda_id, priority, occupies_agenda (true|false), duration_minutes (22/10/2026: minutos que a tarefa ocupa, inteiro de 1 a 1440; ausente ou null = o tempo do TIPO: Tarefa/Follow-up/Prazo 15, Ligacao/Personalizado 30, Reuniao/Call 60, tipo da conta 30), due: {amount, unit: 'hours'|'days', at: 'HH:MM' (so em dias), business_days: true (so em dias)}, responsible: {mode: 'card_owner'|'fixed'|'funnel_rotation'|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}. Cada regra create_task NOVA ou alterada e conferida uma a uma: regra torta recebe 422 que diz a posicao da regra e o campo a consertar; as demais regras do funil nao sao afetadas. `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. ORDEM E ACOES MORTAS (22/10/2026): a ordem de automations[] e a ordem de execucao — regras do mesmo acontecimento (ex.: duas em status_change 'won') rodam de cima para baixo; para reordenar, reenvie a lista inteira na ordem nova (a configuracao de cada regra nao muda). NAO grave assign_agent com status_change 'won'/'lost' (a regra roda com o card ja fechado e card fechado nao aceita responsavel: nao faz nada) nem notify_team (so escreve log, nao avisa ninguem). O servidor aceita os dois, mas a regra fica morta e o painel mostra um aviso amarelo nela. "
    }
   ],
   "returns": "funil atualizado Inclui resolved_agents: [{id, name, avatar_url, via: 'agent'|'team'}] — quem efetivamente participa do funil (2026-07-21).",
@@ -3844,7 +3878,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -4184,7 +4218,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/import_preview",
   "title": "Preview Importação",
-  "description": "Pre-visualiza um import de cards (colunas e amostra).",
+  "description": "Pre-visualiza um import de cards: colunas, primeiras linhas, total, valores unicos por coluna (ate 50) e, desde 2026-10-23, attribute_fields = os campos personalizados que PODEM ser importados (card: campos do card da conta, sem nome protegido nem secreto; contact: atributos do contato sem os do sistema nem secretos — vem vazio para quem nao pode importar contatos). Use o key de cada item como destino no attribute_mappings do lionchat_kanban_items_import.",
   "category": "Itens",
   "params": [
    {
@@ -4195,7 +4229,7 @@
     "description": "Arquivo CSV"
    }
   ],
-  "returns": "{ columns, sample_values }",
+  "returns": "{ columns, preview_rows, total_rows, unique_values: {coluna: [valores]}, attribute_fields: { card: [{key: 'card:<nome>', name, type, is_list, options}], contact: [{key: 'contact:<chave>', attribute_key, name, type, is_list, options}] } }",
   "common_use_cases": [
    "Cadastro inicial de item Kanban",
    "Automação a partir de evento externo",
@@ -4212,7 +4246,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/import",
   "title": "Importar Items",
-  "description": "Importa cards em massa (job async). REGRA DO DDI (18/08): telefone sem codigo do pais e considerado invalido e o card e criado SEM contato e SEM conversa, EM SILENCIO (diferente do import de contatos, que da erro na linha). Oriente a planilha a vir com DDI. PARAMETROS CONFERIDOS (18/09/2026): o servidor le `mappings` (plural) e exige `inbox_id` — o antigo `mapping` era ignorado. Opcionais da API (fora deste conector): default_stage_id, stage_mappings (texto JSON {\"<valor da planilha>\": \"<id da etapa>\"}), auto_create_stages ('true'), agent_mode ('mapping' | 'round_robin'), agent_mappings (texto JSON {\"<valor da planilha>\": <id do agente>}). VIA MCP NAO RODA: exige upload do arquivo — oriente o usuario a importar pela tela do Kanban.",
+  "description": "Importa cards em massa (job async). REGRA DO DDI (18/08): telefone sem codigo do pais e considerado invalido e o card e criado SEM contato e SEM conversa, EM SILENCIO (diferente do import de contatos, que da erro na linha). Oriente a planilha a vir com DDI. PARAMETROS CONFERIDOS (18/09/2026): o servidor le `mappings` (plural) e exige `inbox_id` — o antigo `mapping` era ignorado. Opcionais da API (fora deste conector): default_stage_id, stage_mappings (texto JSON {\"<valor da planilha>\": \"<id da etapa>\"}), auto_create_stages ('true'), agent_mode ('mapping' | 'round_robin'), agent_mappings (texto JSON {\"<valor da planilha>\": <id do agente>}). CAMPOS PERSONALIZADOS (2026-10-23, tambem fora deste conector): attribute_mappings (texto JSON {\"card:<nome do campo do card>\": \"<coluna>\", \"contact:<chave do atributo do contato>\": \"<coluna>\"} — destino -> coluna, a mesma coluna pode ir para o card e para o contato) e value_mappings (texto JSON {\"<destino>\": {\"<valor da planilha>\": \"<opcao da lista>\" | \"\"}}, o de-para de campo de lista; \"\" = nao gravar). Os destinos validos sao os que lionchat_kanban_items_create_3 (previa) devolve em attribute_fields. Formato errado, campo que nao existe/protegido/secreto ou coluna que a planilha nao tem = 422 com a lista; contact: sem a permissao de importar contatos = 403. Card: data DD/MM/AAAA vira AAAA-MM-DD, numero vira texto ('1.500' = 1500), lista aceita varias opcoes por ';'. Contato: vai so para o contato principal do card; contato que ja existe tem o valor SUBSTITUIDO (dispara fluxo 'Atributo do contato muda' e webhook contact_updated); celula vazia nunca apaga. Valor que nao entra aparece em skipped no lionchat_kanban_items_import_status. VIA MCP NAO RODA: exige upload do arquivo — oriente o usuario a importar pela tela do Kanban.",
   "category": "Itens",
   "params": [
    {
@@ -8546,7 +8580,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -8633,7 +8667,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados (mesmo formato de conversations_filter). JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados (mesmo formato de conversations_filter). JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "date_basis",
@@ -8815,6 +8849,13 @@
     "description": "Status"
    },
    {
+    "name": "priority",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Prioridade (22/10): urgent | high | medium | low | none. Antes de 22/10 este filtro era ignorado pelo servidor."
+   },
+   {
     "name": "user_id",
     "type": "integer",
     "location": "query",
@@ -8833,7 +8874,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Busca"
+    "description": "Busca (22/10): titulo, descricao e nome do responsavel; com 3 letras ou mais, tambem o CLIENTE da tarefa (nome, telefone, e-mail ou identificador, pela ficha da tarefa ou pela conversa dela). Termo que casa mais de 1.000 clientes procura so nos campos da tarefa. Desde 23/10/2026 tambem acha pelo NOME DO CARD da tarefa e, com 3 letras ou mais, por QUEM FEZ (quem criou, o dono antigo da tarefa e o 'Agendado por')."
    },
    {
     "name": "date_start",
@@ -8857,7 +8898,7 @@
     "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
    }
   ],
-  "returns": "LISTA PURA (array no topo, SEM embrulho meta/payload) — a resposta JA E a lista de tarefas da agenda. Cada tarefa traz todos os campos da tarefa (id, title, description, task_type, status, scheduled_at, completed, recurrence_*), mais assignees [{id, name, agenda_color}], assignee_ids, conversation_display_id, conversation_contact_name, contact_name/contact_phone/contact_email, meeting_url, calendar_color, is_readonly, is_private, guest_emails, attendee_rsvp e booking_id; o compromisso que veio do Booking traz tambem booking_reschedule_url e booking_calendar_url (16/10: link \"salvar na minha agenda\" para mandar ao cliente; nulo quando o compromisso foi cancelado, concluido ou ja passou). Lista vazia = []. Com filtro de data (date_start/date_end) devolve TUDO do periodo sem paginar (teto de 10.000). Sem filtro de data, pagina por `page`/`per_page` — mas a resposta NAO traz numero de paginas nem total: pagina cheia sugere que ha mais. Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
+  "returns": "LISTA PURA (array no topo, SEM embrulho meta/payload) — a resposta JA E a lista de tarefas da agenda. Cada tarefa traz todos os campos da tarefa (id, title, description, task_type, status, scheduled_at, completed, recurrence_*), mais assignees [{id, name, agenda_color}], assignee_ids, conversation_display_id, conversation_contact_name, contact_name/contact_phone/contact_email, meeting_url, calendar_color, is_readonly, is_private, guest_emails, attendee_rsvp e booking_id; o compromisso que veio do Booking traz tambem booking_reschedule_url e booking_calendar_url (16/10: link \"salvar na minha agenda\" para mandar ao cliente; nulo quando o compromisso foi cancelado, concluido ou ja passou). Lista vazia = []. Com filtro de data (date_start/date_end) devolve TUDO do periodo sem paginar (teto de 10.000). Sem filtro de data, pagina por `page`/`per_page` — mas a resposta NAO traz numero de paginas nem total: pagina cheia sugere que ha mais. Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel). Datas de desfecho (23/10/2026): toda tarefa traz `completed_at` (quando foi concluida), `cancelled_at` (quando foi cancelada) e `attendance_marked_at` (quando marcaram Compareceu/Faltou), gravadas pelo servidor na hora da mudanca (nunca aceitas do cliente) e APAGADAS ao reabrir, adiar ou limpar a presenca; tarefa anterior a 23/10 vem com nulo. E `concluida_no_prazo` (true/false/nulo): so no tipo Tarefa, true = concluida ate o horario marcado (scheduled_at).",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
    "Buscar com filtros antes de outra operação",
@@ -8865,7 +8906,8 @@
   ],
   "related_tools": [
    "lionchat_tasks_list_1",
-   "lionchat_tasks_list_2"
+   "lionchat_tasks_list_2",
+   "lionchat_tasks_task_list"
   ]
  },
  {
@@ -9079,7 +9121,7 @@
     "description": "ID da tarefa"
    }
   ],
-  "returns": "tarefa/agenda (objeto completo com associações; compromisso do Booking traz booking_reschedule_url e booking_calendar_url — link \"salvar na minha agenda\", nulo quando não dá mais para salvar) Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
+  "returns": "tarefa/agenda (objeto completo com associações; compromisso do Booking traz booking_reschedule_url e booking_calendar_url — link \"salvar na minha agenda\", nulo quando não dá mais para salvar) Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel). Datas de desfecho (23/10/2026): toda tarefa traz `completed_at` (quando foi concluida), `cancelled_at` (quando foi cancelada) e `attendance_marked_at` (quando marcaram Compareceu/Faltou), gravadas pelo servidor na hora da mudanca (nunca aceitas do cliente) e APAGADAS ao reabrir, adiar ou limpar a presenca; tarefa anterior a 23/10 vem com nulo. E `concluida_no_prazo` (true/false/nulo): so no tipo Tarefa, true = concluida ate o horario marcado (scheduled_at).",
   "common_use_cases": [
    "Ver dados completos antes de editar",
    "Verificar estado atual antes de uma ação",
@@ -9513,7 +9555,7 @@
     "description": "Recorta por AGENDA (unidade). SEM este parametro a listagem ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
    }
   ],
-  "returns": "Objeto com QUATRO listas separadas, sem meta e sem payload: { overdue: [...], today: [...], tomorrow: [...], next_7_days: [...] }. Traz APENAS tarefas em aberto (status pendente ou adiada — concluida/cancelada nao aparece) e nao ocultas, ja filtradas pela permissao de quem chama (administrador ve todas; agente ve so as que criou ou em que e responsavel). Agrupamento pela data agendada: overdue = antes de hoje 00:00 (ordenado da mais recente para a mais antiga), today = hoje, tomorrow = amanha, next_7_days = ate 7 dias a frente. Cada item e a tarefa completa (serializacao do modelo AccountTask, ja com assignees/assignee_ids, completed, dados de recorrencia, conversation_display_id, nome/telefone/email do contato, meeting_url e links de booking). Sem paginacao (teto de 10 mil por grupo). Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel).",
+  "returns": "Objeto com QUATRO listas separadas, sem meta e sem payload: { overdue: [...], today: [...], tomorrow: [...], next_7_days: [...] }. Traz APENAS tarefas em aberto (status pendente ou adiada — concluida/cancelada nao aparece) e nao ocultas, ja filtradas pela permissao de quem chama (administrador ve todas; agente ve so as que criou ou em que e responsavel). Agrupamento pela data agendada: overdue = antes de hoje 00:00 (ordenado da mais recente para a mais antiga), today = hoje, tomorrow = amanha, next_7_days = ate 7 dias a frente. Cada item e a tarefa completa (serializacao do modelo AccountTask, ja com assignees/assignee_ids, completed, dados de recorrencia, conversation_display_id, nome/telefone/email do contato, meeting_url e links de booking). Sem paginacao (teto de 10 mil por grupo). Toda tarefa traz tambem `kanban_item_id` (card a que esta presa, ou nulo), `kanban_item_title` (nome do card, ou nulo), `occupies_agenda` (true|false) e `automation_event_key` (preenchido so nas tarefas criadas por automacao do funil ou bloco do fluxo; identifica o acontecimento que a gerou, nunca e editavel). Datas de desfecho (23/10/2026): toda tarefa traz `completed_at` (quando foi concluida), `cancelled_at` (quando foi cancelada) e `attendance_marked_at` (quando marcaram Compareceu/Faltou), gravadas pelo servidor na hora da mudanca (nunca aceitas do cliente) e APAGADAS ao reabrir, adiar ou limpar a presenca; tarefa anterior a 23/10 vem com nulo. E `concluida_no_prazo` (true/false/nulo): so no tipo Tarefa, true = concluida ate o horario marcado (scheduled_at).",
   "common_use_cases": [
    "Dashboard: contar/exibir tarefas/agenda",
    "Buscar com filtros antes de outra operação",
@@ -9521,7 +9563,93 @@
   ],
   "related_tools": [
    "lionchat_tasks_list",
-   "lionchat_tasks_list_2"
+   "lionchat_tasks_list_2",
+   "lionchat_tasks_task_list"
+  ]
+ },
+ {
+  "id": "lionchat_tasks_task_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/account_tasks/task_list",
+  "title": "Lista de tarefas abertas (aba Tarefas da Agenda)",
+  "description": "Tarefas ABERTAS (pendentes e adiadas, sem 'Compareceu'/'Faltou') em grupos por periodo, no DIA DA CONTA: overdue (antes de hoje, da mais recente para a mais antiga), today, tomorrow, next_7_days e later (depois disso). E a mesma lista da aba 'Tarefas' da Agenda (22/10): a melhor ferramenta para 'o que esta atrasado?' ou 'o que falta fazer?'. Usa a MESMA regra de quem ve o que e os MESMOS filtros do calendario (lionchat_tasks_list). Pagina de 50 por grupo: sem `group` vem a 1a pagina dos cinco; com `group` + `page`, so aquele grupo naquela pagina. Diferente de lionchat_tasks_list_1 (Meu Dia), que nao tem filtros, nao pagina e nao tem o grupo 'later'. Cargo com a Agenda oculta recebe 401. **`selo`:** cada tarefa traz o rotulo que o painel mostra (pending, snoozed, rescheduled). SUBABA 'CONCLUIDAS' (23/10/2026): `group=completed` devolve o que ja teve desfecho — concluida OU marcada 'Compareceu'/'Faltou' (cancelada fica de fora). Nao vem junto dos cinco grupos: so quando pedida. Ordem: a concluida mais recentemente primeiro; as concluidas antes de 23/10 (sem data) vao para o fim. Use-a para 'o que foi feito ontem?' ou 'a fulana concluiu no prazo?'.",
+  "category": "Agenda / Tarefas",
+  "params": [
+   {
+    "name": "group",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Pede SO um grupo: overdue | today | tomorrow | next_7_days | later | completed (23/10/2026: a subaba 'Concluidas', concluidas + Compareceu/Faltou, na ordem da conclusao). Ausente ou desconhecido = os cinco grupos das abertas, pagina 1 (completed NUNCA vem junto)."
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Pagina do grupo pedido em `group` (50 por pagina). So vale junto de `group`; invalida vira 1."
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Busca (22/10): titulo, descricao e nome do responsavel; com 3 letras ou mais, tambem o CLIENTE da tarefa (nome, telefone, e-mail ou identificador, pela ficha da tarefa ou pela conversa dela). Termo que casa mais de 1.000 clientes procura so nos campos da tarefa. Desde 23/10/2026 tambem acha pelo NOME DO CARD da tarefa e, com 3 letras ou mais, por QUEM FEZ (quem criou, o dono antigo da tarefa e o 'Agendado por')."
+   },
+   {
+    "name": "task_type",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Tipo da tarefa"
+   },
+   {
+    "name": "status",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Situacao dentro das abertas: 0 = pendente, 3 = adiada. Concluida (1) e cancelada (2) nunca aparecem aqui (devolvem grupos vazios). Para ver concluidas, use group=completed."
+   },
+   {
+    "name": "priority",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Prioridade (22/10): urgent | high | medium | low | none. Antes de 22/10 este filtro era ignorado pelo servidor."
+   },
+   {
+    "name": "assignee_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Tarefas de UMA pessoa. So muda alguma coisa para quem pode ver a agenda da equipe (administrador ou cargo com 'Gerenciar agenda da equipe'); os demais veem sempre as proprias."
+   },
+   {
+    "name": "user_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "ID de quem criou a tarefa"
+   },
+   {
+    "name": "agenda_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Recorta por AGENDA (unidade). SEM este parametro a lista ja vem recortada pelas agendas que o usuario enxerga. Na agenda PRINCIPAL entram tambem os compromissos com agenda nula."
+   }
+  ],
+  "returns": "Objeto: { overdue: [...], today: [...], tomorrow: [...], next_7_days: [...], later: [...], totals: { overdue: N, ... }, page: N, per_page: 50 }. Com `group`, so aquele grupo + totals dele. `totals` e a contagem REAL do grupo (use-a para 'quantas atrasadas?'; a lista traz no maximo 50). Cada tarefa vem no mesmo formato de lionchat_tasks_list (assignees, contact_name, conversation_contact_name, kanban_item_title, selo, tratamento...). Com `group=completed`: { completed: [...], totals: { completed: N }, page, per_page }. Datas de desfecho (23/10/2026): toda tarefa traz `completed_at` (quando foi concluida), `cancelled_at` (quando foi cancelada) e `attendance_marked_at` (quando marcaram Compareceu/Faltou), gravadas pelo servidor na hora da mudanca (nunca aceitas do cliente) e APAGADAS ao reabrir, adiar ou limpar a presenca; tarefa anterior a 23/10 vem com nulo. E `concluida_no_prazo` (true/false/nulo): so no tipo Tarefa, true = concluida ate o horario marcado (scheduled_at).",
+  "common_use_cases": [
+   "Quantas e quais tarefas estao atrasadas (de toda a equipe ou de uma pessoa)",
+   "Lista do que falta fazer hoje, amanha e na semana",
+   "Achar a tarefa de um cliente pelo nome ou telefone"
+  ],
+  "related_tools": [
+   "lionchat_tasks_list",
+   "lionchat_tasks_list_1",
+   "lionchat_tasks_show",
+   "lionchat_tasks_toggle"
   ]
  },
  {
@@ -11154,7 +11282,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/automation_rules",
   "title": "Criar Regra de Automacao",
-  "description": "Cria uma regra de automacao. event_name validos: conversation_created, conversation_updated, conversation_resolved, message_created, conversation_opened, webhook, kanban_item_created, kanban_item_stage_changed. conditions: [{attribute_key, filter_operator, query_operator, values[]}]. actions: [{action_name, action_params[]}]. Aceita active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
+  "description": "Cria uma regra de automacao. event_name validos: conversation_created, conversation_updated, conversation_resolved, message_created, conversation_opened, webhook, kanban_item_created, kanban_item_stage_changed. conditions: [{attribute_key, filter_operator, query_operator, values[]}]. actions: [{action_name, action_params[]}]. Aceita active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500). [27/10/2026] conditions NAO aceitam 'current_user' em assignee_id (422): automacao nao tem \"quem esta vendo\" — use o id do agente.",
   "category": "Regras de Automacao",
   "params": [
    {
@@ -11183,7 +11311,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "[{attribute_key, filter_operator, query_operator, values[]}] REGRA DO CONECTOR (query_operator) — LEIA ANTES DE GRAVAR: o conector liga a condicao com a SEGUINTE, logo a ULTIMA condicao TEM que ter query_operator: null (condicao UNICA tambem = null). Nas demais: 'AND' ou 'OR'. A API valida o VALOR do conector mas NAO a POSICAO — conector na ultima condicao SALVA COM SUCESSO, aparece certo na tela e a regra NUNCA dispara. Incidente real: 8 regras criadas pelo conector de IA entre 26 e 30/07/2026 em 3 contas, todas com conector na ultima condicao, todas nasceram mortas (732 erros/hora medidos em producao 03/08; a conta 62 ficou com as 6 regras de etiquetagem automatica paradas). attribute_key precisa ser campo padrao OU atributo personalizado que EXISTA na conta (senao a regra inteira falha na validacao: 'Automation conditions <chave> not supported') — conferir antes com lionchat_custom_attributes_list; atributo personalizado exige tambem custom_attribute_type ('conversation_attribute' ou 'contact_attribute'). EMPRESA (2026-10-16): custom_attribute_type 'company_attribute' = campo PERSONALIZADO da empresa do contato (chave definida em lionchat_custom_attributes_list attribute_model=company_attribute; pode ser igual a de contato, o tipo decide). Operadores pelo tipo: todos equal_to/not_equal_to/is_present/is_not_present; texto + contains/does_not_contain; numero/data/hora + is_greater_than/is_less_than. attribute_changed recusado. Negativo inclui contato sem empresa. Modulo Empresas desligado = a condicao nunca casa. filter_operator: equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present, is_greater_than, is_less_than, starts_with, days_before, days_ago, last_days, today, yesterday — cada campo aceita so um subconjunto. Na duvida, leia uma regra que ja funciona com lionchat_automation_rules_show e copie o formato. Detalhe no resource 'conversation-flows'."
+    "description": "[{attribute_key, filter_operator, query_operator, values[]}] REGRA DO CONECTOR (query_operator) — LEIA ANTES DE GRAVAR: o conector liga a condicao com a SEGUINTE, logo a ULTIMA condicao TEM que ter query_operator: null (condicao UNICA tambem = null). Nas demais: 'AND' ou 'OR'. A API valida o VALOR do conector mas NAO a POSICAO — conector na ultima condicao SALVA COM SUCESSO, aparece certo na tela e a regra NUNCA dispara. Incidente real: 8 regras criadas pelo conector de IA entre 26 e 30/07/2026 em 3 contas, todas com conector na ultima condicao, todas nasceram mortas (732 erros/hora medidos em producao 03/08; a conta 62 ficou com as 6 regras de etiquetagem automatica paradas). attribute_key precisa ser campo padrao OU atributo personalizado que EXISTA na conta (senao a regra inteira falha na validacao: 'Automation conditions <chave> not supported') — conferir antes com lionchat_custom_attributes_list; atributo personalizado exige tambem custom_attribute_type ('conversation_attribute' ou 'contact_attribute'). EMPRESA (2026-10-16): custom_attribute_type 'company_attribute' = campo PERSONALIZADO da empresa do contato (chave definida em lionchat_custom_attributes_list attribute_model=company_attribute; pode ser igual a de contato, o tipo decide). Operadores pelo tipo: todos equal_to/not_equal_to/is_present/is_not_present; texto + contains/does_not_contain; numero/data/hora + is_greater_than/is_less_than. attribute_changed recusado. Negativo inclui contato sem empresa. Modulo Empresas desligado = a condicao nunca casa. filter_operator: equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present, is_greater_than, is_less_than, starts_with, days_before, days_ago, last_days, today, yesterday — cada campo aceita so um subconjunto. Na duvida, leia uma regra que ja funciona com lionchat_automation_rules_show e copie o formato. Detalhe no resource 'conversation-flows'. CONDICAO 'VEIO DE ANUNCIO PAGO' (25/10/2026): attribute_key 'origin_paid', filter_operator equal_to/not_equal_to, values ['paid'] (ou not_paid/unknown/unclassified). Junta clique no anuncio e formulario do anuncio — para 'so lead de anuncio' use esta, nao origin_kind = paid_ad (que esquece o formulario). Vale nos eventos de conversa e mensagem."
    },
    {
     "name": "actions",
@@ -11252,7 +11380,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/automation_rules/{id}",
   "title": "Atualizar Regra",
-  "description": "Atualiza uma regra de automacao (PUT, substituicao completa). Campos: name, event_name, conditions, actions, active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500).",
+  "description": "Atualiza uma regra de automacao (PUT, substituicao completa). Campos: name, event_name, conditions, actions, active, inbox_id. As actions DEVEM ser um array de objetos {action_name, action_params} — item malformado (ex.: texto solto) retorna 422 (novo 22/07; antes estourava 500). [27/10/2026] conditions NAO aceitam 'current_user' em assignee_id (422 quando as conditions mudam): automacao nao tem \"quem esta vendo\" — use o id do agente.",
   "category": "Regras de Automacao",
   "params": [
    {
@@ -11281,7 +11409,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Condicoes REGRA DO CONECTOR (query_operator) — LEIA ANTES DE GRAVAR: o conector liga a condicao com a SEGUINTE, logo a ULTIMA condicao TEM que ter query_operator: null (condicao UNICA tambem = null). Nas demais: 'AND' ou 'OR'. A API valida o VALOR do conector mas NAO a POSICAO — conector na ultima condicao SALVA COM SUCESSO, aparece certo na tela e a regra NUNCA dispara. Incidente real: 8 regras criadas pelo conector de IA entre 26 e 30/07/2026 em 3 contas, todas com conector na ultima condicao, todas nasceram mortas (732 erros/hora medidos em producao 03/08; a conta 62 ficou com as 6 regras de etiquetagem automatica paradas). attribute_key precisa ser campo padrao OU atributo personalizado que EXISTA na conta (senao a regra inteira falha na validacao: 'Automation conditions <chave> not supported') — conferir antes com lionchat_custom_attributes_list; atributo personalizado exige tambem custom_attribute_type ('conversation_attribute' ou 'contact_attribute'). EMPRESA (2026-10-16): custom_attribute_type 'company_attribute' = campo PERSONALIZADO da empresa do contato (chave definida em lionchat_custom_attributes_list attribute_model=company_attribute; pode ser igual a de contato, o tipo decide). Operadores pelo tipo: todos equal_to/not_equal_to/is_present/is_not_present; texto + contains/does_not_contain; numero/data/hora + is_greater_than/is_less_than. attribute_changed recusado. Negativo inclui contato sem empresa. Modulo Empresas desligado = a condicao nunca casa. filter_operator: equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present, is_greater_than, is_less_than, starts_with, days_before, days_ago, last_days, today, yesterday — cada campo aceita so um subconjunto. Na duvida, leia uma regra que ja funciona com lionchat_automation_rules_show e copie o formato. Detalhe no resource 'conversation-flows'."
+    "description": "Condicoes REGRA DO CONECTOR (query_operator) — LEIA ANTES DE GRAVAR: o conector liga a condicao com a SEGUINTE, logo a ULTIMA condicao TEM que ter query_operator: null (condicao UNICA tambem = null). Nas demais: 'AND' ou 'OR'. A API valida o VALOR do conector mas NAO a POSICAO — conector na ultima condicao SALVA COM SUCESSO, aparece certo na tela e a regra NUNCA dispara. Incidente real: 8 regras criadas pelo conector de IA entre 26 e 30/07/2026 em 3 contas, todas com conector na ultima condicao, todas nasceram mortas (732 erros/hora medidos em producao 03/08; a conta 62 ficou com as 6 regras de etiquetagem automatica paradas). attribute_key precisa ser campo padrao OU atributo personalizado que EXISTA na conta (senao a regra inteira falha na validacao: 'Automation conditions <chave> not supported') — conferir antes com lionchat_custom_attributes_list; atributo personalizado exige tambem custom_attribute_type ('conversation_attribute' ou 'contact_attribute'). EMPRESA (2026-10-16): custom_attribute_type 'company_attribute' = campo PERSONALIZADO da empresa do contato (chave definida em lionchat_custom_attributes_list attribute_model=company_attribute; pode ser igual a de contato, o tipo decide). Operadores pelo tipo: todos equal_to/not_equal_to/is_present/is_not_present; texto + contains/does_not_contain; numero/data/hora + is_greater_than/is_less_than. attribute_changed recusado. Negativo inclui contato sem empresa. Modulo Empresas desligado = a condicao nunca casa. filter_operator: equal_to, not_equal_to, contains, does_not_contain, is_present, is_not_present, is_greater_than, is_less_than, starts_with, days_before, days_ago, last_days, today, yesterday — cada campo aceita so um subconjunto. Na duvida, leia uma regra que ja funciona com lionchat_automation_rules_show e copie o formato. Detalhe no resource 'conversation-flows'. CONDICAO 'VEIO DE ANUNCIO PAGO' (25/10/2026): attribute_key 'origin_paid', filter_operator equal_to/not_equal_to, values ['paid'] (ou not_paid/unknown/unclassified). Junta clique no anuncio e formulario do anuncio — para 'so lead de anuncio' use esta, nao origin_kind = paid_ad (que esquece o formulario). Vale nos eventos de conversa e mensagem."
    },
    {
     "name": "actions",
@@ -11763,7 +11891,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/custom_filters",
   "title": "Listar Filtros",
-  "description": "Lista os filtros salvos do usuario atual (filtro por filter_type, default conversation).",
+  "description": "Lista os filtros salvos por filter_type (padrao conversation). Desde 22/10/2026: filter_type contact (segmentos) lista os segmentos da CONTA inteira (precisa do menu Contatos no cargo), ordenados por nome; conversation (pastas) traz as do usuario atual MAIS as compartilhadas da conta (campo shared, desde 27/10/2026); report continua so os do usuario atual. Em pasta compartilhada criada por OUTRA pessoa, user_id e user_name vem nulos. Cada item traz user_id/user_name (\"criado por\", pode vir nulo) e can_manage (se quem pergunta pode editar/apagar).",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -11771,7 +11899,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "conversation ou contact"
+    "description": "conversation (pastas: as suas + as compartilhadas da conta), contact (segmentos, da CONTA) ou report"
    }
   ],
   "returns": "array de filtros (sem meta/payload)",
@@ -11791,15 +11919,36 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/custom_filters",
   "title": "Criar Filtro",
-  "description": "Cria um filtro personalizado. Cria novo filtro personalizado. Obrigatórios: name, filter_type, query. Valida unicidade quando aplicável. Retorna o filtro personalizado criado com ID atribuído.",
+  "description": "Cria um filtro personalizado. Cria novo filtro personalizado. Obrigatórios: name, filter_type, query. Valida unicidade quando aplicável. Retorna o filtro personalizado criado com ID atribuído. Desde 22/10/2026 o segmento (filter_type contact) e da CONTA: criar exige administrador ou cargo com contact_manage, campaign_manage ou automation_manage (sem isso, 401). filter_type aceita o nome ou o numero. Regra vazia ou incompleta = 422. Teto de 1.000 segmentos por conta. PASTA COMPARTILHADA (27/10/2026): pasta de conversa (filter_type conversation) com shared true aparece para TODA a conta; so administrador cria, edita, compartilha ou apaga (sem isso, 401). Cada pessoa ve dentro dela so as conversas que ja pode ver. shared nulo = 422; compartilhada sem nenhuma condicao = 422; segmento e relatorio nao podem ser compartilhados (422). Para mostrar a cada pessoa as conversas DELA use assignee_id com o valor 'current_user' (\"Quem esta vendo\").",
   "category": "Filtros Personalizados",
   "params": [
    {
-    "name": "custom_filter",
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Nome da pasta/segmento"
+   },
+   {
+    "name": "filter_type",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "'conversation' (pasta de conversas), 'contact' (segmento de contatos) ou 'report' — aceita o nome ou o numero"
+   },
+   {
+    "name": "query",
     "type": "object",
     "location": "body",
     "required": true,
-    "description": "Wrapper {name, filter_type, query}. filter_type: 'conversation' ou 'contact'. query = {\"payload\": [{\"attribute_key\": \"status\", \"filter_operator\": \"equal_to\", \"values\": [\"open\"], \"query_operator\": \"and\"}, {\"attribute_key\": \"assignee_id\", \"filter_operator\": \"equal_to\", \"values\": [5], \"query_operator\": null}], \"sort_by\": \"...\"} — payload e LISTA de condicoes (mesmo formato de lionchat_conversations_filter / lionchat_contacts_filter); values e SEMPRE lista; query_operator liga a condicao com a SEGUINTE e a ULTIMA vai null. sort_by e opcional (so pasta de conversa)."
+    "description": "query = {\"payload\": [{\"attribute_key\": \"status\", \"filter_operator\": \"equal_to\", \"values\": [\"open\"], \"query_operator\": \"and\"}, {\"attribute_key\": \"assignee_id\", \"filter_operator\": \"equal_to\", \"values\": [5], \"query_operator\": null}], \"sort_by\": \"...\"} — payload e LISTA de condicoes (mesmo formato de lionchat_conversations_filter / lionchat_contacts_filter); values e SEMPRE lista; query_operator liga a condicao com a SEGUINTE e a ULTIMA vai null. sort_by e opcional (so pasta de conversa)."
+   },
+   {
+    "name": "shared",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "So pasta de conversa e so administrador: true = a pasta aparece para toda a conta. Omitido = pasta pessoal."
    }
   ],
   "returns": "filtro personalizado criado (com novo ID)",
@@ -11820,7 +11969,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/custom_filters/{id}",
   "title": "Detalhe do Filtro",
-  "description": "Retorna detalhes. Retorna detalhes completos de UM filtro personalizado específico pelo ID. Inclui campos relacionais quando aplicável.",
+  "description": "Retorna detalhes. Retorna detalhes completos de UM filtro personalizado específico pelo ID. Inclui campos relacionais quando aplicável. Pasta compartilhada (shared true) pode ser lida por qualquer membro da conta.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -11848,7 +11997,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/custom_filters/{id}",
   "title": "Atualizar Filtro",
-  "description": "Atualiza filtro. Atualiza campos do filtro personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, query.",
+  "description": "Atualiza filtro. Atualiza campos do filtro personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, query, shared. filter_type e IGNORADO no update (nao da para trocar o tipo). Segmento (contact) so pode ser editado por administrador ou cargo com contact_manage, campaign_manage ou automation_manage — sem isso, 401 (veja can_manage no list/show). PASTA COMPARTILHADA (27/10/2026): so administrador edita (401). So mande shared para MUDAR o compartilhamento: shared false numa compartilhada a transforma em pasta pessoal DE QUEM MANDOU (some para os outros). Em compartilhada, query.sort_by muda a ordem padrao de TODOS. shared nulo = 422; compartilhada sem condicao = 422. Dois administradores editando juntos: vale a ultima gravacao.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -11859,11 +12008,25 @@
     "description": "ID do filtro"
    },
    {
-    "name": "custom_filter",
+    "name": "name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Novo nome"
+   },
+   {
+    "name": "query",
     "type": "object",
     "location": "body",
-    "required": true,
-    "description": "Wrapper {name, filter_type, query}. filter_type: 'conversation' ou 'contact'. query = {\"payload\": [{\"attribute_key\": \"status\", \"filter_operator\": \"equal_to\", \"values\": [\"open\"], \"query_operator\": \"and\"}, {\"attribute_key\": \"assignee_id\", \"filter_operator\": \"equal_to\", \"values\": [5], \"query_operator\": null}], \"sort_by\": \"...\"} — payload e LISTA de condicoes (mesmo formato de lionchat_conversations_filter / lionchat_contacts_filter); values e SEMPRE lista; query_operator liga a condicao com a SEGUINTE e a ULTIMA vai null. sort_by e opcional (so pasta de conversa). No update, query SUBSTITUI inteira: mande as condicoes E o sort_by (leia antes com lionchat_custom_filters_show)."
+    "required": false,
+    "description": "query = {\"payload\": [{\"attribute_key\": \"status\", \"filter_operator\": \"equal_to\", \"values\": [\"open\"], \"query_operator\": \"and\"}, {\"attribute_key\": \"assignee_id\", \"filter_operator\": \"equal_to\", \"values\": [5], \"query_operator\": null}], \"sort_by\": \"...\"} — payload e LISTA de condicoes (mesmo formato de lionchat_conversations_filter / lionchat_contacts_filter); values e SEMPRE lista; query_operator liga a condicao com a SEGUINTE e a ULTIMA vai null. sort_by e opcional (so pasta de conversa). No update, query SUBSTITUI inteira: mande as condicoes E o sort_by (leia antes com lionchat_custom_filters_show)."
+   },
+   {
+    "name": "shared",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "So administrador e so pasta de conversa: true compartilha com a conta; false volta a ser pasta pessoal de quem mandou."
    }
   ],
   "returns": "filtro personalizado atualizado",
@@ -11884,7 +12047,7 @@
   "method": "DELETE",
   "path": "/api/v1/accounts/{account_id}/custom_filters/{id}",
   "title": "Deletar Filtro",
-  "description": "Remove filtro. Remove filtro personalizado permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
+  "description": "Remove filtro. Remove filtro personalizado permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes. Segmento (contact) so pode ser apagado por administrador ou cargo com contact_manage, campaign_manage ou automation_manage (401). Segmento usado por campanha programada (no publico ou no 'Nao enviar para') NAO e apagado: 422 com message citando a campanha. Pasta compartilhada: so administrador apaga, e ela some para TODA a conta.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -12394,7 +12557,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -12876,7 +13039,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
    },
    {
     "name": "contact_filters",
@@ -12905,8 +13068,8 @@
   "id": "lionchat_upload_create",
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/upload",
-  "title": "Upload de Arquivo",
-  "description": "Upload de arquivo ou busca por URL. Retorna file_url e blob_id. Cria novo upload. Valida unicidade quando aplicável. Retorna o upload criado com ID atribuído.",
+  "title": "Subir Arquivo por Link",
+  "description": "Sobe um arquivo POR LINK (external_url) e devolve file_url e blob_id. Pelo conector o arquivo SEMPRE vai por link — não há envio direto do computador. Aceita foto, vídeo, áudio e documentos (PDF, Word, Excel, CSV, ZIP...); até 23/10/2026 o link só aceitava foto e vídeo. Link que abre uma PÁGINA é recusado ('O link abre uma página, não o arquivo') — ex.: Google Drive .../file/d/<ID>/view; use o download direto https://drive.google.com/uc?export=download&id=<ID> (arquivo com acesso 'qualquer pessoa com o link'). Áudio e documento acima do teto do tipo (lionchat_upload_limits_show) são recusados. Use o blob_id no array attachments de lionchat_conversations_messages_create — funciona também na conversa de um GRUPO do WhatsApp (caixa QR Code). Na dúvida, confira o link antes com lionchat_upload_validate.",
   "category": "Upload",
   "params": [
    {
@@ -12921,16 +13084,20 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "URL externa do arquivo"
+    "description": "Link PÚBLICO de download do arquivo (http/https). Link de página de visualização é recusado"
    }
   ],
-  "returns": "upload criado (com novo ID)",
+  "returns": "{file_url, blob_id}",
   "common_use_cases": [
-   "Cadastro inicial de upload",
-   "Automação a partir de evento externo",
-   "Importação manual via API"
+   "Mandar PDF, áudio ou documento numa conversa ou grupo do WhatsApp (blob_id em attachments)",
+   "Anexar foto ou vídeo por link numa mensagem",
+   "Enviar todo dia um relatório em PDF num grupo"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_conversations_messages_create",
+   "lionchat_upload_validate",
+   "lionchat_upload_limits_show"
+  ]
  },
  {
   "id": "lionchat_inboxes_public_contacts_create",
@@ -14751,7 +14918,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Array de permissoes (array de strings). Valores aceitos (24): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, conversation_assigned_manage (Ver conversas dos colegas: so as que JA TEM responsavel, nas caixas de que a pessoa e membro; nunca a fila sem dono — 02/10/2026), contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09), agenda_manage (Gerenciar a Agenda). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu). O editor da tela marca junto as que uma inclui: conversation_manage inclui as 4 outras de conversa; conversation_team_manage inclui conversation_participating_manage; kanban_manage inclui kanban_view. Mande a lista ja completa."
+    "description": "Array de permissoes (array de strings). Valores aceitos (25): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, conversation_assigned_manage (Ver conversas dos colegas: so as que JA TEM responsavel, nas caixas de que a pessoa e membro; nunca a fila sem dono — 02/10/2026), contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, kanban_ai_analyze (Analisar funil com IA: o botao \"Analisar com IA\" do Kanban; tambem precisa do recurso de plano kanban_ai_analysis, 28/10/2026), campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09), agenda_manage (Gerenciar a Agenda). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu). O editor da tela marca junto as que uma inclui: conversation_manage inclui as 4 outras de conversa; conversation_team_manage inclui conversation_participating_manage; kanban_manage inclui kanban_view. Mande a lista ja completa."
    },
    {
     "name": "hidden_menus",
@@ -14836,7 +15003,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Permissoes (array de strings). Valores aceitos (24): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, conversation_assigned_manage (Ver conversas dos colegas: so as que JA TEM responsavel, nas caixas de que a pessoa e membro; nunca a fila sem dono — 02/10/2026), contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09), agenda_manage (Gerenciar a Agenda). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu). O editor da tela marca junto as que uma inclui: conversation_manage inclui as 4 outras de conversa; conversation_team_manage inclui conversation_participating_manage; kanban_manage inclui kanban_view. Mande a lista ja completa."
+    "description": "Permissoes (array de strings). Valores aceitos (25): conversation_manage, conversation_delete, conversation_unassigned_manage, conversation_participating_manage, conversation_team_manage, conversation_assigned_manage (Ver conversas dos colegas: so as que JA TEM responsavel, nas caixas de que a pessoa e membro; nunca a fila sem dono — 02/10/2026), contact_manage, contact_export_import, report_manage, knowledge_base_manage, kanban_manage, kanban_view, kanban_delete, kanban_export_import, offer_manage, funnel_manage, kanban_ai_analyze (Analisar funil com IA: o botao \"Analisar com IA\" do Kanban; tambem precisa do recurso de plano kanban_ai_analysis, 28/10/2026), campaign_manage, automation_manage, marketing_integrations_manage, captain_manage, flowbuilder_manage, lead_form_manage (Formularios publicos, 05/09), signature_manage (Assinatura eletronica, 05/09), agenda_manage (Gerenciar a Agenda). Fora da lista = recusado. Administrador tem tudo sem cargo; agente sem cargo nao tem lead_form_manage nem signature_manage (nao ve Formularios nem Assinaturas no menu). O editor da tela marca junto as que uma inclui: conversation_manage inclui as 4 outras de conversa; conversation_team_manage inclui conversation_participating_manage; kanban_manage inclui kanban_view. Mande a lista ja completa."
    },
    {
     "name": "hidden_menus",
@@ -15715,7 +15882,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/dashboard_apps",
   "title": "Criar Dashboard App",
-  "description": "Cria um dashboard app. Body exige wrapper dashboard_app.",
+  "description": "Cria um dashboard app. Body exige wrapper dashboard_app. So administrador (desde 27/10; os outros recebem 401).",
   "category": "Dashboard Apps",
   "params": [
    {
@@ -15793,7 +15960,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/dashboard_apps/{id}",
   "title": "Atualizar Dashboard App",
-  "description": "Atualiza um app do dashboard. Atualiza campos do dashboard app existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, content.",
+  "description": "Atualiza um app do dashboard. Atualiza campos do dashboard app existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: title, content. So administrador (desde 27/10; os outros recebem 401).",
   "category": "Dashboard Apps",
   "params": [
    {
@@ -15850,7 +16017,7 @@
   "method": "DELETE",
   "path": "/api/v1/accounts/{account_id}/dashboard_apps/{id}",
   "title": "Excluir Dashboard App",
-  "description": "Remove um app do dashboard. Remove dashboard app permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes.",
+  "description": "Remove um app do dashboard. Remove dashboard app permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes. So administrador (desde 27/10; os outros recebem 401).",
   "category": "Dashboard Apps",
   "params": [
    {
@@ -18774,7 +18941,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Token de validacao Hotmart (hottok) (dentro de hotmart_webhook)"
+    "description": "Token de validacao Hotmart (hottok) (dentro de hotmart_webhook) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "inbox_id",
@@ -19081,7 +19248,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Token de validacao Kiwify (dentro de kiwify_webhook)"
+    "description": "Token de validacao Kiwify (dentro de kiwify_webhook) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "inbox_id",
@@ -19388,7 +19555,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Token de validacao Ticto (dentro de ticto_webhook)"
+    "description": "Token de validacao Ticto (dentro de ticto_webhook) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "inbox_id",
@@ -19695,7 +19862,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Segredo de validacao Eduzz (dentro de eduzz_webhook)"
+    "description": "Segredo de validacao Eduzz (dentro de eduzz_webhook) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "inbox_id",
@@ -20002,7 +20169,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Chave de validacao Monetizze (dentro de monetizze_webhook)"
+    "description": "Chave de validacao Monetizze (dentro de monetizze_webhook) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "inbox_id",
@@ -23097,7 +23264,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "LISTA de objetos — cada secao e um OBJETO com type: [{\"type\": \"Label\", \"id\": 12}, {\"type\": \"ContactAttribute\", \"key\": \"plano\", \"operator\": \"eq\", \"value\": \"Premium\"}]; uma secao unica mandada como objeto vira lista de um; texto ou numero no lugar da lista e RECUSADO (422). Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: [], assignee_mode?, team_mode?} (responsavel atual OU time da conversa; assignee_mode 'none' = conversa SEM responsavel ('Sem atendente'), 'any' = com qualquer responsavel; team_mode 'none'|'any' igual para time; ausente/'specific' = usa os ids. Vale qualquer conversa do contato. Atendente e time SEMPRE somam, mesmo em blocos AgentTeam separados). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga. OBRIGATORIO em campanha one-off. Use exatamente as MESMAS secoes que voce passou em lionchat_campaigns_estimate_audience — estimar com um tipo e criar com outro entrega um publico diferente do numero que voce mostrou."
+    "description": "LISTA de objetos — cada secao e um OBJETO com type: [{\"type\": \"Label\", \"id\": 12}, {\"type\": \"ContactAttribute\", \"key\": \"plano\", \"operator\": \"eq\", \"value\": \"Premium\"}]; uma secao unica mandada como objeto vira lista de um; texto ou numero no lugar da lista e RECUSADO (422). Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 8 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: [], assignee_mode?, team_mode?} (responsavel atual OU time da conversa; assignee_mode 'none' = conversa SEM responsavel ('Sem atendente'), 'any' = com qualquer responsavel; team_mode 'none'|'any' igual para time; ausente/'specific' = usa os ids. Vale qualquer conversa do contato. Atendente e time SEMPRE somam, mesmo em blocos AgentTeam separados); 'Segment' {id} (22/10/2026: segmento de contatos da CONTA — id de lionchat_custom_filters_list com filter_type contact; vale WhatsApp oficial, QR Code e Campanha de Fluxo; SMS recusa com 422; a regra do segmento e lida na HORA do disparo e, se o segmento sumiu ou a regra quebrou, a campanha NAO envia nada e o motivo fica em trigger_rules.audience_error). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga. OBRIGATORIO em campanha one-off. Use exatamente as MESMAS secoes que voce passou em lionchat_campaigns_estimate_audience — estimar com um tipo e criar com outro entrega um publico diferente do numero que voce mostrou."
    },
    {
     "name": "audience_mode",
@@ -23146,7 +23313,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Regras da campanha (hash aberto). Carrega: 'audience_mode' ('sum'|'all', combinacao das secoes de publico) e 'exclusion' (array no MESMO formato do audience — publico a negativar/excluir do disparo). Ex.: {\"audience_mode\":\"sum\",\"exclusion\":[{\"type\":\"ContactLabel\",\"id\":12}]}. audience_mode top-level so vale no estimate_audience; ao criar/editar ele PRECISA ir aqui dentro. A `exclusion` usa o MESMO formato e os MESMOS 7 tipos do audience, inclusive o `operator` nas secoes de atributo. A exclusion e LISTA de objetos (objeto unico vira lista de um; texto e recusado com 422)."
+    "description": "Regras da campanha (hash aberto). Carrega: 'audience_mode' ('sum'|'all', combinacao das secoes de publico) e 'exclusion' (array no MESMO formato do audience — publico a negativar/excluir do disparo). Ex.: {\"audience_mode\":\"sum\",\"exclusion\":[{\"type\":\"ContactLabel\",\"id\":12}]}. audience_mode top-level so vale no estimate_audience; ao criar/editar ele PRECISA ir aqui dentro. A `exclusion` usa o MESMO formato e os MESMOS 8 tipos do audience (inclusive 'Segment' {id}), inclusive o `operator` nas secoes de atributo. A exclusion e LISTA de objetos (objeto unico vira lista de um; texto e recusado com 422)."
    },
    {
     "name": "template_params",
@@ -23232,7 +23399,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "LISTA de objetos — cada secao e um OBJETO com type: [{\"type\": \"Label\", \"id\": 12}, {\"type\": \"ContactAttribute\", \"key\": \"plano\", \"operator\": \"eq\", \"value\": \"Premium\"}]; uma secao unica mandada como objeto vira lista de um; texto ou numero no lugar da lista e RECUSADO (422). Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: [], assignee_mode?, team_mode?} (responsavel atual OU time da conversa; assignee_mode 'none' = conversa SEM responsavel ('Sem atendente'), 'any' = com qualquer responsavel; team_mode 'none'|'any' igual para time; ausente/'specific' = usa os ids. Vale qualquer conversa do contato. Atendente e time SEMPRE somam, mesmo em blocos AgentTeam separados). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga. OBRIGATORIO em campanha one-off. Use exatamente as MESMAS secoes que voce passou em lionchat_campaigns_estimate_audience — estimar com um tipo e criar com outro entrega um publico diferente do numero que voce mostrou. No update a lista SUBSTITUI o publico anterior: mande todas as secoes."
+    "description": "LISTA de objetos — cada secao e um OBJETO com type: [{\"type\": \"Label\", \"id\": 12}, {\"type\": \"ContactAttribute\", \"key\": \"plano\", \"operator\": \"eq\", \"value\": \"Premium\"}]; uma secao unica mandada como objeto vira lista de um; texto ou numero no lugar da lista e RECUSADO (422). Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 8 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: [], assignee_mode?, team_mode?} (responsavel atual OU time da conversa; assignee_mode 'none' = conversa SEM responsavel ('Sem atendente'), 'any' = com qualquer responsavel; team_mode 'none'|'any' igual para time; ausente/'specific' = usa os ids. Vale qualquer conversa do contato. Atendente e time SEMPRE somam, mesmo em blocos AgentTeam separados); 'Segment' {id} (22/10/2026: segmento de contatos da CONTA — id de lionchat_custom_filters_list com filter_type contact; vale WhatsApp oficial, QR Code e Campanha de Fluxo; SMS recusa com 422; a regra do segmento e lida na HORA do disparo e, se o segmento sumiu ou a regra quebrou, a campanha NAO envia nada e o motivo fica em trigger_rules.audience_error). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga. OBRIGATORIO em campanha one-off. Use exatamente as MESMAS secoes que voce passou em lionchat_campaigns_estimate_audience — estimar com um tipo e criar com outro entrega um publico diferente do numero que voce mostrou. No update a lista SUBSTITUI o publico anterior: mande todas as secoes."
    },
    {
     "name": "audience_mode",
@@ -23322,7 +23489,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/campaigns/estimate_audience",
   "title": "Estimar Audiência da Campanha",
-  "description": "Conta quantos contatos COM TELEFONE atendem aos critérios ANTES de criar a campanha. Usa o MESMO motor do disparo (estimativa = lista real). SEMPRE chame antes de campaigns_create e mostre o número ao usuário. [2026-07-25] audience e exclusion aceitam tanto lista quanto texto JSON de uma lista; qualquer outro formato responde 422 com a mensagem do erro (antes dava erro 500).",
+  "description": "Conta quantos contatos COM TELEFONE atendem aos critérios ANTES de criar a campanha. Usa o MESMO motor do disparo (estimativa = lista real). SEMPRE chame antes de campaigns_create e mostre o número ao usuário. [2026-07-25] audience e exclusion aceitam tanto lista quanto texto JSON de uma lista; qualquer outro formato responde 422 com a mensagem do erro (antes dava erro 500). [2026-10-22] Segmento com problema (apagado, de outra conta, regra vazia ou quebrada) no audience OU na exclusion: responde 200 com estimated_count null e segment_unavailable {segment_id, reason} — avise o usuario e NAO crie a campanha assim (ela nao enviaria nada).",
   "category": "Campanhas",
   "params": [
    {
@@ -23330,7 +23497,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "LISTA de objetos — cada secao e um OBJETO com type: [{\"type\": \"Label\", \"id\": 12}, {\"type\": \"ContactAttribute\", \"key\": \"plano\", \"operator\": \"eq\", \"value\": \"Premium\"}]; nunca numero solto nem objeto unico (objeto no lugar da lista nao e lido como publico). Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 7 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: [], assignee_mode?, team_mode?} (responsavel atual OU time da conversa; assignee_mode 'none' = conversa SEM responsavel ('Sem atendente'), 'any' = com qualquer responsavel; team_mode 'none'|'any' igual para time; ausente/'specific' = usa os ids. Vale qualquer conversa do contato. Atendente e time SEMPRE somam, mesmo em blocos AgentTeam separados). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga."
+    "description": "LISTA de objetos — cada secao e um OBJETO com type: [{\"type\": \"Label\", \"id\": 12}, {\"type\": \"ContactAttribute\", \"key\": \"plano\", \"operator\": \"eq\", \"value\": \"Premium\"}]; nunca numero solto nem objeto unico (objeto no lugar da lista nao e lido como publico). Lista de secoes do publico-alvo (uniao/intersecao conforme audience_mode). Sao 8 tipos: 'Label' {id} (etiqueta de CONVERSA); 'Funnel' {id, stages: ['slug_da_etapa'], include_won: bool, include_lost: bool} (SO 1 funil por campanha); 'ConversationAttribute' {key, value, operator}; 'ContactLabel' {id} (etiqueta de CONTATO); 'ContactAttribute' {key, value, operator}; 'CardAttribute' {key, value, operator} (atributo do card Kanban); 'AgentTeam' {assignee_ids: [], team_ids: [], assignee_mode?, team_mode?} (responsavel atual OU time da conversa; assignee_mode 'none' = conversa SEM responsavel ('Sem atendente'), 'any' = com qualquer responsavel; team_mode 'none'|'any' igual para time; ausente/'specific' = usa os ids. Vale qualquer conversa do contato. Atendente e time SEMPRE somam, mesmo em blocos AgentTeam separados); 'Segment' {id} (22/10/2026: segmento de contatos da CONTA — id de lionchat_custom_filters_list com filter_type contact; vale WhatsApp oficial, QR Code e Campanha de Fluxo; SMS recusa com 422; a regra do segmento e lida na HORA do disparo e, se o segmento sumiu ou a regra quebrou, a campanha NAO envia nada e o motivo fica em trigger_rules.audience_error). OPERADOR (28/07/2026): as tres secoes de atributo (ConversationAttribute, ContactAttribute, CardAttribute) aceitam `operator` com 7 valores: eq (padrao), neq, contains, not_contains, starts_with, present, blank. Em `present`/`blank` NAO se manda `value`; nos outros cinco, secao SEM `value` e DESCARTADA em silencio e o publico muda sem aviso nenhum. Vocabulario PROPRIO da campanha: `equal_to`/`is_present` (dos filtros de conversa) NAO existem aqui e caem em igualdade exata, tambem sem erro. `neq` e `not_contains` INCLUEM de proposito quem nao tem o atributo preenchido. Nos operadores de TEXTO (`contains`, `not_contains`, `starts_with`) maiuscula/minuscula NAO importam; ja `eq`/`neq` comparam EXATO — \"Ativo\" NAO casa com \"ativo\". Nos tres de texto, `%`/`_` digitados valem como texto normal, nunca como curinga."
    },
    {
     "name": "audience_mode",
@@ -23351,7 +23518,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "LISTA de objetos (mesmo formato do audience, ex.: [{\"type\": \"ContactLabel\", \"id\": 12}]). Publico a EXCLUIR/negativar antes de estimar (mesmo formato do 'audience': lista de secoes por tipo). O contador desconta quem cair na exclusao. Tipos aceitos iguais aos do audience (Label, Funnel, ConversationAttribute, ContactLabel, ContactAttribute, CardAttribute, AgentTeam). As secoes de atributo aceitam o mesmo `operator` do audience (eq, neq, contains, not_contains, starts_with, present, blank). AgentTeam aceita os mesmos assignee_mode/team_mode ('none'|'any') do audience."
+    "description": "LISTA de objetos (mesmo formato do audience, ex.: [{\"type\": \"ContactLabel\", \"id\": 12}]). Publico a EXCLUIR/negativar antes de estimar (mesmo formato do 'audience': lista de secoes por tipo). O contador desconta quem cair na exclusao. Tipos aceitos iguais aos do audience (Label, Funnel, ConversationAttribute, ContactLabel, ContactAttribute, CardAttribute, AgentTeam, Segment). As secoes de atributo aceitam o mesmo `operator` do audience (eq, neq, contains, not_contains, starts_with, present, blank). AgentTeam aceita os mesmos assignee_mode/team_mode ('none'|'any') do audience."
    }
   ],
   "returns": "{ estimated_count: <int>, limit_info: { tier, cap, used_24h, remaining, will_send_now, batches_preview: [{date, count}] } } — NAO existe o campo `count`. `limit_info` so vem preenchido quando se manda `inbox_id` de caixa WhatsApp OFICIAL (Cloud): `cap` = teto de contatos NOVOS por dia que a Meta libera, `used_24h` = quanto ja foi usado nas ultimas 24h, `remaining` = o que sobra hoje, `will_send_now` = quanto sai agora e `batches_preview` = o cronograma dia a dia do restante. Em caixa QR Code/SMS, ou sem inbox_id, `tier`/`cap`/`used_24h`/`remaining` vem NULOS, `batches_preview` vem VAZIO e `will_send_now` e a lista inteira — nulo NAO significa \"sem limite\". Sempre mostre o teto do dia junto com o numero, senao voce promete 5.000 disparos num numero que so fala com 2.000.",
@@ -23573,7 +23740,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Seções Label/Funnel (mesmo formato das campanhas) — resolve pros telefones dos contatos"
+    "description": "Seções Label/Funnel (mesmo formato das campanhas) — resolve pros telefones dos contatos Segmento de contatos ({type: 'Segment', id}) e RECUSADO (422), no audience e no exclusion."
    },
    {
     "name": "audio_id",
@@ -27416,7 +27583,7 @@
   "method": "GET",
   "path": "/api/v2/accounts/{account_id}/lead_origin_reports",
   "title": "Relatório de Origem dos Leads",
-  "description": "SÓ LEITURA. Agregado de origem dos leads/conversas: de qual plataforma, tipo, campanha, conjunto de anúncios e criativo vieram, com totais e taxa de conversão. Janela padrão: últimos 30 dias. Cruza os atributos origin_* das conversas + leads órfãos (contatos sem conversa); 'won' = cards em estágios de ganho do Kanban; leads únicos deduplicados por telefone. Permite drill-down por níveis (plataforma → tipo → campanha → conjunto → criativo). Filtra por caixa (inbox_id) e por responsável (assignee_id) — em conta com mais de uma loja, SEM inbox_id o relatório soma todas as caixas. campaign/adset aceitam o valor especial \"__none__\" = TODO lead sem nome de campanha/conjunto (diretos, orgânicos e também os de anúncio cujo nome a Meta não deixou ler); para isolar só os de anúncio sem nome, combine com kind=paid_ad.",
+  "description": "SÓ LEITURA. Agregado de origem dos leads/conversas: de qual plataforma, tipo, campanha, conjunto de anúncios e criativo vieram, com totais e taxa de conversão. Janela padrão: últimos 30 dias. Cruza os atributos origin_* das conversas + leads órfãos (contatos sem conversa); 'won' = cards em estágios de ganho do Kanban; leads únicos deduplicados por telefone. Permite drill-down por níveis (plataforma → tipo → campanha → conjunto → criativo). Filtra por caixa (inbox_id) e por responsável (assignee_id) — em conta com mais de uma loja, SEM inbox_id o relatório soma todas as caixas. campaign/adset aceitam o valor especial \"__none__\" = TODO lead sem nome de campanha/conjunto (diretos, orgânicos e também os de anúncio cujo nome a Meta não deixou ler); para isolar só os de anúncio sem nome, combine com kind=paid_ad. 'VEIO DE ANUNCIO PAGO?' (25/10/2026): o filtro `paid` e a quebra `by_paid` juntam o clique no anuncio (kind paid_ad) e o formulario do anuncio (kind lead_form). Para 'quantos leads vieram de anuncio?' use by_paid ou paid=paid — somar so kind=paid_ad esquece os de formulario.",
   "category": "Relatorios",
   "params": [
    {
@@ -27452,7 +27619,14 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtra por tipo de origem"
+    "description": "Filtra por tipo de origem Valores: paid_ad (no painel 'Anuncio (clique)'), lead_form ('Anuncio (formulario)'), organic, direct, referral, agendamento, formulario, manual. Para 'veio de anuncio' (clique + formulario) use `paid`."
+   },
+   {
+    "name": "paid",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Veio de anuncio pago? (25/10/2026). paid = clique no anuncio OU formulario do anuncio; not_paid = organico, direto, indicacao, pagina de agendamento, formulario do site; unknown = origem cadastrada a mao ou tipo desconhecido (nunca tratado como pago); unclassified = sem origem. Valor fora da lista e ignorado."
    },
    {
     "name": "campaign",
@@ -27490,7 +27664,7 @@
     "description": "Agrupamento do resultado: platform, kind, campaign, adset ou creative"
    }
   ],
-  "returns": "{ period, totals: { conversations, classified, unclassified, orphan_leads, unique_leads, won_leads, conversion_rate }, by_platform, by_kind, by_campaign, by_adset, by_creative }",
+  "returns": "{ period, totals: { conversations, classified, unclassified, orphan_leads, unique_leads, won_leads, conversion_rate }, by_platform, by_kind, by_campaign, by_adset, by_creative, by_paid } `by_paid` (25/10/2026): sempre as quatro linhas paid/not_paid/unknown/unclassified, cada uma {value, conversations, won, conversion_rate}, somando o mesmo total do topo.",
   "common_use_cases": [
    "Ver de onde vêm os leads (campanha, anúncio, plataforma)",
    "Medir taxa de conversão por origem",
@@ -28881,7 +29055,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/import_status/{import_id}",
   "title": "Andamento da Importacao",
-  "description": "Acompanha a importacao de cards em massa que ja foi enviada. O import_id e o codigo devolvido pela chamada de importacao (lionchat_kanban_items_import) — a importacao roda em segundo plano, entao consulte aqui de tempos em tempos ate o status virar 'completed' ou 'failed'. O registro vive 1 hora: depois disso volta 404 mesmo que a importacao tenha dado certo, entao 404 nao significa fracasso.",
+  "description": "Acompanha a importacao de cards em massa que ja foi enviada. O import_id e o codigo devolvido pela chamada de importacao (lionchat_kanban_items_import) — a importacao roda em segundo plano, entao consulte aqui de tempos em tempos ate o status virar 'completed' ou 'failed'. O registro vive 1 hora: depois disso volta 404 mesmo que a importacao tenha dado certo, entao 404 nao significa fracasso. Quando a importacao ligou campos personalizados (2026-10-23): attributes_applied: true confirma que o servidor aplicou os campos (ausente = servidor antigo, os cards nasceram sem eles), e skipped lista ate 50 valores que NAO entraram ({row, field, message}, motivo no idioma da conta) com o total em skipped_count — o card nasce do mesmo jeito, so aquele valor fica de fora. row e a linha da PLANILHA (cabecalho = 1), tambem em errors.",
   "category": "Itens",
   "params": [
    {
@@ -28899,7 +29073,7 @@
     "description": "Codigo da importacao (UUID) devolvido pela chamada de importacao de cards"
    }
   ],
-  "returns": "{ status: 'queued'|'processing'|'completed'|'failed', total, processed, created, contacts_created, contacts_pending_validation, error_count, errors: [...] } — e { error } com 404 se o codigo nao existe ou ja passou de 1 hora",
+  "returns": "{ status: 'queued'|'processing'|'completed'|'failed', total, processed, created, contacts_created, contacts_pending_validation, error_count, errors: [{row, error}], attributes_applied?, skipped_count?, skipped?: [{row, field, message}] } — e { error } com 404 se o codigo nao existe ou ja passou de 1 hora",
   "common_use_cases": [
    "Avisar quando a planilha de cards terminou de subir",
    "Descobrir quantas linhas deram erro e por que",
@@ -29052,6 +29226,310 @@
   "related_tools": [
    "lionchat_kanban_sales_reconciliation_apply",
    "lionchat_kanban_sales_reconciliation_preview"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_setup",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses/setup",
+  "title": "Preparar análise do funil com IA",
+  "description": "Mostra o que a janela \"Analisar com IA\" do Kanban mostra, SEM criar nada: as etapas do funil com quantos cards abertos e adiados cada uma tem (e se a etapa tem descrição), `selection` (quantos cards entram com as etapas, o filtro e a quantidade pedidos: `limit` = quantos a IA vai ler, padrão 200, até `max_limit` 1.000; `over_limit`; `already_read` = quantos vão ser PULADOS por a IA ter lido nos últimos `read_days` (7) dias sem fala nova do cliente, 1001 = mais de 1.000; `estimated_cost_usd` e `estimated_minutes`), os dias de \"parados\" aceitos (7, 14, 30), os funis de destino que a pessoa vê (com as etapas), as etiquetas com descrição, quantos motivos de ganho/perda a conta tem, `has_openai_key` e `latest_run` (a análise viva do funil: analisando, ou lista pronta/aplicando dentro das 24 h). Chame ANTES de `lionchat_kanban_ai_analyses_create` e mostre ao usuário as etapas, o total de cards, o custo e o tempo estimados e, se `already_read` > 0, que esses cards vão ser pulados (`filters_include_read: true` lê de novo). `total` 0 com `already_read` > 0 = todos já foram lidos. Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "stages",
+    "type": "array",
+    "location": "query",
+    "required": false,
+    "query_name": "stages[]",
+    "description": "Chaves (slugs) das etapas, para calcular o total de cards e o custo. Ex.: [\"novo\", \"proposta\"]"
+   },
+   {
+    "name": "filters_stale_days",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "query_name": "filters[stale_days]",
+    "description": "Só os cards parados na etapa há N dias: 7, 14 ou 30"
+   },
+   {
+    "name": "filters_no_reply_days",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "query_name": "filters[no_reply_days]",
+    "description": "Só os cards sem resposta do cliente há N dias (1 a 365)"
+   },
+   {
+    "name": "filters_limit",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "query_name": "filters[limit]",
+    "description": "Quantos cards a IA vai ler, de 1 a 1.000 (padrão 200); fora disso vale o mais perto. Os parados há mais tempo primeiro"
+   },
+   {
+    "name": "filters_include_read",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "query_name": "filters[include_read]",
+    "description": "true = ler de novo os cards que a IA já leu nos últimos 7 dias (gasta crédito de novo). Sem isso eles são PULADOS, a não ser que o cliente tenha escrito depois da leitura"
+   }
+  ],
+  "returns": "{ funnel: { id, name, description_present }, stages: [{ key, name, description_present, count }], selection: { stages, filters, total, limit, max_limit, over_limit, analyzed, already_read, read_days, exact_total, estimated_cost_usd, estimated_minutes }, stale_days_options, target_funnels: [{ id, name, stages: [{ key, name }] }], labels: [{ id, title, description, description_present }], reasons: { won, lost }, has_openai_key, latest_run }",
+  "common_use_cases": [
+   "Saber quantos cards abertos cada etapa tem antes de analisar",
+   "Mostrar ao usuário o custo estimado da análise",
+   "Descobrir se o funil já tem uma análise rodando ou uma lista pronta",
+   "Saber quantos cards vão ser pulados por já terem sido lidos pela IA"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_create",
+   "lionchat_kanban_ai_analyses_show",
+   "lionchat_kanban_ai_analyses_items",
+   "lionchat_kanban_ai_analyses_apply",
+   "lionchat_kanban_ai_analyses_reanalyze"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses",
+  "title": "Analisar funil com IA",
+  "description": "Cria a análise do \"Analisar com IA\": a IA (modelo de decisões da OpenAI, com a chave DA CONTA) lê os cards ABERTOS e ADIADOS das etapas escolhidas, com as conversas, e sugere mudar de etapa (também para trás), levar para outro funil, pôr/tirar etiqueta e marcar ganho/perdido. NÃO muda nenhum card: só monta a lista de sugestões. Até `filters.limit` cards somando as etapas (1 a 1.000, padrão 200; os parados há mais tempo primeiro), escolhidos NESTA chamada, PULANDO os que a IA leu nos últimos 7 dias sem fala nova do cliente (`filters.include_read: true` lê de novo e gasta crédito de novo). Roda em segundo plano: depois chame `lionchat_kanban_ai_analyses_show` a cada 5 a 10 segundos até `status = ready`. Uma análise por vez por funil (409 `funnel_busy`) e no máximo duas por conta (`account_busy`); criar uma nova SUBSTITUI a lista anterior do mesmo funil que tiver etapa em comum. Antes de criar, mostre ao usuário o total e o custo estimado do `lionchat_kanban_ai_analyses_setup`. Outras recusas: `no_openai_key`, `no_cards` (também quando todos os cards já foram lidos: mande `include_read: true` para ler de novo), `invalid_stage`, `invalid_options`, `feature_disabled`. Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "funnel_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do funil"
+   },
+   {
+    "name": "stages",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Chaves (slugs) das etapas a analisar (uma ou mais). Ex.: [\"novo\", \"proposta\"]"
+   },
+   {
+    "name": "filters",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "Quais cards: omitir = todos os abertos e adiados; { \"stale_days\": 7 } (7, 14 ou 30) = só os parados na etapa há N dias; { \"no_reply_days\": 10 } (1 a 365) = só os sem resposta do cliente há N dias; { \"limit\": 500 } = quantos cards ler (1 a 1.000, padrão 200); { \"include_read\": true } = ler de novo os já lidos nos últimos 7 dias. `limit` e `include_read` se combinam com os outros"
+   },
+   {
+    "name": "options",
+    "type": "object",
+    "location": "body",
+    "required": true,
+    "description": "O que a IA pode sugerir (pelo menos um): { \"move_stage\": true (mudar de etapa neste funil), \"outcome\": true (ganho/perdido), \"move_funnel\": true + \"target_funnels\": { \"<id do funil>\": \"<chave da etapa de chegada>\" } (só funis ativos que a pessoa vê), \"labels_add\": [títulos das etiquetas que pode PÔR], \"labels_remove\": [títulos das que pode TIRAR] }"
+   }
+  ],
+  "returns": "{ id, funnel_id, stages, status (analyzing|ready|applying|finished|expired|superseded|failed), user_id, options, filters, selected_count, analyzed_count, suggested_count, skipped_count, failed_count, processed_count, input_tokens, llm_calls, cost_usd, error_code, expires_at, created_at, finished_at, apply: { requested, done, pending, returned } } — nasce com status analyzing",
+  "common_use_cases": [
+   "Revisar de uma vez os cards parados de uma ou mais etapas",
+   "Achar leads que já deviam estar em outra etapa ou já são perdidos",
+   "Sugerir etiquetas pela conversa de cada card"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_setup",
+   "lionchat_kanban_ai_analyses_show",
+   "lionchat_kanban_ai_analyses_items",
+   "lionchat_kanban_ai_analyses_apply",
+   "lionchat_kanban_ai_analyses_reanalyze"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses/{id}",
+  "title": "Andamento da análise com IA",
+  "description": "Andamento de uma análise do \"Analisar com IA\": `status`, quantos cards já foram analisados, quantos têm sugestão, tokens e custo (`cost_usd`) e, depois de aplicar, o progresso em `apply`. Chame a cada 5 a 10 segundos: depois do create até `ready` (ou `failed`), e depois do apply até `finished`. `error_code` de análise que não terminou: `no_openai_key`, `openai_rejected` (a OpenAI recusou a chave da conta), `nothing_analyzed`, `interrupted` (parou no meio; crie outra). A lista vale 24 h (`expires_at`): depois vira `expired`; uma análise nova do funil com etapa em comum a deixa `superseded`. Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da análise (o `id` devolvido pelo create)"
+   }
+  ],
+  "returns": "{ id, funnel_id, stages, status (analyzing|ready|applying|finished|expired|superseded|failed), user_id, options, filters, selected_count, analyzed_count, suggested_count, skipped_count, failed_count, processed_count, input_tokens, llm_calls, cost_usd, error_code, expires_at, created_at, finished_at, apply: { requested, done, pending, returned } }",
+  "common_use_cases": [
+   "Esperar a análise ficar pronta",
+   "Acompanhar a aplicação até terminar",
+   "Ver quanto a análise custou"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_setup",
+   "lionchat_kanban_ai_analyses_create",
+   "lionchat_kanban_ai_analyses_items",
+   "lionchat_kanban_ai_analyses_apply",
+   "lionchat_kanban_ai_analyses_reanalyze"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_items",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses/{id}/items",
+  "title": "Sugestões da análise com IA",
+  "description": "A lista de sugestões de uma análise pronta (422 `list_analyzing` antes). Vem uma linha por card QUE TEM sugestão (ou que voltou ou foi aplicado); o resto é contado em `counts` (`no_change` = lidos sem motivo para mudar). Cada sugestão traz `id` (o que vai no apply: `stage`, `funnel`, `outcome`, `label_add:...`, `label_remove:...`), `kind`, `value`, `label`, `force` (`high` = Alta, confiança >= 70%; `medium` = Média, 50 a 70%), `checked` (vem marcada: Alta de etapa, funil e perdido; ganho, Média e etiqueta vêm desmarcadas, com o motivo em `unchecked_reason`) e o que a ação dispara (`hints`: conversão, regras do funil, fluxos). Linha com `locked` (`client_wrote` = o cliente escreveu depois da análise; `card_changed` = o card mudou) NÃO deve ser aplicada: use `lionchat_kanban_ai_analyses_reanalyze`. `return_code` = voltou para a lista: `interrupted`, `card_busy` e `apply_failed` podem ser aplicadas de novo; `agent_no_access` = o responsável não acessa o funil de destino. Mostre as sugestões ao usuário agrupadas por etapa, com a força e o motivo. Com `no_change: true` vem também `no_change_items`: os cards lidos e deixados como estão, cada um com `lines` (`kind` stage, funnel, outcome ou label + `state`: `same` = confirmou o que já está, `doubt` = as duas ordens discordaram, `weak` = abaixo de 50%, `other_funnel`, `not_chosen`, `no_answer`; na etiqueta `add_no` e `remove_keeps`; `confidence` e `probability` em %). `lines: null` = análise antiga, sem detalhes. Use para responder \"por que a IA não mudou nada?\". Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da análise (o `id` devolvido pelo create)"
+   },
+   {
+    "name": "no_change",
+    "type": "boolean",
+    "location": "query",
+    "required": false,
+    "description": "true = traz também `no_change_items`: os cards que a IA leu e deixou como estão, com o porquê (a lista \"Ficaram como estão\" da tela). Peça só quando for mostrar essa lista"
+   }
+  ],
+  "returns": "{ id, funnel_id, stages, status (analyzing|ready|applying|finished|expired|superseded|failed), user_id, options, filters, selected_count, analyzed_count, suggested_count, skipped_count, failed_count, processed_count, input_tokens, llm_calls, cost_usd, error_code, expires_at, created_at, finished_at, apply: { requested, done, pending, returned } } + items: [{ id (item_id do apply), kanban_item_id, stage, card: { title, value, current_stage, status, contact_name, conversation_display_id, linked_display_ids, whatsapp_qr }, days_without_reply, suggestions: [...], locked, return_code, requested, requested_actions, done, apply_code, applied_actions }], counts: { analyzed, no_change, with_suggestion, by_analysis_code, ... } + no_change_items (só com no_change=true): [{ id, kanban_item_id, position, title, stage, stage_label, lines: [{ kind, state, value, confidence, other_value, other_confidence, funnel, label, probability, conversation_index, total }] | null }]",
+  "common_use_cases": [
+   "Mostrar ao usuário o que a IA sugeriu",
+   "Saber quais cards voltaram ou travaram",
+   "Conferir o que foi aplicado",
+   "Explicar por que a IA deixou um card como está"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_setup",
+   "lionchat_kanban_ai_analyses_create",
+   "lionchat_kanban_ai_analyses_show",
+   "lionchat_kanban_ai_analyses_apply",
+   "lionchat_kanban_ai_analyses_reanalyze"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_apply",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses/{id}/apply",
+  "title": "Aplicar sugestões da análise com IA",
+  "description": "Aplica as sugestões ESCOLHIDAS pelo usuário de uma lista pronta. NÃO TEM COMO DESFAZER: fica como se uma pessoa tivesse feito à mão, e as automações, os fluxos e as conversões do funil disparam normalmente. ANTES de chamar, confirme com o usuário quais cards e quais ações, quantas mudanças em quantos cards, e diga que não volta; só então reenvie com `confirm: true`. Mande em `items` o `id` de cada linha (de `lionchat_kanban_ai_analyses_items`) com os `id` das sugestões escolhidas daquela linha. Ação que não foi sugerida para o item, linha travada ou já pedida volta em `ignored` com o motivo (`not_found`, `already_requested`, `locked`, `invalid_actions`). Roda em segundo plano: depois chame `lionchat_kanban_ai_analyses_show` até `finished` e `lionchat_kanban_ai_analyses_items` para ver `done`/`apply_code`/`return_code` de cada card. Lista vencida, substituída ou terminada é recusada (`list_expired`, `list_superseded`, `list_finished`). Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "confirm_required": true,
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da análise (o `id` devolvido pelo create)"
+   },
+   {
+    "name": "items",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Lista de { \"item_id\": <id da linha>, \"actions\": [\"stage\", \"outcome\", ...] } — os `id` das sugestões daquela linha que o usuário escolheu"
+   }
+  ],
+  "returns": "{ accepted: [item_id, ...], ignored: [{ item_id, reason }], run: { id, funnel_id, stages, status (analyzing|ready|applying|finished|expired|superseded|failed), user_id, options, filters, selected_count, analyzed_count, suggested_count, skipped_count, failed_count, processed_count, input_tokens, llm_calls, cost_usd, error_code, expires_at, created_at, finished_at, apply: { requested, done, pending, returned } } }",
+  "common_use_cases": [
+   "Aplicar as sugestões que o usuário aprovou",
+   "Aplicar só um card da lista"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_setup",
+   "lionchat_kanban_ai_analyses_create",
+   "lionchat_kanban_ai_analyses_show",
+   "lionchat_kanban_ai_analyses_items",
+   "lionchat_kanban_ai_analyses_reanalyze"
+  ]
+ },
+ {
+  "id": "lionchat_kanban_ai_analyses_reanalyze",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/kanban_ai_analyses/{id}/reanalyze",
+  "title": "Reanalisar um card da análise com IA",
+  "description": "Analisa de novo UM card de uma lista ainda válida — use quando a linha veio travada (`locked`: o cliente escreveu ou o card mudou depois da análise). Custa uma chamada à IA. Um card por vez por lista: com outro sendo reanalisado volta 409 `reanalyze_wait` (espere e tente de novo). Card já pedido ou aplicado = 422 `reanalyze_not_allowed`; 503 `reanalyze_unavailable` = tente em instantes. Responde `{ item_id, status: \"queued\" }`: depois de alguns segundos chame `lionchat_kanban_ai_analyses_items` de novo para ver a sugestão nova. Quem pode: administrador ou cargo com a permissão `kanban_ai_analyze` (\"Analisar funil com IA\"), com o recurso de plano `kanban_ai_analysis` ligado na conta e o menu do Kanban visível. Funil que a pessoa não vê = 404 `funnel_not_visible`.",
+  "category": "Itens",
+  "params": [
+   {
+    "name": "account_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da conta"
+   },
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da análise (o `id` devolvido pelo create)"
+   },
+   {
+    "name": "item_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "O `id` da linha (de `lionchat_kanban_ai_analyses_items`), não o id do card"
+   }
+  ],
+  "returns": "{ item_id, status: \"queued\" }",
+  "common_use_cases": [
+   "Atualizar a sugestão de um card em que o cliente escreveu depois da análise"
+  ],
+  "related_tools": [
+   "lionchat_kanban_ai_analyses_setup",
+   "lionchat_kanban_ai_analyses_create",
+   "lionchat_kanban_ai_analyses_show",
+   "lionchat_kanban_ai_analyses_items",
+   "lionchat_kanban_ai_analyses_apply"
   ]
  },
  {
@@ -32447,7 +32925,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates/media_library",
   "title": "Biblioteca de Mídia dos Modelos (caixa oficial)",
-  "description": "SÓ LEITURA. Lista os arquivos de mídia de modelo JÁ anexados nesta caixa WhatsApp Cloud (tudo que já subiu por upload_media/upload_header_media), pra reaproveitar como mídia padrão de cabeçalho sem subir de novo — o MCP não faz upload de arquivo, então esta é a ÚNICA forma de obter uma url NOSSA aceita por lionchat_inboxes_whatsapp_templates_header_media. Até 60 itens, mais novos primeiro, sem repetir o mesmo arquivo (dedup por checksum). kind filtra ANTES do teto.",
+  "description": "SÓ LEITURA. Lista os arquivos de mídia de modelo JÁ anexados nesta caixa WhatsApp Cloud (tudo que já subiu por upload_media/upload_header_media), pra reaproveitar como mídia padrão de cabeçalho sem subir de novo — o conector não sobe arquivo direto do computador, então esta é a ÚNICA forma de obter uma url NOSSA aceita por lionchat_inboxes_whatsapp_templates_header_media. Até 60 itens, mais novos primeiro, sem repetir o mesmo arquivo (dedup por checksum). kind filtra ANTES do teto.",
   "category": "Templates WhatsApp",
   "params": [
    {
@@ -33978,7 +34456,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Token do webhook da Greenn (valida a assinatura do que chega)"
+    "description": "Token do webhook da Greenn (valida a assinatura do que chega) (27/10) Mandar o valor escondido (•••••••• ou [REDACTED]) mantem a chave gravada — so mande quando for trocar de verdade."
    },
    {
     "name": "active",
@@ -34827,7 +35305,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/upload/validate",
   "title": "Testar uma URL de mídia (sem gravar nada)",
-  "description": "SÓ LEITURA na prática: baixa a URL pra validar tipo, tamanho e segurança (SSRF) com a MESMA lista de aceite que o FlowBuilder usa ao enviar mídia por URL — e descarta. Não cria arquivo. Como o MCP não faz upload, é o jeito de conferir se um link de foto/vídeo/áudio/documento vai funcionar num fluxo, campanha ou mensagem ANTES de usar. Sempre 200: valid=true com media_kind/content_type/size_mb/limit_mb, ou valid=false com error_key: 'web_page' (o link é uma página, não o arquivo), 'too_large' (com size_mb/limit_mb), 'unsupported', 'fetch_failed', 'invalid', 'unexpected'.",
+  "description": "SÓ LEITURA na prática: baixa a URL pra validar tipo, tamanho e segurança (SSRF) com a MESMA lista de aceite que o FlowBuilder usa ao enviar mídia por URL — e descarta. Não cria arquivo. Como pelo conector o arquivo só sobe POR LINK (lionchat_upload_create com external_url, mesma lista de aceite), é o jeito de conferir se um link de foto/vídeo/áudio/documento vai funcionar num fluxo, campanha ou mensagem ANTES de usar. Sempre 200: valid=true com media_kind/content_type/size_mb/limit_mb, ou valid=false com error_key: 'web_page' (o link é uma página, não o arquivo), 'too_large' (com size_mb/limit_mb), 'unsupported', 'fetch_failed', 'invalid', 'unexpected'.",
   "category": "Upload",
   "params": [
    {
@@ -35632,7 +36110,7 @@
     "description": "ID do modelo"
    }
   ],
-  "returns": "modelo + envelopes: [{id, title, status, contact_id, contact_name, sent_at, completed_at, expires_at, participants[]}]",
+  "returns": "modelo (roles_layout com required_proofs e public_link {enabled, inbox_id, path}) + envelopes: [{id, title, status, contact_id, contact_name, sent_at, completed_at, expires_at, participants[]}]",
   "common_use_cases": [
    "Ver o texto e as variaveis do modelo antes de editar",
    "Conferir quem ja recebeu este contrato"
@@ -35684,7 +36162,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo. required_proofs (28/10): documentos que a pessoa manda antes de assinar — lista com id_document (documento com foto; ela escolhe RG, CNH ou CPF), selfie_with_document e address_proof (comprovante, foto ou PDF); [] = nenhum; outro valor = 422. Com algum, o contrato so fecha depois de a equipe aprovar (status awaiting_approval). public_link (28/10): link do contrato para divulgar — {enabled: true, inbox_id: <caixa de WhatsApp da conta>} (regenerate: true troca o endereco; o antigo para de funcionar). So para modelo com 1 assinante principal e sem sender_signs (422 com 'public_link' no texto). A leitura devolve {enabled, inbox_id, path} — o endereco e o dominio da instalacao + path (/contrato/<codigo>); salvar sem regenerate mantem o mesmo endereco."
    }
   ],
   "returns": "o modelo criado (id, name, kind, body, variables, roles_layout, progress)",
@@ -35746,7 +36224,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo. required_proofs (28/10): documentos que a pessoa manda antes de assinar — lista com id_document (documento com foto; ela escolhe RG, CNH ou CPF), selfie_with_document e address_proof (comprovante, foto ou PDF); [] = nenhum; outro valor = 422. Com algum, o contrato so fecha depois de a equipe aprovar (status awaiting_approval). public_link (28/10): link do contrato para divulgar — {enabled: true, inbox_id: <caixa de WhatsApp da conta>} (regenerate: true troca o endereco; o antigo para de funcionar). So para modelo com 1 assinante principal e sem sender_signs (422 com 'public_link' no texto). A leitura devolve {enabled, inbox_id, path} — o endereco e o dominio da instalacao + path (/contrato/<codigo>); salvar sem regenerate mantem o mesmo endereco."
    }
   ],
   "returns": "o modelo atualizado",
@@ -35801,11 +36279,45 @@
   ]
  },
  {
+  "id": "lionchat_signature_documents_fill_fields",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/signature_documents/{id}/fill_fields",
+  "title": "O que o Contrato Pede e a Ficha Tem",
+  "description": "Antes de enviar: cada campo do modelo que se preenche pela ficha (dados cadastrais, endereco, e-mail, atributo personalizado de contato) com o valor que a ficha do contato JA tem e missing=true no que falta. Use para completar no envio com contact_data (jeito ready) ou decidir mandar o formulario (collection=form). blocked = o que falta e NAO se preenche por aqui (ex.: telefone, dados da conta) — com isso o envio pronto volta variaveis_sem_valor; blocked_in_form = o mesmo no jeito formulario (no formulario o nome tambem e perguntado). Sem contact_id ou contato de outra conta = 422 sem_contato.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do modelo"
+   },
+   {
+    "name": "contact_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "Ficha do titular"
+   }
+  ],
+  "returns": "{fields: [{variable, label, description, placeholder, type, options[{id,label}], value, missing}], blocked: [nomes], blocked_in_form: [nomes]}",
+  "common_use_cases": [
+   "Saber o que falta na ficha antes de mandar o contrato",
+   "Completar os dados que faltam no proprio envio (contact_data)"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_create",
+   "lionchat_signature_documents_show",
+   "lionchat_contacts_update_cadastral"
+  ]
+ },
+ {
   "id": "lionchat_signature_envelopes_list",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes",
   "title": "Listar Contratos Enviados",
-  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde. Por empresa: company_id (contratos de todos os contatos dela).",
+  "description": "Lista os CONTRATOS (cada envio a uma pessoa e um contrato, com PDF proprio e linha do tempo), paginada (25 por pagina) com filtro e busca no servidor. Recortes: por modelo (signature_document_id), por contato (contact_id — o que aparece na aba Contratos da ficha) ou por conversa (conversation_id). status aceita os baldes aguardando (draft/sent/awaiting_data/awaiting_approval — awaiting_data = esperando a pessoa preencher o formulario; awaiting_approval = todos assinaram e a equipe ainda nao aprovou os documentos pedidos), visualizado (viewed/partially_signed), assinado (signed_pending_seal/signed), encerrado (refused/cancelled/expired) ou falta_eu (contratos em que o usuario do token e o remetente e ainda nao assinou). Resposta traz meta.counts com a contagem por balde. Por empresa: company_id (contratos de todos os contatos dela).",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -35858,7 +36370,7 @@
     "description": "Recorta pelos contatos de uma EMPRESA (aba Contratos da pagina da empresa). Empresa de outra conta = 404."
    }
   ],
-  "returns": "payload: [{id, title, status, signature_document_id, document_name, contact_id, contact_name, conversation_id, sent_at, completed_at, expires_at, participants[{id, name, role, status, delivery_channel, phone, email, signed_at, viewed_at, public_url, signs_in_panel}], delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, has_signed_document, pending_for_me}], meta: {page, per_page, has_more, counts}",
+  "returns": "payload: [{id, title, status, signature_document_id, document_name, contact_id, contact_name, conversation_id, sent_at, completed_at, expires_at, participants[{id, name, role, status, delivery_channel, phone, email, signed_at, viewed_at, public_url, signs_in_panel}], delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, has_signed_document, pending_for_me, required_proofs[]}], meta: {page, per_page, has_more, counts}",
   "common_use_cases": [
    "Ver o status dos contratos de um cliente (assinou? abriu? expirou?)",
    "Relatorio de um modelo: quantos aguardando/assinados, quem falta",
@@ -35875,7 +36387,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}",
   "title": "Detalhes do Contrato (linha do tempo)",
-  "description": "Um contrato com quem assina e a LINHA DO TEMPO completa (events): created, delivered, sent, opened, code_requested, code_verified, signed (com ip, device, location e panel=true quando foi assinado no painel), all_signed, sealed (documento final gerado, com hash), refused, expired, cancelled, delivery_failed, reminded, resent. E o relatorio de evidencias em dados; os PDFs (original, assinado, evidencias) so saem pela tela/API de download.",
+  "description": "Um contrato com quem assina e a LINHA DO TEMPO completa (events): created, delivered, sent, opened, code_requested, code_verified, signed (com ip, device, location, panel=true quando foi assinado no painel e, desde 28/10, signature_method drawn|typed + typed_name), data_filled (a pessoa preencheu o formulario e o contrato foi gerado), all_signed, sealed (documento final gerado, com hash), refused, expired, cancelled, delivery_failed, reminded, resent; (28/10) proof_sent (a pessoa mandou um documento pedido), awaiting_approval, proofs_approved / proofs_rejected (com o motivo); code_requested/code_verified com method=whatsapp = confirmou mandando a frase pelo WhatsApp em vez do codigo. E o relatorio de evidencias em dados; os PDFs (original, assinado, evidencias) so saem pela tela/API de download.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -35886,7 +36398,7 @@
     "description": "ID do contrato"
    }
   ],
-  "returns": "contrato (com delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, copies = a via assinada de cada pessoa) + events: [{kind, occurred_at, ip, device, location, participant_id, panel}] + original_sha256/sealed_sha256",
+  "returns": "contrato (com delivery: {failed[{participant_id, reason}], delivered_participant_ids[], copies[{participant_id, status: sent|failed, reason}]}, copies = a via assinada de cada pessoa) + events: [{kind, occurred_at, ip, device, location, participant_id, panel, signature_method, typed_name, method}] + required_proofs[] + original_sha256/sealed_sha256",
   "common_use_cases": [
    "Conferir quando e de onde a pessoa abriu e assinou",
    "Ver por que um contrato nao foi entregue (delivery.failed) ou foi recusado"
@@ -35894,7 +36406,8 @@
   "related_tools": [
    "lionchat_signature_envelopes_list",
    "lionchat_signature_envelopes_resend",
-   "lionchat_signature_envelopes_cancel"
+   "lionchat_signature_envelopes_cancel",
+   "lionchat_signature_envelopes_proofs"
   ]
  },
  {
@@ -35902,7 +36415,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes",
   "title": "Enviar Contrato para Assinar",
-  "description": "Cria o contrato DAQUELA pessoa a partir de um modelo e ENTREGA o link (na conversa de WhatsApp da pessoa — uma conversa POR assinante — ou por e-mail). O PDF e gerado com os dados da ficha; variavel do modelo sem valor na ficha = 422 variaveis_sem_valor com a lista do que falta (preencha a ficha e tente de novo). Sem inbox_id e com o contato conversando em MAIS de uma caixa de WhatsApp = 422 escolher_caixa com inboxes[] — repita mandando inbox_id. Ninguem recebeu = 422 entrega_falhou (o contrato fica como rascunho; use resend). Recebeu parcialmente = 201 com delivery_failures[]. Consome 1 vaga do limite mensal (veja signature_envelopes_limits). Modelo com sender_signs cria sozinho o participante do remetente (o usuario do token), que assina NO PAINEL (nao ha ferramenta pra assinar por ele).",
+  "description": "Cria o contrato DAQUELA pessoa a partir de um modelo e ENTREGA o link (na conversa de WhatsApp da pessoa — uma conversa POR assinante — ou por e-mail). O PDF e gerado com os dados da ficha; variavel do modelo sem valor na ficha = 422 variaveis_sem_valor com a lista do que falta (preencha a ficha e tente de novo). Sem inbox_id e com o contato conversando em MAIS de uma caixa de WhatsApp = 422 escolher_caixa com inboxes[] — repita mandando inbox_id. Ninguem recebeu = 422 entrega_falhou (o contrato fica como rascunho; use resend). Recebeu parcialmente = 201 com delivery_failures[]. Consome 1 vaga do limite mensal (veja signature_envelopes_limits). Modelo com sender_signs cria sozinho o participante do remetente (o usuario do token), que assina NO PAINEL (nao ha ferramenta pra assinar por ele). DOIS JEITOS (27/10): collection='ready' (padrao) = o contrato sai agora com a ficha; o que faltar pode ir em contact_data (grava na ficha E no contrato; erro de um campo = 422 dados_invalidos com field_errors). Para saber antes o que a ficha tem e o que falta: lionchat_signature_documents_fill_fields. collection='form' (exige contact_id) = o titular recebe um formulario em branco, preenche os dados dele (atualiza a ficha) e o contrato nasce com o que ele digitou; o contrato fica awaiting_data ate la e o link e o participants[].public_url do titular. message (ate 1.000 caracteres) vai junto do link nos dois jeitos. Modelo de Word com campo sem escolha no mapeamento = 422 campos_sem_escolha (missing = os rotulos do Word): ajuste o modelo pela tela.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -35939,19 +36452,42 @@
     "location": "body",
     "required": true,
     "description": "Quem assina (array). Cada item: {name (obrigatorio), role: signer|witness (titular|testemunha; NAO mande sender — o remetente e criado sozinho quando o modelo tem sender_signs), phone (+55DDDNUMERO, quando delivery_channel=whatsapp), email (quando delivery_channel=email), delivery_channel: whatsapp|email (padrao whatsapp), cpf (opcional; invalido = 422 cpf_invalido), contact_id (ficha da pessoa; recomendado no titular)}. Cada pessoa recebe o proprio link e assina com codigo de uso unico."
+   },
+   {
+    "name": "collection",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Jeito de coletar os dados: ready (padrao, contrato pronto com a ficha) | form (a pessoa preenche pelo link; exige contact_id). Outro valor = 422 coleta_invalida"
+   },
+   {
+    "name": "message",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Texto proprio que vai junto do link (ate 1.000 caracteres; acima = 422 mensagem_longa)"
+   },
+   {
+    "name": "contact_data",
+    "type": "object",
+    "location": "body",
+    "required": false,
+    "description": "So no jeito ready: o que voce completa da ficha antes de gerar, {variavel: valor} com as variaveis do modelo (ex.: {\"contact.cpf\": \"52998224725\", \"contact.marital_status\": \"casado\"}). Grava na ficha e no contrato; tudo valido ou nada gravado. Telefone nao se preenche por aqui. Formato torto (nao objeto de textos, mais de 50 chaves, valor acima de 4 KB) = 422 contact_data_invalido"
    }
   ],
-  "returns": "201: o contrato (status sent) com participants[] (public_url de cada um), events[] e delivery_failures[]; 422: {error, detail, missing, inboxes, envelope}",
+  "returns": "201: o contrato (status sent) com participants[] (public_url de cada um), events[] e delivery_failures[]; 422: {error, detail, missing, inboxes, envelope}; 422 dados_invalidos traz field_errors {variavel: motivo} (invalid_cpf, invalid_option, email_em_uso, campo_desconhecido...); variaveis_sem_valor e campos_sem_escolha trazem missing (chaves) e missing_labels (nomes de gente)",
   "common_use_cases": [
    "Mandar o contrato padrao pra um cliente assinar pelo WhatsApp",
    "Mandar com testemunha (participants com role witness e o telefone dela)",
-   "Reenviar um contrato que ficou como rascunho por falha de entrega (use resend)"
+   "Reenviar um contrato que ficou como rascunho por falha de entrega (use resend)",
+   "Mandar um formulario para a pessoa preencher os proprios dados (collection=form) e o contrato sair com eles"
   ],
   "related_tools": [
    "lionchat_signature_documents_list",
    "lionchat_signature_envelopes_limits",
    "lionchat_signature_envelopes_show",
-   "lionchat_signature_envelopes_resend"
+   "lionchat_signature_envelopes_resend",
+   "lionchat_signature_documents_fill_fields"
   ]
  },
  {
@@ -35984,7 +36520,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/sign_as_sender",
   "title": "Remetente Assina o Contrato pelo Painel",
-  "description": "A assinatura do REMETENTE (a pessoa do token), quando o modelo tem 'eu tambem assino' (roles_layout.sender_signs). Nao serve pra assinar no lugar do cliente: titular e testemunha assinam pelo link publico deles. Manda o desenho da assinatura como PNG em base64 com o prefixo data:image/png;base64,... (o mesmo rabisco da tela; remember_drawing guarda pra proxima vez). Recusas 422: nao_e_sua (o usuario do token nao e o remetente deste contrato), ja_assinado, sem_desenho. Quando era a ultima assinatura que faltava, o contrato fecha e o PDF final e gerado em seguida (status signed_pending_seal -> signed). Ache os contratos que esperam a sua assinatura com status=falta_eu em lionchat_signature_envelopes_list.",
+  "description": "A assinatura do REMETENTE (a pessoa do token), quando o modelo tem 'eu tambem assino' (roles_layout.sender_signs). Nao serve pra assinar no lugar do cliente: titular e testemunha assinam pelo link publico deles. Manda o desenho da assinatura como PNG em base64 com o prefixo data:image/png;base64,... (o mesmo rabisco da tela; remember_drawing guarda pra proxima vez). Recusas 422: nao_e_sua (o usuario do token nao e o remetente deste contrato), ja_assinado, sem_desenho. Quando era a ultima assinatura que faltava, o contrato fecha e o PDF final e gerado em seguida (status signed_pending_seal -> signed). Ache os contratos que esperam a sua assinatura com status=falta_eu em lionchat_signature_envelopes_list. JEITO (28/10): signature_method drawn (desenhada) ou typed (o nome digitado numa letra de assinatura) + typed_name — a folha de assinaturas e o relatorio de evidencias dizem 'Assinatura desenhada a mao' ou 'Assinatura digitada: <nome>'. Sem o campo, nao dizem nada. A imagem e sempre o PNG.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -36014,6 +36550,20 @@
     "location": "body",
     "required": false,
     "description": "true = guarda o desenho nas preferencias do usuario pra reaproveitar no proximo contrato"
+   },
+   {
+    "name": "signature_method",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "drawn (desenhada) | typed (nome digitado numa letra de assinatura). Outro valor = nada gravado"
+   },
+   {
+    "name": "typed_name",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "So com signature_method=typed: o nome escrito (ate 120 caracteres) que aparece na folha de assinaturas"
    }
   ],
   "returns": "o contrato atualizado com participants[] e events[] (o seu participante vira signed); 422: {error: nao_e_sua | ja_assinado | sem_desenho}",
@@ -36057,7 +36607,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes/limits",
   "title": "Limite Mensal de Contratos",
-  "description": "Quantos contratos a conta ja mandou no mes e o teto do plano ({used, limit, unlimited}). Contrato cancelado/expirado NAO devolve a vaga.",
+  "description": "Quantos contratos a conta ja mandou no mes e o teto do plano ({used, limit, unlimited}). Contrato cancelado/expirado NAO devolve a vaga. (28/10) O contrato que nasce do link do modelo (roles_layout.public_link) so conta depois que a pessoa confirma que e ela; quem abre o link e some nao gasta vaga.",
   "category": "Assinatura eletronica",
   "params": [],
   "returns": "{used, limit, unlimited}",
@@ -36066,6 +36616,118 @@
   ],
   "related_tools": [
    "lionchat_signature_envelopes_create"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_proofs",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/proofs",
+  "title": "Documentos de Quem Assina (Contrato)",
+  "description": "Os documentos que o modelo pede (required_proofs) e, por pessoa que assina pelo link, o que ela mandou (kind id_document/selfie_with_document/address_proof, formato, document_type rg/cnh/cpf, quando) e a revisao da equipe (pending/approved/rejected, motivo, quem, quando). NUNCA devolve o arquivo: documento de identidade e selfie so se olham na tela (botao amarelo \"Ver documentos\" no contrato ou na aba Contratos da ficha). last_proof_event_id = o ultimo documento mandado (use como seen_event_id ao aprovar/reprovar). Administrador ou signature_manage.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   }
+  ],
+  "returns": "{required[], awaiting_approval, people: [{participant_id, name, role, signed, proofs: [{kind, content_type, document_type, sent_at}], review: {status, decision, reason, by, at}, last_proof_event_id}]}",
+  "common_use_cases": [
+   "Saber se o contrato esta esperando a aprovacao dos documentos e de quem",
+   "Ver o motivo de uma reprovacao e se a pessoa ja mandou de novo"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_approve_proofs",
+   "lionchat_signature_envelopes_reject_proofs",
+   "lionchat_signature_envelopes_show"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_approve_proofs",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/approve_proofs",
+  "title": "Aprovar Documentos de Quem Assina",
+  "description": "Aprova os documentos de UMA pessoa num contrato que esta awaiting_approval. Com todos aprovados o contrato fecha, o documento final e gerado e cada pessoa recebe a via (MANDA mensagem ao cliente) — confirme com o usuario antes e pergunte se ele ja conferiu os arquivos na tela (eles nao saem por ferramenta). 422: fora_do_momento (contrato nao esta esperando aprovacao), sem_documentos, documentos_mudaram (a pessoa mandou outro depois do que foi visto — leia _proofs de novo). Administrador ou signature_manage.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   },
+   {
+    "name": "participant_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "participant_id da pessoa (de _proofs)"
+   },
+   {
+    "name": "seen_event_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "last_proof_event_id que foi conferido; se a pessoa mandou outro depois, volta 422 documentos_mudaram"
+   }
+  ],
+  "returns": "o mesmo de _proofs + status do contrato",
+  "common_use_cases": [
+   "A equipe conferiu os documentos na tela e pediu para aprovar"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_proofs",
+   "lionchat_signature_envelopes_reject_proofs"
+  ]
+ },
+ {
+  "id": "lionchat_signature_envelopes_reject_proofs",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/reject_proofs",
+  "title": "Reprovar Documentos de Quem Assina",
+  "description": "Reprova os documentos de UMA pessoa com o motivo: ela recebe no canal dela (WhatsApp ou e-mail) o pedido de documento novo com o motivo escrito (MANDA mensagem ao cliente — confirme o texto com o usuario antes). Ela troca o que for preciso, toca Enviar e a equipe e avisada de novo. 422: motivo_obrigatorio, fora_do_momento, sem_documentos, documentos_mudaram. Administrador ou signature_manage.",
+  "category": "Assinatura eletronica",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do contrato"
+   },
+   {
+    "name": "participant_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "participant_id da pessoa (de _proofs)"
+   },
+   {
+    "name": "reason",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "Motivo que a pessoa vai ler (ex.: \"a foto da CNH ficou desfocada, mande de novo\")"
+   },
+   {
+    "name": "seen_event_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "last_proof_event_id que foi conferido"
+   }
+  ],
+  "returns": "o mesmo de _proofs + status do contrato",
+  "common_use_cases": [
+   "Documento ilegivel ou do tipo errado: pedir outro a pessoa"
+  ],
+  "related_tools": [
+   "lionchat_signature_envelopes_proofs",
+   "lionchat_signature_envelopes_approve_proofs"
   ]
  },
  {

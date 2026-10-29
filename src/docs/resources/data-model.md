@@ -752,7 +752,7 @@ Pra auditar o que foi/será disparado, use `lionchat_eclinica_reminder_history_l
 **Um aviso por CONSULTA (desde 2026-09-17).** A regra antiga "um lembrete por dia" saiu: paciente com duas
 consultas no mesmo dia — ou duas pessoas no mesmo celular (mãe e filho) — recebe um lembrete para CADA
 consulta, cada um com o seu nome, horário, profissional e link. Eles não saem juntos: sai o da consulta
-mais cedo e, ~10 minutos depois (na rodada seguinte), o da próxima. No histórico
+mais cedo e, ~2 minutos depois (desde 26/10/2026 a rotina roda de minuto em minuto; o irmão espera a janela de 120 s), o da próxima. No histórico
 (`lionchat_eclinica_reminder_history_list`) isso aparece assim: o que espera a vez fica `pending` com
 `fire_at` no passado por alguns minutos (normal); `skip_reason = outra_consulta_no_mesmo_dia` só existe em
 linhas ANTIGAS (até 17/09); e `fail_reason = fluxo_ainda_em_andamento_com_este_contato` significa que o
