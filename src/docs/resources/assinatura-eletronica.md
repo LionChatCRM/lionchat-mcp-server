@@ -75,8 +75,8 @@ a autoria é o código de uso único. A folha de assinaturas e o relatório de e
 mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não dizem nada.
 
 ## Documentos de quem assina (28/10)
-- No modelo, `roles_layout.required_proofs`: lista com `id_document` (documento com foto — a pessoa escolhe RG, CNH ou
-  CPF), `selfie_with_document` e `address_proof` (comprovante, foto ou PDF). `[]` = nenhum. Outro valor = 422. O
+- No modelo, `roles_layout.required_proofs`: lista com `id_document` (documento com foto — a pessoa escolhe entre os
+  aceitos, RG, CNH ou CPF; ver `accepted_types` abaixo), `selfie_with_document` e `address_proof` (comprovante, foto ou PDF). `[]` = nenhum. Outro valor = 422. O
   contrato guarda uma cópia ao nascer: mudar o modelo depois não muda contrato já enviado (`required_proofs` vem no
   `list` e no `show` do contrato).
 - A pessoa manda os documentos na página, antes de assinar. Com algum documento pedido, o contrato NÃO fecha quando
@@ -99,6 +99,13 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
   `address_proof` ou um documento CRIADO, `custom_<6 a 12 letras/números minúsculos>` com `label` obrigatório (1 a 60).
   **Você inventa a chave do criado** (ex.: `custom_oab2026`) e a mantém igual nas gravações seguintes — o servidor não
   cria chave, e trocar a chave vira outro documento. Aceita `["rg", "cnh"]` (texto solto = padrões). Máximo 12 itens.
+- **Documento com foto = `id_document` com `accepted_types`** (30/10): a lista dos documentos ACEITOS (`rg`, `cnh`, `cpf`;
+  um ou mais) e a pessoa manda QUALQUER UM deles. Ex.: `{"key": "id_document", "accepted_types": ["rg", "cnh"]}` = aceita
+  RG ou CNH. Sem a lista = os três. Com um só aceito a página não pergunta o tipo. O nome que a pessoa e a equipe veem
+  diz os aceitos ("Documento com foto (RG ou CNH)") e a IA confere se a foto é de um deles. Lista vazia, tipo desconhecido
+  ou `accepted_types` em outro item = 422. **Quando o usuário pedir "RG ou CNH", use isto** — `rg`, `cnh` e `cpf` como
+  itens soltos continuam aceitos, mas cada um EXIGE aquele documento (pedir os três soltos = a pessoa manda os três), e a
+  tela não os oferece mais.
 - `accepts_pdf`: só no comprovante (sempre) e nos criados; RG/CNH/CPF/selfie com PDF = 422.
 - `attach_to_contract: true` = o arquivo entra como páginas no contrato assinado. Teto: 10 arquivos anexados por
   contrato (itens "anexar" × pessoas que mandam) — 422 ao salvar o modelo e `anexos_demais` ao enviar.
