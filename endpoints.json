@@ -1987,7 +1987,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages",
   "title": "Listar Mensagens",
-  "description": "Lista mensagens de uma conversa (mais recentes primeiro). Lista mensagens paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, before_id. Retorna meta (contadores) + payload (array de mensagem). Cada mensagem traz original_sent_at (20/10/2026): unix s da hora em que foi ENVIADA quando chegou atrasada mais de 2 min (WhatsApp oficial e QR Code, mensagens de 20/10/2026 em diante); null no resto. created_at continua sendo a hora de CHEGADA e a ordem da lista nao muda.",
+  "description": "Lista mensagens de uma conversa, da mais ANTIGA para a mais nova (a mais antiga recebida e a PRIMEIRA do payload). Sem parâmetro vêm as ÚLTIMAS 20 mensagens. Para as anteriores use before_id = id da mais antiga recebida (vem 20 por vez); after_id e around_id também existem. NÃO há paginação por página: o servidor ignora page. Retorna meta (etiquetas, contato e responsável da conversa, SEM contadores) + payload (array de mensagem). Cada mensagem traz original_sent_at (20/10/2026): unix s da hora em que foi ENVIADA quando chegou atrasada mais de 2 min (WhatsApp oficial e QR Code, mensagens de 20/10/2026 em diante); null no resto. created_at continua sendo a hora de CHEGADA e a ordem da lista nao muda.",
   "category": "Mensagens",
   "params": [
    {
@@ -2002,17 +2002,34 @@
     "type": "integer",
     "location": "query",
     "required": false,
-    "description": "Página"
+    "description": "Sem efeito nesta lista (o servidor pagina por before_id/after_id/around_id). Mantido por compatibilidade."
    },
    {
     "name": "before_id",
     "type": "integer",
     "location": "query",
     "required": false,
-    "description": "Mensagens antes deste ID"
+    "description": "Traz as 20 mensagens ANTERIORES a este id (use o id da mais antiga recebida para ir voltando).",
+    "query_name": "before"
+   },
+   {
+    "name": "after_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "query_name": "after",
+    "description": "Traz até 100 mensagens POSTERIORES a este id."
+   },
+   {
+    "name": "around_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "query_name": "around",
+    "description": "Traz ~50 mensagens ao redor deste id (útil para abrir uma mensagem achada na busca)."
    }
   ],
-  "returns": "Objeto com `meta` + `payload`. `payload` = array de mensagens, das mais antigas para as mais novas. `meta` NAO tem contadores: traz `labels` (etiquetas da conversa), `additional_attributes`, `contact`, `assignee`, `agent_last_seen_at` e `assignee_last_seen_at`. Sem parametro vem as ULTIMAS 20 mensagens; para paginar use `before` (20 anteriores ao id), `after` (ate 100 posteriores) ou `around` (~50 ao redor de um id).",
+  "returns": "Objeto com `meta` + `payload`. `payload` = array de mensagens, das mais antigas para as mais novas. `meta` NAO tem contadores: traz `labels` (etiquetas da conversa), `additional_attributes`, `contact`, `assignee`, `agent_last_seen_at` e `assignee_last_seen_at`. Sem parametro vem as ULTIMAS 20 mensagens; para paginar use `before_id` (20 anteriores ao id), `after_id` (ate 100 posteriores) ou `around_id` (~50 ao redor de um id). `page` nao tem efeito.",
   "common_use_cases": [
    "Dashboard: contar/exibir mensagens",
    "Buscar com filtros antes de outra operação",

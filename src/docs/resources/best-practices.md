@@ -67,7 +67,7 @@ Quando existir endpoint específico, prefira:
 Conversa com 200 mensagens? **Não baixe tudo**:
 
 1. `conversations_show` (1 chamada) → metadata + última mensagem
-2. Se precisa contexto: pegue só as últimas 20-30 mensagens com `conversations_messages_list` (use `page`)
+2. Se precisa contexto: pegue só as últimas 20-30 mensagens com `conversations_messages_list` (sem parâmetro vêm as últimas 20; para as anteriores use `before_id` com o `id` da mais antiga recebida)
 3. Pra análise/resumo completo, use `conversations_messages_list` paginando — é a fonte do texto.
 
 > **Atenção:** `conversations_transcript` NÃO retorna o texto da conversa pra você ler. Ele EXIGE o
@@ -201,7 +201,7 @@ própria: cada agente de ligação tem um objetivo e **não ocupa vaga de IA do 
 
 | Ferramenta | Para quê |
 |---|---|
-| `captain_call_agents_list` | lista os agentes de ligação e `meta.dial_inboxes` (caixas que podem ligar) |
+| `captain_call_agents_list` | lista os agentes de ligação e `meta.dial_inboxes` (caixas que podem ligar). É daqui que sai o `aiCallAgentId` do bloco "Ligar com IA" — **nunca** o id de um agente de texto |
 | `captain_call_agents_create` / `_update` / `_duplicate` / `_destroy` | cadastro |
 | `captain_call_test_phones_list` / `_create` / `_destroy` | números autorizados a receber ligação de teste |
 | `captain_call_agents_test_call` | **liga de verdade** para um número de teste cadastrado |

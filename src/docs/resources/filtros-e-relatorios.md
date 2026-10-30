@@ -265,9 +265,12 @@ categoria: 15/página (kanban: primeiros 15, sem paginação).
   lista/show pesadas). Anexos de mensagem (data_url/download_url) NUNCA são podados.
 - **Segredos:** chaves de credencial (api_key, tokens, senhas) saem SEMPRE como `[REDACTED]` —
   sem exceção, nem com full_response. Precisa de um token? Painel, não robô.
-- **Paginação:** os DOIS conectores agora informam `pagination.{current_page,total_pages,
-  total_count,has_more}` — pagine até `has_more=false`. (No remoto o bloco é ADICIONADO ao lado
-  do shape original.)
+- **Paginação:** nas listas que paginam por página, os DOIS conectores informam
+  `pagination.{current_page,total_pages,total_count,has_more}` — pagine até `has_more=false`. (No
+  remoto o bloco é ADICIONADO ao lado do shape original.) Lista que NÃO pagina por página vem SEM
+  `pagination` e com o `meta` do servidor intacto: mensagens de uma conversa (volte com `before_id` =
+  id da mais antiga recebida) e agentes de ligação (lista inteira; `meta.dial_inboxes` = caixas que
+  ligam). Ausência do bloco NÃO quer dizer "acabou" nas mensagens.
 - **Corte:** resposta acima do teto é enxugada por ITENS INTEIROS (aviso `[LISTA ENXUGADA...]`
   com contagem exibida/total) — o JSON nunca vem quebrado no meio.
 

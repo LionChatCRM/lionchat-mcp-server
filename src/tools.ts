@@ -497,7 +497,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-29)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-30)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -1186,6 +1186,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 ▸ ai_call ("Ligar com IA", 17/10/2026 — so em conta com ai_calling + lioncalls_calling)
   A IA liga para o TELEFONE DO CONTATO da conversa do fluxo pela linha de ligacao do WhatsApp (LionCalls).
   data: { aiCallAgentId: <id de lionchat_captain_call_agents_list>, aiCallInboxId: <id de meta.dial_inboxes> }
+  aiCallAgentId e de um AGENTE DE LIGACAO. NUNCA use o id de um agente de TEXTO (lionchat_captain_assistants_*): o
+  agente de ligacao so aponta para um de texto em captain_assistant_id. Se captain_call_agents_list nao estiver
+  entre as suas ferramentas, PESQUISE pelo nome antes de dizer que nao existe; agente que ja existe nao se recria.
   (aiCallAgentName/aiCallInboxName sao opcionais, so pro resumo do card). O que a IA fala, a voz e o TEMPO
   MAXIMO da ligacao vem do agente de ligacao (max_duration_seconds, 30-600 s): no tempo o motor desliga sozinho.
   Handles: "answered" (a pessoa atendeu), "no_answer" (nao atendeu ou recusou), "error" (nao deu pra ligar:
@@ -1196,7 +1199,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   condition antes. A IA so liga se sobrar uma vaga na linha para uma pessoa; senao espera a vez (fila por
   ordem de chegada, ate 2 h). O card da ligacao vai para a conversa do lead na caixa da linha.
   PROIBIDO em flow 'action', em flow de GRUPO e em ai_tool (o save recusa); id de agente/caixa de OUTRA conta
-  tambem e recusado. Agente apagado ou caixa excluida NAO travam o save — falham na execucao.
+  tambem e recusado, e agente ou caixa ESCOLHIDOS/TROCADOS que nao existem nesta conta tambem ("ai_call block
+  uses a call agent that does not exist in this account"). Agente apagado ou caixa excluida DEPOIS NAO travam o
+  save — falham na execucao.
   Receita "a IA de atendimento pede a ligacao" (sem ferramenta nova): cenario manda por a etiqueta 'ligar';
   flow conversation com gatilho label_added 'ligar' -> action remove_conversation_label 'ligar' (LOGO depois
   do start) -> ai_call.
