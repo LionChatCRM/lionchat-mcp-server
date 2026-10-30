@@ -95,14 +95,15 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
 
 ## Documentos pedidos com anexo e conferência por IA (29/10)
 - `roles_layout.proof_requests` é a lista completa (o que vale de verdade): itens `{key, label, accepts_pdf,
-  attach_to_contract, from_witnesses}`. `key`: `id_document`, `rg`, `cnh`, `cpf`, `selfie_with_document`,
+  attach_to_contract, from_witnesses}` (+ `accepted_types` no `id_document` e `description` nos criados). `key`: `id_document`, `rg`, `cnh`, `cpf`, `selfie_with_document`,
   `address_proof` ou um documento CRIADO, `custom_<6 a 12 letras/números minúsculos>` com `label` obrigatório (1 a 60).
   **Você inventa a chave do criado** (ex.: `custom_oab2026`) e a mantém igual nas gravações seguintes — o servidor não
   cria chave, e trocar a chave vira outro documento. Aceita `["rg", "cnh"]` (texto solto = padrões). Máximo 12 itens.
 - **Documento com foto = `id_document` com `accepted_types`** (30/10): a lista dos documentos ACEITOS (`rg`, `cnh`, `cpf`;
   um ou mais) e a pessoa manda QUALQUER UM deles. Ex.: `{"key": "id_document", "accepted_types": ["rg", "cnh"]}` = aceita
   RG ou CNH. Sem a lista = os três. Com um só aceito a página não pergunta o tipo. O nome que a pessoa e a equipe veem
-  diz os aceitos ("Documento com foto (RG ou CNH)") e a IA confere se a foto é de um deles. Lista vazia, tipo desconhecido
+  diz os aceitos ("Documento com foto (RG ou CNH)") e a IA confere se a foto é do tipo que a pessoa ESCOLHEU na página
+  (tocou em CNH e mandou RG = dúvida). Lista vazia, tipo desconhecido
   ou `accepted_types` em outro item = 422. **Quando o usuário pedir "RG ou CNH", use isto** — `rg`, `cnh` e `cpf` como
   itens soltos continuam aceitos, mas cada um EXIGE aquele documento (pedir os três soltos = a pessoa manda os três), e a
   tela não os oferece mais.
@@ -111,9 +112,13 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
   contrato (itens "anexar" × pessoas que mandam) — 422 ao salvar o modelo e `anexos_demais` ao enviar.
 - `from_witnesses: true` = as testemunhas também mandam aquele documento (padrão: sim nos fixos, não nos criados).
 - Com anexo e testemunha o contrato fecha com DUAS vias: testemunha recebe a sua SEM as páginas de anexo.
-- `roles_layout.ai_document_check: true` liga a conferência das FOTOS pela IA (só com a chave da OpenAI da conta;
-  gasta crédito dela). Foto em dúvida não conta como entregue até a pessoa mandar outra ou tocar "Manter" (da 2ª dúvida
-  em diante); a equipe vê o aviso em "Ver documentos". Falha da IA = foto aceita.
+- `roles_layout.ai_document_check: true` liga a conferência das FOTOS e dos PDFs de até 5 páginas pela IA (só com a
+  chave da OpenAI da conta; gasta crédito dela). Arquivo em dúvida não conta como entregue até a pessoa mandar outro ou
+  tocar "Manter" (da 2ª dúvida em diante); a equipe vê o aviso em "Ver documentos". Falha da IA = arquivo aceito. PDF com
+  mais de 5 páginas não é conferido.
+- **`description`** (30/10, só nos documentos criados `custom_*`, opcional, até 300 caracteres): explica à IA o que o
+  documento é, além do nome (ex.: `"description": "comprovante de inscrição no conselho de classe, com o nome da pessoa"`).
+  Quem assina NÃO vê. Em documento fixo = 422. Quando o usuário criar um documento cujo nome não diz tudo, sugira escrever.
 - `required_proofs` continua aceito (só as três antigas) e preserva os itens novos; prefira `proof_requests`.
 - `_proofs` ganhou `requests`, `label`/`ai_check`/`ai_kept` por prova e `seal_blocked` (lista: anexo que não entrou no
   selo; o contrato fica parado em `signed_pending_seal` e só dá para REPROVAR aquele documento, com o motivo — aí ele
