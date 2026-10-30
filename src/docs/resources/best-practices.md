@@ -258,9 +258,13 @@ teto de 1380**).
 
 (O exemplo acima soma exatamente 1380: 30 + 240 + 1110.)
 
-Dispara quando o CLIENTE fica inativo após resposta da IA. O motor de follow-up é dedicado e
-**só-leitura** (não executa ferramentas, não coleta dado — só redige a mensagem de retomada,
-com saída estruturada garantida). `paused=true` no assistente corta os follow-ups também.
+Dispara quando o CLIENTE fica inativo após resposta da IA. Passo SEM ferramenta marcada: o motor de
+follow-up só redige a mensagem de retomada. Desde 24/10, o texto de cada passo (até 2.000 caracteres) aceita
+a mesma menção de ferramenta do cenário, `[Nome](tool://slug)` (nativa = id, personalizada = slug, fluxo =
+`flow_<id>`): com menção a uma ferramenta que o agente pode usar e janela de 24h aberta, o passo roda um
+turno completo da IA só com as ferramentas marcadas (+ as de leitura). Transferir/encerrar só valem se
+`handoff`/`resolve_conversation` estiverem marcados no passo. `paused=true` no assistente corta os
+follow-ups também.
 
 ### "A IA nunca faz o follow-up" — o conserto é de 29/07, NÃO de 24/07
 

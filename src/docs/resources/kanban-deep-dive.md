@@ -469,8 +469,9 @@ acesso a uma conversa solta vem de estar atribuído ao card dela.
 
 ## Funil arquivado vs ativo
 
-- `archived = true`: funil escondido da UI principal. Cards ainda existem mas não aparecem nas listas
-- `active = false`: bloqueia movimentação (modo "somente leitura")
+Arquivar e `active = false` são a MESMA coisa (`funnels_archive` grava `active: false`; `funnels_unarchive`
+volta para `true`). Não existe campo `archived` separado. O funil arquivado some da tela principal e os cards
+continuam guardados.
 
 Use cases:
 - Arquivar funis antigos no fim do ano
@@ -572,7 +573,7 @@ PUT /api/v1/accounts/43/funnels/43
 
 **Regras críticas (gravar diferente disso = automação perdida ou morta):**
 
-- `trigger_value` vazio ou `enabled: false` → a UI DESCARTA a automação no próximo "Salvar" do usuário. Nunca grave automação desabilitada "pra ativar depois".
+- `trigger_value` vazio → a UI DESCARTA a automação no próximo "Salvar" do usuário. `enabled: false` é estado válido desde 20/10: a regra desligada que já existe fica guardada, desligada (antes a tela a descartava).
 - Nomes de trigger/action fora das tabelas acima (ex.: `status_changed`, `duplicate_to_funnel`, `send_message`, `set_priority` — NÃO existem) são salvos mas NUNCA disparam, sem erro nenhum.
 - `id` no formato `automation_<timestamp_ms>` — a UI usa pra editar/remover a automação.
 - Trigger `card_created` + ação `duplicate_item` funciona (backend tem anti-loop), mas a UI esconde essa combinação.
@@ -615,11 +616,11 @@ Use para: "ao ganhar um card de Vendas → criar automaticamente em Pós-Venda n
 
 `AutomationRule` é o motor geral da conta (mensagens, contatos, conversas, e também eventos Kanban). Bem mais genérico, com sistema completo de condições/ações.
 
-Eventos Kanban: `kanban_item_created`, `kanban_item_moved`, `kanban_item_stage_changed`.
+Eventos Kanban: `kanban_item_created` e `kanban_item_stage_changed` (não existe `kanban_item_moved`).
 
 ```json
 {
-  "event_name": "kanban_item_moved",
+  "event_name": "kanban_item_stage_changed",
   "conditions": [
     {"attribute_key": "funnel_stage", "operator": "equal_to", "value": "ganho"}
   ],
@@ -775,8 +776,9 @@ A planilha do financeiro (ou de outro sistema) entra e:
 
 | Situação do card no funil | O que acontece |
 |---|---|
-| Card **aberto** (mais antigo, se houver vários) | Grava o valor e marca **ganho com a DATA DA VENDA** |
-| Card **já ganho** | Atualiza **só o valor**; a data do ganho dele **não muda** |
+| Card **aberto** (mais antigo, se houver vários) | Grava o valor (e os produtos, se vierem) e marca **ganho com a DATA DA VENDA** |
+| Card **já ganho** com o mesmo valor e a mesma data | É a mesma venda: **nada muda** (`ja_ganho`) |
+| Card **já ganho** com outro valor ou outra data | Venda nova: nasce **outro card ganho** (`nova_venda`, só se `criar_sem_card: true`) |
 | Card marcado como **perdido** | **Não é tocado** — vai pra conferência humana |
 | **Sem card nenhum** | Cria card já ganho (só se `criar_sem_card: true`) |
 | Linha com telefone sem DDI, valor ilegível ou data no futuro | Vira **erro da linha**, com motivo |
@@ -803,6 +805,11 @@ arquivo, aponta as colunas e ainda oferece uma planilha de exemplo pra baixar.
 | `email` | não | |
 | `agent` | não | Nome ou e-mail do vendedor |
 | `order_id` | não | Número do pedido, guardado no card |
+| `co_participant` | não | Nome ou e-mail de quem ajudou na venda |
+| `products` | não | TEXTO `"Plano Pro:1200; Instalação:300"` (até 20). Troca os produtos do card e o valor vira a soma; com ele, `value` pode ir vazio. Lista ou objeto é recusado |
+
+Card **ganho nunca é editado** (regra de 30/10/2026). Produto que não está no catálogo da conta entra só no
+card (aviso na conferência). A conferência devolve, por linha, `produtos` e `avisos`.
 
 ### O que você PRECISA saber antes de aplicar
 
@@ -813,8 +820,8 @@ arquivo, aponta as colunas e ainda oferece uma planilha de exemplo pra baixar.
 - **A conciliação não dispara conversão por conta própria.** Quem dispara é o caminho normal do ganho
   (Meta/GA4/Google Ads), e só nos funis com o evento de Ganho configurado. Por isso rodar a mesma
   planilha duas vezes não reenvia conversão: o identificador do evento de ganho é estável.
-- **Rodar a mesma planilha duas vezes é seguro**: card já com aquele valor volta como `sem_mudanca` e
-  nem é gravado.
+- **Rodar a mesma planilha duas vezes é seguro**: a venda já registrada (mesmo valor e mesma data) volta
+  como `ja_ganho`/`sem_mudanca` e nada é gravado.
 - **`criar_sem_card: true` abre uma CONVERSA nova por card criado**, e conversa nova acorda o que a conta
   tiver em "Conversa criada" (automação, fluxo, notificação). Avise a pessoa antes de ligar isso numa
   planilha grande.

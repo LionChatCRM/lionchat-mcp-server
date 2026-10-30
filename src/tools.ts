@@ -819,8 +819,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     ja preenchido NAO e sobrescrito (imutavel). saveTo contact_attr/conversation_attr: se o atributo tiver tipo
     (number/currency/percent/date/list ou text+regex), a resposta tambem e validada/formatada por esse tipo.
   saveTo "attribute"/"contact_attribute" NAO EXISTEM — nao salvam nada.
-  TIMEOUT DISPARA DE VERDADE (corrigido 2026-06-09): waitTime estourou -> handle "timeout"
-  (ou "option_{val}_timeout" no modo options). Sempre ligue um edge no timeout.
+  TIMEOUT DISPARA DE VERDADE (corrigido 2026-06-09): waitTime estourou -> handle "timeout" (tambem
+  no modo options; nao existe handle por opcao). Sempre ligue um edge no timeout.
   FALLBACK DE SAIDA (regra de 20/08/2026, substitui a de 15/08): fio COM rotulo so e seguido por quem
     CASA o rotulo. O "ultimo recurso" do avanco segue EXCLUSIVAMENTE a ligacao SEM sourceHandle (fluxo
     legado de bloco simples) — nunca mais "pega o primeiro fio que existir": resposta A num menu com so a
@@ -1055,8 +1055,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         vaga futura fica verde "nasce as HH:MM:SS"). Quem agendou = o Fluxo (booking_source 'fluxo'); o historico do
         card diz "Fluxo X criou uma tarefa ..." / "Fluxo X nao criou a tarefa: motivo".
     Sistema (SO flow conversation e flow action): send_webhook({url,headers?,body?}), start_flow({flow_id}
-      — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save mas IGNORADO
-      EM SILENCIO na execucao, e o fluxo para ali [2026-08-18].
+      — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save, mas na execucao
+      o passo fica com ERRO visivel no historico (self_reference) e o fluxo para ali.
       CAIXA TEM QUE BATER [17/09/2026]: se o flow-alvo e do tipo conversation e NAO esta ligado a
       caixa da conversa, a execucao e RECUSADA e o passo fica com ERRO no historico
       (inbox_mismatch) — antes rodava no lugar errado em silencio. Flow-alvo do tipo 'action' e
