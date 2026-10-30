@@ -497,7 +497,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-28)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-29)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -671,17 +671,28 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     NAO dispara — de proposito nao cai pra conversa do contrato, senao o lembrete da testemunha iria
     pro WhatsApp do titular com as variaveis da outra pessoa.
     Item: {key:'signature_delivered', config:{document_ids:[]}}
+    signature_awaiting_approval / signature_proofs_approved / signature_proofs_rejected (NOVOS
+    2026-10-29 — DOCUMENTOS PEDIDOS na assinatura): os documentos esperam a conferencia da equipe (no
+    fechamento, com participante nulo, roda na conversa do CONTRATO; e de novo A CADA reenvio de
+    documento, na conversa de quem reenviou) / a equipe aprovou os documentos de uma pessoa / a equipe
+    reprovou (por pessoa, na conversa dela; a mensagem de "mande de novo" ja sai sozinha pela secao
+    Comunicacao do modelo — se o flow tambem escrever, a pessoa recebe as duas). Por pessoa sem conversa
+    (so e-mail) NAO dispara. Item: {key:'signature_proofs_rejected', config:{document_ids:[]}}
     — document_ids = ids de MODELO de contrato (STRINGS; vazio = qualquer modelo). A sessao nasce na
     conversa da PESSOA do acontecimento (a testemunha tem a dela); contrato so por e-mail (sem conversa)
     nao dispara; o flow precisa estar ligado a caixa da conversa (ou a nenhuma). Sessao ativa do MESMO
     flow na conversa NAO e atropelada (pulo visivel 'session_already_active'). Idempotente por 24h.
     SO flow individual. Variaveis {{contrato.*}}: contrato.id, contrato.evento (sent|opened|signed|
-    sealed|refused|expired), contrato.titulo, contrato.modelo, contrato.modelo_id, contrato.status,
+    sealed|refused|expired|awaiting_approval|proofs_approved|proofs_rejected), contrato.titulo, contrato.modelo, contrato.modelo_id, contrato.status,
     contrato.enviado_em, contrato.prazo, contrato.validade_dias, contrato.assinado_por_todos (sim|nao),
-    contrato.conversa_id; quem agiu: contrato.assinante.nome / .papel (Assinante|Testemunha|Remetente) /
+    contrato.conversa_id, contrato.documentos_situacao (sem_documentos|pendentes|esperando_aprovacao|
+    aprovados|reprovados), contrato.pessoas_com_documento_reprovado; quem agiu: contrato.assinante.nome / .papel (Assinante|Testemunha|Remetente) /
     .papel_chave (signer|witness|sender) / .email / .telefone / .cpf / .status / .assinou_em /
     .abriu_em / .link (endereco de assinatura; vazio pra quem assina no painel) / .ip / .dispositivo /
-    .localizacao / .foto_documento (sim|nao) / .pelo_painel (sim|nao); lista: contrato.participantes
+    .localizacao / .foto_documento (sim|nao) / .pelo_painel (sim|nao) / .documentos_pedidos /
+    .documentos_enviados (nomes) / .documentos_situacao (sem_documentos|faltando|enviados|
+    esperando_aprovacao|aprovados|reprovados) / .motivo_da_reprovacao / .documento_reenviado /
+    .aviso_da_ia (sim|nao); valores FIXOS de proposito (para comparar no bloco Condicao). Lista: contrato.participantes
     (array de {nome, papel, status, assinou_em}). trigger.type = a chave do gatilho.
     CONFLITO (flow_trigger_conflict): e por CONTA, nao por caixa — dois flows ATIVOS com o mesmo
     booking_* colidem quando os tipos se cruzam E os agentes se cruzam (lista vazia = todos, entao dois

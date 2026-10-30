@@ -93,23 +93,66 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
   esperando aprovação), `sem_documentos`, `motivo_obrigatorio`, `documentos_mudaram` (a pessoa mandou outro depois do
   que foi visto — leia `_proofs` de novo). Quem pode: administrador ou `signature_manage`.
 
+## Documentos pedidos com anexo e conferência por IA (29/10)
+- `roles_layout.proof_requests` é a lista completa (o que vale de verdade): itens `{key, label, accepts_pdf,
+  attach_to_contract, from_witnesses}`. `key`: `id_document`, `rg`, `cnh`, `cpf`, `selfie_with_document`,
+  `address_proof` ou um documento CRIADO, `custom_<6 a 12 letras/números minúsculos>` com `label` obrigatório (1 a 60).
+  **Você inventa a chave do criado** (ex.: `custom_oab2026`) e a mantém igual nas gravações seguintes — o servidor não
+  cria chave, e trocar a chave vira outro documento. Aceita `["rg", "cnh"]` (texto solto = padrões). Máximo 12 itens.
+- `accepts_pdf`: só no comprovante (sempre) e nos criados; RG/CNH/CPF/selfie com PDF = 422.
+- `attach_to_contract: true` = o arquivo entra como páginas no contrato assinado. Teto: 10 arquivos anexados por
+  contrato (itens "anexar" × pessoas que mandam) — 422 ao salvar o modelo e `anexos_demais` ao enviar.
+- `from_witnesses: true` = as testemunhas também mandam aquele documento (padrão: sim nos fixos, não nos criados).
+- Com anexo e testemunha o contrato fecha com DUAS vias: testemunha recebe a sua SEM as páginas de anexo.
+- `roles_layout.ai_document_check: true` liga a conferência das FOTOS pela IA (só com a chave da OpenAI da conta;
+  gasta crédito dela). Foto em dúvida não conta como entregue até a pessoa mandar outra ou tocar "Manter" (da 2ª dúvida
+  em diante); a equipe vê o aviso em "Ver documentos". Falha da IA = foto aceita.
+- `required_proofs` continua aceito (só as três antigas) e preserva os itens novos; prefira `proof_requests`.
+- `_proofs` ganhou `requests`, `label`/`ai_check`/`ai_kept` por prova e `seal_blocked` (lista: anexo que não entrou no
+  selo; o contrato fica parado em `signed_pending_seal` e só dá para REPROVAR aquele documento, com o motivo — aí ele
+  volta a esperar a aprovação).
+- Gatilhos do Flow novos: `signature_awaiting_approval`, `signature_proofs_approved`, `signature_proofs_rejected`, com
+  `{{contrato.documentos_situacao}}` e `{{contrato.assinante.documentos_situacao}}` para condicionar.
+
 ## Confirmar pelo WhatsApp (28/10)
 Quem recebe o link pelo WhatsApp pode confirmar que é ela mandando uma frase pronta (com um código `CT-XXXXXX`) para o
 WhatsApp do contrato, em vez de digitar o código de 6 dígitos — resolve a caixa oficial com a janela de 24 h fechada.
 Só vale do telefone da pessoa e na caixa do contrato. A mensagem aparece na conversa, mas a IA, os fluxos e as
 automações não respondem a ela. Não há ferramenta: é só a página da pessoa.
 
-## Link do contrato para divulgar (28/10)
-- No modelo, `roles_layout.public_link: {enabled: true, inbox_id: <caixa de WhatsApp da conta>}`. A leitura devolve
-  `{enabled, inbox_id, path}` — o endereço é o domínio da instalação + `path` (`/contrato/<código>`). Mande
-  `regenerate: true` para trocar o código (o endereço antigo para de funcionar). Salvar sem `regenerate` mantém o
-  mesmo endereço; desligar e religar também.
+## Caixa do modelo e as mensagens (29/10)
+- `roles_layout.communication: {inbox_id, code_message, invite_message, copy_message, proofs_again_message,
+  code_template, invite_template, copy_template, proofs_again_template}`. A caixa (`inbox_id`, WhatsApp da conta: oficial ou QR Code) vale para TODA a comunicação dos contratos
+  do modelo: código, link de quem assina e das testemunhas, cópia assinada e o link do contrato para divulgar.
+- Caixa de QR Code: os quatro textos (em branco = o texto de sempre). `code_message` precisa ter `{{codigo}}`;
+  `invite_message`, `copy_message` e `proofs_again_message` (pedido de documento de novo), `{{link}}`; `{{contrato}}`
+  põe o nome e, no pedido de documento de novo, `{{motivo}}` põe o motivo da equipe. Sem a variável = 422.
+- Caixa oficial: os quatro modelos (`code_template`, `invite_template`, `copy_template`, `proofs_again_template`), cada um `{name, language}` de um modelo do WhatsApp APROVADO com UMA variável no corpo e
+  sem foto/arquivo/variável no cabeçalho; o do código é de Autenticação. `null` tira. Para criar o modelo na Meta use
+  `lionchat_inboxes_whatsapp_templates_create` (o do código: categoria `AUTHENTICATION`, corpo com
+  `add_security_recommendation: true`, rodapé `code_expiration_minutes: 10`, botão `OTP`/`COPY_CODE`) — confirme com o
+  usuário antes: cada código enviado por ele é cobrado pela Meta.
+- Mande só o que muda: o que não vem fica o guardado.
+- O código de 6 dígitos aparece no painel (decisão do dono, 29/10); no webhook de saída ele vai escondido.
+
+## Como a pessoa pode assinar (29/10)
+- `roles_layout.signature_methods`: `["drawn","typed"]` (os dois, o padrão quando não vem), `["drawn"]` (só desenhar) ou
+  `["typed"]` (só digitar o nome). Lista vazia ou valor desconhecido = 422. Vale para os próximos envios; o contrato
+  grava o que valia quando saiu.
+
+## Link do contrato para divulgar (28/10; formulário e código desde 29/10)
+- No modelo, `roles_layout.public_link: {enabled: true}`. O link usa a caixa de `communication` (o `inbox_id` dentro de
+  `public_link` só vale para modelo sem caixa em `communication`). A leitura devolve `{enabled, inbox_id, path}` — o
+  endereço é o domínio da instalação + `path` (`/contrato/<código>`). Mande `regenerate: true` para trocar o código (o
+  endereço antigo para de funcionar). Salvar sem `regenerate` mantém o mesmo endereço; desligar e religar também.
 - Só para modelo com UM assinante principal e sem `sender_signs` (422 com `public_link` no texto do erro), e só caixa de
-  WhatsApp (oficial ou QR Code).
-- Quem abre o endereço manda a mensagem pronta pelo WhatsApp; o contrato dela nasce sozinho no jeito Formulário, na
-  conversa dela (`additional_attributes.link_padrao: true`). Se o modelo tem testemunha, o formulário pergunta nome e
-  WhatsApp de cada uma. A mesma pessoa pedindo de novo em 24 h recebe o mesmo contrato.
-- **Limite do mês:** o contrato do link só conta depois que a pessoa confirma que é ela. Quem abre e some não gasta vaga.
+  WhatsApp (oficial ou QR Code). Na oficial o link fica "indisponível" até o modelo do código estar aprovado.
+- Quem abre o endereço preenche um formulário (os dados do contrato, o WhatsApp dela e as testemunhas do modelo), recebe
+  um código no WhatsApp digitado e, com o código certo, o contrato dela nasce com os dados preenchidos
+  (`additional_attributes.link_padrao: true`). Contato que já existe não tem a ficha alterada. A mesma pessoa (mesmo
+  WhatsApp e mesmo CPF) preenchendo de novo em 24 h ganha contrato novo e o anterior sem assinatura é cancelado.
+- **Limite do mês:** o contrato do link só nasce (e conta) depois que a pessoa confirma o código. Quem abre e some não
+  gasta vaga.
 
 ## Como mandar um contrato (receita)
 1. `lionchat_signature_documents_list` → escolha o modelo (ou crie um `text` com `signature_documents_create`;
@@ -157,7 +200,7 @@ automações não respondem a ela. Não há ferramenta: é só a página da pess
   `message` junto do link e `send_link: false` para só gerar; o contrato criado vira `{{contrato.*}}`, com
   `{{contrato.link}}`, para os blocos seguintes), na Macro e na Automação;
   bloco `generate_contract` no Formulário público (gera pelas respostas e manda o link). Gatilhos do Flow
-  `signature_*` (8 acontecimentos) trazem `{{contrato.*}}` — ver `lionchat_flows_schema_reference`.
+  `signature_*` (12 acontecimentos, 29/10) trazem `{{contrato.*}}` — ver `lionchat_flows_schema_reference`.
 
 ## Onde o cliente vê
 Menu **Assinaturas** (modelos e contratos, filtros, "Falta você assinar"), aba **Contratos** na ficha do contato,
