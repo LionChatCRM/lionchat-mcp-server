@@ -1111,6 +1111,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     -> 401). Secret so resolve dentro do node api (apiUrl/apiHeaders/apiBody).
   Ler a resposta adiante: {{apiResponseVar.campo}} navega por ponto (default var api_response, ex
     {{api_response.user.name}}); NAO existe .payload/.response; status em {{api_response_status}}.
+  LISTA na resposta: item pelo indice com PONTO ({{api_response.data.0.id}}) e tamanho com FILTRO
+    ({{api_response.data | size}}) — funcionam em qualquer versao. Colchete ({{x.data[0].id}}) e .size sem
+    filtro so funcionam depois da correcao de 30/10/2026 estar no ar; antes saem VAZIOS sem erro (a previa
+    da tela mostra o valor e a execucao nao). Prefira ponto e | size.
   Handles: "success", "error"
 
 ▸ ai

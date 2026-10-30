@@ -765,6 +765,13 @@ mensagem elas são bloqueadas por segurança); aqui resolvem no `apiUrl`, `apiHe
 NÃO existe `.payload`/`.response` (`{{api_response.payload.x}}` resolve vazio). O status fica em
 `{{api_response_status}}`. Se a resposta não for JSON, só `{{api_response}}` inteiro funciona.
 
+**Listas na resposta:** item de lista pelo índice com PONTO — `{{api_response.data.0.id}}`,
+`{{api_response.data.0.itens.1.nome}}` — funciona em qualquer versão. Tamanho da lista com FILTRO:
+`{{api_response.data | size}}`. Colchete (`{{api_response.data[0].id}}`) e `.size` sem filtro
+(`{{api_response.data.size}}`) só funcionam depois da correção de 30/10/2026 estar no ar; antes disso saem
+VAZIOS sem erro (a prévia da tela mostra o valor e a execução real não). Prefira sempre o ponto e o `| size`.
+Posição que não existe sai vazia.
+
 **Handles que SAEM:** `success`, `error`.
 
 ### 2.7 `ai`
