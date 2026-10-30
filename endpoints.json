@@ -29106,7 +29106,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/sales_reconciliation/preview",
   "title": "Conferir planilha de vendas",
-  "description": "CONFERE uma planilha de vendas contra os cards de um funil e NAO GRAVA NADA. Devolve, linha a linha, o que aconteceria: completar um card aberto, so atualizar o valor de um card ja ganho, criar card pra quem nao tem, conferir a mao (card marcado como perdido) ou erro da linha. SEMPRE chame isto antes de `lionchat_kanban_sales_reconciliation_apply` e mostre o resumo pra pessoa confirmar. O MCP NAO sobe arquivo: mande as linhas da planilha em `rows` (lista de objetos). Se a pessoa anexar uma planilha na conversa, LEIA o arquivo e monte as linhas voce mesmo. Quem prefere a tela usa Kanban > botao azul + > Importar vendas. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id.",
+  "description": "CONFERE uma planilha de vendas contra os cards de um funil e NAO GRAVA NADA. Devolve, linha a linha, o que aconteceria: completar um card aberto, ja registrada (card ganho igual), venda nova (outro card ganho), criar card pra quem nao tem, conferir a mao (card marcado como perdido) ou erro da linha. Regra por pessoa no funil: card ABERTO (o mais antigo) e completado e marcado ganho com a DATA DA VENDA; sem products, card com 1 produto recebe o valor nesse produto e card com 2 ou mais produtos NAO muda de valor (aviso). Card GANHO nunca e editado: ganho com o MESMO valor e a MESMA data = a mesma venda, nada muda (ja_ganho); senao e uma venda nova e nasce OUTRO card ja ganho (nova_venda, so com criar_sem_card: true). So card perdido = conferir a mao. Ninguem com card = cria (so com criar_sem_card: true). SEMPRE chame isto antes de `lionchat_kanban_sales_reconciliation_apply` e mostre o resumo pra pessoa confirmar. O MCP NAO sobe arquivo: mande as linhas da planilha em `rows` (lista de objetos). Se a pessoa anexar uma planilha na conversa, LEIA o arquivo e monte as linhas voce mesmo. Quem prefere a tela usa Kanban > botao azul + > Importar vendas (o mesmo menu tem 'Baixar modelo de vendas', planilha de exemplo em Excel). Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'; obrigatorio, MENOS quando vier products), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor), order_id, co_participant e products (30/10). products e TEXTO no formato 'Nome:valor; Nome:valor' (ex.: 'Plano Pro:1200; Instalação:300'), ate 20 por linha; o nome e casado com o catalogo de produtos da conta (sem diferenca de maiuscula/acento) e o que nao esta no catalogo entra SO no card, como produto avulso (a conferencia avisa). Com products, os produtos do card sao TROCADOS pelos da planilha e o valor vira a SOMA; se value tambem vier e nao bater, valem os produtos (aviso). Lista ou objeto em products = erro da linha (mande texto).",
   "category": "Itens",
   "params": [
    {
@@ -29135,10 +29135,10 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Linhas da planilha. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id."
+    "description": "Linhas da planilha. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'; obrigatorio, MENOS quando vier products), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor), order_id, co_participant e products (30/10). products e TEXTO no formato 'Nome:valor; Nome:valor' (ex.: 'Plano Pro:1200; Instalação:300'), ate 20 por linha; o nome e casado com o catalogo de produtos da conta (sem diferenca de maiuscula/acento) e o que nao esta no catalogo entra SO no card, como produto avulso (a conferencia avisa). Com products, os produtos do card sao TROCADOS pelos da planilha e o valor vira a SOMA; se value tambem vier e nao bater, valem os produtos (aviso). Lista ou objeto em products = erro da linha (mande texto)."
    }
   ],
-  "returns": "{ total, erros, conversoes, conversao_ligada, pos_venda, automacoes_de_ganho, responsavel, contagem: { completa, ja_ganho, cria, conferir, erro }, linhas: [...] } — nada e gravado.",
+  "returns": "{ total, erros, conversoes, conversao_ligada, pos_venda, automacoes_de_ganho, responsavel, contagem: { completa, ja_ganho, nova_venda, cria, conferir, erro }, linhas: [...] } — cada linha traz tipo, valor final e, quando houver, produtos ([{nome, valor, do_catalogo}] = os produtos que o card vai ter) e avisos (produto fora do catalogo, nome repetido no catalogo, diferenca entre value e a soma dos produtos, card com varios produtos que nao muda de valor). Nada e gravado.",
   "common_use_cases": [
    "Conferir a planilha do financeiro antes de aplicar",
    "Saber quantas vendas viram conversao e quantos cards de pos-venda nascem",
@@ -29155,7 +29155,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/sales_reconciliation/apply",
   "title": "Aplicar planilha de vendas",
-  "description": "APLICA a planilha de vendas: grava o valor no card e marca o GANHO com a DATA DA VENDA (nao com a data de hoje), pra o relatorio de faturamento contar a venda no mes certo. Card aberto e completado; card ja ganho recebe SO o valor (a data do ganho dele nao muda); card marcado como perdido nao e tocado. Roda em segundo plano — acompanhe com `lionchat_kanban_sales_reconciliation_status`. Rodar a mesma planilha duas vezes nao dobra valor nem cria card repetido. ATENCAO: `criar_sem_card: true` abre uma CONVERSA nova por card criado, e conversa nova aciona o que a conta tiver em 'Conversa criada' (automacao, fluxo, notificacao) — avise a pessoa antes de ligar isso numa planilha grande. O MCP NAO sobe arquivo: mande as linhas da planilha em `rows` (lista de objetos). Se a pessoa anexar uma planilha na conversa, LEIA o arquivo e monte as linhas voce mesmo. Quem prefere a tela usa Kanban > botao azul + > Importar vendas. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id.",
+  "description": "APLICA a planilha de vendas: grava o valor (e os produtos, se vierem) no card e marca o GANHO com a DATA DA VENDA (nao com a data de hoje), pra o relatorio de faturamento contar a venda no mes certo. Regra por pessoa no funil: card ABERTO (o mais antigo) e completado e marcado ganho com a DATA DA VENDA; sem products, card com 1 produto recebe o valor nesse produto e card com 2 ou mais produtos NAO muda de valor (aviso). Card GANHO nunca e editado: ganho com o MESMO valor e a MESMA data = a mesma venda, nada muda (ja_ganho); senao e uma venda nova e nasce OUTRO card ja ganho (nova_venda, so com criar_sem_card: true). So card perdido = conferir a mao. Ninguem com card = cria (so com criar_sem_card: true). A gravacao segue EXATAMENTE a mesma regra da conferencia. Roda em segundo plano — acompanhe com `lionchat_kanban_sales_reconciliation_status`. Rodar a mesma planilha duas vezes nao dobra valor nem cria card repetido (a 2a rodada da 'ja registrada'). ATENCAO: `criar_sem_card: true` abre uma CONVERSA nova por card criado (inclusive na venda nova de quem ja ganhou), e conversa nova aciona o que a conta tiver em 'Conversa criada' (automacao, fluxo, notificacao) — avise a pessoa antes de ligar isso numa planilha grande. O MCP NAO sobe arquivo: mande as linhas da planilha em `rows` (lista de objetos). Se a pessoa anexar uma planilha na conversa, LEIA o arquivo e monte as linhas voce mesmo. Quem prefere a tela usa Kanban > botao azul + > Importar vendas. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'; obrigatorio, MENOS quando vier products), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor), order_id, co_participant e products (30/10). products e TEXTO no formato 'Nome:valor; Nome:valor' (ex.: 'Plano Pro:1200; Instalação:300'), ate 20 por linha; o nome e casado com o catalogo de produtos da conta (sem diferenca de maiuscula/acento) e o que nao esta no catalogo entra SO no card, como produto avulso (a conferencia avisa). Com products, os produtos do card sao TROCADOS pelos da planilha e o valor vira a SOMA; se value tambem vier e nao bater, valem os produtos (aviso). Lista ou objeto em products = erro da linha (mande texto).",
   "category": "Itens",
   "params": [
    {
@@ -29184,7 +29184,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Linhas da planilha. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id."
+    "description": "Linhas da planilha. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'; obrigatorio, MENOS quando vier products), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor), order_id, co_participant e products (30/10). products e TEXTO no formato 'Nome:valor; Nome:valor' (ex.: 'Plano Pro:1200; Instalação:300'), ate 20 por linha; o nome e casado com o catalogo de produtos da conta (sem diferenca de maiuscula/acento) e o que nao esta no catalogo entra SO no card, como produto avulso (a conferencia avisa). Com products, os produtos do card sao TROCADOS pelos da planilha e o valor vira a SOMA; se value tambem vier e nao bater, valem os produtos (aviso). Lista ou objeto em products = erro da linha (mande texto)."
    },
    {
     "name": "criar_sem_card",
@@ -29235,7 +29235,7 @@
     "description": "Codigo da rodada, devolvido pela aplicacao"
    }
   ],
-  "returns": "{ status, total, completados, valor_atualizado, criados, sem_mudanca, pulados, erros } — 'sem_mudanca' e a linha cujo card ja estava com aquele valor",
+  "returns": "{ status, total, completados, criados, sem_mudanca, pulados, erros, co_participantes } — 'sem_mudanca' e a linha ja registrada (card ganho com o mesmo valor e a mesma data); 'criados' inclui a venda nova de quem ja tinha card ganho; 'pulados' e a linha que precisaria criar card com criar_sem_card desligado. Desde 30/10 nao existe mais 'valor_atualizado' (card ganho nunca e editado).",
   "common_use_cases": [
    "Saber se a planilha terminou de ser aplicada",
    "Contar quantos cards foram completados e quantos foram criados"
@@ -30179,7 +30179,7 @@
   "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage — EXCETO para quem edita fluxo (Admin ou flowbuilder_manage): esse recebe a forma LEVE (so id e name de cada agente, e as linhas recortadas pelas caixas que ve), que e o que o node ai_call do FlowBuilder precisa. Devolve tambem meta.dial_inboxes: as caixas que podem fazer ligacao (LionCalls ligada) — use o id no data.aiCallInboxId do node ai_call.",
   "category": "Assistentes",
   "params": [],
-  "returns": "{ payload: [agente de ligacao], meta: { dial_inboxes: [{id, name}] } }",
+  "returns": "{ payload: [agente de ligacao { id, name, objective, first_message, style, voice_provider, engine, voice_id, elevenlabs_agent_id, max_duration_seconds, captain_assistant_id, captain_assistant_name, sip_ramal, sip_server, sip_port, max_concurrent_calls, new_conversation_inbox_id, has_sip_password }], meta: { dial_inboxes: [{id, name}] } }",
   "common_use_cases": [
    "Ver agentes de ligacao configurados",
    "Descobrir qual caixa pode ligar"
@@ -30207,7 +30207,7 @@
     "description": "ID do agente de ligacao"
    }
   ],
-  "returns": "agente de ligacao { id, name, objective, first_message, style, voice_provider, engine, voice_id, elevenlabs_agent_id, max_duration_seconds, captain_assistant_id, captain_assistant_name }",
+  "returns": "agente de ligacao { id, name, objective, first_message, style, voice_provider, engine, voice_id, elevenlabs_agent_id, max_duration_seconds, captain_assistant_id, captain_assistant_name, sip_ramal, sip_server, sip_port, max_concurrent_calls, new_conversation_inbox_id, has_sip_password }",
   "common_use_cases": [
    "Conferir a configuracao antes de editar"
   ],
@@ -30215,7 +30215,8 @@
    "lionchat_captain_call_agents_list",
    "lionchat_captain_call_agents_update",
    "lionchat_captain_call_agents_test_call",
-   "lionchat_captain_call_test_phones_list"
+   "lionchat_captain_call_test_phones_list",
+   "lionchat_captain_call_agents_ramal_status"
   ]
  },
  {
@@ -30223,7 +30224,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/captain/call_agents",
   "title": "Criar Agente de Ligacao",
-  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Campos em body (pode mandar solto ou dentro de call_agent). Durante a ligacao a voz so CONSULTA agenda e REPASSA pedidos; quem executa e o agente de texto de captain_assistant_id.",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Campos em body (pode mandar solto ou dentro de call_agent). Durante a ligacao a voz so CONSULTA agenda e REPASSA pedidos; quem executa e o agente de texto de captain_assistant_id. Com ramal VTCall (sip_ramal + sip_server) o agente LIGA POR TELEFONE; sem ramal, a ligacao sai pelo WhatsApp Calling. A senha do ramal nunca entra pelo MCP — so pela tela.",
   "category": "Assistentes",
   "params": [
    {
@@ -30295,6 +30296,41 @@
     "location": "body",
     "required": false,
     "description": "Agente de TEXTO que EXECUTA durante a ligacao o que o cliente pedir (mandar link no WhatsApp, mover card, anotar), com as ferramentas e a configuracao DELE. Sem ele a voz so conversa. Tem de ser desta conta (422 se nao for)."
+   },
+   {
+    "name": "sip_ramal",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Numero do ramal VTCall. Com ele preenchido, este agente LIGA POR TELEFONE (nao pelo WhatsApp). Exige sip_server junto. A SENHA do ramal (sip_password) NAO entra pelo MCP — so pela tela do painel."
+   },
+   {
+    "name": "sip_server",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Servidor SIP do ramal, no formato <algo>.vtcall.app ou <algo>.vtcall.com.br. Exigido junto com sip_ramal."
+   },
+   {
+    "name": "sip_port",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Porta SIP: 5060, 5061, 5068 ou 5080 (lista fechada). Padrao 5060."
+   },
+   {
+    "name": "max_concurrent_calls",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Teto de ligacoes simultaneas por este ramal, 0 a 50 (padrao 1; 0 = nao liga)."
+   },
+   {
+    "name": "new_conversation_inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa de entrada onde nasce a conversa de cada ligacao feita por este ramal. Tem de ser desta conta."
    }
   ],
   "returns": "agente de ligacao criado",
@@ -30306,7 +30342,8 @@
    "lionchat_captain_call_agents_list",
    "lionchat_captain_call_agents_update",
    "lionchat_captain_call_agents_test_call",
-   "lionchat_captain_call_test_phones_list"
+   "lionchat_captain_call_test_phones_list",
+   "lionchat_captain_call_agents_ramal_status"
   ]
  },
  {
@@ -30314,7 +30351,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/captain/call_agents/{id}",
   "title": "Atualizar Agente de Ligacao",
-  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Edicao parcial.",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Edicao parcial. Com ramal VTCall (sip_ramal + sip_server) o agente LIGA POR TELEFONE; sem ramal, a ligacao sai pelo WhatsApp Calling. A senha do ramal nunca entra pelo MCP — so pela tela.",
   "category": "Assistentes",
   "params": [
    {
@@ -30393,6 +30430,41 @@
     "location": "body",
     "required": false,
     "description": "Agente de TEXTO que EXECUTA durante a ligacao o que o cliente pedir (mandar link no WhatsApp, mover card, anotar), com as ferramentas e a configuracao DELE. Sem ele a voz so conversa. Tem de ser desta conta (422 se nao for)."
+   },
+   {
+    "name": "sip_ramal",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Numero do ramal VTCall. Com ele preenchido, este agente LIGA POR TELEFONE (nao pelo WhatsApp). Exige sip_server junto. A SENHA do ramal (sip_password) NAO entra pelo MCP — so pela tela do painel."
+   },
+   {
+    "name": "sip_server",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Servidor SIP do ramal, no formato <algo>.vtcall.app ou <algo>.vtcall.com.br. Exigido junto com sip_ramal."
+   },
+   {
+    "name": "sip_port",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Porta SIP: 5060, 5061, 5068 ou 5080 (lista fechada). Padrao 5060."
+   },
+   {
+    "name": "max_concurrent_calls",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Teto de ligacoes simultaneas por este ramal, 0 a 50 (padrao 1; 0 = nao liga)."
+   },
+   {
+    "name": "new_conversation_inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa de entrada onde nasce a conversa de cada ligacao feita por este ramal. Tem de ser desta conta."
    }
   ],
   "returns": "agente de ligacao atualizado",
@@ -30403,7 +30475,8 @@
    "lionchat_captain_call_agents_list",
    "lionchat_captain_call_agents_update",
    "lionchat_captain_call_agents_test_call",
-   "lionchat_captain_call_test_phones_list"
+   "lionchat_captain_call_test_phones_list",
+   "lionchat_captain_call_agents_ramal_status"
   ]
  },
  {
@@ -30533,6 +30606,32 @@
    "lionchat_captain_call_agents_update",
    "lionchat_captain_call_agents_test_call",
    "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_agents_ramal_status",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/call_agents/{id}/ramal_status",
+  "title": "Estado do Ramal VTCall",
+  "description": "So para agente de ligacao COM ramal (sip_ramal). Le NO MOTOR o estado do cadastro do ramal: aguardando_teste (registrando), comprovado (o ramal conectou), senha_recusada, aguardando_liberacao ou erro. Agente sem ramal devolve estado nulo. A senha nunca aparece — so has_sip_password.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do agente de ligacao"
+   }
+  ],
+  "returns": "{ estado: null|aguardando_teste|comprovado|senha_recusada|aguardando_liberacao|erro, has_sip_password, message }",
+  "common_use_cases": [
+   "Conferir se o ramal VTCall conectou depois de salvar o agente de ligacao"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_show",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call"
   ]
  },
  {

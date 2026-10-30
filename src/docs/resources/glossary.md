@@ -468,6 +468,15 @@ caixa oficial → `whatsapp_calls`; telefone/ramal → Zenvia (softphone) ou VTC
 WhatsApp Calling (Cloud) fica fora, em `whatsapp_calls_*`. Ligações antigas do **Wavoip** (integração
 encerrada em 30/07/2026) continuam aparecendo nesse histórico, com `provider: "wavoip"`.
 
+**Agente de Ligação com IA pelo TELEFONE (ramal VTCall, 30/10/2026).** O Agente de Ligação
+(`captain_call_agents_*`) é a IA de voz. Por padrão ela liga pelo WhatsApp; se o agente tiver um
+**ramal VTCall** configurado (`sip_ramal` + `sip_server`, com `sip_port` e `max_concurrent_calls`),
+ela passa a **ligar por TELEFONE** por esse ramal, e a conversa de cada ligação nasce na caixa
+`new_conversation_inbox_id`. Os campos do ramal vão no `create`/`update` do agente; **a senha do ramal
+(`sip_password`) NUNCA entra pelo MCP — só pela tela do painel** (o MCP só lê `has_sip_password`
+true/false). `captain_call_agents_ramal_status` lê no motor se o ramal conectou (`comprovado`),
+foi recusado (`senha_recusada`) ou ainda está registrando (`aguardando_teste`).
+
 **Wavoip — INTEGRAÇÃO REMOVIDA (12/08/2026).** O vínculo com a Wavoip acabou; o último uso real foi
 em 30/07/2026. Saíram do produto: a aba "Ligação WP" da caixa, o discador, o Super Admin, as rotas,
 os webhooks, as tarefas automáticas e a tabela. As 8 tools `wavoip_*` já haviam sido removidas do MCP
