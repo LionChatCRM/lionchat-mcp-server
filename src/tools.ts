@@ -497,7 +497,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-28)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-30)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -671,17 +671,28 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     NAO dispara — de proposito nao cai pra conversa do contrato, senao o lembrete da testemunha iria
     pro WhatsApp do titular com as variaveis da outra pessoa.
     Item: {key:'signature_delivered', config:{document_ids:[]}}
+    signature_awaiting_approval / signature_proofs_approved / signature_proofs_rejected (NOVOS
+    2026-10-29 — DOCUMENTOS PEDIDOS na assinatura): os documentos esperam a conferencia da equipe (no
+    fechamento, com participante nulo, roda na conversa do CONTRATO; e de novo A CADA reenvio de
+    documento, na conversa de quem reenviou) / a equipe aprovou os documentos de uma pessoa / a equipe
+    reprovou (por pessoa, na conversa dela; a mensagem de "mande de novo" ja sai sozinha pela secao
+    Comunicacao do modelo — se o flow tambem escrever, a pessoa recebe as duas). Por pessoa sem conversa
+    (so e-mail) NAO dispara. Item: {key:'signature_proofs_rejected', config:{document_ids:[]}}
     — document_ids = ids de MODELO de contrato (STRINGS; vazio = qualquer modelo). A sessao nasce na
     conversa da PESSOA do acontecimento (a testemunha tem a dela); contrato so por e-mail (sem conversa)
     nao dispara; o flow precisa estar ligado a caixa da conversa (ou a nenhuma). Sessao ativa do MESMO
     flow na conversa NAO e atropelada (pulo visivel 'session_already_active'). Idempotente por 24h.
     SO flow individual. Variaveis {{contrato.*}}: contrato.id, contrato.evento (sent|opened|signed|
-    sealed|refused|expired), contrato.titulo, contrato.modelo, contrato.modelo_id, contrato.status,
+    sealed|refused|expired|awaiting_approval|proofs_approved|proofs_rejected), contrato.titulo, contrato.modelo, contrato.modelo_id, contrato.status,
     contrato.enviado_em, contrato.prazo, contrato.validade_dias, contrato.assinado_por_todos (sim|nao),
-    contrato.conversa_id; quem agiu: contrato.assinante.nome / .papel (Assinante|Testemunha|Remetente) /
+    contrato.conversa_id, contrato.documentos_situacao (sem_documentos|pendentes|esperando_aprovacao|
+    aprovados|reprovados), contrato.pessoas_com_documento_reprovado; quem agiu: contrato.assinante.nome / .papel (Assinante|Testemunha|Remetente) /
     .papel_chave (signer|witness|sender) / .email / .telefone / .cpf / .status / .assinou_em /
     .abriu_em / .link (endereco de assinatura; vazio pra quem assina no painel) / .ip / .dispositivo /
-    .localizacao / .foto_documento (sim|nao) / .pelo_painel (sim|nao); lista: contrato.participantes
+    .localizacao / .foto_documento (sim|nao) / .pelo_painel (sim|nao) / .documentos_pedidos /
+    .documentos_enviados (nomes) / .documentos_situacao (sem_documentos|faltando|enviados|
+    esperando_aprovacao|aprovados|reprovados) / .motivo_da_reprovacao / .documento_reenviado /
+    .aviso_da_ia (sim|nao); valores FIXOS de proposito (para comparar no bloco Condicao). Lista: contrato.participantes
     (array de {nome, papel, status, assinou_em}). trigger.type = a chave do gatilho.
     CONFLITO (flow_trigger_conflict): e por CONTA, nao por caixa — dois flows ATIVOS com o mesmo
     booking_* colidem quando os tipos se cruzam E os agentes se cruzam (lista vazia = todos, entao dois
@@ -808,8 +819,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     ja preenchido NAO e sobrescrito (imutavel). saveTo contact_attr/conversation_attr: se o atributo tiver tipo
     (number/currency/percent/date/list ou text+regex), a resposta tambem e validada/formatada por esse tipo.
   saveTo "attribute"/"contact_attribute" NAO EXISTEM — nao salvam nada.
-  TIMEOUT DISPARA DE VERDADE (corrigido 2026-06-09): waitTime estourou -> handle "timeout"
-  (ou "option_{val}_timeout" no modo options). Sempre ligue um edge no timeout.
+  TIMEOUT DISPARA DE VERDADE (corrigido 2026-06-09): waitTime estourou -> handle "timeout" (tambem
+  no modo options; nao existe handle por opcao). Sempre ligue um edge no timeout.
   FALLBACK DE SAIDA (regra de 20/08/2026, substitui a de 15/08): fio COM rotulo so e seguido por quem
     CASA o rotulo. O "ultimo recurso" do avanco segue EXCLUSIVAMENTE a ligacao SEM sourceHandle (fluxo
     legado de bloco simples) — nunca mais "pega o primeiro fio que existir": resposta A num menu com so a
@@ -1044,8 +1055,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         vaga futura fica verde "nasce as HH:MM:SS"). Quem agendou = o Fluxo (booking_source 'fluxo'); o historico do
         card diz "Fluxo X criou uma tarefa ..." / "Fluxo X nao criou a tarefa: motivo".
     Sistema (SO flow conversation e flow action): send_webhook({url,headers?,body?}), start_flow({flow_id}
-      — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save mas IGNORADO
-      EM SILENCIO na execucao, e o fluxo para ali [2026-08-18].
+      — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save, mas na execucao
+      o passo fica com ERRO visivel no historico (self_reference) e o fluxo para ali.
       CAIXA TEM QUE BATER [17/09/2026]: se o flow-alvo e do tipo conversation e NAO esta ligado a
       caixa da conversa, a execucao e RECUSADA e o passo fica com ERRO no historico
       (inbox_mismatch) — antes rodava no lugar errado em silencio. Flow-alvo do tipo 'action' e
@@ -1100,6 +1111,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     -> 401). Secret so resolve dentro do node api (apiUrl/apiHeaders/apiBody).
   Ler a resposta adiante: {{apiResponseVar.campo}} navega por ponto (default var api_response, ex
     {{api_response.user.name}}); NAO existe .payload/.response; status em {{api_response_status}}.
+  LISTA na resposta: item pelo indice com PONTO ({{api_response.data.0.id}}) e tamanho com FILTRO
+    ({{api_response.data | size}}) — funcionam em qualquer versao. Colchete ({{x.data[0].id}}) e .size sem
+    filtro so funcionam depois da correcao de 30/10/2026 estar no ar; antes saem VAZIOS sem erro (a previa
+    da tela mostra o valor e a execucao nao). Prefira ponto e | size.
   Handles: "success", "error"
 
 ▸ ai
@@ -1175,6 +1190,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 ▸ ai_call ("Ligar com IA", 17/10/2026 — so em conta com ai_calling + lioncalls_calling)
   A IA liga para o TELEFONE DO CONTATO da conversa do fluxo pela linha de ligacao do WhatsApp (LionCalls).
   data: { aiCallAgentId: <id de lionchat_captain_call_agents_list>, aiCallInboxId: <id de meta.dial_inboxes> }
+  aiCallAgentId e de um AGENTE DE LIGACAO. NUNCA use o id de um agente de TEXTO (lionchat_captain_assistants_*): o
+  agente de ligacao so aponta para um de texto em captain_assistant_id. Se captain_call_agents_list nao estiver
+  entre as suas ferramentas, PESQUISE pelo nome antes de dizer que nao existe; agente que ja existe nao se recria.
   (aiCallAgentName/aiCallInboxName sao opcionais, so pro resumo do card). O que a IA fala, a voz e o TEMPO
   MAXIMO da ligacao vem do agente de ligacao (max_duration_seconds, 30-600 s): no tempo o motor desliga sozinho.
   Handles: "answered" (a pessoa atendeu), "no_answer" (nao atendeu ou recusou), "error" (nao deu pra ligar:
@@ -1185,7 +1203,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   condition antes. A IA so liga se sobrar uma vaga na linha para uma pessoa; senao espera a vez (fila por
   ordem de chegada, ate 2 h). O card da ligacao vai para a conversa do lead na caixa da linha.
   PROIBIDO em flow 'action', em flow de GRUPO e em ai_tool (o save recusa); id de agente/caixa de OUTRA conta
-  tambem e recusado. Agente apagado ou caixa excluida NAO travam o save — falham na execucao.
+  tambem e recusado, e agente ou caixa ESCOLHIDOS/TROCADOS que nao existem nesta conta tambem ("ai_call block
+  uses a call agent that does not exist in this account"). Agente apagado ou caixa excluida DEPOIS NAO travam o
+  save — falham na execucao.
   Receita "a IA de atendimento pede a ligacao" (sem ferramenta nova): cenario manda por a etiqueta 'ligar';
   flow conversation com gatilho label_added 'ligar' -> action remove_conversation_label 'ligar' (LOGO depois
   do start) -> ai_call.

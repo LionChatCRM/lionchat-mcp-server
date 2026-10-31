@@ -36,7 +36,7 @@
   "method": "PUT",
   "path": "/api/v1/profile",
   "title": "Atualizar Perfil",
-  "description": "Atualiza o perfil do usuário atual. Campos (nested em profile): name, email, display_name, avatar, message_signature, timezone, ui_settings, current_password, password. NÃO altera availability aqui. NOVO 22/07: aceita working_hours_enabled + working_hours (horário comercial único da conta; SLA com only_during_business_hours passa a contar só o expediente).",
+  "description": "Atualiza o perfil do usuário atual. Campos (nested em profile): name, email, display_name, avatar, message_signature, timezone, ui_settings, current_password, password. NÃO altera availability aqui. Esta ferramenta grava o PERFIL do usuário (/profile): NÃO grava o horário comercial da conta (working_hours) — isso se ajusta no painel.",
   "category": "Conta",
   "params": [
    {
@@ -1987,7 +1987,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages",
   "title": "Listar Mensagens",
-  "description": "Lista mensagens de uma conversa (mais recentes primeiro). Lista mensagens paginados (per_page padrão 25, máximo 100). Filtros disponíveis: page, before_id. Retorna meta (contadores) + payload (array de mensagem). Cada mensagem traz original_sent_at (20/10/2026): unix s da hora em que foi ENVIADA quando chegou atrasada mais de 2 min (WhatsApp oficial e QR Code, mensagens de 20/10/2026 em diante); null no resto. created_at continua sendo a hora de CHEGADA e a ordem da lista nao muda.",
+  "description": "Lista mensagens de uma conversa, da mais ANTIGA para a mais nova (a mais antiga recebida e a PRIMEIRA do payload). Sem parâmetro vêm as ÚLTIMAS 20 mensagens. Para as anteriores use before_id = id da mais antiga recebida (vem 20 por vez); after_id e around_id também existem. NÃO há paginação por página: o servidor ignora page. Retorna meta (etiquetas, contato e responsável da conversa, SEM contadores) + payload (array de mensagem). Cada mensagem traz original_sent_at (20/10/2026): unix s da hora em que foi ENVIADA quando chegou atrasada mais de 2 min (WhatsApp oficial e QR Code, mensagens de 20/10/2026 em diante); null no resto. created_at continua sendo a hora de CHEGADA e a ordem da lista nao muda.",
   "category": "Mensagens",
   "params": [
    {
@@ -2002,17 +2002,34 @@
     "type": "integer",
     "location": "query",
     "required": false,
-    "description": "Página"
+    "description": "Sem efeito nesta lista (o servidor pagina por before_id/after_id/around_id). Mantido por compatibilidade."
    },
    {
     "name": "before_id",
     "type": "integer",
     "location": "query",
     "required": false,
-    "description": "Mensagens antes deste ID"
+    "description": "Traz as 20 mensagens ANTERIORES a este id (use o id da mais antiga recebida para ir voltando).",
+    "query_name": "before"
+   },
+   {
+    "name": "after_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "query_name": "after",
+    "description": "Traz até 100 mensagens POSTERIORES a este id."
+   },
+   {
+    "name": "around_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "query_name": "around",
+    "description": "Traz ~50 mensagens ao redor deste id (útil para abrir uma mensagem achada na busca)."
    }
   ],
-  "returns": "Objeto com `meta` + `payload`. `payload` = array de mensagens, das mais antigas para as mais novas. `meta` NAO tem contadores: traz `labels` (etiquetas da conversa), `additional_attributes`, `contact`, `assignee`, `agent_last_seen_at` e `assignee_last_seen_at`. Sem parametro vem as ULTIMAS 20 mensagens; para paginar use `before` (20 anteriores ao id), `after` (ate 100 posteriores) ou `around` (~50 ao redor de um id).",
+  "returns": "Objeto com `meta` + `payload`. `payload` = array de mensagens, das mais antigas para as mais novas. `meta` NAO tem contadores: traz `labels` (etiquetas da conversa), `additional_attributes`, `contact`, `assignee`, `agent_last_seen_at` e `assignee_last_seen_at`. Sem parametro vem as ULTIMAS 20 mensagens; para paginar use `before_id` (20 anteriores ao id), `after_id` (ate 100 posteriores) ou `around_id` (~50 ao redor de um id). `page` nao tem efeito.",
   "common_use_cases": [
    "Dashboard: contar/exibir mensagens",
    "Buscar com filtros antes de outra operação",
@@ -2746,7 +2763,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id (formato 'automation_<timestamp_ms>'), enabled: true, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value SEMPRE preenchido ('card_created' literal p/ card_created; chave da etapa de destino no hash funnel.stages p/ stage_moved; 'won'|'lost'|'snoozed' p/ status_change ('snoozed' desde 11/10/2026: roda quando o card e ADIADO)), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; update_checklist->{checklist_updates:[{checklist_item_id,completed,text}]}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. Regras: trigger_value vazio ou enabled=false fazem a UI descartar a automacao no proximo salvar do usuario; stage_moved + move_to_stage nunca executa (anti-loop); notify_team hoje so registra em log (nao notifica ninguem); update_checklist nao aparece na UI (so via API). ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations). Regra com action 'create_task' (cria uma tarefa presa ao card quando o gatilho acontece): action_config = {title (texto, obrigatorio), description, task_type, agenda_id, priority, occupies_agenda (true|false), duration_minutes (22/10/2026: minutos que a tarefa ocupa, inteiro de 1 a 1440; ausente ou null = o tempo do TIPO: Tarefa/Follow-up/Prazo 15, Ligacao/Personalizado 30, Reuniao/Call 60, tipo da conta 30), due: {amount, unit: 'hours'|'days', at: 'HH:MM' (so em dias), business_days: true (so em dias)}, responsible: {mode: 'card_owner'|'fixed'|'funnel_rotation'|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}. Cada regra create_task NOVA ou alterada e conferida uma a uma: regra torta recebe 422 que diz a posicao da regra e o campo a consertar; as demais regras do funil nao sao afetadas. `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. ORDEM E ACOES MORTAS (22/10/2026): a ordem de automations[] e a ordem de execucao — regras do mesmo acontecimento (ex.: duas em status_change 'won') rodam de cima para baixo; para reordenar, reenvie a lista inteira na ordem nova (a configuracao de cada regra nao muda). NAO grave assign_agent com status_change 'won'/'lost' (a regra roda com o card ja fechado e card fechado nao aceita responsavel: nao faz nada) nem notify_team (so escreve log, nao avisa ninguem). O servidor aceita os dois, mas a regra fica morta e o painel mostra um aviso amarelo nela. "
+    "description": "Objeto de configuracoes do funil. Chaves: goals[], agents[] e automations[] (automacoes do funil). agents[] = [{id: <id do agente>}] — cada item e um OBJETO com id, nunca numero solto; use lionchat_agents_list para os IDs; o sistema completa sozinho nome, e-mail, cargo e foto de cada agente (e o que as telas mostram). Mande so agentes DESTA conta: id de outra conta fica sem nome e nao da acesso. Cada automacao: {id (formato 'automation_<timestamp_ms>'), enabled: true, trigger_type: 'card_created'|'stage_moved'|'status_change', trigger_value SEMPRE preenchido ('card_created' literal p/ card_created; chave da etapa de destino no hash funnel.stages p/ stage_moved; 'won'|'lost'|'snoozed' p/ status_change ('snoozed' desde 11/10/2026: roda quando o card e ADIADO)), action: 'move_to_stage'|'assign_agent'|'create_note'|'update_checklist'|'apply_checklist_template'|'notify_team'|'duplicate_item'|'send_webhook', action_config: {} (move_to_stage->{stage}; assign_agent->{agent_id}; create_note->{note_text}; update_checklist->{checklist_updates:[{checklist_item_id,completed,text}]}; apply_checklist_template->{template_id}; notify_team->{message}; send_webhook->{webhook_url}; duplicate_item->{funnel_id,stage})}. Regras: trigger_value vazio faz a UI descartar a automacao no proximo salvar do usuario (enabled=false e estado valido desde 20/10: a regra fica guardada, desligada); stage_moved + move_to_stage nunca executa (anti-loop); notify_team hoje so registra em log (nao notifica ninguem); update_checklist nao aparece na UI (so via API). ATENCAO: gravar settings SUBSTITUI o objeto inteiro — leia o funil (show) e reenvie settings completo (goals+agents+automations). NOVO (2026-07-21): settings.teams[] = [{id: <team_id>}] — vincula TIMES ao funil: membros do time ganham acesso e entram no rodízio, resolvidos AO VIVO (mudou o time, mudou o funil). Lista efetiva = agents[] + membros dos teams[]; vazia = funil aberto a todos. IMPORTANTE: settings é substituído por inteiro — reenvie completo (goals+agents+teams+automations). Regra com action 'create_task' (cria uma tarefa presa ao card quando o gatilho acontece): action_config = {title (texto, obrigatorio), description, task_type, agenda_id, priority, occupies_agenda (true|false), duration_minutes (22/10/2026: minutos que a tarefa ocupa, inteiro de 1 a 1440; ausente ou null = o tempo do TIPO: Tarefa/Follow-up/Prazo 15, Ligacao/Personalizado 30, Reuniao/Call 60, tipo da conta 30), due: {amount, unit: 'hours'|'days', at: 'HH:MM' (so em dias), business_days: true (so em dias)}, responsible: {mode: 'card_owner'|'fixed'|'funnel_rotation'|'team_rotation', fallback_user_id (card_owner), user_id (fixed), team_id (team_rotation)}}. Cada regra create_task NOVA ou alterada e conferida uma a uma: regra torta recebe 422 que diz a posicao da regra e o campo a consertar; as demais regras do funil nao sao afetadas. `settings.removed_stages` (a lista das etapas ja excluidas) e do SERVIDOR: se voce mandar essa chave dentro de funnel.settings ela e IGNORADA (nao da erro), e o servidor a mantem sozinho. Para excluir uma etapa que tem cards, NAO reenvie o funil sem a etapa nem use migrate_stage: use lionchat_funnels_remove_stage. ORDEM E ACOES MORTAS (22/10/2026): a ordem de automations[] e a ordem de execucao — regras do mesmo acontecimento (ex.: duas em status_change 'won') rodam de cima para baixo; para reordenar, reenvie a lista inteira na ordem nova (a configuracao de cada regra nao muda). NAO grave assign_agent com status_change 'won'/'lost' (a regra roda com o card ja fechado e card fechado nao aceita responsavel: nao faz nada) nem notify_team (so escreve log, nao avisa ninguem). O servidor aceita os dois, mas a regra fica morta e o painel mostra um aviso amarelo nela. "
    }
   ],
   "returns": "funil atualizado Inclui resolved_agents: [{id, name, avatar_url, via: 'agent'|'team'}] — quem efetivamente participa do funil (2026-07-21).",
@@ -17351,7 +17368,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/google_calendar/connect",
   "title": "Conectar Google Calendar",
-  "description": "Inicia o fluxo de conexao com Google Calendar. Lista configs Google Calendar paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config Google Calendar). [07/08] SO ADMINISTRADOR conecta (usuario nao-admin recebe 403) e SO UMA conta Google por conta LionChat — se ja houver uma conectada por outro admin, a nova e recusada; desconecte a atual antes.",
+  "description": "Inicia o fluxo de conexao com Google Calendar. Lista configs Google Calendar paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de config Google Calendar). [07/08] SO ADMINISTRADOR conecta (usuario nao-admin recebe 403) e UMA conta Google por AGENDA (desde 13/09; conta com varias agendas pode ter uma conexao por agenda, informe agenda_id) — se a agenda ja tiver a conexao de outro admin, a nova e recusada (409); desconecte a atual antes.",
   "category": "Google Calendar",
   "params": [
    {
@@ -21988,7 +22005,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inbox_members",
   "title": "Definir Membros da Inbox",
-  "description": "Define os agentes membros da inbox (substitui a lista). Para adicionar incrementalmente, leia a lista atual e mescle. Use supervisor_ids[] para marcar supervisores (veem tudo, fora da distribuicao automatica); a resposta traz is_supervisor por agente.",
+  "description": "ACRESCENTA agentes como membros da inbox (não substitui a lista nem remove ninguém; para tirar, use inbox_members_destroy). supervisor_ids[] e IGNORADO aqui (todos entram como agentes): para marcar supervisores (veem tudo, fora da distribuicao automatica) use inbox_members_update, que SUBSTITUI a lista inteira. A resposta traz is_supervisor por agente.",
   "category": "Membros de Inbox",
   "params": [
    {
@@ -22010,7 +22027,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "IDs dos membros que entram como SUPERVISORES da caixa: veem TODAS as conversas/cards dela, mas ficam FORA da distribuicao automatica (round-robin). Quem nao estiver aqui (e estiver em user_ids) vira agente normal. A resposta traz is_supervisor por agente."
+    "description": "Ignorado nesta ferramenta. Supervisores so por inbox_members_update."
    }
   ],
   "returns": "lista de agentes atualizada",
@@ -23235,7 +23252,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/campaigns",
   "title": "Criar Campanha",
-  "description": "Cria campanha. O TIPO vem da inbox: WhatsApp oficial (Cloud, exige template em template_params), WhatsApp QR Code/WAHA (texto livre + variações anti-bloqueio), SMS/Twilio, ou Website (ongoing — popup de chat por URL/tempo). One-off exige audience. ENVIO EM MASSA: SEMPRE rode estimate_audience com o MESMO audience+audience_mode antes e CONFIRME com o usuário. 422 se inbox incompatível, audience vazio (one-off) ou ConversationAttribute sem key/value. COMPORTAMENTO NOVO 23/07: as ações pós-envio da campanha (tag/atributo/prioridade/atendente) aplicam SÓ quando a Meta confirma a ENTREGA (delivered/read), nunca no aceite — mensagem que falha ou é barrada por spam NÃO recebe as ações (corrige exclusão furada no disparo seguinte). Efeito visível: a tag/atributo pode levar de segundos a minutos pra aparecer após o disparo. CAMPANHA DE FLUXO (NOVO 28/07/2026): passando `flow_id` a campanha dispara um FLUXO do FlowBuilder para cada pessoa do publico, cadenciado, em vez de mandar uma mensagem — vale nas duas familias de WhatsApp (oficial e QR Code). Nesse modo `message` e ignorado e o ritmo vai em template_params (delay_min/delay_max/daily_cap). Acompanhe com lionchat_campaigns_flow_report e interrompa com lionchat_campaigns_stop_flow.",
+  "description": "Cria campanha. O TIPO vem da inbox: WhatsApp oficial (Cloud, exige template em template_params), WhatsApp QR Code/WAHA (texto livre + variações anti-bloqueio), SMS/Twilio, ou Website (ongoing — popup de chat por URL/tempo). One-off exige audience. ENVIO EM MASSA: SEMPRE rode estimate_audience com o MESMO audience+audience_mode antes e CONFIRME com o usuário. 422 se inbox incompatível ou ConversationAttribute sem key/value. ATENÇÃO: audience vazio NÃO dá 422 — a campanha nasce e não manda para ninguém; confira antes com estimate_audience. COMPORTAMENTO NOVO 23/07: as ações pós-envio da campanha (tag/atributo/prioridade/atendente) aplicam SÓ quando a Meta confirma a ENTREGA (delivered/read), nunca no aceite — mensagem que falha ou é barrada por spam NÃO recebe as ações (corrige exclusão furada no disparo seguinte). Efeito visível: a tag/atributo pode levar de segundos a minutos pra aparecer após o disparo. CAMPANHA DE FLUXO (NOVO 28/07/2026): passando `flow_id` a campanha dispara um FLUXO do FlowBuilder para cada pessoa do publico, cadenciado, em vez de mandar uma mensagem — vale nas duas familias de WhatsApp (oficial e QR Code). Nesse modo `message` e ignorado e o ritmo vai em template_params (delay_min/delay_max/daily_cap). Acompanhe com lionchat_campaigns_flow_report e interrompa com lionchat_campaigns_stop_flow.",
   "category": "Campanhas",
   "params": [
    {
@@ -29089,7 +29106,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/sales_reconciliation/preview",
   "title": "Conferir planilha de vendas",
-  "description": "CONFERE uma planilha de vendas contra os cards de um funil e NAO GRAVA NADA. Devolve, linha a linha, o que aconteceria: completar um card aberto, so atualizar o valor de um card ja ganho, criar card pra quem nao tem, conferir a mao (card marcado como perdido) ou erro da linha. SEMPRE chame isto antes de `lionchat_kanban_sales_reconciliation_apply` e mostre o resumo pra pessoa confirmar. O MCP NAO sobe arquivo: mande as linhas da planilha em `rows` (lista de objetos). Se a pessoa anexar uma planilha na conversa, LEIA o arquivo e monte as linhas voce mesmo. Quem prefere a tela usa Kanban > botao azul + > Importar vendas. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id.",
+  "description": "CONFERE uma planilha de vendas contra os cards de um funil e NAO GRAVA NADA. Devolve, linha a linha, o que aconteceria: completar um card aberto, ja registrada (card ganho igual), venda nova (outro card ganho), criar card pra quem nao tem, conferir a mao (card marcado como perdido) ou erro da linha. Regra por pessoa no funil: card ABERTO (o mais antigo) e completado e marcado ganho com a DATA DA VENDA; sem products, card com 1 produto recebe o valor nesse produto e card com 2 ou mais produtos NAO muda de valor (aviso). Card GANHO nunca e editado: ganho com o MESMO valor e a MESMA data = a mesma venda, nada muda (ja_ganho); senao e uma venda nova e nasce OUTRO card ja ganho (nova_venda, so com criar_sem_card: true). So card perdido = conferir a mao. Ninguem com card = cria (so com criar_sem_card: true). SEMPRE chame isto antes de `lionchat_kanban_sales_reconciliation_apply` e mostre o resumo pra pessoa confirmar. O MCP NAO sobe arquivo: mande as linhas da planilha em `rows` (lista de objetos). Se a pessoa anexar uma planilha na conversa, LEIA o arquivo e monte as linhas voce mesmo. Quem prefere a tela usa Kanban > botao azul + > Importar vendas (o mesmo menu tem 'Baixar modelo de vendas', planilha de exemplo em Excel). Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'; obrigatorio, MENOS quando vier products), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor), order_id, co_participant e products (30/10). products e TEXTO no formato 'Nome:valor; Nome:valor' (ex.: 'Plano Pro:1200; Instalação:300'), ate 20 por linha; o nome e casado com o catalogo de produtos da conta (sem diferenca de maiuscula/acento) e o que nao esta no catalogo entra SO no card, como produto avulso (a conferencia avisa). Com products, os produtos do card sao TROCADOS pelos da planilha e o valor vira a SOMA; se value tambem vier e nao bater, valem os produtos (aviso). Lista ou objeto em products = erro da linha (mande texto).",
   "category": "Itens",
   "params": [
    {
@@ -29118,10 +29135,10 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Linhas da planilha. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id."
+    "description": "Linhas da planilha. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'; obrigatorio, MENOS quando vier products), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor), order_id, co_participant e products (30/10). products e TEXTO no formato 'Nome:valor; Nome:valor' (ex.: 'Plano Pro:1200; Instalação:300'), ate 20 por linha; o nome e casado com o catalogo de produtos da conta (sem diferenca de maiuscula/acento) e o que nao esta no catalogo entra SO no card, como produto avulso (a conferencia avisa). Com products, os produtos do card sao TROCADOS pelos da planilha e o valor vira a SOMA; se value tambem vier e nao bater, valem os produtos (aviso). Lista ou objeto em products = erro da linha (mande texto)."
    }
   ],
-  "returns": "{ total, erros, conversoes, conversao_ligada, pos_venda, automacoes_de_ganho, responsavel, contagem: { completa, ja_ganho, cria, conferir, erro }, linhas: [...] } — nada e gravado.",
+  "returns": "{ total, erros, conversoes, conversao_ligada, pos_venda, automacoes_de_ganho, responsavel, contagem: { completa, ja_ganho, nova_venda, cria, conferir, erro }, linhas: [...] } — cada linha traz tipo, valor final e, quando houver, produtos ([{nome, valor, do_catalogo}] = os produtos que o card vai ter) e avisos (produto fora do catalogo, nome repetido no catalogo, diferenca entre value e a soma dos produtos, card com varios produtos que nao muda de valor). Nada e gravado.",
   "common_use_cases": [
    "Conferir a planilha do financeiro antes de aplicar",
    "Saber quantas vendas viram conversao e quantos cards de pos-venda nascem",
@@ -29138,7 +29155,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/kanban_items/sales_reconciliation/apply",
   "title": "Aplicar planilha de vendas",
-  "description": "APLICA a planilha de vendas: grava o valor no card e marca o GANHO com a DATA DA VENDA (nao com a data de hoje), pra o relatorio de faturamento contar a venda no mes certo. Card aberto e completado; card ja ganho recebe SO o valor (a data do ganho dele nao muda); card marcado como perdido nao e tocado. Roda em segundo plano — acompanhe com `lionchat_kanban_sales_reconciliation_status`. Rodar a mesma planilha duas vezes nao dobra valor nem cria card repetido. ATENCAO: `criar_sem_card: true` abre uma CONVERSA nova por card criado, e conversa nova aciona o que a conta tiver em 'Conversa criada' (automacao, fluxo, notificacao) — avise a pessoa antes de ligar isso numa planilha grande. O MCP NAO sobe arquivo: mande as linhas da planilha em `rows` (lista de objetos). Se a pessoa anexar uma planilha na conversa, LEIA o arquivo e monte as linhas voce mesmo. Quem prefere a tela usa Kanban > botao azul + > Importar vendas. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id.",
+  "description": "APLICA a planilha de vendas: grava o valor (e os produtos, se vierem) no card e marca o GANHO com a DATA DA VENDA (nao com a data de hoje), pra o relatorio de faturamento contar a venda no mes certo. Regra por pessoa no funil: card ABERTO (o mais antigo) e completado e marcado ganho com a DATA DA VENDA; sem products, card com 1 produto recebe o valor nesse produto e card com 2 ou mais produtos NAO muda de valor (aviso). Card GANHO nunca e editado: ganho com o MESMO valor e a MESMA data = a mesma venda, nada muda (ja_ganho); senao e uma venda nova e nasce OUTRO card ja ganho (nova_venda, so com criar_sem_card: true). So card perdido = conferir a mao. Ninguem com card = cria (so com criar_sem_card: true). A gravacao segue EXATAMENTE a mesma regra da conferencia. Roda em segundo plano — acompanhe com `lionchat_kanban_sales_reconciliation_status`. Rodar a mesma planilha duas vezes nao dobra valor nem cria card repetido (a 2a rodada da 'ja registrada'). ATENCAO: `criar_sem_card: true` abre uma CONVERSA nova por card criado (inclusive na venda nova de quem ja ganhou), e conversa nova aciona o que a conta tiver em 'Conversa criada' (automacao, fluxo, notificacao) — avise a pessoa antes de ligar isso numa planilha grande. O MCP NAO sobe arquivo: mande as linhas da planilha em `rows` (lista de objetos). Se a pessoa anexar uma planilha na conversa, LEIA o arquivo e monte as linhas voce mesmo. Quem prefere a tela usa Kanban > botao azul + > Importar vendas. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'; obrigatorio, MENOS quando vier products), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor), order_id, co_participant e products (30/10). products e TEXTO no formato 'Nome:valor; Nome:valor' (ex.: 'Plano Pro:1200; Instalação:300'), ate 20 por linha; o nome e casado com o catalogo de produtos da conta (sem diferenca de maiuscula/acento) e o que nao esta no catalogo entra SO no card, como produto avulso (a conferencia avisa). Com products, os produtos do card sao TROCADOS pelos da planilha e o valor vira a SOMA; se value tambem vier e nao bater, valem os produtos (aviso). Lista ou objeto em products = erro da linha (mande texto).",
   "category": "Itens",
   "params": [
    {
@@ -29167,7 +29184,7 @@
     "type": "array",
     "location": "body",
     "required": true,
-    "description": "Linhas da planilha. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (obrigatorio, valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor) e order_id."
+    "description": "Linhas da planilha. Cada item aceita: phone (obrigatorio, COM codigo do pais, ex.: 5511999887766), value (valor da venda; aceita 1500, '1500,00', 'R$ 1.500,00'; obrigatorio, MENOS quando vier products), sale_date (obrigatorio, data da VENDA; aceita '01/08/2026' ou '2026-08-01'), name, email, agent (nome ou e-mail do vendedor), order_id, co_participant e products (30/10). products e TEXTO no formato 'Nome:valor; Nome:valor' (ex.: 'Plano Pro:1200; Instalação:300'), ate 20 por linha; o nome e casado com o catalogo de produtos da conta (sem diferenca de maiuscula/acento) e o que nao esta no catalogo entra SO no card, como produto avulso (a conferencia avisa). Com products, os produtos do card sao TROCADOS pelos da planilha e o valor vira a SOMA; se value tambem vier e nao bater, valem os produtos (aviso). Lista ou objeto em products = erro da linha (mande texto)."
    },
    {
     "name": "criar_sem_card",
@@ -29218,7 +29235,7 @@
     "description": "Codigo da rodada, devolvido pela aplicacao"
    }
   ],
-  "returns": "{ status, total, completados, valor_atualizado, criados, sem_mudanca, pulados, erros } — 'sem_mudanca' e a linha cujo card ja estava com aquele valor",
+  "returns": "{ status, total, completados, criados, sem_mudanca, pulados, erros, co_participantes } — 'sem_mudanca' e a linha ja registrada (card ganho com o mesmo valor e a mesma data); 'criados' inclui a venda nova de quem ja tinha card ganho; 'pulados' e a linha que precisaria criar card com criar_sem_card desligado. Desde 30/10 nao existe mais 'valor_atualizado' (card ganho nunca e editado).",
   "common_use_cases": [
    "Saber se a planilha terminou de ser aplicada",
    "Contar quantos cards foram completados e quantos foram criados"
@@ -30162,7 +30179,7 @@
   "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage — EXCETO para quem edita fluxo (Admin ou flowbuilder_manage): esse recebe a forma LEVE (so id e name de cada agente, e as linhas recortadas pelas caixas que ve), que e o que o node ai_call do FlowBuilder precisa. Devolve tambem meta.dial_inboxes: as caixas que podem fazer ligacao (LionCalls ligada) — use o id no data.aiCallInboxId do node ai_call.",
   "category": "Assistentes",
   "params": [],
-  "returns": "{ payload: [agente de ligacao], meta: { dial_inboxes: [{id, name}] } }",
+  "returns": "{ payload: [agente de ligacao { id, name, objective, first_message, style, voice_provider, engine, voice_id, elevenlabs_agent_id, max_duration_seconds, captain_assistant_id, captain_assistant_name, sip_ramal, sip_server, sip_port, max_concurrent_calls, new_conversation_inbox_id, has_sip_password }], meta: { dial_inboxes: [{id, name}] } }",
   "common_use_cases": [
    "Ver agentes de ligacao configurados",
    "Descobrir qual caixa pode ligar"
@@ -30190,7 +30207,7 @@
     "description": "ID do agente de ligacao"
    }
   ],
-  "returns": "agente de ligacao { id, name, objective, first_message, style, voice_provider, engine, voice_id, elevenlabs_agent_id, max_duration_seconds, captain_assistant_id, captain_assistant_name }",
+  "returns": "agente de ligacao { id, name, objective, first_message, style, voice_provider, engine, voice_id, elevenlabs_agent_id, max_duration_seconds, captain_assistant_id, captain_assistant_name, sip_ramal, sip_server, sip_port, max_concurrent_calls, new_conversation_inbox_id, has_sip_password }",
   "common_use_cases": [
    "Conferir a configuracao antes de editar"
   ],
@@ -30198,7 +30215,8 @@
    "lionchat_captain_call_agents_list",
    "lionchat_captain_call_agents_update",
    "lionchat_captain_call_agents_test_call",
-   "lionchat_captain_call_test_phones_list"
+   "lionchat_captain_call_test_phones_list",
+   "lionchat_captain_call_agents_ramal_status"
   ]
  },
  {
@@ -30206,7 +30224,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/captain/call_agents",
   "title": "Criar Agente de Ligacao",
-  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Campos em body (pode mandar solto ou dentro de call_agent). Durante a ligacao a voz so CONSULTA agenda e REPASSA pedidos; quem executa e o agente de texto de captain_assistant_id.",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Campos em body (pode mandar solto ou dentro de call_agent). Durante a ligacao a voz so CONSULTA agenda e REPASSA pedidos; quem executa e o agente de texto de captain_assistant_id. Com ramal VTCall (sip_ramal + sip_server) o agente LIGA POR TELEFONE; sem ramal, a ligacao sai pelo WhatsApp Calling. A senha do ramal nunca entra pelo MCP — so pela tela.",
   "category": "Assistentes",
   "params": [
    {
@@ -30278,6 +30296,41 @@
     "location": "body",
     "required": false,
     "description": "Agente de TEXTO que EXECUTA durante a ligacao o que o cliente pedir (mandar link no WhatsApp, mover card, anotar), com as ferramentas e a configuracao DELE. Sem ele a voz so conversa. Tem de ser desta conta (422 se nao for)."
+   },
+   {
+    "name": "sip_ramal",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Numero do ramal VTCall. Com ele preenchido, este agente LIGA POR TELEFONE (nao pelo WhatsApp). Exige sip_server junto. A SENHA do ramal (sip_password) NAO entra pelo MCP — so pela tela do painel."
+   },
+   {
+    "name": "sip_server",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Servidor SIP do ramal, no formato <algo>.vtcall.app ou <algo>.vtcall.com.br. Exigido junto com sip_ramal."
+   },
+   {
+    "name": "sip_port",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Porta SIP: 5060, 5061, 5068 ou 5080 (lista fechada). Padrao 5060."
+   },
+   {
+    "name": "max_concurrent_calls",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Teto de ligacoes simultaneas por este ramal, 0 a 50 (padrao 1; 0 = nao liga)."
+   },
+   {
+    "name": "new_conversation_inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa de entrada onde nasce a conversa de cada ligacao feita por este ramal. Tem de ser desta conta."
    }
   ],
   "returns": "agente de ligacao criado",
@@ -30289,7 +30342,8 @@
    "lionchat_captain_call_agents_list",
    "lionchat_captain_call_agents_update",
    "lionchat_captain_call_agents_test_call",
-   "lionchat_captain_call_test_phones_list"
+   "lionchat_captain_call_test_phones_list",
+   "lionchat_captain_call_agents_ramal_status"
   ]
  },
  {
@@ -30297,7 +30351,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/captain/call_agents/{id}",
   "title": "Atualizar Agente de Ligacao",
-  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Edicao parcial.",
+  "description": "Agente de LIGACAO (area \"Agentes de ligacao\", separada dos agentes de texto desde 24/09/2026). Nao ocupa vaga de IA do plano. Exige Admin ou cargo com captain_manage. Edicao parcial. Com ramal VTCall (sip_ramal + sip_server) o agente LIGA POR TELEFONE; sem ramal, a ligacao sai pelo WhatsApp Calling. A senha do ramal nunca entra pelo MCP — so pela tela.",
   "category": "Assistentes",
   "params": [
    {
@@ -30376,6 +30430,41 @@
     "location": "body",
     "required": false,
     "description": "Agente de TEXTO que EXECUTA durante a ligacao o que o cliente pedir (mandar link no WhatsApp, mover card, anotar), com as ferramentas e a configuracao DELE. Sem ele a voz so conversa. Tem de ser desta conta (422 se nao for)."
+   },
+   {
+    "name": "sip_ramal",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Numero do ramal VTCall. Com ele preenchido, este agente LIGA POR TELEFONE (nao pelo WhatsApp). Exige sip_server junto. A SENHA do ramal (sip_password) NAO entra pelo MCP — so pela tela do painel."
+   },
+   {
+    "name": "sip_server",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Servidor SIP do ramal, no formato <algo>.vtcall.app ou <algo>.vtcall.com.br. Exigido junto com sip_ramal."
+   },
+   {
+    "name": "sip_port",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Porta SIP: 5060, 5061, 5068 ou 5080 (lista fechada). Padrao 5060."
+   },
+   {
+    "name": "max_concurrent_calls",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Teto de ligacoes simultaneas por este ramal, 0 a 50 (padrao 1; 0 = nao liga)."
+   },
+   {
+    "name": "new_conversation_inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Caixa de entrada onde nasce a conversa de cada ligacao feita por este ramal. Tem de ser desta conta."
    }
   ],
   "returns": "agente de ligacao atualizado",
@@ -30386,7 +30475,8 @@
    "lionchat_captain_call_agents_list",
    "lionchat_captain_call_agents_update",
    "lionchat_captain_call_agents_test_call",
-   "lionchat_captain_call_test_phones_list"
+   "lionchat_captain_call_test_phones_list",
+   "lionchat_captain_call_agents_ramal_status"
   ]
  },
  {
@@ -30516,6 +30606,32 @@
    "lionchat_captain_call_agents_update",
    "lionchat_captain_call_agents_test_call",
    "lionchat_captain_call_test_phones_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_call_agents_ramal_status",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/call_agents/{id}/ramal_status",
+  "title": "Estado do Ramal VTCall",
+  "description": "So para agente de ligacao COM ramal (sip_ramal). Le NO MOTOR o estado do cadastro do ramal: aguardando_teste (registrando), comprovado (o ramal conectou), senha_recusada, aguardando_liberacao ou erro. Agente sem ramal devolve estado nulo. A senha nunca aparece — so has_sip_password.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do agente de ligacao"
+   }
+  ],
+  "returns": "{ estado: null|aguardando_teste|comprovado|senha_recusada|aguardando_liberacao|erro, has_sip_password, message }",
+  "common_use_cases": [
+   "Conferir se o ramal VTCall conectou depois de salvar o agente de ligacao"
+  ],
+  "related_tools": [
+   "lionchat_captain_call_agents_show",
+   "lionchat_captain_call_agents_update",
+   "lionchat_captain_call_agents_test_call"
   ]
  },
  {
@@ -30695,7 +30811,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/captain/media_assets",
   "title": "Adicionar Mídia à Biblioteca",
-  "description": "Cadastra um arquivo na Biblioteca de Mídia do AI Agente. ATENÇÃO: o arquivo em si NÃO sobe por aqui — é obrigatório informar `blob_signed_id`, o identificador de um arquivo JÁ carregado no armazenamento pelo upload direto do painel; sem ele o cadastro é recusado (422, arquivo obrigatório). Na prática, criar mídia pelo conector só funciona quando esse identificador já está em mãos — caso contrário, use a tela Biblioteca de Mídia. O `media_kind` precisa casar com o tipo real do arquivo, e só formatos e tamanhos aceitos pelo WhatsApp passam (imagem JPG/PNG/WEBP até 5MB; vídeo MP4/3GP até 16MB; áudio MP3/AAC/M4A/AMR/OGG até 16MB; documento PDF/DOC/DOCX/XLS/XLSX/PPT/PPTX/TXT até 100MB). Depois de criar, ainda é preciso liberar o ID no assistente (config.media_asset_ids) para a IA poder enviar. Exige Admin ou papel com permissão de gerenciar o AI Agente.",
+  "description": "Cadastra um arquivo na Biblioteca de Mídia do AI Agente. ATENÇÃO: o arquivo em si NÃO sobe por aqui — é obrigatório informar `blob_signed_id`, o identificador de um arquivo JÁ carregado no armazenamento; sem ele o cadastro é recusado (422, arquivo obrigatório). Pelo conector: suba o arquivo por link com `lionchat_upload_create` (`external_url`) e use o `blob_id` devolvido como `blob_signed_id`. O `media_kind` precisa casar com o tipo real do arquivo, e só formatos e tamanhos aceitos pelo WhatsApp passam (imagem JPG/PNG/WEBP até 5MB; vídeo MP4/3GP até 16MB; áudio MP3/AAC/M4A/AMR/OGG até 16MB; documento PDF/DOC/DOCX/XLS/XLSX/PPT/PPTX/TXT até 100MB). Depois de criar, ainda é preciso liberar o ID no assistente (config.media_asset_ids) para a IA poder enviar. Exige Admin ou papel com permissão de gerenciar o AI Agente.",
   "category": "Biblioteca de Midia",
   "params": [
    {
@@ -35489,7 +35605,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/eclinica_integrations/{id}",
   "title": "Configurar Integração e-Clínica (mapeamento de eventos e lembretes)",
-  "description": "AÇÃO DE ESCRITA, somente administrador. Configura a integração e-Clínica: o MAPEAMENTO evento→automação/fluxo (event_mapping) e os LEMBRETES automáticos (reminder_config). Até 31/08/2026 os dois só existiam na tela — este comando fecha a lacuna.\n\nSUBSTITUIÇÃO TOTAL — LEIA ANTES DE GRAVAR: os dois campos SUBSTITUEM o conteúdo inteiro, NÃO mesclam (o backend faz update! direto no jsonb). Mandar event_mapping com um evento só APAGA todos os outros mapeamentos do cliente; o mesmo vale pra reminder_config. SEMPRE chame lionchat_eclinica_integrations_show ANTES, pegue o objeto atual, altere só o que precisa e devolva o objeto COMPLETO.\n\nevent_mapping: objeto {tipo_do_evento: {automation_id, flow_id}} — pode deixar um dos dois nulo. Tipos aceitos: cliente_novo, cliente_alteracao, agendamento_novo, agendamento_alterado, agendamento_atendido, agendamento_desmarcado, agendamento_transferido, falta, pagamento, cliente_baixa_pagamento, cliente_inclusao_pagamento, controle_laboratorio_novo, controle_laboratorio_alterado, agendamento_aguardando, odontograma_aprovado, cliente_alteracao_pagamento (NOVO 01/09 — a cobrança foi EDITADA: mesmos campos da inclusão e o lembrete de vencimento é MOVIDO, não duplicado; dispara a cada edição, então não sirva para avisar \"nova cobrança\"), procedimento_finalizado (NOVO 31/08 — um procedimento do plano de tratamento foi concluído; dispara UMA VEZ POR PROCEDIMENTO e grava eclinica_procedimento_id/_dente/_valor/_finalizado_em/_profissional no contato, então o fluxo ligado aqui precisa filtrar pelo número do procedimento). odontograma_finalizado (NOVO 01/09 — o plano de tratamento INTEIRO foi concluido; nao confundir com procedimento_finalizado, que e UM item do plano; grava eclinica_odontograma_finalizado_em e nao mexe na data de aprovacao), inclusao_procedimento (NOVO 01/09 — um procedimento foi ACRESCENTADO ao plano, ainda nao executado: serve para aviso de orcamento, NAO e gatilho de orientacao pos-procedimento; grava eclinica_procedimento_incluido_id/_dente/_valor, nunca nos campos do finalizado). Tipo fora da lista = 422; flow_id e automation_id precisam ser da PRÓPRIA conta = 422 senão.\n\nreminder_config: array de {days_before (inteiro >= 0), event_type ('agendamento' padrão | 'controle_laboratorio_novo' | 'cliente_inclusao_pagamento'), flow_id e/ou automation_id (pelo menos um dos dois; com os dois a AUTOMAÇÃO vence), label, dispatch_time (OBRIGATÓRIA — 'HH:MM' fixo ou fórmula Liquid), filter_field/filter_operator/filter_value (opcional; filter_field precisa começar com eclinica_, operadores contains/equal/not_equal)}. Duas linhas com a MESMA régua = 422.\n\nALERTA de regra de negócio: isto muda, na hora e em produção, o que o paciente recebe. E no lembrete por automação as AÇÕES rodam SEM avaliar as CONDIÇÕES da automação. Desde 17/09/2026 os DOIS caminhos (fluxo e automacao) mandam um aviso POR CONSULTA: paciente com duas consultas no dia (ou dois pacientes no mesmo celular) recebe um aviso para cada uma, ~10 min um do outro (fila por contato). Quem quer so um por dia monta no FLUXO (condicao num atributo com {{data_consulta}}); na automacao nao da, porque as condicoes dela nao sao avaliadas.",
+  "description": "AÇÃO DE ESCRITA, somente administrador. Configura a integração e-Clínica: o MAPEAMENTO evento→automação/fluxo (event_mapping) e os LEMBRETES automáticos (reminder_config). Até 31/08/2026 os dois só existiam na tela — este comando fecha a lacuna.\n\nSUBSTITUIÇÃO TOTAL — LEIA ANTES DE GRAVAR: os dois campos SUBSTITUEM o conteúdo inteiro, NÃO mesclam (o backend faz update! direto no jsonb). Mandar event_mapping com um evento só APAGA todos os outros mapeamentos do cliente; o mesmo vale pra reminder_config. SEMPRE chame lionchat_eclinica_integrations_show ANTES, pegue o objeto atual, altere só o que precisa e devolva o objeto COMPLETO.\n\nevent_mapping: objeto {tipo_do_evento: {automation_id, flow_id}} — pode deixar um dos dois nulo. Tipos aceitos: cliente_novo, cliente_alteracao, agendamento_novo, agendamento_alterado, agendamento_atendido, agendamento_desmarcado, agendamento_transferido, falta, pagamento, cliente_baixa_pagamento, cliente_inclusao_pagamento, controle_laboratorio_novo, controle_laboratorio_alterado, agendamento_aguardando, odontograma_aprovado, agendamento_confirmado_link e agendamento_cancelado_link (NOVOS 18/09 — o paciente confirmou ou cancelou pelo link da e-Clinica), cliente_alteracao_pagamento (NOVO 01/09 — a cobrança foi EDITADA: mesmos campos da inclusão e o lembrete de vencimento é MOVIDO, não duplicado; dispara a cada edição, então não sirva para avisar \"nova cobrança\"), procedimento_finalizado (NOVO 31/08 — um procedimento do plano de tratamento foi concluído; dispara UMA VEZ POR PROCEDIMENTO e grava eclinica_procedimento_id/_dente/_valor/_finalizado_em/_profissional no contato, então o fluxo ligado aqui precisa filtrar pelo número do procedimento). odontograma_finalizado (NOVO 01/09 — o plano de tratamento INTEIRO foi concluido; nao confundir com procedimento_finalizado, que e UM item do plano; grava eclinica_odontograma_finalizado_em e nao mexe na data de aprovacao), inclusao_procedimento (NOVO 01/09 — um procedimento foi ACRESCENTADO ao plano, ainda nao executado: serve para aviso de orcamento, NAO e gatilho de orientacao pos-procedimento; grava eclinica_procedimento_incluido_id/_dente/_valor, nunca nos campos do finalizado). Tipo fora da lista = 422; flow_id e automation_id precisam ser da PRÓPRIA conta = 422 senão.\n\nreminder_config: array de {days_before (inteiro >= 0), event_type ('agendamento' padrão | 'controle_laboratorio_novo' | 'cliente_inclusao_pagamento'), flow_id e/ou automation_id (pelo menos um dos dois; com os dois a AUTOMAÇÃO vence), label, dispatch_time (OBRIGATÓRIA — 'HH:MM' fixo ou fórmula Liquid), filter_field/filter_operator/filter_value (opcional; filter_field precisa começar com eclinica_, operadores contains/equal/not_equal)}. Duas linhas com a MESMA régua = 422.\n\nALERTA de regra de negócio: isto muda, na hora e em produção, o que o paciente recebe. E no lembrete por automação as AÇÕES rodam SEM avaliar as CONDIÇÕES da automação. Desde 17/09/2026 os DOIS caminhos (fluxo e automacao) mandam um aviso POR CONSULTA: paciente com duas consultas no dia (ou dois pacientes no mesmo celular) recebe um aviso para cada uma, ~10 min um do outro (fila por contato). Quem quer so um por dia monta no FLUXO (condicao num atributo com {{data_consulta}}); na automacao nao da, porque as condicoes dela nao sao avaliadas.",
   "category": "Integracoes",
   "params": [
    {
@@ -36110,7 +36226,7 @@
     "description": "ID do modelo"
    }
   ],
-  "returns": "modelo (roles_layout com required_proofs e public_link {enabled, inbox_id, path}) + envelopes: [{id, title, status, contact_id, contact_name, sent_at, completed_at, expires_at, participants[]}]",
+  "returns": "modelo (roles_layout com required_proofs (so as tres antigas), proof_requests (os itens completos), ai_document_check, communication, signature_methods e public_link {enabled, inbox_id, path}) + envelopes: [{id, title, status, contact_id, contact_name, sent_at, completed_at, expires_at, participants[]}]",
   "common_use_cases": [
    "Ver o texto e as variaveis do modelo antes de editar",
    "Conferir quem ja recebeu este contrato"
@@ -36162,7 +36278,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo. required_proofs (28/10): documentos que a pessoa manda antes de assinar — lista com id_document (documento com foto; ela escolhe RG, CNH ou CPF), selfie_with_document e address_proof (comprovante, foto ou PDF); [] = nenhum; outro valor = 422. Com algum, o contrato so fecha depois de a equipe aprovar (status awaiting_approval). public_link (28/10): link do contrato para divulgar — {enabled: true, inbox_id: <caixa de WhatsApp da conta>} (regenerate: true troca o endereco; o antigo para de funcionar). So para modelo com 1 assinante principal e sem sender_signs (422 com 'public_link' no texto). A leitura devolve {enabled, inbox_id, path} — o endereco e o dominio da instalacao + path (/contrato/<codigo>); salvar sem regenerate mantem o mesmo endereco."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo. required_proofs (28/10): documentos que a pessoa manda antes de assinar — lista com id_document (documento com foto; ela escolhe um dos aceitos, RG, CNH ou CPF — ver accepted_types em proof_requests), selfie_with_document e address_proof (comprovante, foto ou PDF); [] = nenhum; outro valor = 422. Com algum, o contrato so fecha depois de a equipe aprovar (status awaiting_approval). public_link (28/10): link do contrato para divulgar — {enabled: true, inbox_id: <caixa de WhatsApp da conta>} (regenerate: true troca o endereco; o antigo para de funcionar). So para modelo com 1 assinante principal e sem sender_signs (422 com 'public_link' no texto). A leitura devolve {enabled, inbox_id, path} — o endereco e o dominio da instalacao + path (/contrato/<codigo>); salvar sem regenerate mantem o mesmo endereco. communication (29/10): a CAIXA do modelo e as mensagens — {inbox_id (WhatsApp da conta, oficial ou QR Code; vale para TODA mensagem dos contratos do modelo: codigo, link, copia assinada, pedido de documento de novo e o link para divulgar), code_message ({{codigo}}), invite_message, copy_message e proofs_again_message ({{link}}; {{contrato}} poe o nome; {{motivo}} no pedido de documento de novo) para caixa de QR Code; code_template, invite_template, copy_template, proofs_again_template ({name, language} de modelo do WhatsApp APROVADO com UMA variavel no corpo; o do codigo de Autenticacao) para caixa oficial; null tira}; o que nao vem fica o guardado. signature_methods (29/10): como a pessoa pode assinar — [\"drawn\",\"typed\"] (padrao), [\"drawn\"] ou [\"typed\"]; vazio ou outro valor = 422. proof_requests (29/10, substitui required_proofs, que continua aceito so com as tres antigas): lista de documentos pedidos [{key, label, accepts_pdf, attach_to_contract, from_witnesses, accepted_types, description}] — key = id_document | rg | cnh | cpf | selfie_with_document | address_proof | custom_<6 a 12 letras/numeros minusculos> (o criado EXIGE label de 1 a 60; VOCE escolhe a chave e mantem igual nas gravacoes seguintes — o servidor nao cria chave); aceita tambem [\"rg\",\"cnh\"]; maximo 12; DOCUMENTO COM FOTO (30/10): id_document com accepted_types = lista dos ACEITOS entre rg, cnh e cpf (um ou mais; ex.: {\"key\":\"id_document\",\"accepted_types\":[\"rg\",\"cnh\"]} = aceita RG OU CNH, a pessoa manda UM deles e a IA confere se a foto e do tipo que ela ESCOLHEU na pagina; sem a lista = os tres; lista vazia, tipo desconhecido ou accepted_types em outro item = 422); rg, cnh e cpf SOLTOS continuam aceitos mas cada um EXIGE aquele documento (os tres soltos = a pessoa manda os tres) — para \"RG ou CNH\" use sempre id_document com accepted_types; accepts_pdf so no comprovante e nos criados; attach_to_contract = o arquivo entra como paginas no contrato assinado (testemunha recebe a via SEM os anexos); from_witnesses = testemunha tambem manda (padrao: sim nos fixos, nao nos criados); mais de 10 arquivos anexados (itens anexar x pessoas) = 422. ai_document_check (29/10, true/false): a IA da OpenAI DA CONTA confere as fotos e, desde 30/10, os PDFs de ate 5 paginas (so com a chave cadastrada; gasta credito da conta; duvida pede outro arquivo e, da 2a em diante, a pessoa pode manter; falha da IA = arquivo aceito). description (30/10, so nos documentos criados custom_*, opcional, ate 300 caracteres): explica a IA o que o documento e alem do nome (ex.: \"comprovante de inscricao no conselho de classe, com o nome da pessoa\"); quem assina NAO ve; em documento fixo = 422."
    }
   ],
   "returns": "o modelo criado (id, name, kind, body, variables, roles_layout, progress)",
@@ -36224,7 +36340,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo. required_proofs (28/10): documentos que a pessoa manda antes de assinar — lista com id_document (documento com foto; ela escolhe RG, CNH ou CPF), selfie_with_document e address_proof (comprovante, foto ou PDF); [] = nenhum; outro valor = 422. Com algum, o contrato so fecha depois de a equipe aprovar (status awaiting_approval). public_link (28/10): link do contrato para divulgar — {enabled: true, inbox_id: <caixa de WhatsApp da conta>} (regenerate: true troca o endereco; o antigo para de funcionar). So para modelo com 1 assinante principal e sem sender_signs (422 com 'public_link' no texto). A leitura devolve {enabled, inbox_id, path} — o endereco e o dominio da instalacao + path (/contrato/<codigo>); salvar sem regenerate mantem o mesmo endereco."
+    "description": "Configuracao do modelo (objeto, MESCLADO no update — mande so o que muda): signers (quantos titulares assinam, 1..), witnesses (testemunhas, 0..), sender_signs (bool: quem envia tambem assina, NO PAINEL), require_id_photo (bool: exige foto do documento na assinatura), validity_days (validade em dias contada do ENVIO; padrao 7; 1..365 — vira {{document.deadline}} no texto). O LEMBRETE NAO E MAIS CAMPO DO MODELO (2026-09-14): o reminder_days e a tarefa diaria das 10h foram REMOVIDOS. Quem lembra e um fluxo do cliente, com o texto e a caixa dele — gatilho signature_delivered (dispara por PESSOA), bloco Esperar em dias e condicao signature_status (person_not_signed + pending, logic and). NUNCA sugerir reminder_days. FORMATO: signers, witnesses e validity_days sao NUMEROS inteiros puros (ex.: {\"signers\": 2, \"witnesses\": 1, \"validity_days\": 7}) — lista ou objeto nesses campos derruba a lista de modelos de contrato da conta; sender_signs e require_id_photo sao true/false. field_prompts (27/10): como o formulario (jeito collection=form) pergunta cada dado — objeto {variavel: {label, description, placeholder}} (ex.: {\"contact.cpf\": {\"label\": \"Qual e o seu CPF?\", \"description\": \"Igual ao documento\", \"placeholder\": \"000.000.000-00\"}}); texto ate 200 caracteres; pergunta de variavel que o modelo nao usa e descartada; sem pergunta o formulario mostra o nome do campo. required_proofs (28/10): documentos que a pessoa manda antes de assinar — lista com id_document (documento com foto; ela escolhe um dos aceitos, RG, CNH ou CPF — ver accepted_types em proof_requests), selfie_with_document e address_proof (comprovante, foto ou PDF); [] = nenhum; outro valor = 422. Com algum, o contrato so fecha depois de a equipe aprovar (status awaiting_approval). public_link (28/10): link do contrato para divulgar — {enabled: true, inbox_id: <caixa de WhatsApp da conta>} (regenerate: true troca o endereco; o antigo para de funcionar). So para modelo com 1 assinante principal e sem sender_signs (422 com 'public_link' no texto). A leitura devolve {enabled, inbox_id, path} — o endereco e o dominio da instalacao + path (/contrato/<codigo>); salvar sem regenerate mantem o mesmo endereco. communication (29/10): a CAIXA do modelo e as mensagens — {inbox_id (WhatsApp da conta, oficial ou QR Code; vale para TODA mensagem dos contratos do modelo: codigo, link, copia assinada, pedido de documento de novo e o link para divulgar), code_message ({{codigo}}), invite_message, copy_message e proofs_again_message ({{link}}; {{contrato}} poe o nome; {{motivo}} no pedido de documento de novo) para caixa de QR Code; code_template, invite_template, copy_template, proofs_again_template ({name, language} de modelo do WhatsApp APROVADO com UMA variavel no corpo; o do codigo de Autenticacao) para caixa oficial; null tira}; o que nao vem fica o guardado. signature_methods (29/10): como a pessoa pode assinar — [\"drawn\",\"typed\"] (padrao), [\"drawn\"] ou [\"typed\"]; vazio ou outro valor = 422. proof_requests (29/10, substitui required_proofs, que continua aceito so com as tres antigas): lista de documentos pedidos [{key, label, accepts_pdf, attach_to_contract, from_witnesses, accepted_types, description}] — key = id_document | rg | cnh | cpf | selfie_with_document | address_proof | custom_<6 a 12 letras/numeros minusculos> (o criado EXIGE label de 1 a 60; VOCE escolhe a chave e mantem igual nas gravacoes seguintes — o servidor nao cria chave); aceita tambem [\"rg\",\"cnh\"]; maximo 12; DOCUMENTO COM FOTO (30/10): id_document com accepted_types = lista dos ACEITOS entre rg, cnh e cpf (um ou mais; ex.: {\"key\":\"id_document\",\"accepted_types\":[\"rg\",\"cnh\"]} = aceita RG OU CNH, a pessoa manda UM deles e a IA confere se a foto e do tipo que ela ESCOLHEU na pagina; sem a lista = os tres; lista vazia, tipo desconhecido ou accepted_types em outro item = 422); rg, cnh e cpf SOLTOS continuam aceitos mas cada um EXIGE aquele documento (os tres soltos = a pessoa manda os tres) — para \"RG ou CNH\" use sempre id_document com accepted_types; accepts_pdf so no comprovante e nos criados; attach_to_contract = o arquivo entra como paginas no contrato assinado (testemunha recebe a via SEM os anexos); from_witnesses = testemunha tambem manda (padrao: sim nos fixos, nao nos criados); mais de 10 arquivos anexados (itens anexar x pessoas) = 422. ai_document_check (29/10, true/false): a IA da OpenAI DA CONTA confere as fotos e, desde 30/10, os PDFs de ate 5 paginas (so com a chave cadastrada; gasta credito da conta; duvida pede outro arquivo e, da 2a em diante, a pessoa pode manter; falha da IA = arquivo aceito). description (30/10, so nos documentos criados custom_*, opcional, ate 300 caracteres): explica a IA o que o documento e alem do nome (ex.: \"comprovante de inscricao no conselho de classe, com o nome da pessoa\"); quem assina NAO ve; em documento fixo = 422."
    }
   ],
   "returns": "o modelo atualizado",
@@ -36415,7 +36531,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes",
   "title": "Enviar Contrato para Assinar",
-  "description": "Cria o contrato DAQUELA pessoa a partir de um modelo e ENTREGA o link (na conversa de WhatsApp da pessoa — uma conversa POR assinante — ou por e-mail). O PDF e gerado com os dados da ficha; variavel do modelo sem valor na ficha = 422 variaveis_sem_valor com a lista do que falta (preencha a ficha e tente de novo). Sem inbox_id e com o contato conversando em MAIS de uma caixa de WhatsApp = 422 escolher_caixa com inboxes[] — repita mandando inbox_id. Ninguem recebeu = 422 entrega_falhou (o contrato fica como rascunho; use resend). Recebeu parcialmente = 201 com delivery_failures[]. Consome 1 vaga do limite mensal (veja signature_envelopes_limits). Modelo com sender_signs cria sozinho o participante do remetente (o usuario do token), que assina NO PAINEL (nao ha ferramenta pra assinar por ele). DOIS JEITOS (27/10): collection='ready' (padrao) = o contrato sai agora com a ficha; o que faltar pode ir em contact_data (grava na ficha E no contrato; erro de um campo = 422 dados_invalidos com field_errors). Para saber antes o que a ficha tem e o que falta: lionchat_signature_documents_fill_fields. collection='form' (exige contact_id) = o titular recebe um formulario em branco, preenche os dados dele (atualiza a ficha) e o contrato nasce com o que ele digitou; o contrato fica awaiting_data ate la e o link e o participants[].public_url do titular. message (ate 1.000 caracteres) vai junto do link nos dois jeitos. Modelo de Word com campo sem escolha no mapeamento = 422 campos_sem_escolha (missing = os rotulos do Word): ajuste o modelo pela tela.",
+  "description": "Cria o contrato DAQUELA pessoa a partir de um modelo e ENTREGA o link (na conversa de WhatsApp da pessoa — uma conversa POR assinante — ou por e-mail). O PDF e gerado com os dados da ficha; variavel do modelo sem valor na ficha = 422 variaveis_sem_valor com a lista do que falta (preencha a ficha e tente de novo). Sem inbox_id e com o contato conversando em MAIS de uma caixa de WhatsApp = 422 escolher_caixa com inboxes[] — repita mandando inbox_id. Ninguem recebeu = 422 entrega_falhou (o contrato fica como rascunho; use resend). Recebeu parcialmente = 201 com delivery_failures[]. Consome 1 vaga do limite mensal (veja signature_envelopes_limits). Modelo com sender_signs cria sozinho o participante do remetente (o usuario do token), que assina no painel ou por signature_envelopes_sign_as_sender (so com o desenho feito pela propria pessoa; nunca inventar a assinatura). DOIS JEITOS (27/10): collection='ready' (padrao) = o contrato sai agora com a ficha; o que faltar pode ir em contact_data (grava na ficha E no contrato; erro de um campo = 422 dados_invalidos com field_errors). Para saber antes o que a ficha tem e o que falta: lionchat_signature_documents_fill_fields. collection='form' (exige contact_id) = o titular recebe um formulario em branco, preenche os dados dele (atualiza a ficha) e o contrato nasce com o que ele digitou; o contrato fica awaiting_data ate la e o link e o participants[].public_url do titular. message (ate 1.000 caracteres) vai junto do link nos dois jeitos. Modelo de Word com campo sem escolha no mapeamento = 422 campos_sem_escolha (missing = os rotulos do Word): ajuste o modelo pela tela.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -36475,7 +36591,7 @@
     "description": "So no jeito ready: o que voce completa da ficha antes de gerar, {variavel: valor} com as variaveis do modelo (ex.: {\"contact.cpf\": \"52998224725\", \"contact.marital_status\": \"casado\"}). Grava na ficha e no contrato; tudo valido ou nada gravado. Telefone nao se preenche por aqui. Formato torto (nao objeto de textos, mais de 50 chaves, valor acima de 4 KB) = 422 contact_data_invalido"
    }
   ],
-  "returns": "201: o contrato (status sent) com participants[] (public_url de cada um), events[] e delivery_failures[]; 422: {error, detail, missing, inboxes, envelope}; 422 dados_invalidos traz field_errors {variavel: motivo} (invalid_cpf, invalid_option, email_em_uso, campo_desconhecido...); variaveis_sem_valor e campos_sem_escolha trazem missing (chaves) e missing_labels (nomes de gente)",
+  "returns": "201: o contrato (status sent) com participants[] (public_url de cada um), events[] e delivery_failures[]; 422: {error, detail, missing, inboxes, envelope}; 422 dados_invalidos traz field_errors {variavel: motivo} (invalid_cpf, invalid_option, email_em_uso, campo_desconhecido...); variaveis_sem_valor e campos_sem_escolha trazem missing (chaves) e missing_labels (nomes de gente); 422 anexos_demais = com as pessoas deste envio o contrato passaria de 10 arquivos anexados (documentos marcados 'anexar ao contrato' x pessoas que mandam) — tire pessoas ou desmarque 'anexar' no modelo",
   "common_use_cases": [
    "Mandar o contrato padrao pra um cliente assinar pelo WhatsApp",
    "Mandar com testemunha (participants com role witness e o telefone dela)",
@@ -36520,7 +36636,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/sign_as_sender",
   "title": "Remetente Assina o Contrato pelo Painel",
-  "description": "A assinatura do REMETENTE (a pessoa do token), quando o modelo tem 'eu tambem assino' (roles_layout.sender_signs). Nao serve pra assinar no lugar do cliente: titular e testemunha assinam pelo link publico deles. Manda o desenho da assinatura como PNG em base64 com o prefixo data:image/png;base64,... (o mesmo rabisco da tela; remember_drawing guarda pra proxima vez). Recusas 422: nao_e_sua (o usuario do token nao e o remetente deste contrato), ja_assinado, sem_desenho. Quando era a ultima assinatura que faltava, o contrato fecha e o PDF final e gerado em seguida (status signed_pending_seal -> signed). Ache os contratos que esperam a sua assinatura com status=falta_eu em lionchat_signature_envelopes_list. JEITO (28/10): signature_method drawn (desenhada) ou typed (o nome digitado numa letra de assinatura) + typed_name — a folha de assinaturas e o relatorio de evidencias dizem 'Assinatura desenhada a mao' ou 'Assinatura digitada: <nome>'. Sem o campo, nao dizem nada. A imagem e sempre o PNG.",
+  "description": "A assinatura do REMETENTE (a pessoa do token), quando o modelo tem 'eu tambem assino' (roles_layout.sender_signs). Nao serve pra assinar no lugar do cliente: titular e testemunha assinam pelo link publico deles. Manda o desenho da assinatura como PNG em base64 com o prefixo data:image/png;base64,... (o mesmo rabisco da tela; remember_drawing guarda pra proxima vez). Recusas 422: nao_e_sua (o usuario do token nao e o remetente deste contrato), ja_assinado, sem_desenho. Quando era a ultima assinatura que faltava, o contrato fecha e o PDF final e gerado em seguida (status signed_pending_seal -> signed). Ache os contratos que esperam a sua assinatura com status=falta_eu em lionchat_signature_envelopes_list. JEITO (28/10): signature_method drawn (desenhada) ou typed (o nome digitado numa letra de assinatura) + typed_name — a folha de assinaturas e o relatorio de evidencias dizem 'Assinatura desenhada a mao' ou 'Assinatura digitada: <nome>'. Sem o campo, nao dizem nada. A imagem e sempre o PNG. (29/10) O modelo escolhe os jeitos permitidos (roles_layout.signature_methods): jeito fora da lista = 422 jeito_nao_permitido.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -36566,7 +36682,7 @@
     "description": "So com signature_method=typed: o nome escrito (ate 120 caracteres) que aparece na folha de assinaturas"
    }
   ],
-  "returns": "o contrato atualizado com participants[] e events[] (o seu participante vira signed); 422: {error: nao_e_sua | ja_assinado | sem_desenho}",
+  "returns": "o contrato atualizado com participants[] e events[] (o seu participante vira signed); 422: {error: nao_e_sua | ja_assinado | sem_desenho | jeito_nao_permitido}",
   "common_use_cases": [
    "Fechar um contrato em que so falta a assinatura do remetente",
    "Assinar em lote os contratos listados com status=falta_eu"
@@ -36623,7 +36739,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/proofs",
   "title": "Documentos de Quem Assina (Contrato)",
-  "description": "Os documentos que o modelo pede (required_proofs) e, por pessoa que assina pelo link, o que ela mandou (kind id_document/selfie_with_document/address_proof, formato, document_type rg/cnh/cpf, quando) e a revisao da equipe (pending/approved/rejected, motivo, quem, quando). NUNCA devolve o arquivo: documento de identidade e selfie so se olham na tela (botao amarelo \"Ver documentos\" no contrato ou na aba Contratos da ficha). last_proof_event_id = o ultimo documento mandado (use como seen_event_id ao aprovar/reprovar). Administrador ou signature_manage.",
+  "description": "Os documentos que o contrato pede (requests: os itens de proof_requests com o nome em label) e, por pessoa que assina pelo link, o que ela mandou (kind id_document/rg/cnh/cpf/selfie_with_document/address_proof/custom_*, label, formato, document_type rg/cnh/cpf, quando) e a revisao da equipe (pending/approved/rejected, motivo, quem, quando). NUNCA devolve o arquivo: documento de identidade e selfie so se olham na tela (botao amarelo \"Ver documentos\" no contrato ou na aba Contratos da ficha). last_proof_event_id = o ultimo documento mandado (use como seen_event_id ao aprovar/reprovar). Administrador ou signature_manage. (29/10) Com a conferencia por IA ligada, cada documento traz ai_check ({veredito: ok|duvida, probabilidade}) e ai_kept (a pessoa manteve a foto apesar da duvida) — e um AVISO para olhar com atencao, nao uma recusa. seal_blocked (lista) = um anexo ao contrato nao entrou no documento final: o contrato fica parado (status signed_pending_seal) e o unico caminho e REPROVAR o documento daquela pessoa (com o motivo) para ela mandar outro; ai ele volta a esperar a aprovacao.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -36634,7 +36750,7 @@
     "description": "ID do contrato"
    }
   ],
-  "returns": "{required[], awaiting_approval, people: [{participant_id, name, role, signed, proofs: [{kind, content_type, document_type, sent_at}], review: {status, decision, reason, by, at}, last_proof_event_id}]}",
+  "returns": "{required[], requests: [{key, label, accepts_pdf, attach_to_contract, from_witnesses}], awaiting_approval, seal_blocked: [{participant_id, kind, label}], people: [{participant_id, name, role, signed, proofs: [{kind, label, content_type, document_type, sent_at, ai_check, ai_kept}], review: {status, decision, reason, by, at}, last_proof_event_id}]}",
   "common_use_cases": [
    "Saber se o contrato esta esperando a aprovacao dos documentos e de quem",
    "Ver o motivo de uma reprovacao e se a pessoa ja mandou de novo"
@@ -36689,7 +36805,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/signature_envelopes/{id}/reject_proofs",
   "title": "Reprovar Documentos de Quem Assina",
-  "description": "Reprova os documentos de UMA pessoa com o motivo: ela recebe no canal dela (WhatsApp ou e-mail) o pedido de documento novo com o motivo escrito (MANDA mensagem ao cliente — confirme o texto com o usuario antes). Ela troca o que for preciso, toca Enviar e a equipe e avisada de novo. 422: motivo_obrigatorio, fora_do_momento, sem_documentos, documentos_mudaram. Administrador ou signature_manage.",
+  "description": "Reprova os documentos de UMA pessoa com o motivo: ela recebe no canal dela (WhatsApp ou e-mail) o pedido de documento novo com o motivo escrito (MANDA mensagem ao cliente — confirme o texto com o usuario antes). Ela troca o que for preciso, toca Enviar e a equipe e avisada de novo. 422: motivo_obrigatorio, fora_do_momento, sem_documentos, documentos_mudaram. Administrador ou signature_manage. (29/10) Tambem e o caminho quando _proofs mostra seal_blocked (anexo que nao entrou no documento final): reprove o documento daquela pessoa e ela manda outro.",
   "category": "Assinatura eletronica",
   "params": [
    {
@@ -37149,7 +37265,7 @@
   "path": "/api/v1/accounts/{account_id}/agenda_treatments/{id}/marcar_todas",
   "title": "Programa: marcar varias sessoes de uma vez",
   "category": "Agenda / Tarefas",
-  "description": "[POST] (15/09) Marca de uma vez as sessoes confirmadas do programa. Body: `sessoes: [{numero, date, slot}]` — o numero da sessao, o dia (YYYY-MM-DD) e o horario (HH:MM). NAO e transacao unica de proposito: cada sessao e uma reserva DE VERDADE (cria a tarefa, dispara confirmacao, lembrete e Google como qualquer agendamento), entao uma falha no meio NAO desfaz as que ja entraram na agenda — a resposta e 200 com `marcadas` e `falhas: [{numero, erro}]`. ATENCAO: com confirmacao ligada no tipo, o cliente recebe UMA mensagem por sessao. Teto de 60 sessoes por chamada. 422 se o programa estiver encerrado/concluido ou sem tipo de agendamento. Sessao que ja tem compromisso vivo volta em `falhas` ('Essa sessao ja foi marcada').",
+  "description": "[POST] (15/09) Marca de uma vez as sessoes confirmadas do programa. Body: `sessoes: [{numero, date, slot}]` — o numero da sessao, o dia (YYYY-MM-DD) e o horario (HH:MM). NAO e transacao unica de proposito: cada sessao e uma reserva DE VERDADE (cria a tarefa, dispara confirmacao, lembrete e Google como qualquer agendamento), entao uma falha no meio NAO desfaz as que ja entraram na agenda — a resposta e 200 com `marcadas` e `falhas: [{numero, erro}]`. Com confirmacao ligada no tipo, o cliente recebe UMA confirmacao por DIA de marcacao do programa (nao uma por sessao); lembretes, gatilho de fluxo e conversoes continuam saindo por sessao. Teto de 60 sessoes por chamada. 422 se o programa estiver encerrado/concluido ou sem tipo de agendamento. Sessao que ja tem compromisso vivo volta em `falhas` ('Essa sessao ja foi marcada').",
   "params": [
    {
     "name": "id",

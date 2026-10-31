@@ -765,6 +765,13 @@ mensagem elas são bloqueadas por segurança); aqui resolvem no `apiUrl`, `apiHe
 NÃO existe `.payload`/`.response` (`{{api_response.payload.x}}` resolve vazio). O status fica em
 `{{api_response_status}}`. Se a resposta não for JSON, só `{{api_response}}` inteiro funciona.
 
+**Listas na resposta:** item de lista pelo índice com PONTO — `{{api_response.data.0.id}}`,
+`{{api_response.data.0.itens.1.nome}}` — funciona em qualquer versão. Tamanho da lista com FILTRO:
+`{{api_response.data | size}}`. Colchete (`{{api_response.data[0].id}}`) e `.size` sem filtro
+(`{{api_response.data.size}}`) só funcionam depois da correção de 30/10/2026 estar no ar; antes disso saem
+VAZIOS sem erro (a prévia da tela mostra o valor e a execução real não). Prefira sempre o ponto e o `| size`.
+Posição que não existe sai vazia.
+
 **Handles que SAEM:** `success`, `error`.
 
 ### 2.7 `ai`
@@ -1172,8 +1179,12 @@ pela linha de ligacao do WhatsApp (LionCalls).
   "data": { "aiCallAgentId": 4, "aiCallInboxId": 82 } }
 ```
 
-- `aiCallAgentId`: id de `lionchat_captain_call_agents_list`. O que a IA fala, a voz e o **tempo maximo** da ligacao
-  vem do agente (`max_duration_seconds`, 30-600 s; no tempo o motor desliga sozinho).
+- `aiCallAgentId`: id de um **agente de LIGACAO**, vindo de `lionchat_captain_call_agents_list`. O que a IA fala, a
+  voz e o **tempo maximo** da ligacao vem do agente (`max_duration_seconds`, 30-600 s; no tempo o motor desliga sozinho).
+  **NUNCA** use o id de um agente de TEXTO (`lionchat_captain_assistants_*`): sao cadastros diferentes, e o agente de
+  ligacao so APONTA para um de texto em `captain_assistant_id`. Se `captain_call_agents_list` nao estiver entre as
+  suas ferramentas, **pesquise pelo nome** antes de concluir que nao existe. Agente de ligacao que ja existe na conta
+  **nao se recria** — use o id que a lista devolve.
 - `aiCallInboxId`: id de `meta.dial_inboxes` da mesma lista (caixa com a ligacao ligada).
 - Saidas: `answered` (atendeu), `no_answer` (nao atendeu/recusou), `error` (nao deu pra ligar; motivo no historico).
   `answered`/`no_answer` sem edge = o flow termina; `error` sem edge = execucao "Falhou".
@@ -1182,6 +1193,9 @@ pela linha de ligacao do WhatsApp (LionCalls).
 - Nao confere horario (use `condition` antes). Linha ocupada: espera a vez por ate 2 h (a IA sempre deixa uma vaga
   para a equipe).
 - **Proibido** em flow `action`, em flow de grupo e em `ai_tool` (o save recusa). Id de outra conta tambem e recusado.
+- O save tambem recusa agente ou caixa **escolhidos ou trocados** que nao existem nesta conta ("ai_call block uses a
+  call agent that does not exist in this account" / "...an inbox without a calling line..."). Agente apagado ou
+  caixa excluida DEPOIS nao travam o save — falham na execucao.
 
 **Receita — a IA de atendimento pede a ligacao:** etiqueta `ligar`; o cenario manda por a etiqueta quando o cliente
 pede para falar por telefone; flow `conversation` com gatilho `label_added` (`label_names: ["ligar"]`) -> action

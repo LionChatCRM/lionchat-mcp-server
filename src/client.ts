@@ -14,6 +14,9 @@ export interface RequestOptions {
 // AIDEV-NOTE: Normalized pagination format returned by the client
 export interface PaginatedResponse {
   data: unknown[];
+  // AIDEV-NOTE: [ligar-com-ia-agente-errado 30/10] o meta do servidor viaja junto — antes era descartado e sumiam
+  // dados que nao sao paginacao (meta.dial_inboxes dos agentes de ligacao; etiquetas/contato das mensagens).
+  meta?: Record<string, unknown>;
   pagination?: {
     current_page: number;
     total_pages: number;
@@ -126,6 +129,19 @@ function sleep(ms: number): Promise<void> {
 // - Array with meta/payload pagination -> PaginatedResponse
 // - Plain array -> { data: [...] }
 // - Single object -> returned as-is
+// AIDEV-NOTE: [ligar-com-ia-agente-errado 30/10] so e paginacao se o meta trouxer ALGUM dado de paginacao. Sem
+// nenhum (agentes de ligacao: so dial_inboxes; mensagens: etiquetas/contato, paginam por before_id), dizer
+// "tem mais pagina" manda a IA atras de uma pagina 2 que nao existe. Lista sem total MAS com pagina continua
+// "ate esvaziar" (fix 18/07). Mesma lista no remoto (runner.ts#attachPagination).
+const PAGINATION_KEYS = ['all_count', 'count', 'total_count', 'total', 'current_page', 'page', 'per', 'total_pages'];
+// Numero OU texto so de digitos: artigos mandam current_page como texto ("2") quando a pagina vem na URL.
+function hasPaginationKey(meta: Record<string, unknown>): boolean {
+  return PAGINATION_KEYS.some((key) => {
+    const value = meta[key];
+    return typeof value === 'number' || (typeof value === 'string' && /^\d+$/.test(value));
+  });
+}
+
 function normalizeResponse(body: unknown): unknown {
   if (body && typeof body === 'object' && !Array.isArray(body)) {
     const obj = body as Record<string, unknown>;
@@ -133,6 +149,9 @@ function normalizeResponse(body: unknown): unknown {
     // AIDEV-NOTE: Chatwoot pagination format: { payload: [...], meta: { count|all_count, current_page } }
     if (Array.isArray(obj.payload) && obj.meta && typeof obj.meta === 'object') {
       const meta = obj.meta as Record<string, unknown>;
+      if (!hasPaginationKey(meta)) {
+        return { data: obj.payload, meta } satisfies PaginatedResponse;
+      }
       // AIDEV-NOTE: [fix paginacao 18/07] Chave do total VARIA por endpoint no Chatwoot:
       // conversas=all_count, contatos=count, busca de mensagens/kanban items/anexos=total_count.
       // Ler so all_count zerava total_count/has_more nos demais (a IA parava cedo e entregava
@@ -166,6 +185,7 @@ function normalizeResponse(body: unknown): unknown {
 
       return {
         data: obj.payload,
+        meta,
         pagination: {
           current_page: currentPage,
           total_pages: totalPages,
@@ -178,6 +198,9 @@ function normalizeResponse(body: unknown): unknown {
     // AIDEV-NOTE: Some endpoints return { data: [...], meta: {...} } format
     if (Array.isArray(obj.data) && obj.meta && typeof obj.meta === 'object') {
       const meta = obj.meta as Record<string, unknown>;
+      if (!hasPaginationKey(meta)) {
+        return { data: obj.data, meta } satisfies PaginatedResponse;
+      }
       // AIDEV-NOTE: [fix paginacao 18/07] Chamadas VoIP/LionCalls, WhatsApp calls e logs de evento
       // (ga4/google_ads/meta_capi) usam meta.total e meta.page (nao total_count/current_page) —
       // sem estes fallbacks o has_more vinha SEMPRE false e o relatorio parava na 1a pagina.
@@ -209,6 +232,7 @@ function normalizeResponse(body: unknown): unknown {
 
       return {
         data: obj.data,
+        meta,
         pagination: {
           current_page: currentPage,
           total_pages: totalPages,
@@ -229,6 +253,9 @@ function normalizeResponse(body: unknown): unknown {
         typeof inner.meta === 'object'
       ) {
         const meta = inner.meta as Record<string, unknown>;
+        if (!hasPaginationKey(meta)) {
+          return { data: inner.payload, meta } satisfies PaginatedResponse;
+        }
         const allCount =
           typeof meta.all_count === 'number'
             ? meta.all_count
@@ -251,6 +278,7 @@ function normalizeResponse(body: unknown): unknown {
               : currentPage;
         return {
           data: inner.payload,
+          meta,
           pagination: {
             current_page: currentPage,
             total_pages: totalPages,

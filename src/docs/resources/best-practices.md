@@ -67,7 +67,7 @@ Quando existir endpoint específico, prefira:
 Conversa com 200 mensagens? **Não baixe tudo**:
 
 1. `conversations_show` (1 chamada) → metadata + última mensagem
-2. Se precisa contexto: pegue só as últimas 20-30 mensagens com `conversations_messages_list` (use `page`)
+2. Se precisa contexto: pegue só as últimas 20-30 mensagens com `conversations_messages_list` (sem parâmetro vêm as últimas 20; para as anteriores use `before_id` com o `id` da mais antiga recebida)
 3. Pra análise/resumo completo, use `conversations_messages_list` paginando — é a fonte do texto.
 
 > **Atenção:** `conversations_transcript` NÃO retorna o texto da conversa pra você ler. Ele EXIGE o
@@ -201,7 +201,7 @@ própria: cada agente de ligação tem um objetivo e **não ocupa vaga de IA do 
 
 | Ferramenta | Para quê |
 |---|---|
-| `captain_call_agents_list` | lista os agentes de ligação e `meta.dial_inboxes` (caixas que podem ligar) |
+| `captain_call_agents_list` | lista os agentes de ligação e `meta.dial_inboxes` (caixas que podem ligar). É daqui que sai o `aiCallAgentId` do bloco "Ligar com IA" — **nunca** o id de um agente de texto |
 | `captain_call_agents_create` / `_update` / `_duplicate` / `_destroy` | cadastro |
 | `captain_call_test_phones_list` / `_create` / `_destroy` | números autorizados a receber ligação de teste |
 | `captain_call_agents_test_call` | **liga de verdade** para um número de teste cadastrado |
@@ -258,9 +258,13 @@ teto de 1380**).
 
 (O exemplo acima soma exatamente 1380: 30 + 240 + 1110.)
 
-Dispara quando o CLIENTE fica inativo após resposta da IA. O motor de follow-up é dedicado e
-**só-leitura** (não executa ferramentas, não coleta dado — só redige a mensagem de retomada,
-com saída estruturada garantida). `paused=true` no assistente corta os follow-ups também.
+Dispara quando o CLIENTE fica inativo após resposta da IA. Passo SEM ferramenta marcada: o motor de
+follow-up só redige a mensagem de retomada. Desde 24/10, o texto de cada passo (até 2.000 caracteres) aceita
+a mesma menção de ferramenta do cenário, `[Nome](tool://slug)` (nativa = id, personalizada = slug, fluxo =
+`flow_<id>`): com menção a uma ferramenta que o agente pode usar e janela de 24h aberta, o passo roda um
+turno completo da IA só com as ferramentas marcadas (+ as de leitura). Transferir/encerrar só valem se
+`handoff`/`resolve_conversation` estiverem marcados no passo. `paused=true` no assistente corta os
+follow-ups também.
 
 ### "A IA nunca faz o follow-up" — o conserto é de 29/07, NÃO de 24/07
 
