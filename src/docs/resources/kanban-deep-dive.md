@@ -1006,8 +1006,10 @@ para outro funil, pôr/tirar etiqueta e marcar ganho/perdido. **Nada muda sem ap
 - **Uma análise por vez por funil** (`funnel_busy`, 409) e no máximo duas rodando por conta (`account_busy`). Criar uma
   análise nova **substitui a lista anterior** do mesmo funil que tiver etapa em comum (ela vira `superseded`).
 - **A lista vale 24 horas** (`expires_at`); depois vira `expired` e é preciso analisar de novo.
-- **O que vem marcado** (`checked: true`): sugestões de força Alta de etapa, funil e perdido. Ganho, Média e etiqueta vêm
-  sempre desmarcados, com o motivo em `unchecked_reason`. Na dúvida, proponha aplicar só as marcadas.
+- **O que vem marcado** (`checked: true`): sugestões de força Alta de etapa, funil, perdido e etiqueta (etiqueta é Alta com
+  chance de 90% ou mais para pôr, ou de 10% ou menos para tirar). Com 90% de certeza ou mais a ação vem marcada sempre, inclusive ganho, card
+  adiado, card sem conversa e etapa com conversão de venda; abaixo disso, ganho, Média e essas exceções vêm desmarcados, com o motivo em
+  `unchecked_reason`. "Aplicar todas" pode, portanto, pôr e tirar etiqueta, e etiqueta dispara automação, fluxo e webhook. Na dúvida, proponha aplicar só as marcadas.
 - **Linha travada** (`locked`: `client_wrote` = o cliente escreveu depois da análise; `card_changed` = o card mudou):
   não aplique. Chame `reanalyze` com o `item_id` e depois `items` de novo.
 - **Linha que voltou** (`return_code`): `interrupted` (sistema reiniciou), `card_busy` e `apply_failed` podem ser
