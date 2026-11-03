@@ -210,9 +210,11 @@ automações não respondem a ela. Não há ferramenta: é só a página da pess
   última que faltava? o contrato fecha e o PDF final é gerado em seguida. Os que esperam você: `status=falta_eu`.
 - **Envio por outros caminhos**: ação `send_signature_document` no FlowBuilder (28/10: `collection` `ready`/`form`,
   `message` junto do link e `send_link: false` para só gerar; o contrato criado vira `{{contrato.*}}`, com
-  `{{contrato.link}}`, para os blocos seguintes), na Macro e na Automação;
+  `{{contrato.link}}` do titular, para os blocos seguintes), na Macro e na Automação;
   bloco `generate_contract` no Formulário público (gera pelas respostas e manda o link). Gatilhos do Flow
-  `signature_*` (12 acontecimentos, 29/10) trazem `{{contrato.*}}` — ver `lionchat_flows_schema_reference`.
+  `signature_*` (12 acontecimentos, 29/10) trazem `{{contrato.*}}` — ver `lionchat_flows_schema_reference`. Neles,
+  `{{contrato.link}}` (03/11) é o link de quem está na conversa em que o fluxo roda: na conversa da testemunha, o dela; na do
+  contrato, o do titular. Para o de quem causou o evento, `{{contrato.assinante.link}}`.
 
 ## Onde o cliente vê
 Menu **Assinaturas** (modelos e contratos, filtros, "Falta você assinar"), aba **Contratos** na ficha do contato,
