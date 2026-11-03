@@ -439,7 +439,7 @@ function registerPingTool(
 ): void {
   server.tool(
     'lionchat_ping',
-    'Test connectivity to the LionChat API. Returns your user profile if the token is valid.',
+    'Test connectivity to the LionChat API. Returns your user profile if the token is valid, plus the panel address and the account in use, needed to build card and conversation links.',
     {},
     { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
     async () => {
@@ -449,8 +449,13 @@ function registerPingTool(
           path: '/api/v1/profile',
         });
 
+        // AIDEV-NOTE: [link-do-card 03/11/2026] A IA monta link de card e de conversa com estes dois
+        // valores (docs/resources/kanban-deep-dive.md, "Link do card"). Cada instalacao tem o seu endereco.
+        const panelAddress = config.baseUrl.replace(/\/+$/, '');
+        const linkFacts = `Endereco do painel (para montar links): ${panelAddress}\nConta em uso: ${config.accountId}`;
+
         return {
-          content: [{ type: 'text' as const, text: formatResponse(result) }],
+          content: [{ type: 'text' as const, text: `${formatResponse(result)}\n\n${linkFacts}` }],
         };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

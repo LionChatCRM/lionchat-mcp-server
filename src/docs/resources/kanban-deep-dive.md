@@ -286,6 +286,58 @@ existiam).
 
 **NUNCA gravar inteiros direto** — sempre objetos com `{display_id: ...}`. Inteiros diretos causam TypeError no `as_json`.
 
+## Link do card, da aba e da conversa (03/11/2026)
+
+Abrir um card no Kanban muda o endereço da página, e quem abre esse endereço vê a mesma coisa: o quadro daquele funil, o card aberto, a aba escolhida e, se houver, a conversa por cima. **Não existe ferramenta para isso e nem precisa: você monta o endereço com o que já tem e entrega na resposta.** Quando alguém pedir "o link desse card" ou "me manda onde eu vejo isso", é daqui que sai.
+
+```
+<painel>/app/accounts/<conta>/kanban?funnel=<funil>&card_id=<card>&tab=<aba>&conversation_id=<conversa>
+```
+
+| Parte | De onde vem | Cuidado |
+|---|---|---|
+| `<painel>` | Linha "Endereco do painel" de `lionchat_current_account` (conector remoto) ou de `lionchat_ping` (conector local) | Cada instalação tem o seu. **Nunca chute nem copie de um exemplo.** Se a ferramenta não informar, pergunte à pessoa |
+| `<conta>` | A conta ativa, nas mesmas duas ferramentas | |
+| `funnel` | `funnel_id` do card | Mande sempre: é o quadro que fica atrás do card |
+| `card_id` | `id` do card | O nome é esse: a tela não lê `card`, `item` nem `kanban_item_id` |
+| `tab` | Tabela abaixo | Opcional. Sem ela, abre em Notas |
+| `conversation_id` | `conversation_display_id` do card, ou um `display_id` de `linked_conversations` | É o número que aparece na tela, nunca o id interno. Abre a conversa por cima |
+
+Só entra a parte que interessa:
+
+- Só o card: `<painel>/app/accounts/56/kanban?funnel=37&card_id=123`
+- Card em uma aba: `<painel>/app/accounts/56/kanban?funnel=37&card_id=123&tab=checklist`
+- Card com a conversa por cima: `<painel>/app/accounts/56/kanban?funnel=37&card_id=123&conversation_id=456`
+- Só a conversa, com o quadro atrás: `<painel>/app/accounts/56/kanban?funnel=37&conversation_id=456`
+- Conversa na tela de Conversas: `<painel>/app/accounts/56/conversations/456`
+
+| `tab` | Aba na tela | Para ler o mesmo conteúdo |
+|---|---|---|
+| (sem `tab`) | Notas | `lionchat_kanban_items_kanban_notes_list` |
+| `checklist` | Checklist | `lionchat_kanban_items_kanban_checklist_list` |
+| `attachments` | Anexos | `lionchat_kanban_v2_list_1` |
+| `activities` | Atividades | Campo `activities` de `lionchat_kanban_items_show` |
+| `tasks` | Tarefas | `lionchat_kanban_items_tasks_list` |
+| `scheduled-messages` | Mensagens agendadas | `lionchat_kanban_items_scheduled_messages_list` |
+
+Aba desconhecida cai em Notas. `scheduled-messages` só existe em card com conversa.
+
+**O que avisar a quem vai receber:**
+
+- O link não dá acesso a ninguém: só abre para quem está logado naquela conta e pode ver aquele card ou conversa. **Nunca mande ao cliente final.**
+- Sem login, a pessoa cai no login e, depois de entrar, na tela inicial, não no card. É só abrir o link de novo.
+- Card apagado ou fora do alcance da pessoa: aviso na tela e o quadro sem o card.
+- Conversa apagada: aviso, e nada abre. Conversa que a pessoa não pode ver: tela dizendo que ela não tem acesso.
+
+**Recebeu um link? Leia o endereço:**
+
+1. `accounts/<conta>`: se não for a conta ativa, troque com `lionchat_switch_account` antes de consultar. No conector local a conta é fixa: avise a pessoa.
+2. `card_id`: `lionchat_kanban_items_show`. A `tab` diz o que ela estava olhando.
+3. `conversation_id`, ou `conversations/<número>`: `lionchat_conversations_show`, que recebe esse mesmo número.
+4. `funnel` sozinho: `lionchat_funnels_show`.
+
+**Em mensagem de fluxo** (avisar um grupo, por exemplo), em fluxo iniciado por card: `<painel>/app/accounts/<conta>/kanban?funnel={{trigger.funnel_id}}&card_id={{trigger.kanban_item_id}}`. O endereço e a conta vão escritos no texto, porque não há variável para eles. Em fluxo que não nasce de um card, as duas variáveis saem vazias e o link abre só o quadro. No fluxo `{{conversation.id}}` já é o número da tela, então `&conversation_id={{conversation.id}}` funciona.
+
 ## Posição (ordering)
 
 Cada KanbanItem tem `position` (integer). Cards ordenados ASC dentro da etapa.
