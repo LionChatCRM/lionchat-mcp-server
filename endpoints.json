@@ -29596,7 +29596,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/audit_logs",
   "title": "Registro de Auditoria",
-  "description": "Histórico de quem mexeu no quê dentro da conta (criação, edição, exclusão, login e logout), com o autor, o IP e o antes/depois de cada campo. ATENÇÃO ao formato das datas: aqui 'since' e 'until' são DATA POR EXTENSO (AAAA-MM-DD) e NÃO timestamp Unix — é o oposto dos relatórios; mandar um número Unix derruba a chamada com erro. Somente administradores; a conta precisa ter o recurso de auditoria habilitado, senão a lista volta VAZIA sem nenhum aviso de erro. MENSAGEM APAGADA (26/09/2026): quando alguém apaga uma mensagem pelo painel, fica um registro auditable_type 'Message', action 'destroy', com audited_changes = { content (texto, até 2000 caracteres), display_id (conversa), inbox_id, sender_type, sender_id, sender_name, attachments (nomes dos arquivos) } — é a foto tirada ANTES de apagar; auditable vem null nesse caso. Busque com q='trecho da mensagem' ou auditable_type=Message.",
+  "description": "Histórico de quem mexeu no quê dentro da conta (criação, edição, exclusão, login e logout), com o autor, o IP e o antes/depois de cada campo. ATENÇÃO ao formato das datas: aqui 'since' e 'until' são DATA POR EXTENSO (AAAA-MM-DD) e NÃO timestamp Unix — é o oposto dos relatórios; mandar um número Unix derruba a chamada com erro. Somente administradores; a conta precisa ter o recurso de auditoria habilitado, senão a lista volta VAZIA sem nenhum aviso de erro. MENSAGEM APAGADA (26/09/2026): quando alguém apaga uma mensagem pelo painel, fica um registro auditable_type 'Message', action 'destroy', com audited_changes = { content (texto, até 2000 caracteres), display_id (conversa), inbox_id, sender_type, sender_id, sender_name, attachments (nomes dos arquivos) } — é a foto tirada ANTES de apagar; auditable vem null nesse caso. Busque com q='trecho da mensagem' ou auditable_type=Message. CREDENCIAIS (03/11/2026): audited_changes nunca traz senha, token, chave nem PIN: as chaves continuam e o valor vem '[FILTERED]', inclusive em registro antigo; de proxy_config só 'server' fica aberto. Isso é máscara, não dado perdido: não trate '[FILTERED]' como valor real nem tente regravá-lo.",
   "category": "Auditoria",
   "params": [
    {
@@ -29660,7 +29660,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Busca por texto (3+ letras): nome de quem fez OU conteúdo da mudança (inclusive o texto de mensagem apagada). Menos de 3 letras = ignorado. Em conta grande pode levar ~1 s; combine com since/until pra encurtar."
+    "description": "Busca por texto (3+ letras): nome de quem fez OU conteúdo da mudança (inclusive o texto de mensagem apagada). NÃO olha additional_attributes, custom_attributes, provider_config nem colunas de credencial: texto dentro delas não é achado. Menos de 3 letras = ignorado. Em conta grande pode levar ~1 s; combine com since/until pra encurtar."
    },
    {
     "name": "sort",
@@ -29670,7 +29670,7 @@
     "description": "Ordem por data: desc (mais recentes primeiro, padrão) ou asc."
    }
   ],
-  "returns": "{ per_page, total_entries, current_page, audit_logs: [{ id, auditable_id, auditable_type, auditable, associated_id, associated_type, user_id, user_type, username, action, audited_changes (antes/depois por campo), version, comment, request_uuid, created_at (Unix em segundos), remote_address (IP inteiro), ip_masked (IP parcial, ex. 177.12.x.x; null pra IP interno), ip_city, ip_region (cidade/estado do IP — só do que já foi descoberto; o que falta aparece na próxima consulta) }] }",
+  "returns": "{ per_page, total_entries, current_page, audit_logs: [{ id, auditable_id, auditable_type, auditable, associated_id, associated_type, user_id, user_type, username, action, audited_changes (antes/depois por campo; credencial vem '[FILTERED]'), version, comment, request_uuid, created_at (Unix em segundos), remote_address (IP inteiro), ip_masked (IP parcial, ex. 177.12.x.x; null pra IP interno), ip_city, ip_region (cidade/estado do IP — só do que já foi descoberto; o que falta aparece na próxima consulta) }] }",
   "common_use_cases": [
    "Descobrir quem apagou uma caixa de entrada ou uma automação",
    "Ver todos os logins de um agente num intervalo de datas",
