@@ -672,3 +672,7 @@ Ramal sem cadastro não gera registro — se o cliente diz que "liguei e não ap
 ### Erros do envio (`signature_envelopes_create`): `variaveis_sem_valor` (+ `missing[]`), `escolher_caixa` (+ `inboxes[]`),
 `entrega_falhou`, `sem_caixa_whatsapp`, `telefone_invalido`, `limite_do_mes`, `cpf_invalido`, `funcionalidade_desligada`,
 `fila_cheia` (fila única de conversão do Word cheia — repetir em instantes), `conversor_indisponivel` (o serviço de conversão de Word não respondeu — repetir em instantes).
+
+### Juiz do Supervisor (novo 2026-11-04)
+
+Não tem relação com "Supervisor de caixa" nem "Supervisor de time", que são papéis de pessoa. **Supervisor de IA** é a tela que compara as IAs, e **juiz** é a análise que um administrador inicia por botão ali: outra IA lê as conversas e responde sobre cada uma (nota, disse e não fez, não soube responder, o que travou, objeções, quanto seguiu o cenário). Ele só lê e não muda a conversa. Pelo conector dá para consultar o resultado (`lionchat_captain_judge_runs_*`), mas não iniciar. Detalhes em `reports-guide`.

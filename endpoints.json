@@ -33033,7 +33033,107 @@
   "related_tools": [
    "lionchat_captain_assistants_list",
    "lionchat_captain_assistants_show",
-   "lionchat_reports_summary"
+   "lionchat_reports_summary",
+   "lionchat_captain_judge_runs_results"
+  ]
+ },
+ {
+  "id": "lionchat_captain_judge_runs_current",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/judge_runs/current",
+  "title": "Juiz do Supervisor: andamento",
+  "description": "Devolve a análise viva ou a última da conta: situação, quantas conversas foram escolhidas e lidas, quantas ficaram de fora e por quê, tokens e custo. Só leitura. A análise é iniciada apenas pelo botão do Supervisor no painel, por um administrador: não há ferramenta para iniciar, porque gasta a chave da conta.",
+  "category": "Assistentes",
+  "params": [],
+  "returns": "{ run: { id, status, days, assistant_ids, selected_count, analyzed_count, pending_count, selecting, not_analyzed, error_code, input_tokens, cost_usd, created_at, finished_at } } ou { run: null }",
+  "common_use_cases": [
+   "Saber se há análise rodando",
+   "Ver quando foi a última análise e o que ficou de fora"
+  ],
+  "related_tools": [
+   "lionchat_captain_supervisor_show",
+   "lionchat_captain_judge_runs_results"
+  ]
+ },
+ {
+  "id": "lionchat_captain_judge_runs_results",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/judge_runs/results",
+  "title": "Juiz do Supervisor: resultados por IA",
+  "description": "O que o juiz respondeu nas conversas já analisadas, por IA: nota do atendimento de 1 a 5, disse e não fez, não soube responder, perguntas sem resposta, pediu dado de novo, cliente irritado, o que travou e objeções nas conversas que não converteram, e a média de 0 a 100% de quanto a IA seguiu cada cenário (average vem de 0 a 1, do menor para o maior). Só leitura. Traga junto os avisos em warnings: com menos de 30 conversas analisadas o número ainda não permite concluir. O juiz não muda nada na conversa.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "days",
+    "type": "number",
+    "location": "query",
+    "required": false,
+    "description": "Período em dias, pela data da última fala da IA. Padrão 30."
+   }
+  ],
+  "returns": "{ has_judgments, assistants: [{ id, name, analyzed, note_average, said_not_done, didnt_know, irritated, asked_again, unanswered, lost_count, objections, stuck, scenarios, same_model_as_judge }], warnings }",
+  "common_use_cases": [
+   "Entender por que uma IA perde",
+   "Achar o cenário que precisa de ajuste",
+   "Comparar a qualidade do atendimento entre IAs"
+  ],
+  "related_tools": [
+   "lionchat_captain_supervisor_show",
+   "lionchat_captain_judge_runs_conversations"
+  ]
+ },
+ {
+  "id": "lionchat_captain_judge_runs_conversations",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/judge_runs/conversations",
+  "title": "Juiz do Supervisor: conversas por trás de um número",
+  "description": "Lista as conversas que formam um número do juiz, só as que a pessoa conectada pode abrir. Só leitura. Para scenario, value é o id do cenário e a lista vem da menor para a maior porcentagem.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "assistant_id",
+    "type": "number",
+    "location": "query",
+    "required": true,
+    "description": "ID da IA."
+   },
+   {
+    "name": "metric",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "said_not_done, didnt_know, unanswered, asked_again, irritated, note, analyzed, stuck, objection ou scenario."
+   },
+   {
+    "name": "value",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Para stuck e objection, a opção (ex.: ia_errou, preco). Para scenario, o id do cenário."
+   },
+   {
+    "name": "days",
+    "type": "number",
+    "location": "query",
+    "required": false,
+    "description": "Período em dias. Padrão 30."
+   },
+   {
+    "name": "page",
+    "type": "number",
+    "location": "query",
+    "required": false,
+    "description": "Página; 25 por página."
+   }
+  ],
+  "returns": "{ total, page, per_page, conversations: [{ display_id, status, contact_name, inbox_name, value }] }",
+  "common_use_cases": [
+   "Abrir as conversas em que a IA disse e não fez",
+   "Ver as conversas com a menor nota de um cenário"
+  ],
+  "related_tools": [
+   "lionchat_captain_judge_runs_results",
+   "lionchat_conversations_show"
   ]
  },
  {

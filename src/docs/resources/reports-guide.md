@@ -1002,3 +1002,8 @@ Em `agent_report` e `calls_report`, `scope_type: 'inbox'` + `scope_id` recorta *
 caixa: membros da caixa contando SÓ o que fizeram nela (era o defeito dos relatórios por médico
 saírem iguais). `'agent'`/`'team'` seguem sendo recorte de PESSOAS (trabalho na conta inteira);
 `'inbox'` + `dimension: 'team'` é recusado. E `lead_origin` passou a respeitar `time_range`.
+
+## Juiz do Supervisor
+
+`lionchat_captain_judge_runs_results` traz, por IA, o que o juiz respondeu nas conversas já analisadas: nota, disse e não fez, não soube responder, o que travou, objeções e a média de quanto a IA seguiu cada cenário. `lionchat_captain_judge_runs_conversations` abre as conversas por trás de um número, e `lionchat_captain_judge_runs_current` mostra o andamento. São só leitura. A análise é iniciada pelo botão do Supervisor no painel, por um administrador: não há ferramenta para iniciar. Sempre traga os avisos de `warnings`, e não trate a resposta do juiz como fato: ela é uma avaliação e pode errar.
+
