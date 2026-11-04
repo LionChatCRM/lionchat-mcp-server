@@ -27,6 +27,7 @@ const REDACT_EXACT = new Set([
   'smtp_password',
   'hmac_token',
   'webhook_verify_token',
+  'verification_pin',
   'pubsub_token',
   'topsend_api_key',
   'liontrack_token',

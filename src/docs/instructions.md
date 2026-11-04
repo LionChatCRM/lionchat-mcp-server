@@ -457,6 +457,8 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | Achar **onde foi dito** algo (palavra dentro da conversa) | `lionchat_search_list_2` (`/search/messages`) | RÁPIDO: índice trigram próprio e teto de tempo em duas fases (2 s / 2 s desde 04/09 — antes a 2ª fase herdava 14 s e o pior caso da seção era 16 s). Estourou as duas, o payload volta com `message_search_interrupted: true` e a lista VAZIA — isso NÃO quer dizer que não existe, quer dizer que não deu tempo: tente de novo. É a substituta certa do `lionchat_conversations_search` |
 | Não sei se o termo é nome de alguém ou algo dito no papo | `lionchat_search_search` (`/search`) | Cobre os dois numa chamada. Opção mais segura quando a intenção é ambígua |
 | (qualquer busca) termo com menos de 3 caracteres | — | Volta **vazio de propósito** em todas as buscas. Vazio ≠ "não existe": quer dizer que a busca não rodou. Refaça com 3+ caracteres. Só-dígitos é isento nas rotas `/search/*`, mas **não** no `lionchat_conversations_search` legado |
+| Entregar o **link** de um card ou de uma conversa ("me manda o link desse card") | Sem ferramenta: monte o endereço. Card: `<painel>/app/accounts/<conta>/kanban?funnel=<funnel_id>&card_id=<id do card>`. Conversa: `<painel>/app/accounts/<conta>/conversations/<número da conversa>`. `<painel>` e `<conta>` vêm de `lionchat_current_account` (conector remoto) ou `lionchat_ping` (conector local) | Cada instalação tem o seu endereço: nunca chute. Só abre para quem tem login e acesso naquela conta: nunca mande ao cliente final. Aba do card, conversa por cima do card e uso em fluxo: `lionchat://docs/kanban-deep-dive`, seção "Link do card" |
+| Recebeu um **link do painel** e quer saber do que se trata | Leia o endereço: `card_id` vai em `lionchat_kanban_items_show`; `conversation_id` ou `conversations/<número>` vai em `lionchat_conversations_show` | `accounts/<conta>` pode não ser a conta ativa: confira e troque antes de concluir que não existe. `conversation_id` é o número da tela (`display_id`), não o id interno |
 | Só a contagem / números | `lionchat_conversations_meta` / `lionchat_reports_summary` | Não liste o conteúdo completo |
 | Criar contato | `lionchat_contacts_create` base (path `/contacts`) | NÃO use as variantes `_1` … `_9` |
 | Pausar a IA agora (botão de pânico) | `lionchat_captain_assistants_update` (`paused: true`, top-level) | — |
@@ -518,7 +520,7 @@ Quando precisar de detalhes profundos, leia um destes documents via `resources/r
 - `lionchat://docs/reports-guide` — Como interpretar cada um dos 19 endpoints de relatório
 - `lionchat://docs/api-conventions` — Auth, paginação, filtros, errors, rate limits
 - `lionchat://docs/conversation-flows` — Ciclo de vida de uma conversa (criação, auto-assignment, IA, resolução)
-- `lionchat://docs/kanban-deep-dive` — Estrutura completa do Kanban (Funnel/Stage/Item/pipeline)
+- `lionchat://docs/kanban-deep-dive` — Estrutura completa do Kanban (Funnel/Stage/Item/pipeline) e link do card, da aba e da conversa
 - `lionchat://docs/agenda-multiplas-unidades` — **Agenda por unidade**: o que `agenda_id` nulo significa, tipos de compromisso da conta, Booking ligado a unidade, página pública (cancelar/remarcar/confirmar), Google **uma conexão por agenda** e **programa de sessões** (N sessões de um tipo; faltar consome; marcar próxima e marcar todas)
 - `lionchat://docs/best-practices` — Como economizar tokens, evitar rate limit, ordem de operações
 - `lionchat://docs/troubleshooting` — Códigos HTTP, erros comuns, debugging

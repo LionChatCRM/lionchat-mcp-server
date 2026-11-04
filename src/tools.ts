@@ -439,7 +439,7 @@ function registerPingTool(
 ): void {
   server.tool(
     'lionchat_ping',
-    'Test connectivity to the LionChat API. Returns your user profile if the token is valid.',
+    'Test connectivity to the LionChat API. Returns your user profile if the token is valid, plus the panel address and the account in use, needed to build card and conversation links.',
     {},
     { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
     async () => {
@@ -449,8 +449,13 @@ function registerPingTool(
           path: '/api/v1/profile',
         });
 
+        // AIDEV-NOTE: [link-do-card 03/11/2026] A IA monta link de card e de conversa com estes dois
+        // valores (docs/resources/kanban-deep-dive.md, "Link do card"). Cada instalacao tem o seu endereco.
+        const panelAddress = config.baseUrl.replace(/\/+$/, '');
+        const linkFacts = `Endereco do painel (para montar links): ${panelAddress}\nConta em uso: ${config.accountId}`;
+
         return {
-          content: [{ type: 'text' as const, text: formatResponse(result) }],
+          content: [{ type: 'text' as const, text: `${formatResponse(result)}\n\n${linkFacts}` }],
         };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -497,7 +502,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-10-30)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-03)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -682,11 +687,13 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     conversa da PESSOA do acontecimento (a testemunha tem a dela); contrato so por e-mail (sem conversa)
     nao dispara; o flow precisa estar ligado a caixa da conversa (ou a nenhuma). Sessao ativa do MESMO
     flow na conversa NAO e atropelada (pulo visivel 'session_already_active'). Idempotente por 24h.
-    SO flow individual. Variaveis {{contrato.*}}: contrato.id, contrato.evento (sent|opened|signed|
+    SO flow individual. Variaveis {{contrato.*}}: contrato.id, contrato.evento (sent|delivered|opened|signed|
     sealed|refused|expired|awaiting_approval|proofs_approved|proofs_rejected), contrato.titulo, contrato.modelo, contrato.modelo_id, contrato.status,
-    contrato.enviado_em, contrato.prazo, contrato.validade_dias, contrato.assinado_por_todos (sim|nao),
+    contrato.criado_em, contrato.enviado_em, contrato.prazo, contrato.validade_dias, contrato.assinado_por_todos (sim|nao),
     contrato.conversa_id, contrato.documentos_situacao (sem_documentos|pendentes|esperando_aprovacao|
-    aprovados|reprovados), contrato.pessoas_com_documento_reprovado; quem agiu: contrato.assinante.nome / .papel (Assinante|Testemunha|Remetente) /
+    aprovados|reprovados), contrato.pessoas_com_documento_reprovado, contrato.link (NOVO 2026-11-03:
+    endereco de assinatura de quem esta na conversa em que o fluxo roda — na conversa da testemunha, o dela; na conversa
+    do contrato, o do titular. Pra quem causou o evento, contrato.assinante.link); quem agiu: contrato.assinante.nome / .papel (Assinante|Testemunha|Remetente) /
     .papel_chave (signer|witness|sender) / .email / .telefone / .cpf / .status / .assinou_em /
     .abriu_em / .link (endereco de assinatura; vazio pra quem assina no painel) / .ip / .dispositivo /
     .localizacao / .foto_documento (sim|nao) / .pelo_painel (sim|nao) / .documentos_pedidos /
@@ -997,8 +1004,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         dados dela pelo link antes do contrato nascer); message = texto que vai junto do link (aceita
         {{variaveis}} do fluxo); send_link:false = so GERA o contrato, nao manda nada — o link vira
         variavel pro cliente mandar no proprio bloco de mensagem ou modelo do WhatsApp. Depois do bloco
-        ficam {{contrato.*}} (as mesmas dos gatilhos signature_*) + {{contrato.link}} (endereco de
-        assinatura do titular), e a condicao signature_status passa a falar DESTE contrato. Bloco salvo
+        ficam {{contrato.*}} (as mesmas dos gatilhos signature_*), com {{contrato.link}} fixo no endereco
+        de assinatura do titular, e a condicao signature_status passa a falar DESTE contrato. Bloco salvo
         sem as chaves novas manda o link como sempre. A mesma acao existe em macro e automacao
         (send_signature_document, action_params [document_id]). Exige document_signing.
     Contato: add_label({labels:[...]}), remove_label({labels:[...]}),  // etiqueta NO CONTATO
