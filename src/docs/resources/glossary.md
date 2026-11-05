@@ -423,7 +423,7 @@ mandar). Detalhes em `lionchat://docs/best-practices`.
 |---|---|---|
 | Motivo de Ganho/Perda do card | `kanban_config.win_reasons` / `loss_reasons` | ❌ NÃO |
 | Atributo em TODO card | `kanban_config.global_custom_attributes` | só se não couber acima |
-| Valor de um campo em UM card | `item_details.custom_attributes` — LISTA `[{name, type, value}]` casando com o campo de `kanban_config.global_custom_attributes` | a coluna `kanban_item.custom_attributes` NÃO aparece em tela nenhuma — não use pra dado que o cliente precisa ver |
+| Valor de um campo em UM card | Grave com `kanban_item.custom_attributes` — objeto `{nome do campo: valor}`, só os campos enviados mudam; o valor vai para a lista `item_details.custom_attributes` (`[{name, type, value}]`), a que a tela Atributos do Card mostra | objeto dentro de `item_details.custom_attributes` é ignorado: não grava |
 | CPF, RG, CNPJ, endereço, data nasc., gênero do cliente | mecanismo NATIVO cadastral: `PATCH /contacts/{id}/cadastral` (`update_cadastral`) | ❌ NÃO (tem nativo) |
 | Tag pro contato (residencial, empresarial) | `labels` | ✅ SIM via Label |
 | Etapa do funil | `funnel.stages` | ❌ NÃO |

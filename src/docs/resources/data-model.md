@@ -330,7 +330,7 @@ KanbanItem
 ├── conversation_display_id (FK opcional → Conversation.display_id)
 ├── item_details (jsonb — os campos da aba Campos ficam em item_details.custom_attributes, LISTA de
 │     {name, type, value}; nunca objeto {chave: valor})
-├── custom_attributes (jsonb — coluna que NENHUMA tela mostra; nao confundir com a lista acima)
+├── custom_attributes (nas respostas e no webhook: {nome do campo: valor}, lido da lista acima; ao gravar, objeto {nome do campo: valor} que muda so os campos enviados)
 ├── assigned_agents (jsonb array — para gravar: lista de NUMEROS [5, 12])
 ├── linked_conversations (jsonb array de { display_id })
 ├── checklist (jsonb array de itens — NAO e tabela separada; ver abaixo)
