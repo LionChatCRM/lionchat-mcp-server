@@ -489,6 +489,7 @@ e `send_conversion` (`[{destinations, event_names, value}]` — só administrado
 `marketing_integrations_manage` consegue SALVAR a macro; executar segue livre; teto de 50 conversões por
 execução). Atributo protegido em `update_*_attribute` é recusado na execução (só no log). Executar
 (`lionchat_macros_execute`): até 100 conversas por chamada, a mesma conversa em 5 s é pulada em silêncio,
+conversa que a pessoa não consegue abrir também é pulada em silêncio, com resposta 200,
 30 execuções por minuto por usuário (429). A mensagem de `send_canned_response` sai assinada por quem executou.
 Cada execução deixa na conversa a pílula "Macro: X executada por Fulano" (uma por conversa, 26/09) — vale
 também pelo MCP, então quem executa aparece no histórico da conversa.
@@ -540,7 +541,8 @@ AccountTask (agenda interna)
 │   que este compromisso é; índice único parcial por tratamento+número entre os NÃO cancelados (15/09)
 └── assignees (has_many → User, via account_task_assignments). Compromisso NASCIDO DE BOOKING
     (`booking_id` presente) tem responsável FIXO = o agente configurado no tipo de evento:
-    `assignee_ids` enviado no update é IGNORADO (200, o resto da edição vale — 17/09)
+    `assignee_ids` enviado no update é IGNORADO (200, o resto da edição vale — 17/09), exceto
+    número de pessoa de outra conta, que é recusado com 422 (04/11)
 
 AgendaTreatment (tratamento em sessões — tools `agenda_treatments_*`; tabela agenda_treatments; 15/09)
 ├── id (PK) / account_id (FK) / contact_id (FK) / booking_event_type_id (FK, nullify)

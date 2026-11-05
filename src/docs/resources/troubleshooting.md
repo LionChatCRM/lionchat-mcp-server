@@ -27,10 +27,13 @@ Há DOIS tipos de 401 — leia o corpo da resposta antes de concluir:
   Agente de IA, Central de ajuda, Agenda ou Chat interno). **NÃO peça para renovar o token.** Diga ao
   usuário que o cargo dele não libera aquela área e que quem resolve é um administrador da conta
   (desmarcar a ocultação em Configurações > Funções personalizadas, ou dar outro cargo).
+- **Corpo `{"error": "IDs de usuario invalidos"}`** = o token está CERTO, mas algum id em `user_ids` ou
+  `supervisor_ids` não é desta conta, nas rotas de membro de time. Nada mudou. **NÃO peça para renovar o
+  token.** Corrija a lista e chame de novo.
 - **Qualquer outro corpo** (ex.: "You need to sign in or sign up before continuing") = token de API
   inválido ou expirado. Parar e reportar que precisa renovar as credenciais.
 
-**Ação nos dois casos:** NÃO retry — vai falhar igual.
+**Ação nos três casos:** NÃO retry igual — vai falhar igual.
 
 ### 403 Forbidden
 Token válido, mas SEM permissão pra essa ação.
@@ -924,4 +927,5 @@ pós-atendimento dele e dispara o gatilho de fluxo "agendamento concluído" — 
 
 Compromisso nascido de Booking (`booking_id` presente) tem responsável fixo: o profissional do tipo de
 evento. `assignee_ids` no update é ignorado (a resposta é 200 e o resto da edição vale). Para mudar quem
-atende, edite o tipo de evento — ou cancele e marque de novo em outro Booking.
+atende, edite o tipo de evento — ou cancele e marque de novo em outro Booking. Número de pessoa de outra
+conta é recusado com 422, mesmo aí.

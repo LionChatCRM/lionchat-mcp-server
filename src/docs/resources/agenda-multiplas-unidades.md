@@ -153,6 +153,7 @@ O compromisso marcado por um tipo de evento (Booking) cai SEMPRE na agenda do pr
 nele. Na criação, `assignee_ids` nunca valeu; desde 17/09 também é **ignorado na edição**
 (`lionchat_tasks_update` / `_update_1`): a resposta é 200, o resto da edição vale e o responsável continua
 o mesmo. Para mudar quem atende, altere o profissional do tipo de evento (`booking_event_types_update`).
+Número de pessoa de outra conta é recusado com 422, em qualquer compromisso.
 
 ### Ver como está o dia antes de marcar
 
