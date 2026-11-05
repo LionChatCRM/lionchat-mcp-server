@@ -301,6 +301,24 @@ Diagnóstico, nesta ordem, quando relatarem "a IA nunca faz o follow-up":
 2. A ativação veio por **lote**? Então nunca foi armado.
 3. Tem `follow_up_skip_conditions` batendo (etiqueta, atributo, janela de silêncio)?
 4. A soma das etapas passa de 1380 min? Nesse caso o assistente nem salvou a cadência.
+5. Tem pílula cinza "Follow-up não enviado: <motivo>" na conversa? Então o modelo de decisões leu a conversa e as
+   instruções daquele follow-up e decidiu não enviar (seção seguinte).
+
+## Faz ou não faz: o sistema decide antes de cada follow-up (novo 2026-11-05)
+
+Na hora de cada Follow-up (1, 2, 3), antes de a IA escrever, o modelo de decisões lê a conversa, as instruções da IA
+e, acima de tudo, as instruções daquele follow-up, e escolhe: enviar agora, ou um motivo para não enviar. Se escolhe
+enviar, a IA só escreve (não desiste mais). Se não, nada sai e fica uma pílula cinza com o motivo, só para a equipe.
+
+- **Encerram a sequência até o cliente escrever:** "o cliente já resolveu", "o cliente pediu para não receber mais",
+  "o assunto foi encerrado". Mensagem de fluxo, automação ou campanha no meio NÃO reabre.
+- **Seguem para o próximo follow-up no tempo dele:** "aguardando retorno combinado com o cliente" e "a instrução deste
+  follow-up não se aplica agora".
+- As condições acima (etiqueta, atributo) valem ANTES da pergunta e, desde 2026-11-05, também passam para o próximo
+  follow-up em vez de parar a sequência.
+- Para mudar o comportamento, mude o TEXTO das instruções de cada follow-up (`follow_up_steps[].prompt`): é o que mais
+  pesa na decisão. Não existe chave para desligar a pergunta.
+- Sem chave principal da OpenAI na conta, ou se o modelo de decisões falhar, o follow-up segue como antes (a IA decide).
 
 ## Condições para NÃO fazer follow-up + horário de silêncio (2026-07)
 
@@ -315,6 +333,8 @@ pula o follow-up). Tipos:
 ] } }
 ```
 
+- `label`, `contact_attr`, `conversation_attr`: o follow-up daquele passo não sai e o seguinte é agendado no tempo dele
+  (desde 2026-11-05; antes a sequência parava).
 - `label`: pula se a conversa TEM (`present`) / NÃO tem (`absent`) alguma das etiquetas.
 - `contact_attr` / `conversation_attr`: pula quando o atributo do contato/conversa bate o operador
   (`equal`, `not_equal`, `contains`, `present`, `blank`, `gt`, `lt`) com `value`.
