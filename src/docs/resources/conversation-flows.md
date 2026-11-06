@@ -711,7 +711,7 @@ Todos os formatos abaixo foram conferidos linha a linha em `app/services/action_
 | `assign_team` | `[3]`. `["nil"]` desatribui |
 | `assign_captain_assistant` | `[17]` ou `[{"assistant_id": 17, "proactive": true}]` — `proactive` false = a IA assume mas nao fala na hora |
 | `deactivate_captain` | `[]` — desliga o AI Agente da conversa (novo 10/09/2026; a macro também tem) |
-| `send_email_to_team` | `[{"team_ids": [1], "message": "texto"}]` |
+| `send_email_to_team` | `[{"team_ids": [1], "message": "texto"}]` — so times desta conta; time de outra conta na lista e ignorado |
 | `send_webhook_event` | `["https://..."]` |
 | `send_attachment` | `[blob_ids]` — so funciona se a regra ja tiver arquivo anexado; nao da pra montar so por API |
 | `change_status` | `["resolved"]`, `["open"]`, `["pending"]` ou `["snoozed"]` |

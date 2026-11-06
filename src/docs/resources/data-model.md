@@ -115,8 +115,9 @@ Attachment
 ├── file_type (string ou int)
 ├── extension
 ├── file (ActiveStorage attached)
-├── transcribed_text (string, áudio/PDF)
-├── meta (jsonb, ex: image_description)
+├── transcribed_text (string, SÓ áudio na resposta da API)
+├── meta (jsonb, ex: image_description; a leitura de documento (PDF, Word, planilha) mora aqui por página e NÃO
+│   vem na API — o que a IA leu aparece na pílula de atividade da conversa)
 ├── width / height (pixels)
 └── file_size (bytes)
 ```
@@ -330,7 +331,7 @@ KanbanItem
 ├── conversation_display_id (FK opcional → Conversation.display_id)
 ├── item_details (jsonb — os campos da aba Campos ficam em item_details.custom_attributes, LISTA de
 │     {name, type, value}; nunca objeto {chave: valor})
-├── custom_attributes (jsonb — coluna que NENHUMA tela mostra; nao confundir com a lista acima)
+├── custom_attributes (nas respostas e no webhook: {nome do campo: valor}, lido da lista acima; ao gravar, objeto {nome do campo: valor} que muda so os campos enviados)
 ├── assigned_agents (jsonb array — para gravar: lista de NUMEROS [5, 12])
 ├── linked_conversations (jsonb array de { display_id })
 ├── checklist (jsonb array de itens — NAO e tabela separada; ver abaixo)
@@ -402,8 +403,10 @@ Captain::Assistant
 │     activation_label (etiqueta que ativa o agente — unica por conta),
 │     min_response_time / max_response_time (delay humanizado, 1-60s),
 │     disabled_tools (array de IDs de tools desativadas pro assistente),
-│     (faq_lookup/search_articles NÃO são desligáveis — auto-gerenciadas: carregam só quando há
-│       FAQ/documento ou artigo publicado, e são escondidas do endpoint captain_assistants_tools)
+│     (faq_lookup/search_articles/read_document NÃO são desligáveis — auto-gerenciadas e escondidas do
+│       endpoint captain_assistants_tools: faq_lookup/search_articles carregam só quando há FAQ/documento ou
+│       artigo publicado; read_document ("Ler Documento Recebido", 06/11/2026) fica sempre ligada e lê páginas
+│       ou busca uma palavra do documento que o cliente mandou NA conversa)
 │     offer_ids / media_asset_ids / booking_event_type_ids (arrays de IDs vinculados),
 │     products (array legado de produtos)
 ├── guardrails (jsonb array de strings — limites duros injetados no prompt, ex: anti-pitch)
@@ -489,6 +492,7 @@ e `send_conversion` (`[{destinations, event_names, value}]` — só administrado
 `marketing_integrations_manage` consegue SALVAR a macro; executar segue livre; teto de 50 conversões por
 execução). Atributo protegido em `update_*_attribute` é recusado na execução (só no log). Executar
 (`lionchat_macros_execute`): até 100 conversas por chamada, a mesma conversa em 5 s é pulada em silêncio,
+conversa que a pessoa não consegue abrir também é pulada em silêncio, com resposta 200,
 30 execuções por minuto por usuário (429). A mensagem de `send_canned_response` sai assinada por quem executou.
 Cada execução deixa na conversa a pílula "Macro: X executada por Fulano" (uma por conversa, 26/09) — vale
 também pelo MCP, então quem executa aparece no histórico da conversa.
@@ -540,7 +544,8 @@ AccountTask (agenda interna)
 │   que este compromisso é; índice único parcial por tratamento+número entre os NÃO cancelados (15/09)
 └── assignees (has_many → User, via account_task_assignments). Compromisso NASCIDO DE BOOKING
     (`booking_id` presente) tem responsável FIXO = o agente configurado no tipo de evento:
-    `assignee_ids` enviado no update é IGNORADO (200, o resto da edição vale — 17/09)
+    `assignee_ids` enviado no update é IGNORADO (200, o resto da edição vale — 17/09), exceto
+    número de pessoa de outra conta, que é recusado com 422 (04/11)
 
 AgendaTreatment (tratamento em sessões — tools `agenda_treatments_*`; tabela agenda_treatments; 15/09)
 ├── id (PK) / account_id (FK) / contact_id (FK) / booking_event_type_id (FK, nullify)

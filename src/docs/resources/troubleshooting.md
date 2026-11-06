@@ -27,10 +27,13 @@ Há DOIS tipos de 401 — leia o corpo da resposta antes de concluir:
   Agente de IA, Central de ajuda, Agenda ou Chat interno). **NÃO peça para renovar o token.** Diga ao
   usuário que o cargo dele não libera aquela área e que quem resolve é um administrador da conta
   (desmarcar a ocultação em Configurações > Funções personalizadas, ou dar outro cargo).
+- **Corpo `{"error": "IDs de usuario invalidos"}`** = o token está CERTO, mas algum id em `user_ids` ou
+  `supervisor_ids` não é desta conta, nas rotas de membro de time. Nada mudou. **NÃO peça para renovar o
+  token.** Corrija a lista e chame de novo.
 - **Qualquer outro corpo** (ex.: "You need to sign in or sign up before continuing") = token de API
   inválido ou expirado. Parar e reportar que precisa renovar as credenciais.
 
-**Ação nos dois casos:** NÃO retry — vai falhar igual.
+**Ação nos três casos:** NÃO retry igual — vai falhar igual.
 
 ### 403 Forbidden
 Token válido, mas SEM permissão pra essa ação.
@@ -500,6 +503,33 @@ mal montado — bloco de API sem saída de erro, pergunta sem para onde ir, esco
 cobra está em `lionchat://docs/formularios-publicos`. Enquanto não publicar, a página pública
 continua servindo a última versão publicada (ou nada, se nunca houve).
 
+### "A IA não achou o dado do PDF que o cliente mandou" (06/11)
+
+Desde 06/11/2026 a IA lê o documento página a página (até 50 páginas, 8 mil caracteres por página; escaneado lido
+por imagem, até 20 páginas) e consulta por página ou palavra depois. A API NÃO traz o texto lido. Leia a pílula de
+atividade da conversa (`lionchat_conversations_messages_list`):
+- "(N de M páginas, acima do teto)": o dado pode estar depois da página 50, que não foi lida.
+- "por imagem (escaneado, N de M páginas)" com N menor que M: escaneado com mais de 20 páginas.
+- "A IA não conseguiu ler o documento": arquivo protegido ou corrompido, ou escaneado sem chave OpenAI na conta.
+- "Limite de documentos lidos nesta conversa hoje atingido": passou de 20 documentos novos na conversa no dia.
+- Sem pílula nenhuma: documento anterior a 07/11/2026 03:00 UTC (a IA ainda consulta, sem aviso).
+Regras completas: `lionchat://docs/best-practices`, seção "Documento que o cliente manda".
+
+### "O pixel da Meta diz 'Salvo, sem envio aceito'" / "dizia Conectado e nada chegava" (04/11)
+
+Desde 04/11/2026 a tela só mostra "Conectado" quando a Meta já ACEITOU um envio daquele pixel com aquele token
+(`last_success_at` preenchido em `lionchat_meta_pixel_integrations_list`). `enabled: true` sem `last_success_at` =
+"Salvo, sem envio aceito": o salvar liga o pixel, mas a Meta nunca aceitou um evento desse par. Antes disso a tela
+mostrava "Conectado" só por estar ligado, mesmo com toda tentativa recusada.
+- `last_success_at` é apagado ao trocar o número do pixel ou o token, e quando o teste é recusado pela Meta (erro 4xx).
+  Instabilidade da Meta (5xx, sem resposta) não apaga.
+- Recusa do teste (`lionchat_meta_pixel_integrations_test_event` devolve 502 com `ok: false` e o motivo em
+  `response.error`): código 100 com subcódigo 33 = este token não tem acesso a este pixel (número do pixel errado, ou
+  token gerado em outro pixel); 190 = token inválido ou vencido. O motivo das recusas de evento real fica em
+  `last_failure_reason` e `failed_count`.
+- Conserto: gerar o token DENTRO do pixel certo (Gerenciador de Eventos > o pixel > Configurações > API de Conversões),
+  salvar e rodar o teste de novo.
+
 ## Webhooks como alternativa a polling
 
 Se você precisa monitorar mudanças em conversas/mensagens, NÃO faça polling:
@@ -924,4 +954,5 @@ pós-atendimento dele e dispara o gatilho de fluxo "agendamento concluído" — 
 
 Compromisso nascido de Booking (`booking_id` presente) tem responsável fixo: o profissional do tipo de
 evento. `assignee_ids` no update é ignorado (a resposta é 200 e o resto da edição vale). Para mudar quem
-atende, edite o tipo de evento — ou cancele e marque de novo em outro Booking.
+atende, edite o tipo de evento — ou cancele e marque de novo em outro Booking. Número de pessoa de outra
+conta é recusado com 422, mesmo aí.

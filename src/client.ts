@@ -54,6 +54,10 @@ function getErrorMessage(status: number, body: unknown): string {
         return 'Permission denied: your role does not allow this action (an administrator may have hidden this menu ' +
           'in the custom role). The token is valid — do not ask the user to renew it.';
       }
+      if (isInvalidMemberIds(body)) {
+        return 'Invalid user id: at least one id in user_ids or supervisor_ids does not belong to this account, and ' +
+          'nothing was changed. The token is valid — fix the list and do not ask the user to renew it.';
+      }
       return 'Authentication failed. Check your token at Login > Profile Settings';
     case 403:
       return 'Permission denied. Your token may not have access to this resource';
@@ -81,6 +85,15 @@ function isPermissionRefusal(body: unknown): boolean {
   if (!body || typeof body !== 'object') return false;
   const obj = body as Record<string, unknown>;
   return obj.error === PERMISSION_REFUSAL_TEXT || obj.message === PERMISSION_REFUSAL_TEXT;
+}
+
+// AIDEV-NOTE: [protecao-contra-excesso 04/11] as 4 rotas que gravam membro de time respondem 401 com este texto quando a
+// lista traz id de fora da conta. O token esta certo: como "token invalido", a IA pedia credencial nova sem precisar.
+const INVALID_MEMBER_IDS_TEXT = 'IDs de usuario invalidos';
+
+function isInvalidMemberIds(body: unknown): boolean {
+  if (!body || typeof body !== 'object') return false;
+  return (body as Record<string, unknown>).error === INVALID_MEMBER_IDS_TEXT;
 }
 
 // AIDEV-NOTE: Extract validation details from 422 response body

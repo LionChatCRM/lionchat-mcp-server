@@ -92,7 +92,7 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 | `image` | Foto / imagem (JPG, PNG, etc) |
 | `audio` | Áudio (geralmente vem com `transcribed_text` preenchido) |
 | `video` | Vídeo |
-| `file` | PDF, DOCX, qualquer outro (pode vir com `extracted_text` se for processado) |
+| `file` | PDF, DOCX, planilha, qualquer outro. O texto lido pela IA NÃO vem na API (não existe `extracted_text` na resposta) |
 | `location` | Coordenadas GPS |
 | `contact` | vCard |
 | `share` | Link compartilhado |
@@ -101,7 +101,10 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 
 ### Campos importantes
 - `data_url`: URL pra baixar o arquivo (válida por tempo limitado)
-- `transcribed_text`: transcrição (áudio) ou texto extraído (PDF/imagem com OCR)
+- `transcribed_text`: transcrição do áudio (só `audio` traz este campo na API)
+- Documento lido pela IA (PDF, Word, planilha, desde 06/11/2026): o texto fica guardado no próprio anexo e NÃO
+  vem na API. O que ela leu aparece na pílula de atividade da conversa (ver `lionchat://docs/best-practices`,
+  seção "Documento que o cliente manda")
 - `meta.image_description`: descrição gerada pela IA (cache, se disponível)
 - `file_size`: bytes
 - `width`/`height`: pixels (imagens/vídeos)
@@ -423,7 +426,7 @@ mandar). Detalhes em `lionchat://docs/best-practices`.
 |---|---|---|
 | Motivo de Ganho/Perda do card | `kanban_config.win_reasons` / `loss_reasons` | ❌ NÃO |
 | Atributo em TODO card | `kanban_config.global_custom_attributes` | só se não couber acima |
-| Valor de um campo em UM card | `item_details.custom_attributes` — LISTA `[{name, type, value}]` casando com o campo de `kanban_config.global_custom_attributes` | a coluna `kanban_item.custom_attributes` NÃO aparece em tela nenhuma — não use pra dado que o cliente precisa ver |
+| Valor de um campo em UM card | Grave com `kanban_item.custom_attributes` — objeto `{nome do campo: valor}`, só os campos enviados mudam; o valor vai para a lista `item_details.custom_attributes` (`[{name, type, value}]`), a que a tela Atributos do Card mostra | objeto dentro de `item_details.custom_attributes` é ignorado: não grava |
 | CPF, RG, CNPJ, endereço, data nasc., gênero do cliente | mecanismo NATIVO cadastral: `PATCH /contacts/{id}/cadastral` (`update_cadastral`) | ❌ NÃO (tem nativo) |
 | Tag pro contato (residencial, empresarial) | `labels` | ✅ SIM via Label |
 | Etapa do funil | `funnel.stages` | ❌ NÃO |
@@ -672,3 +675,7 @@ Ramal sem cadastro não gera registro — se o cliente diz que "liguei e não ap
 ### Erros do envio (`signature_envelopes_create`): `variaveis_sem_valor` (+ `missing[]`), `escolher_caixa` (+ `inboxes[]`),
 `entrega_falhou`, `sem_caixa_whatsapp`, `telefone_invalido`, `limite_do_mes`, `cpf_invalido`, `funcionalidade_desligada`,
 `fila_cheia` (fila única de conversão do Word cheia — repetir em instantes), `conversor_indisponivel` (o serviço de conversão de Word não respondeu — repetir em instantes).
+
+### Juiz do Supervisor (novo 2026-11-04)
+
+Não tem relação com "Supervisor de caixa" nem "Supervisor de time", que são papéis de pessoa. **Supervisor de IA** é a tela que compara as IAs, e **juiz** é a análise que um administrador inicia por botão ali: outra IA lê as conversas e responde sobre cada uma (nota, disse e não fez, não soube responder, o que travou, objeções, quanto seguiu o cenário). Ele só lê e não muda a conversa. Pelo conector dá para consultar o resultado (`lionchat_captain_judge_runs_*`), mas não iniciar. Detalhes em `reports-guide`.

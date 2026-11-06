@@ -164,7 +164,7 @@ dos cards já marcados); lista de textos soltos, motivo sem `id`/`title` ou `id`
 | Atributo que aparece em TODO card | `kanban_config.global_custom_attributes` | ❌ custom_attribute de conversation |
 | Atributo só de um contato (CPF, endereço) | `custom_attribute_definitions` model=contact_attribute | ❌ kanban_config |
 | Atributo só de uma conversa (motivo, tag interna) | `custom_attribute_definitions` model=conversation_attribute | ❌ kanban_config |
-| Valor de um campo num card (aparece na aba Campos) | `item_details.custom_attributes` — LISTA `[{name, type, value}]`, com o campo definido em `kanban_config.global_custom_attributes` | ❌ `kanban_item.custom_attributes` (coluna que nenhuma tela mostra) |
+| Valor de um campo num card (aparece em Atributos do Card) | `kanban_item.custom_attributes` — objeto `{nome do campo: valor}`, só os campos enviados mudam | ❌ objeto dentro de `item_details.custom_attributes` (é ignorado, não grava) |
 
 ### KanbanItem (Card)
 Um card individual dentro de uma etapa.
@@ -180,7 +180,7 @@ Um card individual dentro de uma etapa.
 | `origin_conversation_display_id` | Conversa em que o card NASCEU (só preenchida se o vínculo já foi movido). É o que o relatório de origem de lead usa, pra uma venda não mudar de mês nem de anúncio quando o card anda. |
 | `linked_conversations` | jsonb array `[{display_id: 123}, {display_id: 456}]` — múltiplas conversas |
 | `item_details` | jsonb (ver abaixo) |
-| `custom_attributes` | jsonb (coluna própria) — **NÃO aparece na aba Campos, no filtro do quadro nem na busca**. Os campos visíveis do card moram em `item_details.custom_attributes` (ver abaixo) |
+| `custom_attributes` | Ao LER (conversa, contato, webhook): `{nome do campo: valor}`, tirado da lista `item_details.custom_attributes`. Ao GRAVAR: objeto `{nome do campo: valor}`, só os campos enviados mudam, e campo que não existe é criado como Texto (ver abaixo). Um lugar só desde 04/11/2026: a lista, que a tela Atributos do Card mostra. |
 | `assigned_agents` | jsonb array de agentes responsáveis |
 | `activities` | jsonb array — log de atividades |
 | `checklist` | **O que fica guardado:** jsonb array de tarefas do card (item: `text`/`completed`/`position` + `group_id`/`group_name` opcionais para agrupar). **O que a API devolve é OUTRA coisa** — ver o aviso logo abaixo |
@@ -233,16 +233,13 @@ Um card individual dentro de uma etapa.
 **`value`** é onde fica o valor monetário do negócio (usado em pipelines). Sempre NÚMERO — texto quebra a
 soma das colunas.
 
-**`custom_attributes` é uma LISTA, nunca um objeto `{chave: valor}`** (conferido no código em 18/09/2026).
-Cada item é `{name, type, value}` e só aparece na aba Campos se `name` **e** `type` baterem exatamente com
-um campo de `kanban_config.global_custom_attributes` (leia com `lionchat_kanban_config_list`).
+**Os campos do card moram em UM lugar: a lista `item_details.custom_attributes`, a que a tela Atributos do Card mostra** (04/11/2026). Cada item é `{name, type, value}`.
 
-Como gravar pelo `lionchat_kanban_items_update` (`kanban_item.item_details`):
-- O `item_details` é MESCLADO só no 1º nível: cada chave enviada **troca a chave inteira** no card. Por isso
-  a lista `custom_attributes` enviada **substitui a lista toda** — leia o card com `lionchat_kanban_items_show`
-  e reenvie TODOS os campos, com o alterado.
-- Mandar objeto (`{"origem_lead": "Facebook Ads"}`) no lugar da lista **APAGA todos os campos do card**: o
-  servidor só aceita itens `{name, type, value}` e o objeto vira vazio.
+Como gravar pelo `lionchat_kanban_items_update` ou `_create`:
+- **O jeito simples: `kanban_item.custom_attributes`, objeto `{nome do campo: valor}`.** Só os campos enviados mudam; os outros ficam. Campo que não existe é criado como Texto, para a conta inteira (confira o nome com `lionchat_kanban_config_list` antes: erro de digitação vira campo novo). `null` ou `""` apaga aquele campo.
+- **`kanban_item.item_details.custom_attributes`, LISTA `[{name, type, value}]`, substitui a lista toda**: o `item_details` é MESCLADO só no 1º nível, e cada chave enviada troca a chave inteira no card. Leia o card antes e reenvie todos os campos. Nome novo com valor vira campo Texto. `[]` limpa a lista.
+- **Objeto dentro de `item_details.custom_attributes` é IGNORADO:** não grava, não apaga, não cria campo, e o resto do pedido é salvo. É o que o card guarda quando nasce de "Criar card" (cópia dos dados da conversa), e devolver o card lido não pode criar campo nenhum.
+- Texto ou lista em `kanban_item.custom_attributes` e, em `item_details.custom_attributes`, texto ou número no lugar da lista, item que não seja objeto, objeto no `value` e valor sem `name` em texto recusam o pedido inteiro com 422, e a mensagem ensina o formato.
 - Lista fechada de chaves do `item_details` (outras são descartadas em silêncio): title, description, status,
   reason, win_reason, loss_reason, attributed_to, co_attributed_to (13/10/2026, ver "Co-participante da venda"),
   duplicated_from_id, priority, value, currency, custom_attributes, offers, closed_offers, closed_offer, deadline_at,
@@ -743,14 +740,12 @@ Cada card pode receber atributos custom de 3 origens diferentes. **A escolha do 
 - É o que a aba **Campos** do card mostra e edita (e o que o filtro do quadro, a busca e o fluxo leem)
 - LISTA de `{name, type, value}`; `name` + `type` precisam bater com um campo do item 2 abaixo, senão o
   valor fica gravado e **não aparece**
-- Grava via `kanban_items_update` em `kanban_item.item_details.custom_attributes` — a lista enviada
-  **substitui a inteira** (leia o card antes e reenvie tudo). Objeto `{chave: valor}` no lugar da lista
-  **apaga** os campos do card
-- Um campo só, sem reenviar a lista: ação `update_card_attribute` da automação/macro
+- Grava via `kanban_items_update`: `kanban_item.custom_attributes` (`{nome do campo: valor}`) muda só os campos
+  enviados; `kanban_item.item_details.custom_attributes` (lista) **substitui a inteira**. Objeto dentro de
+  `item_details.custom_attributes` é ignorado: não grava
+- Um campo só também pela ação `update_card_attribute` da automação/macro
 
-> **NÃO confundir com a coluna `kanban_item.custom_attributes`** (objeto `{chave: valor}` direto no card):
-> nenhuma tela a mostra — nem a aba Campos, nem o filtro, nem a busca. Só a ação "Alterar atributo do card"
-> do FlowBuilder e a leitura do fluxo a usam. Para o cliente ver o dado, use a lista acima.
+> **Um lugar só:** desde 04/11/2026 `kanban_item.custom_attributes` grava nessa mesma lista, campo a campo. Antes guardava numa coluna que nenhuma tela mostrava.
 
 ### 2. `kanban_config.global_custom_attributes` (atributos globais do Kanban)
 

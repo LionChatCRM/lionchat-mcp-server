@@ -415,6 +415,10 @@ Quando rate-limited:
 2026-05-15). Acima disso o servidor recusa com `422` + `code: "bulk_ids_limit_exceeded"` — quebre em
 chamadas de 300.
 
+`fields.assignee_id`, `fields.team_id` e `fields.inbox_id` têm de ser da conta. Fora disso a resposta é
+`422` `Invalid <campo>` e nada é aplicado. Para tirar o responsável ou o time, mande `null` ou `0`. A caixa
+não aceita vazio: sem caixa, a conversa não envia nem recebe.
+
 **Exceção:** contato com `select_all: true` (agir sobre TODOS os contatos do filtro) **não tem teto** —
 o servidor resolve pelo próprio filtro (`query` / `labels_filter`), em lotes no fundo, e não usa `ids`.
 
