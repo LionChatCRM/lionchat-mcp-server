@@ -252,10 +252,15 @@ pergunta com números diferentes, e o usuário conclui que o relatório está er
 
 ## 5. Busca com filtro estruturado
 
-`search_search` (tudo), `conversations_search`, `contacts_search`, `kanban_items_search` aceitam
+`search_search` (tudo), `contacts_search`, `kanban_items_search` aceitam
 `conversation_filters`/`contact_filters` (JSON-string no MESMO shape do payload dos /filter, mesmo
 motor, cap 10 condições) e `kanban_filters` (JSON-string do subset flat da seção 3). Paginação por
 categoria: 15/página (kanban: primeiros 15, sem paginação).
+
+`conversations_search` (busca no texto das mensagens) NÃO lê nenhum desses três filtros, e nunca leu: quem
+mandou filtro ali recebeu a lista sem filtro achando que estava filtrada. Cada conversa da resposta já traz a
+caixa (`inbox`) e o contato; situação, responsável e time NÃO vêm (confira com `conversations_show`). Para
+recortar, ela aceita `inbox_id` e `team_id` (lista e números) e `assignee_type` (só a lista); a situação é ignorada.
 
 ## 6. Respostas: enxutas por padrão + paginação
 

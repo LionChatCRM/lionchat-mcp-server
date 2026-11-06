@@ -92,7 +92,7 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 | `image` | Foto / imagem (JPG, PNG, etc) |
 | `audio` | Áudio (geralmente vem com `transcribed_text` preenchido) |
 | `video` | Vídeo |
-| `file` | PDF, DOCX, qualquer outro (pode vir com `extracted_text` se for processado) |
+| `file` | PDF, DOCX, planilha, qualquer outro. O texto lido pela IA NÃO vem na API (não existe `extracted_text` na resposta) |
 | `location` | Coordenadas GPS |
 | `contact` | vCard |
 | `share` | Link compartilhado |
@@ -101,7 +101,10 @@ Glossário completo de termos, status codes, enums e conceitos da plataforma. Us
 
 ### Campos importantes
 - `data_url`: URL pra baixar o arquivo (válida por tempo limitado)
-- `transcribed_text`: transcrição (áudio) ou texto extraído (PDF/imagem com OCR)
+- `transcribed_text`: transcrição do áudio (só `audio` traz este campo na API)
+- Documento lido pela IA (PDF, Word, planilha, desde 06/11/2026): o texto fica guardado no próprio anexo e NÃO
+  vem na API. O que ela leu aparece na pílula de atividade da conversa (ver `lionchat://docs/best-practices`,
+  seção "Documento que o cliente manda")
 - `meta.image_description`: descrição gerada pela IA (cache, se disponível)
 - `file_size`: bytes
 - `width`/`height`: pixels (imagens/vídeos)

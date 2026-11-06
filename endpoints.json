@@ -1205,7 +1205,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Busca rapida na lista (min 3 caracteres): casa nome, e-mail, telefone ou identifier do contato; se for so digitos, casa tambem o numero da conversa (display_id). Respeita o filtro de status. Para busca ampla (CPF, atributo, conteudo de mensagem) use conversations_search."
+    "description": "Busca rapida na lista (min 3 caracteres): casa nome, e-mail, telefone ou identifier do contato; se for so digitos, casa tambem o numero da conversa (display_id). Respeita o filtro de status. Para CPF/CNPJ e atributo use lionchat_search_list; para texto de mensagem, lionchat_conversations_search."
    },
    {
     "name": "source_id",
@@ -1513,7 +1513,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/conversations/search",
   "title": "Buscar Conversas",
-  "description": "LENTO — EVITE. Busca conversas por texto (no conteúdo das mensagens). Diferente de filter — pesquisa free-text.\n\nCUSTO MEDIDO EM PRODUCAO (11/08/2026): 15 a 22 SEGUNDOS por chamada. E o endpoint legado: alem da varredura, ele devolve todas as mensagens que casaram, e so a montagem da resposta consome ate 8 s. As rotas /search/* fazem o mesmo trabalho com indice proprio e teto de tempo.\n\nPREFIRA: para achar a conversa DE UMA PESSOA/EMPRESA (nome, telefone, e-mail, CPF/CNPJ, numero da conversa) use lionchat_search_list. Para achar ONDE FOI DITO algo dentro da conversa use lionchat_search_list_2. Para as duas coisas de uma vez, sem ter que adivinhar, use lionchat_search_search.\n\nPISO DE 3 CARACTERES (desde 11/08/2026): termo com menos de 3 caracteres — INCLUSIVE so-digitos — e recusado e a resposta vem VAZIA sem nenhum aviso. Vazio NAO quer dizer que a conversa nao existe, quer dizer que a busca nem rodou; refaca com 3+ caracteres. (Aqui digito NAO e isento, diferente de /search/messages, porque este caminho nao tem teto de tempo.)\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "Busca por TEXTO dentro das mensagens: responde EM QUAIS CONVERSAS algo foi dito e QUANTAS, no historico inteiro. Refeita em 05/11/2026: antes levava 15 a 22 s e chegou a derrubar o servidor; resposta anterior que mandava EVITAR esta ferramenta ficou velha.\n\nO QUE PROCURA: o TRECHO EXATO digitado em `q`, com os espacos (frase, nao palavras soltas), sem diferenca de maiuscula e minuscula (acento conta), nas mensagens do cliente e da equipe. Nota privada e evento do sistema ficam fora. NAO procura no nome, telefone, e-mail ou CPF do contato: para achar a conversa DE UMA PESSOA use lionchat_search_list. Termo com menos de 3 caracteres, ou sem nenhuma letra ou numero, volta VAZIO de proposito (a busca nem rodou).\n\nRESPOSTA: 25 conversas por pagina, as de atividade mais recente primeiro. `meta.all_count` conta CONVERSAS (nao vezes) e ja responde 'quantas' na 1a pagina: peca outras paginas so para ler mais conversas. Cada conversa traz `matched_messages_count` (quantas mensagens casam nela) e `messages` com ate 5 delas, as mais novas, em ordem de data; para ler o resto use lionchat_conversations_messages_search naquela conversa.\n\nAVISOS: `meta.truncated: true` = passou de 5.000 conversas, o numero e 'pelo menos'; refine o termo. `meta.message_search_interrupted: true` = estourou o tempo: payload vazio NAO quer dizer que nao existe e os numeros vem null; refine o termo. Resposta cortada por tamanho: as conversas cortadas NAO voltam na pagina seguinte; refine o termo.\n\nRespeita o que o usuario pode ver (caixas, cargo). Recorte opcional: `inbox_id` e `team_id` recortam a lista e os numeros; `assignee_type` recorta so a lista. A situacao (aberta/resolvida) e IGNORADA aqui: a busca cobre todas. Com `meta.truncated: true` o recorte so alcanca as primeiras 5.000 conversas que casam.",
   "category": "Conversas",
   "params": [
    {
@@ -1521,44 +1521,48 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo de busca"
+    "description": "Trecho exato a procurar no texto das mensagens (minimo 3 caracteres, com ao menos uma letra ou numero)"
    },
    {
     "name": "page",
     "type": "integer",
     "location": "query",
     "required": false,
-    "description": "Página"
+    "description": "Pagina (25 conversas por pagina)"
    },
    {
-    "name": "conversation_filters",
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "So conversas desta caixa (recorta lista e numeros)"
+   },
+   {
+    "name": "team_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "So conversas deste time (recorta lista e numeros)"
+   },
+   {
+    "name": "assignee_type",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONVERSAS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422 assignee_id aceita 'current_user' (quem pergunta)."
-   },
-   {
-    "name": "contact_filters",
-    "type": "string",
-    "location": "query",
-    "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CONTATOS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
-   },
-   {
-    "name": "kanban_filters",
-    "type": "string",
-    "location": "query",
-    "required": false,
-    "description": "Filtros estruturados aplicados aos resultados de CARDS. JSON-string de condicoes no formato do endpoint /filter correspondente (ex: [{\"attribute_key\":\"status\",\"filter_operator\":\"equal_to\",\"values\":[\"open\"]}]). Cap 10 condicoes; payload invalido = 422"
+    "description": "Recorta SO a lista: 'me' (minhas), 'unassigned' (sem responsavel), 'assigned' (com responsavel). Vazio = todas. Os numeros de meta continuam do conjunto inteiro"
    }
   ],
-  "returns": "Array de conversas que contêm o texto buscado",
+  "returns": "{ meta: { mine_count, unassigned_count, all_count (CONVERSAS que casam), truncated, message_search_interrupted, current_page, per }, payload: [{ id (numero da conversa), uuid, created_at, contact: {id, name}, inbox: {id, name, channel_type}, matched_messages_count, messages: [ate 5: {id, content, sender_name, message_type, created_at}], account_id }] }. No corte de tempo: payload vazio e os tres numeros null.",
   "common_use_cases": [
-   "Pergunta \"qual conversa tinha sobre orçamento Y?\"",
-   "Auditoria de palavras-chave",
-   "Localizar conversas perdidas"
+   "Em quantas conversas o cliente falou \"cancelar\"?",
+   "Quais conversas citaram o produto ou a promocao X (historico inteiro)",
+   "Auditoria de palavra-chave com o numero real de conversas"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_search_list",
+   "lionchat_search_list_2",
+   "lionchat_conversations_messages_search"
+  ]
  },
  {
   "id": "lionchat_conversations_create_1",
@@ -8547,7 +8551,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search",
   "title": "Busca Global",
-  "description": "RAPIDO, e a opcao mais segura quando nao se sabe se o termo e o nome de alguem ou algo dito no papo — cobre os dois casos numa chamada. Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nPREFIRA esta ao lionchat_conversations_search legado, que leva 15 a 22 segundos (medido em producao 11/08/2026).\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). Sempre retorna todos os tipos: conversations, contacts, messages, articles e kanban_items. Mensagens trazem previous_message/next_message.",
+  "description": "RAPIDO, e a opcao mais segura quando nao se sabe se o termo e o nome de alguem ou algo dito no papo — cobre os dois casos numa chamada. Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nPara saber EM QUANTAS conversas algo foi dito, no historico inteiro, use lionchat_conversations_search.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). Sempre retorna todos os tipos: conversations, contacts, messages, articles e kanban_items. Mensagens trazem previous_message/next_message.",
   "category": "Busca",
   "params": [
    {
@@ -8634,7 +8638,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/conversations",
   "title": "Buscar Conversas",
-  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Acha a conversa PELA PESSOA/EMPRESA: nome, e-mail, telefone, identificador, CPF/CNPJ por digitos, atributos personalizados da conversa e numero da conversa.\n\nNAO procura dentro do texto das mensagens — para isso use lionchat_search_list_2 (ou lionchat_search_search para as duas coisas). E a substituta rapida do lionchat_conversations_search legado (15 a 22 s) quando a intencao e achar a conversa de alguem.\n\nDevolve payload.conversations[], 15 por pagina. Termo de texto com menos de 3 caracteres e descartado (so-digitos e isento); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Acha a conversa PELA PESSOA/EMPRESA: nome, e-mail, telefone, identificador, CPF/CNPJ por digitos, atributos personalizados da conversa e numero da conversa.\n\nNAO procura dentro do texto das mensagens — para isso use lionchat_search_list_2 (ou lionchat_search_search para as duas coisas). lionchat_conversations_search procura so no texto das mensagens: para achar a conversa de alguem, use esta.\n\nDevolve payload.conversations[], 15 por pagina. Termo de texto com menos de 3 caracteres e descartado (so-digitos e isento); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
   "category": "Busca",
   "params": [
    {
@@ -8772,7 +8776,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/messages",
   "title": "Buscar Mensagens",
-  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nE A SUBSTITUTA CERTA do lionchat_conversations_search legado, que faz a mesma busca em 15 a 22 segundos: aqui ha indice trigram proprio e teto de tempo em duas fases (2 s na primeira tentativa, 14 s no limite absoluto), entao nao trava. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha. Leia message_search_interrupted no retorno antes de afirmar 'nao encontrado'.",
+  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nSo os ULTIMOS 3 MESES, por palavras soltas e sem agrupar por conversa; serve para ver mensagens recentes com o contexto em volta. Indice trigram proprio e teto de tempo em duas fases (2 s + 2 s). Para saber EM QUANTAS conversas algo foi dito no historico inteiro, use lionchat_conversations_search. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha. Leia message_search_interrupted no retorno antes de afirmar 'nao encontrado'.",
   "category": "Busca",
   "params": [
    {
@@ -25371,10 +25375,10 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations",
   "title": "Listar Integrações Meta CAPI",
-  "description": "Lista os pixels da Meta (Conversions API) configurados na conta. ADMIN-ONLY.",
+  "description": "Lista os pixels da Meta (Conversions API) configurados na conta. ADMIN-ONLY.\n\nSITUACAO (04/11/2026): `last_success_at` preenchido = a Meta ja ACEITOU um envio deste pixel com este token (a tela mostra 'Conectado'). `enabled: true` sem `last_success_at` = 'Salvo, sem envio aceito': ligado, mas a Meta nunca aceitou um evento deste par. `last_success_at` e apagado ao trocar o pixel ou o token e quando o teste e recusado (4xx). Motivo das recusas reais: `last_failure_reason`, `failed_count`, `last_failure_at`.",
   "category": "Integracoes",
   "params": [],
-  "returns": "[{ id, pixel_id, enabled, test_event_code, funnel_id }]",
+  "returns": "[{ id, pixel_id, access_token (mascarado), enabled, test_event_code, funnel_id, last_event_sent_at, last_success_at, last_failure_at, failed_count, last_failure_reason, degraded_7d, test_event_active }]",
   "common_use_cases": [
    "Auditar pixels configurados"
   ],
@@ -25432,7 +25436,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations/{id}",
   "title": "Atualizar Integração Meta CAPI",
-  "description": "Atualiza pixel/token/código de teste/funil. ADMIN-ONLY.",
+  "description": "Atualiza pixel/token/codigo de teste/funil. ADMIN-ONLY. Trocar o pixel ou o token apaga `last_success_at` (a prova de envio aceito era do par antigo): rode lionchat_meta_pixel_integrations_test_event depois.",
   "category": "Integracoes",
   "params": [
    {
@@ -25504,7 +25508,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations/{id}/test_event",
   "title": "Testar Evento Meta CAPI",
-  "description": "Dispara evento de teste REAL contra a API da Meta. 200 OK = integração é ativada automaticamente. ADMIN-ONLY.",
+  "description": "Dispara evento de teste REAL contra a API da Meta. 200 OK = integracao ativada (enabled) e `last_success_at` gravado. ADMIN-ONLY.\n\nRECUSA: 502 com `ok: false` e o motivo da Meta em `response.error`; recusa 4xx apaga `last_success_at`. Codigo 100 com subcodigo 33 = este token nao tem acesso a este pixel (numero do pixel errado, ou token gerado em outro pixel). 190 = token invalido ou vencido. `response.error` em texto solto = a Meta nem respondeu (tente de novo).",
   "category": "Integracoes",
   "params": [
    {
@@ -28633,7 +28637,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}",
   "title": "Atualizar Configurações da Conta",
-  "description": "Atualiza as configurações GERAIS da conta (Configurações > Conta). Inclui o FUSO HORÁRIO próprio da conta (novo 2026-07-21): timezone IANA, default America/Sao_Paulo — caixas novas e o Gatilho de Data do FlowBuilder herdam. ATENÇÃO: timezone inválido é DESCARTADO em silêncio (não dá erro) — confirme com account_show depois. Não confundir com account_update (que é o PERFIL do usuário logado). NOTA 18/08: mudar o timezone da conta move a fronteira do dia dos filtros de DATA FIXA e das datas relativas (contatos, conversas, segmentos e condicoes de automacao).",
+  "description": "Atualiza as configurações GERAIS da conta (Configurações > Conta). Inclui o FUSO HORÁRIO próprio da conta (novo 2026-07-21): timezone IANA, default America/Sao_Paulo — caixas novas e o Gatilho de Data do FlowBuilder herdam. ATENÇÃO: timezone inválido é DESCARTADO em silêncio (não dá erro) — confirme com account_show depois. TRANSCRICAO DE AUDIO (04/11/2026): `audio_transcriptions` + `audio_transcription_provider`, para toda conta, com a chave do cliente. Não confundir com account_update (que é o PERFIL do usuário logado). NOTA 18/08: mudar o timezone da conta move a fronteira do dia dos filtros de DATA FIXA e das datas relativas (contatos, conversas, segmentos e condicoes de automacao).",
   "category": "Conta",
   "params": [
    {
@@ -28670,12 +28674,27 @@
     "location": "body",
     "required": false,
     "description": "Fuso horário IANA da conta (ex. America/Sao_Paulo, America/Manaus). Gravado em custom_attributes.timezone; vem no topo do payload da conta. Inválido = ignorado em silêncio."
+   },
+   {
+    "name": "audio_transcriptions",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Liga/desliga 'Transcrever Mensagens de Audio' (Configuracoes > Conta). Desde 04/11/2026 vale para TODA conta, com ou sem Agente de IA; nasce desligada e usa a chave do proprio cliente (OpenAI ou Groq cadastrada em Integracoes)."
+   },
+   {
+    "name": "audio_transcription_provider",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Provedor da transcricao: 'openai' ou 'groq'. So funciona se a conta tiver a chave daquele provedor. Sem escolher, usa a OpenAI se houver chave e depois a Groq."
    }
   ],
   "returns": "Conta atualizada (payload completo, com timezone no topo)",
   "common_use_cases": [
    "Mudar o fuso horário da conta",
-   "Atualizar nome/idioma/e-mail de suporte"
+   "Atualizar nome/idioma/e-mail de suporte",
+   "Ligar a transcricao de audio da conta"
   ],
   "related_tools": [
    "lionchat_account_show",

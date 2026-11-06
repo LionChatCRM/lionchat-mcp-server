@@ -421,6 +421,55 @@ As instruções aceitam variáveis Liquid `{{ }}` que chegam JÁ PREENCHIDAS com
 - As ferramentas "Buscar FAQ" e "Buscar Artigos" são auto-gerenciadas: ligam sozinhas conforme o conteúdo e somem da tela de ferramentas (não são desligáveis por disabled_tools). Diagnóstico "IA não usa a base": confira se há FAQ APROVADA/documento, ou artigo PUBLICADO na Central de Ajuda.
 - A IA pode oferecer ao cliente o link do artigo (precisa de Portal com slug e domínio/FRONTEND_URL).
 
+## Documento que o cliente manda: PDF, Word, planilha (2026-11-06)
+
+Como a IA de atendimento lê o arquivo que o CLIENTE manda na conversa. Nada a ligar: vale para toda conta com
+Agente de IA, sem chave liga/desliga. Até 05/11/2026 o texto era cortado em 30 mil caracteres (a IA via 4 de 13
+páginas de um extrato) e voltava inteiro em toda resposta; resposta anterior sua com essa explicação ficou velha.
+
+- **Leitura:** página a página, até **50 páginas** e **8 mil caracteres por página** (arquivo até 25 MB; planilha até
+  5 mil linhas por aba). O texto fica guardado no próprio anexo e NÃO vem na API.
+- **Na resposta em que o documento chega**, a IA recebe o texto inteiro (até 40 mil caracteres somando os documentos
+  daquela vez). Documento pequeno (até 6 mil caracteres) segue inteiro no histórico.
+- **Nas respostas seguintes**, o histórico mostra um cartão com o código do documento (`D-123`), as páginas lidas e
+  um índice. Para responder, a IA consulta a ferramenta interna `read_document` ("Ler Documento Recebido"): páginas
+  (`"5-9"`) ou palavra/número exato (`"RMC"`, `"1.234,56"`); até 12 mil caracteres por consulta e 40 mil por
+  resposta. Só documento DESTA conversa e que ainda está na memória da IA. `read_document` fica sempre ligada, não
+  aparece na tela de ferramentas e não se desliga por `disabled_tools` (como Buscar FAQ e Buscar Artigos).
+- **PDF escaneado** (página sem texto): lido por IMAGEM por trás, até **20 páginas** por documento, com a chave OpenAI
+  da conta. Enquanto lê, a IA avisa o cliente que está lendo; quando termina, ela RESPONDE SOZINHA uma vez, se ainda
+  cuida da conversa, e essa resposta conta na cota de respostas da IA. PDF com texto e algumas páginas escaneadas:
+  responde na hora com as páginas de texto, e as escaneadas ficam disponíveis depois, sem resposta nova.
+- **Mesmo arquivo de novo:** não lê de novo. Reenvio na mesma conversa aponta para a leitura anterior; o mesmo
+  arquivo em outra conversa da conta copia a leitura.
+- **Teto por conversa:** 20 documentos novos por dia.
+- **Pílulas para a equipe** (mensagem de atividade, `message_type` 2), uma por leitura:
+  - "A IA leu o documento X (N de M páginas)"
+  - "A IA leu o documento X (N de M páginas, acima do teto)" — passou de 50 páginas; o resto NÃO foi lido
+  - "A IA leu o documento X por imagem (escaneado, N de M páginas)"
+  - "A IA não conseguiu ler o documento X"
+  - "Documento X já lido antes nesta conversa"
+  - "Limite de documentos lidos nesta conversa hoje atingido"
+- **Documento anterior ao recurso** (chegou antes de 07/11/2026 03:00 UTC): a IA ainda consulta, mas sem pílula, sem
+  texto de chegada e sem a resposta sozinha depois do escaneado.
+
+Diagnóstico "a IA não achou o valor do documento": leia a pílula da conversa
+(`lionchat_conversations_messages_list`). "acima do teto" = o valor pode estar depois da página 50; escaneado com
+mais de 20 páginas idem; "não conseguiu ler" = arquivo protegido, corrompido ou sem chave OpenAI para o escaneado.
+Para conferir o conteúdo você mesmo, baixe o arquivo pelo `data_url` do anexo: a API não traz o texto lido.
+
+## Transcrição de áudio (2026-11-04)
+
+- **Onde:** Configurações > Conta > "Transcrever Mensagens de Áudio". Desde 04/11/2026 aparece para TODA conta, com
+  ou sem Agente de IA (antes só com a IA). Nasce DESLIGADA e usa a chave do próprio cliente, OpenAI ou Groq,
+  cadastrada em Integrações: o custo é do cliente, não há chave da plataforma.
+- **Pela API:** `lionchat_account_settings_update` com `audio_transcriptions: true` e
+  `audio_transcription_provider: "openai"` ou `"groq"` (administrador). Só funciona se a conta tiver a chave daquele
+  provedor; sem escolher provedor, usa a OpenAI se houver chave e depois a Groq.
+- **Conversa com Agente de IA:** o áudio do cliente é transcrito para a IA responder mesmo com a opção desligada, desde
+  que a conta tenha a função Agente de IA.
+- O texto sai em `transcribed_text` do anexo de áudio (`file_type: audio`).
+
 ## Anti-loop de ferramentas (custo) (2026-06)
 
 - Ferramentas (webhooks/custom tools e flows) que falham agora param sozinhas: a IA recebe aviso escalonado (1ª falha = no máximo 1 retry; 2ª+ da mesma tool = pare e siga sem ela ou transfira). Tetos por turno: 5 chamadas por ferramenta e 25 no total; ao estourar, a IA dá halt e cria nota mencionando um humano (sem desligar a IA).

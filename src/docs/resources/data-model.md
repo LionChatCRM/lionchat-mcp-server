@@ -115,8 +115,9 @@ Attachment
 ├── file_type (string ou int)
 ├── extension
 ├── file (ActiveStorage attached)
-├── transcribed_text (string, áudio/PDF)
-├── meta (jsonb, ex: image_description)
+├── transcribed_text (string, SÓ áudio na resposta da API)
+├── meta (jsonb, ex: image_description; a leitura de documento (PDF, Word, planilha) mora aqui por página e NÃO
+│   vem na API — o que a IA leu aparece na pílula de atividade da conversa)
 ├── width / height (pixels)
 └── file_size (bytes)
 ```
@@ -402,8 +403,10 @@ Captain::Assistant
 │     activation_label (etiqueta que ativa o agente — unica por conta),
 │     min_response_time / max_response_time (delay humanizado, 1-60s),
 │     disabled_tools (array de IDs de tools desativadas pro assistente),
-│     (faq_lookup/search_articles NÃO são desligáveis — auto-gerenciadas: carregam só quando há
-│       FAQ/documento ou artigo publicado, e são escondidas do endpoint captain_assistants_tools)
+│     (faq_lookup/search_articles/read_document NÃO são desligáveis — auto-gerenciadas e escondidas do
+│       endpoint captain_assistants_tools: faq_lookup/search_articles carregam só quando há FAQ/documento ou
+│       artigo publicado; read_document ("Ler Documento Recebido", 06/11/2026) fica sempre ligada e lê páginas
+│       ou busca uma palavra do documento que o cliente mandou NA conversa)
 │     offer_ids / media_asset_ids / booking_event_type_ids (arrays de IDs vinculados),
 │     products (array legado de produtos)
 ├── guardrails (jsonb array de strings — limites duros injetados no prompt, ex: anti-pitch)
