@@ -390,6 +390,7 @@ e pular evita que ela receba tudo em dobro. Quem está sendo atendido pela equip
 | Bulk actions (IDs) max | 300 por chamada (desde 18/05/2026; passou disso = HTTP 422 `bulk_ids_limit_exceeded`) |
 | Rate limit leitura | 1200/min por token |
 | Rate limit escrita | 600/min por token |
+| Limites por rota | Contam por chave de API em cada conta (09/11/2026); totais da conta somam só pedidos autenticados da própria conta |
 | Loop detection | bloqueia chamada idêntica >10x em 10s |
 | Variável de Conta — tamanho do valor | 32 KB por variável (novo 01/08/2026; passou disso = HTTP 422 na conta). Vale só pra variável DECLARADA na tela; chave interna do sistema não é barrada. É por variável, não pela soma — conta com dezenas de tokens legítimos não é punida |
 

@@ -638,7 +638,7 @@ criar a campanha e mostre a contagem ao usuário — estimativa e disparo usam o
 
 - Reservar o MESMO contato+evento+horário de novo retorna a reserva existente (não duplica) —
   retry de rede é seguro.
-- Rate limit da reserva pública: 10/5min por IP + 20/min por conta (429 ao estourar).
+- Rate limit da reserva pública: 10/5min por rede + 60/min por conta (429 ao estourar; era 20/min até 09/11/2026).
 - Todo agendamento aparece vinculado a uma conversa (cria/reusa a conversa do contato).
 
 ### O que mudou no agendamento DA IA (2026-08-15)

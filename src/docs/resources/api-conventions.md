@@ -401,6 +401,12 @@ Ou com código:
 | Por token API (reads) | 1200 reqs | 1 min |
 | Loop detection | 10 reqs idênticas | 10 seg |
 
+**Limites por rota contam por quem pede (desde 09/11/2026).** Busca de contatos (100/min), subir arquivo (60/h),
+disponibilidade de atendentes (30/min), contadores das conversas (30/min) e relatórios por pessoa (100/min) contam por
+CHAVE de API em cada conta, não pela conta inteira: outra integração ou um estranho não esgota a sua cota. Os totais da
+conta (relatórios 1000/min, enviar conversa por e-mail 1000/h, `check_phone` 1000/dia, disparo de conversão 100/h, evento
+de teste do pixel 10/min) somam todos os pedidos AUTENTICADOS da própria conta. A resposta continua 429 com `Retry-After`.
+
 Quando rate-limited:
 - Status `429 Too Many Requests`
 - Header `Retry-After` indica em quantos segundos voltar
