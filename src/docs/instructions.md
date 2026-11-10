@@ -336,6 +336,10 @@ CONTA). Vale para WhatsApp oficial, QR Code e Campanha de Fluxo; SMS e TopSend r
 lida na HORA do disparo: segmento apagado ou com regra quebrada = a campanha NÃO envia nada e o motivo fica em
 `trigger_rules.audience_error`; na estimativa vem `estimated_count: null` com `segment_unavailable`.
 QR Code aceita `template_params` com `delay_min/delay_max/variations` (anti-bloqueio) e `bulk_actions`.
+QR Code desde 09/11/2026: sai UMA mensagem por vez por NUMERO, respeitando a espera (`delay_min/delay_max`, 1 a 3600 s;
+vazio = 20/40). `daily_cap` = teto da campanha por dia, no maximo 1000 (vazio, zero ou acima = 1000; sem a chave = 500). O
+NUMERO nunca passa de 1000 mensagens de campanha por dia somando todas as campanhas dele: o excedente sai no dia seguinte, na
+hora em que a campanha comecou. Para mais de 1000 pessoas por dia, use a caixa oficial.
 
 ### Criar campanha de FLUXO (dispara um flow, não uma mensagem) — novo 28/07/2026
 ```

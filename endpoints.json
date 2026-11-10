@@ -1219,7 +1219,7 @@
     "type": "integer",
     "location": "query",
     "required": false,
-    "description": "So conversas atualizadas nos ultimos N segundos (ex.: 3600 = ultima hora). Util para polling de atividade recente."
+    "description": "So conversas atualizadas nos ultimos N segundos (ex.: 3600 = ultima hora). Util para polling de atividade recente. TETOS (desde 09/11/2026): no maximo 3 horas (10800 s; pedido maior e cortado para 3 h) e no maximo as 1.000 conversas atualizadas mais recentemente. A resposta traz meta.updated_within_applied (segundos de fato usados) e meta.truncated (true = havia mais de 1.000 e as mais antigas ficaram fora). Com updated_within NAO ha paginacao: page 2 em diante volta vazia. Precisa de mais? Faca janelas menores (ex.: de hora em hora) ou use a lista paginada sem updated_within."
    }
   ],
   "returns": "Objeto com envelope DUPLO: { data: { meta: {...}, payload: [conversas] } }. A lista fica em data.payload (NAO em payload direto). O meta traz exatamente: mine_count, assigned_count, unassigned_count, all_count, groups_count. Cada conversa vem com um array extra `kanban_items` (cards do Kanban visiveis pro usuario). Paginacao real: 25/pagina.",
@@ -23341,7 +23341,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "WhatsApp oficial: { name, namespace, lang_code, parameters }. QR Code/WAHA: { delay_min, delay_max, variations: ['variação 1', ...], bulk_actions: { assignee_id, priority, labels: [] } } CAMPANHA DE FLUXO (flow_id presente): { delay_min, delay_max, daily_cap } — intervalo sorteado em SEGUNDOS entre uma pessoa e outra (padrao 20/40) e teto de PESSOAS por dia (padrao 500 no QR Code; em caixa oficial, sem o campo, herda o limite que a Meta libera). Quem passa do teto do dia entra no dia seguinte no mesmo horario, automaticamente. NAO aceita variations nem bulk_actions (as acoes pos-envio sao blocos do proprio flow)."
+    "description": "WhatsApp oficial: { name, namespace, lang_code, parameters }. QR Code/WAHA: { delay_min, delay_max, variations: ['variação 1', ...], bulk_actions: { assignee_id, priority, labels: [] } } CAMPANHA DE FLUXO (flow_id presente): { delay_min, delay_max, daily_cap } — intervalo sorteado em SEGUNDOS entre uma pessoa e outra (padrao 20/40) e teto de PESSOAS por dia (padrao 500 no QR Code; em caixa oficial, sem o campo, herda o limite que a Meta libera). Quem passa do teto do dia entra no dia seguinte no mesmo horario, automaticamente. NAO aceita variations nem bulk_actions (as acoes pos-envio sao blocos do proprio flow). QR CODE (desde 09/11/2026): a campanha envia UMA mensagem por vez por NUMERO, respeitando a espera escolhida (delay_min/delay_max, de 1 a 3600 s; vazio = 20/40). daily_cap = teto da campanha por dia, no maximo 1000; vazio, zero ou acima de 1000 vira 1000, e sem a chave vale 500. O NUMERO tambem nunca passa de 1000 mensagens de campanha por dia, SOMANDO todas as campanhas dele: o excedente sai no dia seguinte, na hora em que a campanha comecou."
    },
    {
     "name": "flow_id",

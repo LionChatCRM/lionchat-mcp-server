@@ -19,7 +19,7 @@ A maioria dos endpoints aceita parâmetros pra filtrar antes de retornar:
 
 | Endpoint | Filtros úteis |
 |---|---|
-| `conversations_list` | `status` (open/resolved/pending/snoozed/all), `assignee_type`, `conversation_type` (unread/unattended/mention/participating), `inbox_id`, `team_id`, `labels`, `captain_assistant` (any=com IA / none=sem IA / id do assistente), `quick_q` (busca rápida na lista), `source_id`, `updated_within` (segundos) |
+| `conversations_list` | `status` (open/resolved/pending/snoozed/all), `assignee_type`, `conversation_type` (unread/unattended/mention/participating), `inbox_id`, `team_id`, `labels`, `captain_assistant` (any=com IA / none=sem IA / id do assistente), `quick_q` (busca rápida na lista), `source_id`, `updated_within` (segundos; no maximo 3 h e as 1.000 conversas mais recentes, sem paginacao; `meta.truncated` diz se cortou) |
 | `contacts_list` | `q` (nome/email/telefone), `include_contact_inboxes` |
 | `messages_search` | `q`, `file_type[]`, `private_only`, `page` (busca dentro de UMA conversa) |
 | `kanban_items_list` | `funnel_id`, `funnel_stage`, `assigned_agent_id` |
