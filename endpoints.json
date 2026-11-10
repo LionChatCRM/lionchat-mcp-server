@@ -25391,7 +25391,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations",
   "title": "Criar Integração Meta CAPI",
-  "description": "Conecta um pixel da Meta (CAPI). Nasce desativado (enabled=false) — após test_event com sucesso, ativa sozinho. ADMIN-ONLY. Evento de checkout: nome atual é 'begin_checkout' (antigo InitiateCheckout).",
+  "description": "Conecta um pixel da Meta (CAPI). Nasce desativado (enabled=false) — após test_event com sucesso, ativa sozinho. ADMIN-ONLY. Evento de checkout: nome atual é 'begin_checkout' (antigo InitiateCheckout). Pixel de FUNIL (09/11/2026): com funnel_id, o funil usa SO esse registro; criar com pixel_id vazio deixa o funil SEM Pixel (nasce desligado e nao envia nada, nao cai no Pixel da conta). O Pixel da CONTA (sem funnel_id) continua exigindo pixel_id e token.",
   "category": "Integracoes",
   "params": [
    {
@@ -25436,7 +25436,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations/{id}",
   "title": "Atualizar Integração Meta CAPI",
-  "description": "Atualiza pixel/token/codigo de teste/funil. ADMIN-ONLY. Trocar o pixel ou o token apaga `last_success_at` (a prova de envio aceito era do par antigo): rode lionchat_meta_pixel_integrations_test_event depois.",
+  "description": "Atualiza pixel/token/codigo de teste/funil. ADMIN-ONLY. Trocar o pixel ou o token apaga `last_success_at` (a prova de envio aceito era do par antigo): rode lionchat_meta_pixel_integrations_test_event depois. Pixel de FUNIL (09/11/2026): zerar o pixel_id deixa o funil SEM Pixel (desligado, nao envia e nao cai no Pixel da conta). Pixel de funil DESLIGADO tambem nao envia. Para o funil voltar a usar o Pixel da conta, apague o registro do funil (destroy).",
   "category": "Integracoes",
   "params": [
    {
@@ -25486,7 +25486,7 @@
   "method": "DELETE",
   "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations/{id}",
   "title": "Excluir Integração Meta CAPI",
-  "description": "Remove o pixel da conta. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+  "description": "Remove o pixel da conta. DESTRUTIVO — confirme antes. ADMIN-ONLY. Apagar o registro de um FUNIL faz o funil voltar a usar o Pixel da conta (09/11/2026).",
   "category": "Integracoes",
   "params": [
    {
@@ -33823,7 +33823,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/meta_capi_events",
   "title": "Histórico de Eventos Meta CAPI do Funil",
-  "description": "SÓ LEITURA. Lista os eventos de conversão Meta CAPI disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed | duplicate), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | manual | automation | auto_create | test | booking_reservation | lead_form), motivo da falha, o card de origem (kanban_item_title), por onde saiu (action_source: website | business_messaging) e fallback_reason — preenchido quando um lead de ANÚNCIO DE WHATSAPP saiu como site (plano B): lionchat:dataset_nao_configurado (caixa sem 'Vincular à Meta'), lionchat:caixa_token_recusado, lionchat:caixa_nao_encontrada, lionchat:caixa_sem_token, lionchat:dataset_id_invalido, lionchat:desligado_pelo_cliente, lionchat:nome_sem_equivalente_whatsapp, ou '<subcode>: <mensagem da Meta>'. Responde 'por que a venda não apareceu no Meta CAPI?'. Administrador ou cargo com marketing_integrations_manage (403).",
+  "description": "SÓ LEITURA. Lista os eventos de conversão Meta CAPI disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed | duplicate), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | manual | automation | auto_create | test | booking_reservation | lead_form), motivo da falha, o card de origem (kanban_item_title), por onde saiu (action_source: website | business_messaging) e fallback_reason — preenchido quando um lead de ANÚNCIO DE WHATSAPP saiu como site (plano B): lionchat:dataset_nao_configurado (caixa sem 'Vincular à Meta'), lionchat:caixa_token_recusado, lionchat:caixa_nao_encontrada, lionchat:caixa_sem_token, lionchat:dataset_id_invalido, lionchat:desligado_pelo_cliente, lionchat:nome_sem_equivalente_whatsapp, ou '<subcode>: <mensagem da Meta>'. Responde 'por que a venda não apareceu no Meta CAPI?'. Administrador ou cargo com marketing_integrations_manage (403). Desde 09/11/2026 cada linha traz inbox_name: a caixa de entrada da conversa do card (null = card sem conversa ou caixa excluida).",
   "category": "Integracoes",
   "params": [
    {
@@ -33890,7 +33890,7 @@
     "description": "Página (50 por página)"
    }
   ],
-  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, fallback_reason, action_source, created_at, sent_at, kanban_item_id, kanban_item_title, fbtrace_id}], meta: {total, page}}",
+  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, fallback_reason, action_source, created_at, sent_at, kanban_item_id, kanban_item_title, inbox_name, fbtrace_id}], meta: {total, page}}",
   "common_use_cases": [
    "Ver se o evento de conversão chegou no Meta CAPI",
    "Listar os disparos falhados pra reenviar",
@@ -33973,7 +33973,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/ga4_events",
   "title": "Histórico de Eventos GA4 do Funil",
-  "description": "SÓ LEITURA. Lista os eventos de conversão GA4 disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test | lead_form), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no GA4?'. Administrador ou cargo com marketing_integrations_manage (403).",
+  "description": "SÓ LEITURA. Lista os eventos de conversão GA4 disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test | lead_form), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no GA4?'. Administrador ou cargo com marketing_integrations_manage (403). Desde 09/11/2026 cada linha traz inbox_name: a caixa de entrada da conversa do card (null = card sem conversa ou caixa excluida).",
   "category": "Integracoes",
   "params": [
    {
@@ -34033,7 +34033,7 @@
     "description": "Página (50 por página)"
    }
   ],
-  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title}], meta: {total, page}}",
+  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title, inbox_name}], meta: {total, page}}",
   "common_use_cases": [
    "Ver se o evento de conversão chegou no GA4",
    "Listar os disparos falhados pra reenviar"
@@ -34115,7 +34115,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/google_ads_conversions",
   "title": "Histórico de Eventos Google Ads do Funil",
-  "description": "SÓ LEITURA. Lista os eventos de conversão Google Ads disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no Google Ads?'. Administrador ou cargo com marketing_integrations_manage (403).",
+  "description": "SÓ LEITURA. Lista os eventos de conversão Google Ads disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no Google Ads?'. Administrador ou cargo com marketing_integrations_manage (403). Desde 09/11/2026 cada linha traz inbox_name: a caixa de entrada da conversa do card (null = card sem conversa ou caixa excluida).",
   "category": "Integracoes",
   "params": [
    {
@@ -34175,7 +34175,7 @@
     "description": "Página (50 por página)"
    }
   ],
-  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title}], meta: {total, page}}",
+  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title, inbox_name}], meta: {total, page}}",
   "common_use_cases": [
    "Ver se o evento de conversão chegou no Google Ads",
    "Listar os disparos falhados pra reenviar"

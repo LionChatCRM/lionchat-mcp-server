@@ -534,6 +534,8 @@ Meta só aceita isso num **dataset vinculado à WABA**, nunca no pixel do site (
   não existe evento de "perdido" em mensagens. O nome interno do cliente vai em `custom_data.internal_event`.
 - **Diagnóstico "por que a venda não contou como conversão de WhatsApp?":**
   `lionchat_funnels_meta_capi_events_list` com `degraded=true` e ler `fallback_reason` + `action_source`.
+  Desde 09/11/2026 cada linha das 4 listas do histórico (`meta_capi_events`, `ga4_events`, `google_ads_conversions`,
+  `ad_read_failures`) traz `inbox_name` — a caixa de entrada da conversa do card (`null` = card sem conversa).
   Motivos nossos: `lionchat:dataset_nao_configurado` (falta o vínculo), `lionchat:caixa_token_recusado`
   (a Meta recusou a chave da caixa — reconectar a caixa), `lionchat:caixa_nao_encontrada`,
   `lionchat:caixa_sem_token`, `lionchat:dataset_id_invalido`, `lionchat:desligado_pelo_cliente`,

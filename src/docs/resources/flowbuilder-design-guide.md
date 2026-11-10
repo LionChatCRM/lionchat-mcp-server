@@ -404,7 +404,8 @@ só pra destravar, ela pode sair.
 | `conversation_has_agent` / `conversation_no_agent` / `conversation_not_agent` | agente atribuído (HUMANO) |
 | `conversation_has_ai_agent` / `conversation_no_ai_agent` / `conversation_not_ai_agent` | agente de IA atribuído (novo 2026-08-01) — ver abaixo |
 | `contact_has_label` / `contact_no_label` / `conversation_has_label` / `conversation_no_label` | labels |
-| `kanban_exists` / `kanban_in_stage` / `kanban_won` / `kanban_lost` | card no funil. `funnel_id` é CHAVE SEPARADA da condição (número, ex.: `"funnel_id": 37`). A etapa vai em `value` (slug puro da etapa, ex.: `"avaliacao_aceita"`) ou em `stage` — NÃO no formato `"37:etapa"`. Ex.: `{ "operator": "kanban_in_stage", "funnel_id": 37, "value": "avaliacao_aceita" }` |
+| `kanban_exists` / `kanban_in_stage` / `kanban_won` / `kanban_lost` | card no funil. `funnel_id` é CHAVE SEPARADA da condição (número, ex.: `"funnel_id": 37`). A etapa vai em `value` (slug puro da etapa, ex.: `"avaliacao_aceita"`) ou em `stage` — NÃO no formato `"37:etapa"`. Ex.: `{ "operator": "kanban_in_stage", "funnel_id": 37, "value": "avaliacao_aceita" }`. **Várias etapas (09/11/2026):** `kanban_in_stage` aceita `stages: ["qualificado", "contrato_enviado"]` — casa se o card estiver em QUALQUER uma (o `stage` antigo é somado). |
+| `conversation_has_team` / `conversation_not_team` / `conversation_no_team` | equipe da conversa (09/11/2026 — o que a tela grava em "Em equipe"). `field: "{{conversation.team_id}}"`, `valueType: "team"`, `values: ["24","25"]`. `values` VAZIO: `has_team` = tem QUALQUER equipe, `not_team` = sem equipe. `conversation_no_team` = preset "Sem equipe" (sem values). O `equal`/`not_equal` antigo segue funcionando |
 | `kanban_snoozed` (11/10/2026) | card ADIADO no funil — `field: '_kanban_status'`, `funnel_id` separado, igual às irmãs `kanban_won`/`kanban_lost` (mesma regra do card que iniciou o fluxo). Não existe condição "card aberto" |
 | `card_attr_equals` / `card_attr_contains` | atributo do card (`attrSource: 'card'` + `attr_key`; aceita `card_source: 'trigger'` p/ ler o card que iniciou o flow) |
 | `pagetrack_visited` / `pagetrack_event` | LionTrack |
@@ -581,9 +582,9 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `change_status` | `{ status: 'open' \| 'resolved' \| 'pending' \| 'snoozed' }` | Muda status da conversa |
 | `change_priority` | `{ priority: 'urgent' \| 'high' \| 'medium' \| 'low' }` | Muda prioridade |
 | `add_label` | `{ labels: ['slug1', 'slug2'] }` | Adiciona labels ao CONTATO |
-| `remove_label` | `{ labels: ['slug'] }` | Remove labels do CONTATO |
+| `remove_label` | `{ labels: ['slug'] }` | Remove labels do CONTATO. `labels: ['__all__']` = remove TODAS (09/11/2026) |
 | `add_conversation_label` | `{ labels: ['slug'] }` | Adiciona labels à CONVERSA (não ao contato) |
-| `remove_conversation_label` | `{ labels: ['slug'] }` | Remove labels da CONVERSA |
+| `remove_conversation_label` | `{ labels: ['slug'] }` | Remove labels da CONVERSA. `labels: ['__all__']` = remove TODAS (09/11/2026) |
 | `mute_conversation` | `{}` | Silencia notificações |
 | `mark_unread` | `{}` | Marca a conversa como NÃO LIDA pro time (espelho do `mute_conversation`; típico logo após `assign_agent`/`assign_team` numa transferência) |
 | `add_private_note` | `{ text: 'texto' }` | Adiciona nota interna. **A chave é `text`** — é a que o formulário do bloco lê (`v-model="item.config.text"`). Até 04/09 esta linha dizia `content`, e por isso 56 blocos de 8 contas abriam VAZIOS na tela: a nota era gravada (o motor tem rede) mas ninguém conseguia ler nem editar o texto. `content` continua sendo aceito e normalizado para `text` na gravação |
