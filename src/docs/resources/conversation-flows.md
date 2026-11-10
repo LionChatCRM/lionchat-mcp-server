@@ -706,7 +706,7 @@ Todos os formatos abaixo foram conferidos linha a linha em `app/services/action_
 | `send_message` | `["texto da mensagem"]` |
 | `add_private_note` | `["nota interna"]` |
 | `send_canned_response` | `[12]` — id da resposta pronta |
-| `add_label` / `remove_label` | `["etiqueta1", "etiqueta2"]` |
+| `add_label` / `remove_label` | `["etiqueta1", "etiqueta2"]`. Em `remove_label` (e `remove_contact_label`), `["__all__"]` remove TODAS as etiquetas (09/11/2026) |
 | `assign_agent` | `[70]` — o agente precisa ser membro da caixa. `["nil"]` desatribui |
 | `assign_team` | `[3]`. `["nil"]` desatribui |
 | `assign_captain_assistant` | `[17]` ou `[{"assistant_id": 17, "proactive": true}]` — `proactive` false = a IA assume mas nao fala na hora |

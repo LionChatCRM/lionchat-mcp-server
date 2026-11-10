@@ -634,7 +634,8 @@ as outras duas seguem aplicadas. Não prometa essa permissão ao cliente sem con
 (`conversation_mode: "group"`), o start pode ter o item `{ "key": "group_participant_joined", "config": {
 "group_match": "any", "group_name": "", "group_ids": [] } }`. Filtro OPCIONAL de quais grupos disparam:
 `group_match` (`any` padrão, ou os mesmos operadores do "Buscar por nome": `contains`, `equal_to`, `starts_with`,
-`ends_with`, `does_not_contain`, `not_equal_to`) + `group_name`, e/ou `group_ids` (mira exata por id — casa por
+`ends_with`, `does_not_contain`, `not_equal_to`) + `group_names` (lista, 09/11/2026: nos operadores positivos basta UM
+nome casar; em `does_not_contain`/`not_equal_to` NENHUM pode casar; o `group_name` antigo, texto, é somado), e/ou `group_ids` (mira exata por id — casa por
 dígitos, aceita `1203...@g.us` ou só o número). Quando alguém entra, o `send_message` seguinte cai **no próprio
 grupo** (o grupo é a conversa do flow).
 

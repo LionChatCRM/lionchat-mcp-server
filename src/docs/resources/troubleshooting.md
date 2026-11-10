@@ -385,6 +385,24 @@ três caminhos — botão da bolha (`lionchat_conversations_messages_create_1`),
 (`lionchat_inboxes_failed_messages_bulk_retry`) e a auto-recuperação do WAHA. Se o usuário quer
 mesmo mandar de novo, o caminho é escrever uma mensagem nova.
 
+### Conexão híbrida: "reenviar voltou 422", "Não enviada: ..." e reconexão sozinha (09/11)
+A conexão híbrida (WhatsApp de apoio por QR Code ligado a uma caixa da API oficial) passou a ter as mesmas
+proteções de envio das caixas de QR Code:
+- **Tenta de novo sozinha** quando a conexão estava se reconectando no instante do envio (30 s, 2, 5 e 15 min),
+  sempre pela híbrida — nunca pela API oficial.
+- **Reenviar (`lionchat_conversations_messages_create_1`) responde 422** quando a mensagem JÁ saiu pela híbrida
+  (inteira ou só parte dos anexos): reenviar duplicaria no cliente. Oriente a mandar uma mensagem nova.
+- **"Não enviada: o cliente respondeu antes."** — follow-up da IA que só sairia depois de o cliente já ter escrito
+  (vale também nas caixas de QR Code). **"Não enviada: a saída pela conexão híbrida foi desligada nesta caixa."** —
+  a chave da caixa foi desligada enquanto o sistema ainda tentava. As duas ficam fora de todo reenvio automático;
+  o botão de reenviar UMA mensagem continua possível.
+- **Reenvio em lote** (`lionchat_inboxes_failed_messages_bulk_retry`) inclui as mensagens da híbrida, uma a cada
+  8 s, só com a conexão no ar; o bloqueio 463 (abordagem fria) dela fica de fora, e o `retryable_count` do summary
+  já desconta essas.
+- **Reconexão automática**: se a conexão híbrida trava, o sistema a reconecta sozinho e reenvia o que ela não
+  conseguiu mandar. Os administradores veem no sininho "Conexão híbrida de <caixa> reconectada" (ou "precisa de
+  atenção"). Desconectar de propósito nunca é desfeito sozinho.
+
 ### "A falha sumiu do painel" / "apareceu um grupo Excluídas" (25/07)
 Dois comportamentos novos e propositais no painel Falhas de envio
 (`lionchat_inboxes_failed_messages_summary`):

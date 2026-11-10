@@ -19,7 +19,7 @@ A maioria dos endpoints aceita parâmetros pra filtrar antes de retornar:
 
 | Endpoint | Filtros úteis |
 |---|---|
-| `conversations_list` | `status` (open/resolved/pending/snoozed/all), `assignee_type`, `conversation_type` (unread/unattended/mention/participating), `inbox_id`, `team_id`, `labels`, `captain_assistant` (any=com IA / none=sem IA / id do assistente), `quick_q` (busca rápida na lista), `source_id`, `updated_within` (segundos) |
+| `conversations_list` | `status` (open/resolved/pending/snoozed/all), `assignee_type`, `conversation_type` (unread/unattended/mention/participating), `inbox_id`, `team_id`, `labels`, `captain_assistant` (any=com IA / none=sem IA / id do assistente), `quick_q` (busca rápida na lista), `source_id`, `updated_within` (segundos; no maximo 3 h e as 1.000 conversas mais recentes, sem paginacao; `meta.truncated` diz se cortou) |
 | `contacts_list` | `q` (nome/email/telefone), `include_contact_inboxes` |
 | `messages_search` | `q`, `file_type[]`, `private_only`, `page` (busca dentro de UMA conversa) |
 | `kanban_items_list` | `funnel_id`, `funnel_stage`, `assigned_agent_id` |
@@ -534,6 +534,8 @@ Meta só aceita isso num **dataset vinculado à WABA**, nunca no pixel do site (
   não existe evento de "perdido" em mensagens. O nome interno do cliente vai em `custom_data.internal_event`.
 - **Diagnóstico "por que a venda não contou como conversão de WhatsApp?":**
   `lionchat_funnels_meta_capi_events_list` com `degraded=true` e ler `fallback_reason` + `action_source`.
+  Desde 09/11/2026 cada linha das 4 listas do histórico (`meta_capi_events`, `ga4_events`, `google_ads_conversions`,
+  `ad_read_failures`) traz `inbox_name` — a caixa de entrada da conversa do card (`null` = card sem conversa).
   Motivos nossos: `lionchat:dataset_nao_configurado` (falta o vínculo), `lionchat:caixa_token_recusado`
   (a Meta recusou a chave da caixa — reconectar a caixa), `lionchat:caixa_nao_encontrada`,
   `lionchat:caixa_sem_token`, `lionchat:dataset_id_invalido`, `lionchat:desligado_pelo_cliente`,
@@ -638,7 +640,7 @@ criar a campanha e mostre a contagem ao usuário — estimativa e disparo usam o
 
 - Reservar o MESMO contato+evento+horário de novo retorna a reserva existente (não duplica) —
   retry de rede é seguro.
-- Rate limit da reserva pública: 10/5min por IP + 20/min por conta (429 ao estourar).
+- Rate limit da reserva pública: 10/5min por rede + 60/min por conta (429 ao estourar; era 20/min até 09/11/2026).
 - Todo agendamento aparece vinculado a uma conversa (cria/reusa a conversa do contato).
 
 ### O que mudou no agendamento DA IA (2026-08-15)

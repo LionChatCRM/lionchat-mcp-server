@@ -1219,7 +1219,7 @@
     "type": "integer",
     "location": "query",
     "required": false,
-    "description": "So conversas atualizadas nos ultimos N segundos (ex.: 3600 = ultima hora). Util para polling de atividade recente."
+    "description": "So conversas atualizadas nos ultimos N segundos (ex.: 3600 = ultima hora). Util para polling de atividade recente. TETOS (desde 09/11/2026): no maximo 3 horas (10800 s; pedido maior e cortado para 3 h) e no maximo as 1.000 conversas atualizadas mais recentemente. A resposta traz meta.updated_within_applied (segundos de fato usados) e meta.truncated (true = havia mais de 1.000 e as mais antigas ficaram fora). Com updated_within NAO ha paginacao: page 2 em diante volta vazia. Precisa de mais? Faca janelas menores (ex.: de hora em hora) ou use a lista paginada sem updated_within."
    }
   ],
   "returns": "Objeto com envelope DUPLO: { data: { meta: {...}, payload: [conversas] } }. A lista fica em data.payload (NAO em payload direto). O meta traz exatamente: mine_count, assigned_count, unassigned_count, all_count, groups_count. Cada conversa vem com um array extra `kanban_items` (cards do Kanban visiveis pro usuario). Paginacao real: 25/pagina.",
@@ -2329,7 +2329,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/{id}/retry",
   "title": "Reenviar Mensagem",
-  "description": "[POST] Reenvia uma mensagem que falhou. Obrigatorios: conversation_id, id. [2026-07-24] Motor unico de reenvio: limpeza cirurgica de content_attributes (preserva vinculos de flow/automacao/comentario IG) + trava anti-duplicata por mensagem. Pra reenviar TODAS as falhadas de uma caixa de uma vez, use lionchat_inboxes_failed_messages_bulk_retry. [2026-07-25] Mensagem cancelada ou excluida NAO reenvia — a chamada responde 422 com o motivo. Pra cancelar de vez o reenvio, use lionchat_conversations_messages_cancel_retry.",
+  "description": "[POST] Reenvia uma mensagem que falhou. Obrigatorios: conversation_id, id. [2026-07-24] Motor unico de reenvio: limpeza cirurgica de content_attributes (preserva vinculos de flow/automacao/comentario IG) + trava anti-duplicata por mensagem. Pra reenviar TODAS as falhadas de uma caixa de uma vez, use lionchat_inboxes_failed_messages_bulk_retry. [2026-07-25] Mensagem cancelada ou excluida NAO reenvia — a chamada responde 422 com o motivo. Pra cancelar de vez o reenvio, use lionchat_conversations_messages_cancel_retry. [2026-11-09] Mensagem que JA saiu pela conexao hibrida da caixa oficial (inteira, ou so parte dos anexos) NAO reenvia: responde 422 dizendo que reenviar duplicaria — oriente o usuario a mandar uma mensagem nova. Mensagem pedida pela hibrida que saiu pela API oficial e foi recusada depois continua reenviavel.",
   "category": "Mensagens",
   "params": [
    {
@@ -23341,7 +23341,7 @@
     "type": "object",
     "location": "body",
     "required": false,
-    "description": "WhatsApp oficial: { name, namespace, lang_code, parameters }. QR Code/WAHA: { delay_min, delay_max, variations: ['variação 1', ...], bulk_actions: { assignee_id, priority, labels: [] } } CAMPANHA DE FLUXO (flow_id presente): { delay_min, delay_max, daily_cap } — intervalo sorteado em SEGUNDOS entre uma pessoa e outra (padrao 20/40) e teto de PESSOAS por dia (padrao 500 no QR Code; em caixa oficial, sem o campo, herda o limite que a Meta libera). Quem passa do teto do dia entra no dia seguinte no mesmo horario, automaticamente. NAO aceita variations nem bulk_actions (as acoes pos-envio sao blocos do proprio flow)."
+    "description": "WhatsApp oficial: { name, namespace, lang_code, parameters }. QR Code/WAHA: { delay_min, delay_max, variations: ['variação 1', ...], bulk_actions: { assignee_id, priority, labels: [] } } CAMPANHA DE FLUXO (flow_id presente): { delay_min, delay_max, daily_cap } — intervalo sorteado em SEGUNDOS entre uma pessoa e outra (padrao 20/40) e teto de PESSOAS por dia (padrao 500 no QR Code; em caixa oficial, sem o campo, herda o limite que a Meta libera). Quem passa do teto do dia entra no dia seguinte no mesmo horario, automaticamente. NAO aceita variations nem bulk_actions (as acoes pos-envio sao blocos do proprio flow). QR CODE (desde 09/11/2026): a campanha envia UMA mensagem por vez por NUMERO, respeitando a espera escolhida (delay_min/delay_max, de 1 a 3600 s; vazio = 20/40). daily_cap = teto da campanha por dia, no maximo 1000; vazio, zero ou acima de 1000 vira 1000, e sem a chave vale 500. O NUMERO tambem nunca passa de 1000 mensagens de campanha por dia, SOMANDO todas as campanhas dele: o excedente sai no dia seguinte, na hora em que a campanha comecou."
    },
    {
     "name": "flow_id",
@@ -24910,7 +24910,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/failed_messages/summary",
   "title": "Falhas de Envio da Caixa (painel)",
-  "description": "[NOVO 2026-07-24] Painel 'Falhas de envio' da caixa: mensagens FALHADAS das ultimas 24h agrupadas por motivo — billing (falta de saldo/pagamento), transient (erro comum, reenviavel), window_expired (janela de 24h da API oficial fechou), permanent (erro definitivo) — + grupos informativos campaign (mensagem de campanha NUNCA reenvia por aqui) e partial (multi-anexo parcial, anti-duplicata). group_details traz ate 30 itens por grupo com contato, conversa, erro real e horario. Canais elegiveis: WAHA (QR), WhatsApp oficial e Messenger (Telegram/Instagram nao marcam failed). ADMIN-ONLY. Use antes do bulk_retry pra mostrar ao usuario O QUE falhou e quanto e reenviavel (retryable_count = billing + transient). [ATUALIZADO 2026-07-25] Novo grupo informativo 'deleted' (Excluidas): mensagem falhada que o usuario APAGOU continua no painel como registro, com o motivo ORIGINAL da falha preservado e sem botao de reenviar/cancelar; vem tambem no campo deleted_count e fica FORA de retryable_count e do total. Mensagem CANCELADA (lionchat_conversations_messages_cancel_retry ou bulk_cancel) some do painel de vez.",
+  "description": "[NOVO 2026-07-24] Painel 'Falhas de envio' da caixa: mensagens FALHADAS das ultimas 24h agrupadas por motivo — billing (falta de saldo/pagamento), transient (erro comum, reenviavel), window_expired (janela de 24h da API oficial fechou), permanent (erro definitivo) — + grupos informativos campaign (mensagem de campanha NUNCA reenvia por aqui) e partial (multi-anexo parcial, anti-duplicata). group_details traz ate 30 itens por grupo com contato, conversa, erro real e horario. Canais elegiveis: WAHA (QR), WhatsApp oficial e Messenger (Telegram/Instagram nao marcam failed). ADMIN-ONLY. Use antes do bulk_retry pra mostrar ao usuario O QUE falhou e quanto e reenviavel (retryable_count = billing + transient). [ATUALIZADO 2026-07-25] Novo grupo informativo 'deleted' (Excluidas): mensagem falhada que o usuario APAGOU continua no painel como registro, com o motivo ORIGINAL da falha preservado e sem botao de reenviar/cancelar; vem tambem no campo deleted_count e fica FORA de retryable_count e do total. Mensagem CANCELADA (lionchat_conversations_messages_cancel_retry ou bulk_cancel) some do painel de vez. [2026-11-09] retryable_count passou a ser exatamente o que o bulk_retry agendaria: na caixa oficial com conexao hibrida ja desconta o bloqueio 463 da hibrida e as mensagens dela com a conexao caida (os grupos continuam com a mesma classificacao).",
   "category": "Caixas de Entrada",
   "params": [
    {
@@ -24938,7 +24938,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/failed_messages/bulk_retry",
   "title": "Reenvio em Massa das Falhadas",
-  "description": "[NOVO 2026-07-24] Reenvia EM LOTE as mensagens falhadas REENVIAVEIS das ultimas 24h da caixa (grupos billing + transient do summary). Teto 500 por clique; cadencia anti-ban (WAHA 8s entre mensagens, demais 1s); trava de 1 lote por caixa (409 bulk_retry_running se ja houver lote rodando); cada mensagem e re-validada na hora do reenvio (ainda failed, sem source_id, sessao WAHA WORKING, janela 24h da oficial) e tem teto de 3 tentativas no erro comum. Mensagens de CAMPANHA e multi-anexo PARCIAL nunca entram (anti-duplicata). ADMIN-ONLY. Sempre chame o summary antes e mostre as contagens ao usuario; confirme antes de disparar (acao de envio em massa real). [2026-07-25] Mensagem CANCELADA ou EXCLUIDA nunca entra no lote (bloqueio na fonte, vale tambem pro botao de reenvio e pra auto-recuperacao do WAHA). Pra descartar em vez de reenviar use lionchat_inboxes_failed_messages_bulk_cancel.",
+  "description": "[NOVO 2026-07-24] Reenvia EM LOTE as mensagens falhadas REENVIAVEIS das ultimas 24h da caixa (grupos billing + transient do summary). Teto 500 por clique; cadencia anti-ban (WAHA 8s entre mensagens, demais 1s); trava de 1 lote por caixa (409 bulk_retry_running se ja houver lote rodando); cada mensagem e re-validada na hora do reenvio (ainda failed, sem source_id, sessao WAHA WORKING, janela 24h da oficial) e tem teto de 3 tentativas no erro comum. Mensagens de CAMPANHA e multi-anexo PARCIAL nunca entram (anti-duplicata). ADMIN-ONLY. Sempre chame o summary antes e mostre as contagens ao usuario; confirme antes de disparar (acao de envio em massa real). [2026-07-25] Mensagem CANCELADA ou EXCLUIDA nunca entra no lote (bloqueio na fonte, vale tambem pro botao de reenvio e pra auto-recuperacao do WAHA). Pra descartar em vez de reenviar use lionchat_inboxes_failed_messages_bulk_cancel. [2026-11-09] Caixa oficial com conexao hibrida: mensagem que sai pela hibrida entra no lote com cadencia de 8s (nunca 1s), so se a conexao hibrida estiver no ar (caida = fica de fora sem gastar tentativa), e o bloqueio 463 dela (abordagem fria) nunca entra. As frases \"Nao enviada: o cliente respondeu antes.\" e \"Nao enviada: a saida pela conexao hibrida foi desligada nesta caixa.\" sao paradas por regra de negocio: ficam fora de todo reenvio automatico (o reenvio de UMA mensagem pelo botao continua possivel).",
   "category": "Caixas de Entrada",
   "params": [
    {
@@ -25391,7 +25391,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations",
   "title": "Criar Integração Meta CAPI",
-  "description": "Conecta um pixel da Meta (CAPI). Nasce desativado (enabled=false) — após test_event com sucesso, ativa sozinho. ADMIN-ONLY. Evento de checkout: nome atual é 'begin_checkout' (antigo InitiateCheckout).",
+  "description": "Conecta um pixel da Meta (CAPI). Nasce desativado (enabled=false) — após test_event com sucesso, ativa sozinho. ADMIN-ONLY. Evento de checkout: nome atual é 'begin_checkout' (antigo InitiateCheckout). Pixel de FUNIL (09/11/2026): com funnel_id, o funil usa SO esse registro; criar com pixel_id vazio deixa o funil SEM Pixel (nasce desligado e nao envia nada, nao cai no Pixel da conta). O Pixel da CONTA (sem funnel_id) continua exigindo pixel_id e token.",
   "category": "Integracoes",
   "params": [
    {
@@ -25436,7 +25436,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations/{id}",
   "title": "Atualizar Integração Meta CAPI",
-  "description": "Atualiza pixel/token/codigo de teste/funil. ADMIN-ONLY. Trocar o pixel ou o token apaga `last_success_at` (a prova de envio aceito era do par antigo): rode lionchat_meta_pixel_integrations_test_event depois.",
+  "description": "Atualiza pixel/token/codigo de teste/funil. ADMIN-ONLY. Trocar o pixel ou o token apaga `last_success_at` (a prova de envio aceito era do par antigo): rode lionchat_meta_pixel_integrations_test_event depois. Pixel de FUNIL (09/11/2026): zerar o pixel_id deixa o funil SEM Pixel (desligado, nao envia e nao cai no Pixel da conta). Pixel de funil DESLIGADO tambem nao envia. Para o funil voltar a usar o Pixel da conta, apague o registro do funil (destroy).",
   "category": "Integracoes",
   "params": [
    {
@@ -25486,7 +25486,7 @@
   "method": "DELETE",
   "path": "/api/v1/accounts/{account_id}/meta_pixel_integrations/{id}",
   "title": "Excluir Integração Meta CAPI",
-  "description": "Remove o pixel da conta. DESTRUTIVO — confirme antes. ADMIN-ONLY.",
+  "description": "Remove o pixel da conta. DESTRUTIVO — confirme antes. ADMIN-ONLY. Apagar o registro de um FUNIL faz o funil voltar a usar o Pixel da conta (09/11/2026).",
   "category": "Integracoes",
   "params": [
    {
@@ -33823,7 +33823,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/meta_capi_events",
   "title": "Histórico de Eventos Meta CAPI do Funil",
-  "description": "SÓ LEITURA. Lista os eventos de conversão Meta CAPI disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed | duplicate), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | manual | automation | auto_create | test | booking_reservation | lead_form), motivo da falha, o card de origem (kanban_item_title), por onde saiu (action_source: website | business_messaging) e fallback_reason — preenchido quando um lead de ANÚNCIO DE WHATSAPP saiu como site (plano B): lionchat:dataset_nao_configurado (caixa sem 'Vincular à Meta'), lionchat:caixa_token_recusado, lionchat:caixa_nao_encontrada, lionchat:caixa_sem_token, lionchat:dataset_id_invalido, lionchat:desligado_pelo_cliente, lionchat:nome_sem_equivalente_whatsapp, ou '<subcode>: <mensagem da Meta>'. Responde 'por que a venda não apareceu no Meta CAPI?'. Administrador ou cargo com marketing_integrations_manage (403).",
+  "description": "SÓ LEITURA. Lista os eventos de conversão Meta CAPI disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed | duplicate), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | manual | automation | auto_create | test | booking_reservation | lead_form), motivo da falha, o card de origem (kanban_item_title), por onde saiu (action_source: website | business_messaging) e fallback_reason — preenchido quando um lead de ANÚNCIO DE WHATSAPP saiu como site (plano B): lionchat:dataset_nao_configurado (caixa sem 'Vincular à Meta'), lionchat:caixa_token_recusado, lionchat:caixa_nao_encontrada, lionchat:caixa_sem_token, lionchat:dataset_id_invalido, lionchat:desligado_pelo_cliente, lionchat:nome_sem_equivalente_whatsapp, ou '<subcode>: <mensagem da Meta>'. Responde 'por que a venda não apareceu no Meta CAPI?'. Administrador ou cargo com marketing_integrations_manage (403). Desde 09/11/2026 cada linha traz inbox_name: a caixa de entrada da conversa do card (null = card sem conversa ou caixa excluida).",
   "category": "Integracoes",
   "params": [
    {
@@ -33890,7 +33890,7 @@
     "description": "Página (50 por página)"
    }
   ],
-  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, fallback_reason, action_source, created_at, sent_at, kanban_item_id, kanban_item_title, fbtrace_id}], meta: {total, page}}",
+  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, fallback_reason, action_source, created_at, sent_at, kanban_item_id, kanban_item_title, inbox_name, fbtrace_id}], meta: {total, page}}",
   "common_use_cases": [
    "Ver se o evento de conversão chegou no Meta CAPI",
    "Listar os disparos falhados pra reenviar",
@@ -33973,7 +33973,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/ga4_events",
   "title": "Histórico de Eventos GA4 do Funil",
-  "description": "SÓ LEITURA. Lista os eventos de conversão GA4 disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test | lead_form), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no GA4?'. Administrador ou cargo com marketing_integrations_manage (403).",
+  "description": "SÓ LEITURA. Lista os eventos de conversão GA4 disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test | lead_form), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no GA4?'. Administrador ou cargo com marketing_integrations_manage (403). Desde 09/11/2026 cada linha traz inbox_name: a caixa de entrada da conversa do card (null = card sem conversa ou caixa excluida).",
   "category": "Integracoes",
   "params": [
    {
@@ -34033,7 +34033,7 @@
     "description": "Página (50 por página)"
    }
   ],
-  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title}], meta: {total, page}}",
+  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title, inbox_name}], meta: {total, page}}",
   "common_use_cases": [
    "Ver se o evento de conversão chegou no GA4",
    "Listar os disparos falhados pra reenviar"
@@ -34115,7 +34115,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/funnels/{funnel_id}/google_ads_conversions",
   "title": "Histórico de Eventos Google Ads do Funil",
-  "description": "SÓ LEITURA. Lista os eventos de conversão Google Ads disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no Google Ads?'. Administrador ou cargo com marketing_integrations_manage (403).",
+  "description": "SÓ LEITURA. Lista os eventos de conversão Google Ads disparados pelo funil (50 por página, mais novos primeiro) com status (pending | sent | failed), nome do evento, como foi disparado (trigger_type: stage_move | card_won | card_lost | auto_create | manual | automation | booking_reservation | test), motivo da falha e o card de origem (kanban_item_title). Responde 'por que a venda não apareceu no Google Ads?'. Administrador ou cargo com marketing_integrations_manage (403). Desde 09/11/2026 cada linha traz inbox_name: a caixa de entrada da conversa do card (null = card sem conversa ou caixa excluida).",
   "category": "Integracoes",
   "params": [
    {
@@ -34175,7 +34175,7 @@
     "description": "Página (50 por página)"
    }
   ],
-  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title}], meta: {total, page}}",
+  "returns": "{data: [{id, event_name, event_id, status, trigger_type, failure_reason, created_at, sent_at, kanban_item_id, kanban_item_title, inbox_name}], meta: {total, page}}",
   "common_use_cases": [
    "Ver se o evento de conversão chegou no Google Ads",
    "Listar os disparos falhados pra reenviar"

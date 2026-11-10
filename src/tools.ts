@@ -502,7 +502,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-03)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-09)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -748,7 +748,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     group_participant_joined / group_participant_left (NOVO 07/08 — 'Entrou no grupo' / 'Saiu do
     grupo', evento de grupo WhatsApp QR Code). Item {key:'group_participant_joined'|
     'group_participant_left', config:{group_match:'any'|'contains'|'does_not_contain'|'equal_to'|
-    'not_equal_to'|'starts_with'|'ends_with', group_name:'<termo>', group_ids:['<id ou 1203..@g.us>']}}
+    'not_equal_to'|'starts_with'|'ends_with', group_names:['<termo>',...], group_name:'<termo>',
+    group_ids:['<id ou 1203..@g.us>']}}
+    group_names (NOVO 09/11/2026) = VARIOS nomes: em contains/equal_to/starts_with/ends_with basta UM casar;
+    em does_not_contain/not_equal_to NENHUM pode casar. group_name (texto, antigo) segue valendo e e SOMADO a
+    lista (a tela grava a lista e repete o 1o nome em group_name).
     — os dois filtros se SOMAM (E logico), cada um vazio deixa passar: group_match/group_name filtra
     pelo NOME do grupo; group_ids (so via API/MCP, compara por digitos) mira grupos exatos. Vale nos 2
     tipos de flow: em flow de grupo roda na conversa do grupo; em flow individual roda na conversa da
@@ -929,7 +933,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       OBRIGATORIO: 'inbox' na primeira e 'channel_type' na segunda — e ele que faz a tela abrir o
       seletor certo; sem ele a regra roda no motor e a tela nao desenha campo nenhum pra ela.
     conversation_no_team (NOVO 2026-08-15: conversa SEM equipe atribuida — e o preset "Sem equipe"
-      da tela; operador dedicado, sem value), conversation_has_ai_agent/conversation_no_ai_agent
+      da tela; operador dedicado, sem value),
+    conversation_has_team/conversation_not_team (NOVO 09/11/2026 — o que a tela grava em "Em equipe";
+      field '{{conversation.team_id}}', valueType 'team', values:[ids]. values VAZIO: has_team = TEM
+      qualquer equipe, not_team = SEM equipe; com ids: esta / nao esta em uma delas), conversation_has_ai_agent/conversation_no_ai_agent
       (IA ativa/inativa na conversa; not_ai_agent = sinonimo de no_ai_agent),
     contact_has_label/contact_no_label/conversation_has_label/conversation_no_label
       (values = array de titulos ou string com virgula. ATENCAO 2026-08-18: escreva operator E
@@ -941,6 +948,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     kanban_exists/kanban_in_stage/kanban_won/kanban_lost/kanban_snoozed (funnel_id e CHAVE SEPARADA da condicao,
       numero ex funnel_id:37; a etapa vai em value=slug puro ex value:"avaliacao_aceita" ou em stage,
       NAO no formato "37:etapa"), pagetrack_visited/pagetrack_event,
+      kanban_in_stage aceita VARIAS etapas (NOVO 09/11/2026): stages:['qualificado','contrato_enviado'] —
+      casa se o card estiver em QUALQUER uma; stage antigo e somado (a tela repete a 1a em stage).
+      Sem nenhuma etapa a regra NUNCA casa (pra 'tem card' use kanban_exists).
       Desde 20/08 as 4 condicoes kanban_* enxergam o card da conversa ATUAL ou o card cuja conversa de
       ORIGEM e a atual (card religado pra conversa mais nova) — antes "nao tem card" na conversa velha.
       kanban_snoozed (NOVO 11/10/2026) = o card esta ADIADO naquele funil; nao existe condicao "card aberto".
@@ -968,7 +978,9 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     via values[]) + is_empty / is_not_empty (SEM values[]).
   EQUIPE (condicao "Esta na equipe", field '{{conversation.team_id}}'): aceita VARIAS equipes de uma
     vez — passe values:['24','25'] (array de ids) em vez de value unico; casa se bater qualquer uma.
-    Array de values vazio cai no value unico legado.
+    Array de values vazio cai no value unico legado. Desde 09/11/2026 a tela grava os operadores proprios
+    conversation_has_team/conversation_not_team (lista vazia = qualquer equipe / sem equipe); equal/not_equal
+    seguem funcionando.
 
 ▸ action
   data: { label, items: [ { key, config: {...} } ] }
@@ -989,6 +1001,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       //   until_next_month|until_next_reply (ausente = adiada ate a proxima mensagem do cliente)
       mute_conversation({}), mark_unread({}), add_private_note({text}), send_email_transcript({email}),
       add_conversation_label({labels:[...]}), remove_conversation_label({labels:[...]}),  // etiqueta NA CONVERSA
+      // remove_*_label com labels:['__all__'] = tira TODAS as etiquetas (NOVO 09/11/2026; vale tambem
+      //   em automacao/macro: action_params ['__all__']). Nome de etiqueta nunca comeca com '_'.
       assign_captain({assistant_id}), deactivate_captain({}),
       // mark_unread({}) — NOVO 07/08: deixa a conversa NAO LIDA pro time (badge acende). Tipico logo
       //   apos assign_agent/assign_team numa transferencia. Conversa ja nao-lida nao e mexida.

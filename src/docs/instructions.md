@@ -336,6 +336,10 @@ CONTA). Vale para WhatsApp oficial, QR Code e Campanha de Fluxo; SMS e TopSend r
 lida na HORA do disparo: segmento apagado ou com regra quebrada = a campanha NÃO envia nada e o motivo fica em
 `trigger_rules.audience_error`; na estimativa vem `estimated_count: null` com `segment_unavailable`.
 QR Code aceita `template_params` com `delay_min/delay_max/variations` (anti-bloqueio) e `bulk_actions`.
+QR Code desde 09/11/2026: sai UMA mensagem por vez por NUMERO, respeitando a espera (`delay_min/delay_max`, 1 a 3600 s;
+vazio = 20/40). `daily_cap` = teto da campanha por dia, no maximo 1000 (vazio, zero ou acima = 1000; sem a chave = 500). O
+NUMERO nunca passa de 1000 mensagens de campanha por dia somando todas as campanhas dele: o excedente sai no dia seguinte, na
+hora em que a campanha comecou. Para mais de 1000 pessoas por dia, use a caixa oficial.
 
 ### Criar campanha de FLUXO (dispara um flow, não uma mensagem) — novo 28/07/2026
 ```
@@ -390,6 +394,7 @@ e pular evita que ela receba tudo em dobro. Quem está sendo atendido pela equip
 | Bulk actions (IDs) max | 300 por chamada (desde 18/05/2026; passou disso = HTTP 422 `bulk_ids_limit_exceeded`) |
 | Rate limit leitura | 1200/min por token |
 | Rate limit escrita | 600/min por token |
+| Limites por rota | Contam por chave de API em cada conta (09/11/2026); totais da conta somam só pedidos autenticados da própria conta |
 | Loop detection | bloqueia chamada idêntica >10x em 10s |
 | Variável de Conta — tamanho do valor | 32 KB por variável (novo 01/08/2026; passou disso = HTTP 422 na conta). Vale só pra variável DECLARADA na tela; chave interna do sistema não é barrada. É por variável, não pela soma — conta com dezenas de tokens legítimos não é punida |
 
