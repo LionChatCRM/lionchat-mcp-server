@@ -8860,21 +8860,21 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Tipo da tarefa"
+    "description": "Tipo da tarefa: task, call, meeting, email, follow_up, reminder, booking ou a chave de um tipo criado pela conta (inclusive desativado). Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma. Ex.: \"task,follow_up\"."
    },
    {
     "name": "status",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Status"
+    "description": "Situacao: 0 pendente, 1 concluida, 2 cancelada, 3 adiada (numero ou nome). Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma."
    },
    {
     "name": "priority",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Prioridade (22/10): urgent | high | medium | low | none. Antes de 22/10 este filtro era ignorado pelo servidor."
+    "description": "Prioridade: urgent | high | medium | low | none. Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma."
    },
    {
     "name": "user_id",
@@ -8885,10 +8885,10 @@
    },
    {
     "name": "assignee_id",
-    "type": "integer",
+    "type": "string",
     "location": "query",
     "required": false,
-    "description": "ID do responsavel"
+    "description": "Responsavel (id do agente). Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma. Ex.: \"12,15\". Cada um ve so o que ja via: quem nao gerencia a agenda da equipe so traz as tarefas de um colega se ele publicou a agenda."
    },
    {
     "name": "q",
@@ -9622,28 +9622,28 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Tipo da tarefa"
+    "description": "Tipo da tarefa: task, call, meeting, email, follow_up, reminder, booking ou a chave de um tipo criado pela conta (inclusive desativado). Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma. Ex.: \"task,follow_up\"."
    },
    {
     "name": "status",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Situacao dentro das abertas: 0 = pendente, 3 = adiada. Concluida (1) e cancelada (2) nunca aparecem aqui (devolvem grupos vazios). Para ver concluidas, use group=completed."
+    "description": "Situacao dentro das abertas: 0 = pendente, 3 = adiada (concluida e cancelada nunca aparecem aqui). Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma."
    },
    {
     "name": "priority",
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Prioridade (22/10): urgent | high | medium | low | none. Antes de 22/10 este filtro era ignorado pelo servidor."
+    "description": "Prioridade: urgent | high | medium | low | none. Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma."
    },
    {
     "name": "assignee_id",
-    "type": "integer",
+    "type": "string",
     "location": "query",
     "required": false,
-    "description": "Tarefas de UMA pessoa. So muda alguma coisa para quem pode ver a agenda da equipe (administrador ou cargo com 'Gerenciar agenda da equipe'); os demais veem sempre as proprias."
+    "description": "Responsavel (id do agente). Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma. Ex.: \"12,15\". Cada um ve so o que ja via: quem nao gerencia a agenda da equipe so traz as tarefas de um colega se ele publicou a agenda."
    },
    {
     "name": "user_id",
@@ -10028,7 +10028,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "pending, sent, failed"
+    "description": "Situacao dos disparos: pending, sent, failed. Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma."
    },
    {
     "name": "date_start",
@@ -10043,6 +10043,13 @@
     "location": "query",
     "required": false,
     "description": "Data fim"
+   },
+   {
+    "name": "assignee_id",
+    "location": "query",
+    "required": false,
+    "type": "string",
+    "description": "Responsavel da CONVERSA do disparo (id do agente). Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma. Quem nao e administrador ja ve so os disparos das proprias conversas."
    }
   ],
   "returns": "array de mensagens agendadas",
@@ -10661,7 +10668,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "ID do agente ou \"all\""
+    "description": "ID do agente, \"all\", ou VARIOS ids separados por virgula (11/11/2026). Ids que a pessoa nao pode ver sao ignorados."
    }
   ],
   "returns": "Lista pura: a resposta E o array, sem embrulho de meta/payload. Cada item e um tipo de evento de agendamento com os campos do registro mais `booking_availabilities`, `follow_up_schedules`, `public_url`, `agent_profile_url`, `account_booking_slug` e os dados do agente dono (`agent_name`, `agent_color`, `agent_avatar_url`). Traz ativos E inativos, ordenados do mais novo pro mais antigo, sem paginacao. Filtro opcional `user_id` (ou `user_id=all` para todos os agentes visiveis).",

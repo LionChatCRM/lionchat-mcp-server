@@ -308,8 +308,13 @@ atrasado?", "quantas tarefas a fulana tem em aberto?" e "o que falta fazer esta 
 - **Grupos**, no dia da conta: `overdue` (antes de hoje, da mais recente para a mais antiga), `today`,
   `tomorrow`, `next_7_days` e `later`.
 - **Quem vê o quê e filtros**: os MESMOS do calendário (`lionchat_tasks_list`): `assignee_id`, `task_type`,
-  `status` (0 pendente, 3 adiada), `priority`, `agenda_id`, `q`. Quem não gerencia a agenda da equipe vê só as
-  próprias, com ou sem `assignee_id`.
+  `status` (0 pendente, 3 adiada), `priority`, `agenda_id`, `q`. Quem não gerencia a agenda da equipe vê as
+  tarefas em que é dono ou responsável e, quando marca um colega em `assignee_id`, as do colega SÓ se ele publicou
+  a agenda. O filtro nunca mostra mais do que a pessoa já vê.
+- **Várias opções por filtro (11/11/2026)**: `assignee_id`, `task_type`, `status` e `priority` aceitam vários
+  valores separados por vírgula (`assignee_id: "12,15"`, `task_type: "task,follow_up"`); a lista traz o que bate com
+  QUALQUER um. `task_type` aceita a chave dos tipos criados pela conta (inclusive desativados); `status` aceita número
+  ou nome (`pending`, `snoozed`). Tarefa com dois responsáveis da lista vem uma vez só.
 - **50 por grupo**. Para quantidade, leia `totals` (a contagem real), nunca o tamanho da lista. Para ir além das
   50: `group=overdue&page=2` devolve só aquele grupo naquela página.
 - **Busca `q`** (vale também no calendário): título, descrição, responsável e, com 3 letras ou mais, o CLIENTE
