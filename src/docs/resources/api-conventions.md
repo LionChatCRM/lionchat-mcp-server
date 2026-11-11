@@ -504,6 +504,18 @@ conversa (`conversation`) são pessoais até um administrador compartilhar (seç
 incompleta = 422. Segmento usado por campanha programada não pode ser apagado (422 citando a campanha). Segmento serve
 de público de campanha (`{type: 'Segment', id}`) — ver a receita de campanha nas instruções.
 
+### Segmento de EMPRESAS e lista filtrada (2026-11-11)
+
+Ferramentas: `lionchat_companies_filter` (lista filtrada) e `lionchat_custom_filters_*` com `filter_type: company`
+(segmento). Para ver as empresas de um segmento salvo, mande o `query.payload` dele para `lionchat_companies_filter`.
+
+`custom_filters` com `filter_type: company` = segmento da aba Empresas, da conta inteira (como o de contatos). Qualquer
+administrador ou atendente com o menu Empresas visível cria, edita e apaga; módulo Empresas desligado = 403. NÃO serve de
+público de campanha. A lista filtrada é `POST companies/filter` com o mesmo `payload` do filtro de contatos; campos:
+`name`, `domain`, `legal_name`, `cnpj`, `phone`, `email`, `city`, `state`, `contacts_count`, `created_at`,
+`last_activity_at` e atributos de empresa com `custom_attribute_type: company_attribute`. Texto é comparado sem maiúscula
+e sem acento; CNPJ e telefone só pelos números; "diferente de" traz a empresa sem o campo. Campo/operador desconhecido = 422.
+
 ### Pasta de conversa compartilhada (2026-10-27)
 
 Pasta de conversa (`filter_type: conversation`) com `shared: true` aparece para TODA a conta, com o ícone de

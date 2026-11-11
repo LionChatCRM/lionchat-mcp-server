@@ -11919,7 +11919,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/custom_filters",
   "title": "Listar Filtros",
-  "description": "Lista os filtros salvos por filter_type (padrao conversation). Desde 22/10/2026: filter_type contact (segmentos) lista os segmentos da CONTA inteira (precisa do menu Contatos no cargo), ordenados por nome; conversation (pastas) traz as do usuario atual MAIS as compartilhadas da conta (campo shared, desde 27/10/2026); report continua so os do usuario atual. Em pasta compartilhada criada por OUTRA pessoa, user_id e user_name vem nulos. Cada item traz user_id/user_name (\"criado por\", pode vir nulo) e can_manage (se quem pergunta pode editar/apagar).",
+  "description": "Lista os filtros salvos por filter_type (padrao conversation). Desde 22/10/2026: filter_type contact (segmentos) lista os segmentos da CONTA inteira (precisa do menu Contatos no cargo), ordenados por nome; conversation (pastas) traz as do usuario atual MAIS as compartilhadas da conta (campo shared, desde 27/10/2026); report continua so os do usuario atual. Em pasta compartilhada criada por OUTRA pessoa, user_id e user_name vem nulos. Cada item traz user_id/user_name (\"criado por\", pode vir nulo) e can_manage (se quem pergunta pode editar/apagar). SEGMENTO DE EMPRESAS (11/11/2026): filter_type 'company' (ou 3) = segmento da aba Empresas, da CONTA inteira como o de contatos; qualquer administrador ou atendente com o menu Empresas visivel cria, edita e apaga (menu oculto = 401; modulo Empresas desligado = 403). query = {payload:[...]} no formato de lionchat_companies_filter (regra vazia = 422). Segmento de empresas NAO serve de publico de campanha. Para ver as empresas do segmento, mande o query.payload dele para lionchat_companies_filter.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -11927,7 +11927,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "conversation (pastas: as suas + as compartilhadas da conta), contact (segmentos, da CONTA) ou report"
+    "description": "conversation (pastas: as suas + as compartilhadas da conta), contact (segmentos, da CONTA) ou report; 'company' (segmento de EMPRESAS, da conta)"
    }
   ],
   "returns": "array de filtros (sem meta/payload)",
@@ -11939,7 +11939,8 @@
   "related_tools": [
    "lionchat_custom_filters_create",
    "lionchat_custom_filters_show",
-   "lionchat_custom_filters_update"
+   "lionchat_custom_filters_update",
+   "lionchat_companies_filter"
   ]
  },
  {
@@ -11947,7 +11948,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/custom_filters",
   "title": "Criar Filtro",
-  "description": "Cria um filtro personalizado. Cria novo filtro personalizado. Obrigatórios: name, filter_type, query. Valida unicidade quando aplicável. Retorna o filtro personalizado criado com ID atribuído. Desde 22/10/2026 o segmento (filter_type contact) e da CONTA: criar exige administrador ou cargo com contact_manage, campaign_manage ou automation_manage (sem isso, 401). filter_type aceita o nome ou o numero. Regra vazia ou incompleta = 422. Teto de 1.000 segmentos por conta. PASTA COMPARTILHADA (27/10/2026): pasta de conversa (filter_type conversation) com shared true aparece para TODA a conta; so administrador cria, edita, compartilha ou apaga (sem isso, 401). Cada pessoa ve dentro dela so as conversas que ja pode ver. shared nulo = 422; compartilhada sem nenhuma condicao = 422; segmento e relatorio nao podem ser compartilhados (422). Para mostrar a cada pessoa as conversas DELA use assignee_id com o valor 'current_user' (\"Quem esta vendo\").",
+  "description": "Cria um filtro personalizado. Cria novo filtro personalizado. Obrigatórios: name, filter_type, query. Valida unicidade quando aplicável. Retorna o filtro personalizado criado com ID atribuído. Desde 22/10/2026 o segmento (filter_type contact) e da CONTA: criar exige administrador ou cargo com contact_manage, campaign_manage ou automation_manage (sem isso, 401). filter_type aceita o nome ou o numero. Regra vazia ou incompleta = 422. Teto de 1.000 segmentos por conta. PASTA COMPARTILHADA (27/10/2026): pasta de conversa (filter_type conversation) com shared true aparece para TODA a conta; so administrador cria, edita, compartilha ou apaga (sem isso, 401). Cada pessoa ve dentro dela so as conversas que ja pode ver. shared nulo = 422; compartilhada sem nenhuma condicao = 422; segmento e relatorio nao podem ser compartilhados (422). Para mostrar a cada pessoa as conversas DELA use assignee_id com o valor 'current_user' (\"Quem esta vendo\"). SEGMENTO DE EMPRESAS (11/11/2026): filter_type 'company' (ou 3) = segmento da aba Empresas, da CONTA inteira como o de contatos; qualquer administrador ou atendente com o menu Empresas visivel cria, edita e apaga (menu oculto = 401; modulo Empresas desligado = 403). query = {payload:[...]} no formato de lionchat_companies_filter (regra vazia = 422). Segmento de empresas NAO serve de publico de campanha. Para ver as empresas do segmento, mande o query.payload dele para lionchat_companies_filter.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -11962,7 +11963,7 @@
     "type": "string",
     "location": "body",
     "required": true,
-    "description": "'conversation' (pasta de conversas), 'contact' (segmento de contatos) ou 'report' — aceita o nome ou o numero"
+    "description": "'conversation' (pasta de conversas), 'contact' (segmento de contatos) ou 'report' — aceita o nome ou o numero; 'company' (segmento de EMPRESAS, da conta)"
    },
    {
     "name": "query",
@@ -11988,7 +11989,8 @@
   "related_tools": [
    "lionchat_custom_filters_list",
    "lionchat_custom_filters_show",
-   "lionchat_custom_filters_update"
+   "lionchat_custom_filters_update",
+   "lionchat_companies_filter"
   ],
   "body_wrapper": "custom_filter"
  },
@@ -11997,7 +11999,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/custom_filters/{id}",
   "title": "Detalhe do Filtro",
-  "description": "Retorna detalhes. Retorna detalhes completos de UM filtro personalizado específico pelo ID. Inclui campos relacionais quando aplicável. Pasta compartilhada (shared true) pode ser lida por qualquer membro da conta.",
+  "description": "Retorna detalhes. Retorna detalhes completos de UM filtro personalizado específico pelo ID. Inclui campos relacionais quando aplicável. Pasta compartilhada (shared true) pode ser lida por qualquer membro da conta. SEGMENTO DE EMPRESAS (11/11/2026): filter_type 'company' (ou 3) = segmento da aba Empresas, da CONTA inteira como o de contatos; qualquer administrador ou atendente com o menu Empresas visivel cria, edita e apaga (menu oculto = 401; modulo Empresas desligado = 403). query = {payload:[...]} no formato de lionchat_companies_filter (regra vazia = 422). Segmento de empresas NAO serve de publico de campanha. Para ver as empresas do segmento, mande o query.payload dele para lionchat_companies_filter.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -12017,7 +12019,8 @@
   "related_tools": [
    "lionchat_custom_filters_list",
    "lionchat_custom_filters_create",
-   "lionchat_custom_filters_update"
+   "lionchat_custom_filters_update",
+   "lionchat_companies_filter"
   ]
  },
  {
@@ -12025,7 +12028,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/custom_filters/{id}",
   "title": "Atualizar Filtro",
-  "description": "Atualiza filtro. Atualiza campos do filtro personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, query, shared. filter_type e IGNORADO no update (nao da para trocar o tipo). Segmento (contact) so pode ser editado por administrador ou cargo com contact_manage, campaign_manage ou automation_manage — sem isso, 401 (veja can_manage no list/show). PASTA COMPARTILHADA (27/10/2026): so administrador edita (401). So mande shared para MUDAR o compartilhamento: shared false numa compartilhada a transforma em pasta pessoal DE QUEM MANDOU (some para os outros). Em compartilhada, query.sort_by muda a ordem padrao de TODOS. shared nulo = 422; compartilhada sem condicao = 422. Dois administradores editando juntos: vale a ultima gravacao.",
+  "description": "Atualiza filtro. Atualiza campos do filtro personalizado existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: name, query, shared. filter_type e IGNORADO no update (nao da para trocar o tipo). Segmento (contact) so pode ser editado por administrador ou cargo com contact_manage, campaign_manage ou automation_manage — sem isso, 401 (veja can_manage no list/show). PASTA COMPARTILHADA (27/10/2026): so administrador edita (401). So mande shared para MUDAR o compartilhamento: shared false numa compartilhada a transforma em pasta pessoal DE QUEM MANDOU (some para os outros). Em compartilhada, query.sort_by muda a ordem padrao de TODOS. shared nulo = 422; compartilhada sem condicao = 422. Dois administradores editando juntos: vale a ultima gravacao. SEGMENTO DE EMPRESAS (11/11/2026): filter_type 'company' (ou 3) = segmento da aba Empresas, da CONTA inteira como o de contatos; qualquer administrador ou atendente com o menu Empresas visivel cria, edita e apaga (menu oculto = 401; modulo Empresas desligado = 403). query = {payload:[...]} no formato de lionchat_companies_filter (regra vazia = 422). Segmento de empresas NAO serve de publico de campanha. Para ver as empresas do segmento, mande o query.payload dele para lionchat_companies_filter.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -12066,7 +12069,8 @@
   "related_tools": [
    "lionchat_custom_filters_list",
    "lionchat_custom_filters_create",
-   "lionchat_custom_filters_show"
+   "lionchat_custom_filters_show",
+   "lionchat_companies_filter"
   ],
   "body_wrapper": "custom_filter"
  },
@@ -12075,7 +12079,7 @@
   "method": "DELETE",
   "path": "/api/v1/accounts/{account_id}/custom_filters/{id}",
   "title": "Deletar Filtro",
-  "description": "Remove filtro. Remove filtro personalizado permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes. Segmento (contact) so pode ser apagado por administrador ou cargo com contact_manage, campaign_manage ou automation_manage (401). Segmento usado por campanha programada (no publico ou no 'Nao enviar para') NAO e apagado: 422 com message citando a campanha. Pasta compartilhada: so administrador apaga, e ela some para TODA a conta.",
+  "description": "Remove filtro. Remove filtro personalizado permanentemente. CUIDADO: ação irreversível em muitos casos. Verifique dependências antes. Segmento (contact) so pode ser apagado por administrador ou cargo com contact_manage, campaign_manage ou automation_manage (401). Segmento usado por campanha programada (no publico ou no 'Nao enviar para') NAO e apagado: 422 com message citando a campanha. Pasta compartilhada: so administrador apaga, e ela some para TODA a conta. SEGMENTO DE EMPRESAS (11/11/2026): filter_type 'company' (ou 3) = segmento da aba Empresas, da CONTA inteira como o de contatos; qualquer administrador ou atendente com o menu Empresas visivel cria, edita e apaga (menu oculto = 401; modulo Empresas desligado = 403). query = {payload:[...]} no formato de lionchat_companies_filter (regra vazia = 422). Segmento de empresas NAO serve de publico de campanha. Para ver as empresas do segmento, mande o query.payload dele para lionchat_companies_filter.",
   "category": "Filtros Personalizados",
   "params": [
    {
@@ -12095,7 +12099,8 @@
   "related_tools": [
    "lionchat_custom_filters_list",
    "lionchat_custom_filters_create",
-   "lionchat_custom_filters_show"
+   "lionchat_custom_filters_show",
+   "lionchat_companies_filter"
   ]
  },
  {
@@ -12454,7 +12459,9 @@
    "Buscar com filtros antes de outra operação",
    "Auditoria/relatório de empresas ativas"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_companies_filter"
+  ]
  },
  {
   "id": "lionchat_companies_create",
@@ -12615,7 +12622,62 @@
    "Buscar pelo email/telefone parcial",
    "Verificar se já existe antes de criar"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_companies_filter"
+  ]
+ },
+ {
+  "id": "lionchat_companies_filter",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/companies/filter",
+  "title": "Filtrar Empresas",
+  "description": "[2026-11-11] Lista as empresas da conta que atendem as condicoes (aba Empresas > filtro). Mesmo formato do filtro de contatos: payload = lista de condicoes {attribute_key, filter_operator, values, query_operator ('and'/'or', a ultima sem), custom_attribute_type}. 25 por pagina; meta.total_count = total filtrado.\n\nCAMPOS: name (equal_to, not_equal_to, contains, does_not_contain); domain (site), legal_name (razao social), cnpj, phone, email, city, state (os quatro acima + is_present, is_not_present); contacts_count (equal_to, not_equal_to, is_greater_than, is_less_than; valor inteiro); created_at, last_activity_at (today, yesterday, last_days, days_ago, days_before com numero de dias; is_greater_than/is_less_than com data AAAA-MM-DD). Atributo personalizado da EMPRESA: custom_attribute_type 'company_attribute' + a chave do atributo (operadores pelo tipo: texto como os de texto; lista e sim/nao: equal_to/not_equal_to/is_present/is_not_present; numero/data/hora: + is_greater_than/is_less_than). Um atributo de empresa chamado city e OUTRO campo, nunca o endereco.\n\nREGRAS: texto sem maiuscula e sem acento ('sao paulo' acha 'São Paulo'); CNPJ e telefone comparados so pelos numeros (valor sem nenhum numero = 422); 'diferente de' e 'nao contem' trazem tambem a empresa SEM o campo. Campo, operador ou valor que o filtro nao conhece = 422 com o motivo (nunca devolve a lista inteira); payload vazio = 422. Menu Empresas oculto pelo cargo = 401; modulo Empresas desligado = 403.\n\nSEGMENTO SALVO: para listar as empresas de um segmento de empresas, leia o segmento (lionchat_custom_filters_show ou _list com filter_type company) e mande o query.payload dele aqui. Para salvar um filtro como segmento use lionchat_custom_filters_create com filter_type 'company' e query {payload: [...]}.",
+  "category": "Empresas",
+  "params": [
+   {
+    "name": "payload",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "Lista de condicoes: [{attribute_key, filter_operator, values (lista), query_operator ('and' ou 'or'; a ultima sem), custom_attribute_type ('' ou 'company_attribute')}]. Ex.: [{\"attribute_key\":\"city\",\"filter_operator\":\"equal_to\",\"values\":[\"sao paulo\"]}]"
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Busca por nome ou site, aplicada por cima do filtro (opcional)"
+   },
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Pagina (25 por pagina, padrao 1)"
+   },
+   {
+    "name": "sort",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Ordenacao: name, domain, created_at, contacts_count, last_activity_at (prefixo - = decrescente)"
+   }
+  ],
+  "returns": "meta (total_count, page) + payload (array de empresas, mesmo formato de lionchat_companies_list)",
+  "common_use_cases": [
+   "Empresas de uma cidade ou estado",
+   "Empresas com mais de N contatos",
+   "Empresas sem CNPJ cadastrado (cnpj is_not_present)",
+   "Listar as empresas de um segmento de empresas salvo",
+   "Montar a regra antes de salvar um segmento de empresas"
+  ],
+  "related_tools": [
+   "lionchat_companies_list",
+   "lionchat_companies_search",
+   "lionchat_custom_filters_create",
+   "lionchat_custom_filters_list",
+   "lionchat_custom_filters_show"
+  ]
  },
  {
   "id": "lionchat_companies_contacts_list",
