@@ -807,7 +807,7 @@ aiModel nos modos novos (proteção de nós antigos que carregam aiModel de defa
 `aiModel` vazio/ausente = modelo padrão da conta. Com assistente selecionado, o override também vale
 (sobrepõe o modelo que o caminho do assistente usaria). Modelo fora da whitelist = ignorado (cai no
 padrão da conta).
-Exemplo: `{"aiMode":"sentiment","aiAssistantId":"12","aiModel":"gpt-4.1-mini","aiModelExplicit":true}`.
+Exemplo: `{"aiMode":"sentiment","aiModel":"gpt-4.1-mini","aiModelExplicit":true}`.
 
 **A whitelist (`FlowBuilder::RawLlmService::SUPPORTED_MODELS`) é uma lista FECHADA de 19 nomes, SEM
 curinga** — não existe "a família gpt-5 inteira":
@@ -822,14 +822,12 @@ Eles ignoram a temperatura do bloco (só o padrão) e **NÃO valem no bloco de I
 (teto de 15 s — o servidor exclui e usa o fallback). Também não existem `o1-mini`, `gpt-4.5-preview`,
 `gpt-5.2-pro` nem `gpt-5.5-pro` (a OpenAI recusa).
 
-**OBRIGATÓRIO via API — `aiAssistantId`:** os modos `generate`/`intent`/`sentiment`/`extract`
-EXIGEM um `aiAssistantId` válido (id de um assistente Captain da conta). **Sem ele o nó sai pela
-saída `error` desde 20/08/2026** (`AI Assistant not configured`), igual a assistente inexistente na
-conta — antes ficava VERDE e seguia como se a IA tivesse respondido, com a variável de saída
-(`aiResponseVar`/`ai_intent`/`ai_sentiment`) vazia. A tela do Flow Builder preenche esse id pelo
-dropdown; um nó criado via API/MCP SEM `aiAssistantId` "não funciona" por isso. Só rodam sem
-assistente: `aiMode: 'custom'` (motor cru com a chave da conta + `aiModel`) e flow `ai_tool` em
-`generate`/`custom`. A saída fica em `aiResponseVar` (default `ai_response`); `intent` também em
+**`aiAssistantId` só é obrigatório em `generate`** (id de um assistente Captain da conta; é ele que
+traz a base de conhecimento). **Sem ele o nó `generate` sai pela saída `error` desde 20/08/2026**
+(`AI Assistant not configured`). Desde 10/11/2026 **`intent`, `sentiment` e `extract` NÃO usam
+assistente** (chamam a IA direto com a chave da conta + `aiModel`) e a tela nem mostra o campo nesses
+três: não mande `aiAssistantId` neles (se vier, é ignorado). `custom` usa o assistente se houver e roda
+sem (motor cru). Flow `ai_tool` em `generate`/`custom` também roda sem. A saída fica em `aiResponseVar` (default `ai_response`); `intent` também em
 `ai_intent`, `sentiment` em `ai_sentiment`. Nome de variável iniciado por `_` é IGNORADO e cai no
 padrão (prefixo reservado das chaves internas da sessão) — vale pro `apiResponseVar` também.
 
@@ -1566,7 +1564,7 @@ Nodes nunca devem ficar com a mesma coordenada `(x, y)`. Se dois nodes têm posi
 | `method`/`url`/`headers`/`body` no node api | Runtime NÃO lê → GET vazio (ou erro "URL not configured") | `apiMethod`/`apiUrl`/`apiHeaders`/`apiBody` |
 | `{{env.X}}` no node api | Não existe → resolve vazio → 401 | `{{account.custom_attribute.X}}` (secret resolve só no node api) |
 | `{{api_response.payload.campo}}` | `.payload` não existe → vazio | `{{api_response.campo}}` (o corpo fica direto sob a var); status em `{{api_response_status}}` |
-| node `ai` via API sem `aiAssistantId` | Sai pela saída `error` (desde 20/08; antes ficava verde com a variável vazia) | Informe `aiAssistantId` (obrigatório em generate/intent/sentiment/extract) |
+| node `ai` em `generate` via API sem `aiAssistantId` | Sai pela saída `error` (desde 20/08; antes ficava verde com a variável vazia) | Informe `aiAssistantId` (obrigatório só em `generate`; `intent`/`sentiment`/`extract` não usam desde 10/11) |
 | `contextMessages` no node `ai` | Chave errada → descartada em silêncio (fica 5) | `aiContextMessages` (0, 1, 3, 5, 10, 25, 50, 75, 100) |
 | Nome de variável começando com `_` (`set_variable`, `saveVariable`, `apiResponseVar`, `aiResponseVar`) | Prefixo reservado → ignorado / cai no padrão | Nome sem `_` na frente |
 | `{ type: "delay", seconds: 2 }` no send_message | A tela não lê `seconds` → abre como "undefineds" | `duration_seconds` (0-30) |
