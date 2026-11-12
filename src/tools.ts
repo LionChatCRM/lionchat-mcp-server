@@ -502,7 +502,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-09)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-11)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -1140,11 +1140,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
 ▸ ai
   data: { label, aiMode: "generate"|"custom"|"intent"|"sentiment"|"extract", aiPrompt,
-    aiAssistantId,                   // OBRIGATORIO em generate/intent/sentiment/extract — sem ele o node
-                                     // sai pela saida "error" desde 20/08 ('AI Assistant not configured';
-                                     // antes ficava VERDE e seguia como se a IA tivesse respondido).
-                                     // So roda sem assistente: aiMode 'custom' (motor cru com a chave da
-                                     // conta + aiModel) e flow ai_tool em generate/custom
+    aiAssistantId,                   // OBRIGATORIO so em generate — sem ele o node sai pela saida "error"
+                                     // desde 20/08 ('AI Assistant not configured'). Desde 10/11 intent/
+                                     // sentiment/extract NAO usam assistente (IA direto com a chave da conta
+                                     // + aiModel; assistente gravado e ignorado). Tambem roda sem: aiMode
+                                     // 'custom' (motor cru) e flow ai_tool em generate/custom
     aiModel,                         // opcional: modelo LLM SO deste node (ex "gpt-4.1-mini");
                                      // vazio/ausente = modelo padrao da conta; vale em TODOS os
                                      // modos e tambem com assistente (sobrepoe o modelo dele)
@@ -1427,8 +1427,8 @@ sourceHandle OBRIGATORIO casar com handle exposto pelo node source.
 13. Assistente de Formulas no editor (2026-07-10): quem edita pela tela tem preview ao vivo
     (inclusive com contato real), avisos ao digitar e 'Gerar com IA' nos campos de formula —
     ao entregar um flow com Liquid, sugira ao usuario validar as formulas la.
-14. ai: a chave de contexto e aiContextMessages (nao contextMessages); sem aiAssistantId o bloco sai por
-    "error" (nao fica verde). Nome de variavel iniciado por "_" e ignorado em set_variable/saveVariable e
+14. ai: a chave de contexto e aiContextMessages (nao contextMessages); em generate, sem aiAssistantId o bloco
+    sai por "error" (nao fica verde); intent/sentiment/extract dispensam assistente desde 10/11. Nome de variavel iniciado por "_" e ignorado em set_variable/saveVariable e
     cai no padrao em apiResponseVar/aiResponseVar.
 15. send_message: item delay usa duration_seconds (a tela nao le "seconds"). Em caixa oficial ligue
     "window_closed" num bloco com template — sem o fio, janela fechada vira erro.

@@ -207,7 +207,10 @@ atendente). Cadastro da empresa (25/09): `lionchat_companies_create`/`_update` a
 `additional_attributes` com `legal_name`, `cnpj` (validado; grava so digitos), `phone`, `email`,
 `address{cep,street,number,complement,neighborhood,city,state,country}` e
 `social_profiles{linkedin,facebook,instagram,telegram,tiktok,twitter,github}`. MESCLA: mande so o que muda;
-valor vazio apaga aquela chave. Excluir empresa: so administrador; os contatos ficam, so deixam de estar na empresa (as anotacoes da
+valor vazio apaga aquela chave. CNPJ UNICO por empresa na conta (11/11/2026): CNPJ que ja e de outra empresa = 422
+"Ja existe a empresa X com este CNPJ." e NADA do pedido grava — atualize a empresa X (ache pelo nome com
+`lionchat_companies_search`; a busca nao acha por CNPJ). Na importacao em lote, a linha com CNPJ de empresa existente
+ATUALIZA essa empresa. CPF/CNPJ na ficha do CONTATO podem repetir. Excluir empresa: so administrador; os contatos ficam, so deixam de estar na empresa (as anotacoes da
 empresa vao junto).
 
 **Atributos personalizados da EMPRESA (2026-10-15):** campos proprios da empresa que o cliente cria ("Segmento",

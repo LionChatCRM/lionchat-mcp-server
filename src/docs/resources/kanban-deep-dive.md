@@ -283,6 +283,27 @@ existiam).
 
 **NUNCA gravar inteiros direto** — sempre objetos com `{display_id: ...}`. Inteiros diretos causam TypeError no `as_json`.
 
+## Link do quadro filtrado (11/11/2026)
+
+O endereço do Kanban também carrega os filtros do topo. Para mandar "o quadro do funil X só com os cards ganhos da Ana",
+monte o endereço e entregue na resposta (não existe ferramenta para isso):
+
+```
+<painel>/app/accounts/<conta>/kanban?funnel=<funil>&assignee=<id do agente>&status=won
+```
+
+| Parte | Valor |
+|---|---|
+| `assignee` | `all` (todos), `-1` (sem dono) ou o id do agente |
+| `status` | as situações ligadas, por vírgula: `open`, `won`, `lost`, `snoozed` |
+| `label` | nome da etiqueta |
+| `origin` | plataformas por vírgula (as mesmas de `origin_platforms` em `lionchat_kanban_items_list`) |
+| `priority` | `urgent`, `high`, `medium`, `low`, `none` |
+| `offer_name` | nome da oferta (nunca `offer`) |
+| `view` | `list` para abrir na visão Lista |
+
+Quem abre vê só o que já pode ver. Na Agenda vale o mesmo: `<painel>/app/accounts/<conta>/agenda?view=tasks&assignee=<id>&type=task`.
+
 ## Link do card, da aba e da conversa (03/11/2026)
 
 Abrir um card no Kanban muda o endereço da página, e quem abre esse endereço vê a mesma coisa: o quadro daquele funil, o card aberto, a aba escolhida e, se houver, a conversa por cima. **Não existe ferramenta para isso e nem precisa: você monta o endereço com o que já tem e entrega na resposta.** Quando alguém pedir "o link desse card" ou "me manda onde eu vejo isso", é daqui que sai.
