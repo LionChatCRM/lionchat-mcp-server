@@ -265,7 +265,7 @@ bloco — pra isso use `flows_show`. Contadores de sessão (`session_stats`: `to
 }
 ```
 
-**`validation` válidos:** `any`, `options`, `varied_options`, `regex`, `email`, `phone`, `number`, `cpf`, `cnpj`, `cpf_cnpj`, `date`, `rg`, `profession`. As validações cadastrais (`cpf`/`cnpj`/`cpf_cnpj`/`date`/`rg`/`profession`) conferem o formato e, no CPF/CNPJ, o dígito verificador — resposta inválida volta pra `invalidMessage` (respeita `maxRetries`).
+**`validation` válidos:** `any`, `options`, `varied_options`, `regex`, `email`, `phone`, `number`, `cpf`, `cnpj`, `cpf_cnpj`, `date`, `rg`, `profession`. As validações cadastrais (`cpf`/`cnpj`/`cpf_cnpj`/`date`/`rg`/`profession`) conferem o formato e, no CPF/CNPJ, o dígito verificador (o CNPJ com letras da Receita, como `12.ABC.345/01DE-35`, é aceito) — resposta inválida volta pra `invalidMessage` (respeita `maxRetries`).
 
 **`options` normaliza a resposta (2026-06-16):** a comparação com `acceptedOptions` é feita sem acento e sem maiúscula (`I18n.transliterate` + downcase + strip nos dois lados). "São Paulo", "sao paulo" e "SAO PAULO" casam todos.
 
@@ -287,7 +287,7 @@ bloco — pra isso use `flows_show`. Contadores de sessão (`session_stats`: `to
 - `contact_phone` — sobrescreve o telefone do contato
 - `contact_cpf` — campo cadastral CPF (exige `validation: "cpf"`)
 - `contact_cnpj` — campo cadastral CNPJ (exige `validation: "cnpj"`)
-- `contact_document` — CPF ou CNPJ, decide pelo nº de dígitos (exige `validation: "cpf_cnpj"`)
+- `contact_document` — CPF ou CNPJ: grava no CNPJ quando a resposta é um CNPJ válido (inclusive o CNPJ com letras da Receita), senão no CPF (exige `validation: "cpf_cnpj"`)
 - `contact_birthdate` — data de nascimento (exige `validation: "date"`; cliente digita dd/mm/aaaa, salva ISO)
 - `contact_rg` — campo cadastral RG (exige `validation: "rg"`)
 - `contact_profession` — campo cadastral Profissão (exige `validation: "profession"`)
@@ -702,7 +702,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 
 **Empresa do contato (2026-10-16):** a empresa ligada ao contato da conversa (no máximo UMA por contato) vale como VARIÁVEL e como CONDIÇÃO, só com o módulo Empresas ligado.
 - Variável em qualquer bloco de mensagem: `{{contact.company.name}}`, `{{contact.company.legal_name}}`, `{{contact.company.cnpj}}`, `{{contact.company.phone}}`, `{{contact.company.email}}`, `{{contact.company.address.city}}`, `{{contact.company.address.state}}` e `{{contact.company.custom_attribute.<chave>}}` (campo personalizado da empresa). Contato sem empresa = vazio. Data do campo personalizado: DD/MM/AAAA no bloco de mensagem; crua (AAAA-MM-DD) em API, Definir variável e Condição — igual ao atributo do contato.
-- Condição (bloco Condição, aba Atributos, card "Atributo da empresa"): `{ "valueType": "attr_config", "attrSource": "company", "attr_key": "segmento", "operator": "equal", "value": "", "values": ["Varejo"] }`. `attr_key` = chave do campo personalizado OU cadastro com prefixo `company.name`, `company.legal_name`, `company.cnpj` (comparado só pelos dígitos), `company.phone`, `company.email`, `company.address.city`, `company.address.state`. Contato sem empresa = valor vazio (`not_equal`/`is_empty` casam). Módulo Empresas DESLIGADO = a regra NUNCA casa, nem a negativa.
+- Condição (bloco Condição, aba Atributos, card "Atributo da empresa"): `{ "valueType": "attr_config", "attrSource": "company", "attr_key": "segmento", "operator": "equal", "value": "", "values": ["Varejo"] }`. `attr_key` = chave do campo personalizado OU cadastro com prefixo `company.name`, `company.legal_name`, `company.cnpj` (comparado por letras e números, sem pontuação e sem diferença de maiúscula), `company.phone`, `company.email`, `company.address.city`, `company.address.state`. Contato sem empresa = valor vazio (`not_equal`/`is_empty` casam). Módulo Empresas DESLIGADO = a regra NUNCA casa, nem a negativa.
 - `attrSource` fora de `contact`/`conversation`/`card`/`company` NÃO casa (antes comparava a última mensagem do cliente) e marca o bloco com aviso.
 - NÃO vale em condição de SAÍDA (`exit_conditions`), gatilho de entrada, parâmetro de ferramenta de IA nem em `update_attribute` (a ação não grava na empresa).
 

@@ -502,7 +502,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-11)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-12)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -824,8 +824,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     saveTo: "variable"|"contact_name"|"contact_email"|"contact_phone"|"contact_cpf"|"contact_cnpj"|"contact_document"|"contact_birthdate"|"contact_rg"|"contact_profession"|"contact_attr"|"conversation_attr"|"",
     saveVariable, saveAttrKey        // saveAttrKey obrigatorio p/ contact_attr e conversation_attr
   }
-  CPF/CNPJ validam digito verificador (documento falso -> invalidMessage). Alvos cadastrais so com a validation
-    correspondente: cpf=>contact_cpf, cnpj=>contact_cnpj, cpf_cnpj=>contact_document (decide pelos digitos),
+  CPF/CNPJ validam digito verificador (documento falso -> invalidMessage; aceita o CNPJ com letras da Receita). Alvos cadastrais so com a validation
+    correspondente: cpf=>contact_cpf, cnpj=>contact_cnpj, cpf_cnpj=>contact_document (CPF valido vai pro CPF, senao CNPJ),
     date=>contact_birthdate (dd/mm/aaaa->ISO), rg=>contact_rg, profession=>contact_profession. Campo cadastral
     ja preenchido NAO e sobrescrito (imutavel). saveTo contact_attr/conversation_attr: se o atributo tiver tipo
     (number/currency/percent/date/list ou text+regex), a resposta tambem e validada/formatada por esse tipo.
@@ -872,7 +872,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   EMPRESA DO CONTATO (NOVO 16/10 — card "Atributo da empresa", so com o modulo Empresas): regra
     { id, valueType:'attr_config', attrSource:'company', attr_key, operator, value:'', values:[...] }.
     attr_key = chave do campo PERSONALIZADO da empresa OU cadastro com prefixo: company.name,
-    company.legal_name, company.cnpj (comparado so por digitos), company.phone, company.email,
+    company.legal_name, company.cnpj (letras e numeros, sem pontuacao), company.phone, company.email,
     company.address.city, company.address.state. Empresa = a do contato da conversa (no maximo UMA).
     Contato sem empresa = valor vazio (not_equal/is_empty casam). Modulo desligado = NUNCA casa, nem a
     negativa. attrSource fora de contact/conversation/card/company NAO casa. Variaveis da empresa em
