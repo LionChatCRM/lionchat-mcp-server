@@ -24203,7 +24203,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/flow_tools/{id}/executions",
   "title": "Execuções da Ferramenta da IA",
-  "description": "Últimas 50 execuções (manuais e via LLM) com status e duração. ADMIN-ONLY.",
+  "description": "Últimas 50 execuções (manuais e via LLM) com status e duração. ADMIN-ONLY. Cada item traz `conversation: {display_id, contact_name}` (de qual conversa e contato veio a execução); `null` quando foi teste pelo painel.",
   "category": "Ferramentas da IA",
   "params": [
    {
@@ -24214,7 +24214,7 @@
     "description": "ID do flow tool"
    }
   ],
-  "returns": "[{ id, status, started_at, completed_at, duration_ms, error_message }]",
+  "returns": "[{ id, status, started_at, completed_at, duration_ms, error_message, conversation: { display_id, contact_name } | null }]",
   "common_use_cases": [
    "Monitorar saúde da ferramenta",
    "Achar execuções com falha"
@@ -24228,7 +24228,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/flow_tool_executions/{id}",
   "title": "Detalhe de Execução da Ferramenta",
-  "description": "Detalhe completo de UMA execução: entrada, saída, log passo a passo, variáveis, nós visitados e a resposta da IA na sequência (se houver). PII é redigida automaticamente. ADMIN-ONLY.",
+  "description": "Detalhe completo de UMA execução: entrada, saída, log passo a passo, variáveis, nós visitados e a resposta da IA na sequência (se houver). PII é redigida automaticamente. ADMIN-ONLY. Traz `origin` com a conversa (id, display_id, status, inbox_name, channel_type) e o contato (id, name, phone_number, email) que acionou a ferramenta; `null` sem conversa.",
   "category": "Ferramentas da IA",
   "params": [
    {
@@ -24239,7 +24239,7 @@
     "description": "ID da execução (FlowToolExecution)"
    }
   ],
-  "returns": "{ id, flow_id, status, input_params, output_result, execution_log, variables, canvas_detail, ai_response, duration_ms, error_message }",
+  "returns": "{ id, flow_id, status, input_params, output_result, execution_log, variables, canvas_detail, ai_response, duration_ms, error_message, origin }",
   "common_use_cases": [
    "Depurar por que a ferramenta retornou errado pro LLM"
   ],
@@ -33827,7 +33827,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/flow_sessions/{id}",
   "title": "Detalhe de uma Execução de Flow (passo a passo)",
-  "description": "SÓ LEITURA, ADMIN-ONLY, rate limit 30/min por usuário. O detalhe de UMA execução (sessão) de fluxo de conversa: log passo a passo enriquecido (execution_steps, com status e erro por bloco — inclusive falha de entrega assíncrona registrada no passo do bloco), variáveis no fim (variables_snapshot, filtradas), blocos visitados, setas percorridas (traversed_edges) e a conversa. Resolve a FOTO da versão do fluxo da época (flow_snapshot); flow_snapshot_stale=true avisa que o fluxo foi editado durante a execução. execution_log_truncated=true quando o log passou do teto. Os ids vêm de lionchat_flows_executions_list. 404 {error:'Nao encontrado'}.",
+  "description": "SÓ LEITURA, ADMIN-ONLY, rate limit 30/min por usuário. O detalhe de UMA execução (sessão) de fluxo de conversa: log passo a passo enriquecido (execution_steps, com status e erro por bloco — inclusive falha de entrega assíncrona registrada no passo do bloco), variáveis no fim (variables_snapshot, filtradas), blocos visitados, setas percorridas (traversed_edges) e a conversa. Resolve a FOTO da versão do fluxo da época (flow_snapshot); flow_snapshot_stale=true avisa que o fluxo foi editado durante a execução. execution_log_truncated=true quando o log passou do teto. Os ids vêm de lionchat_flows_executions_list. 404 {error:'Nao encontrado'}. Traz também `origin`: conversa (display_id, status, caixa, canal) e contato (id, nome, telefone, e-mail), no mesmo formato da ferramenta de IA.",
   "category": "Flows",
   "params": [
    {
