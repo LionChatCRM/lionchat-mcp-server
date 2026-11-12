@@ -21694,7 +21694,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/captain/documents/{id}/recrawl",
   "title": "Re-indexar Documento",
-  "description": "Reprocessa e reindexa um documento JA EXISTENTE da base de conhecimento (recrawl). NAO cria um documento novo. Reseta o status do documento e dispara o reprocessamento (crawl/chunks/FAQs). Retorna o mesmo documento atualizado.",
+  "description": "Reprocessa e reindexa um documento JA EXISTENTE da base de conhecimento (recrawl). NAO cria um documento novo. Reseta o status do documento e dispara o reprocessamento (crawl/chunks/FAQs). Retorna o mesmo documento atualizado. Para trocar o ARQUIVO de um PDF/.md, use lionchat_captain_documents_replace_file (o re-indexar le o arquivo que ja esta no documento).",
   "category": "Base de Conhecimento",
   "params": [
    {
@@ -21715,6 +21715,40 @@
    "lionchat_captain_documents_list",
    "lionchat_captain_documents_create",
    "lionchat_captain_documents_destroy"
+  ]
+ },
+ {
+  "id": "lionchat_captain_documents_replace_file",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/documents/{id}/replace_file",
+  "title": "Trocar Arquivo do Documento",
+  "description": "Troca o arquivo (PDF ou .md) de um documento JA EXISTENTE da base de conhecimento e refaz a leitura do zero: apaga a copia antiga guardada na OpenAI, envia o arquivo novo e regera as perguntas e respostas a partir dele. As perguntas antigas so saem quando as novas ficam prontas (se a geracao falhar ou voltar vazia, as antigas continuam). Perguntas editadas a mao sao refeitas. So documento que tem arquivo: documento escrito a mao (use update) ou de site (use o re-indexar) responde 422. Mesma permissao do re-indexar.",
+  "category": "Base de Conhecimento",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do documento existente (PDF ou .md)"
+   },
+   {
+    "name": "pdf_file",
+    "type": "file",
+    "location": "body",
+    "required": true,
+    "description": "Arquivo novo, PDF ou .md, ate 10 MB (multipart upload)"
+   }
+  ],
+  "returns": "documento atualizado (mesmo ID, status in_progress, external_link com o nome do arquivo novo)",
+  "common_use_cases": [
+   "Atualizar tabela de precos ou regras em PDF sem apagar o documento",
+   "Trocar o manual por uma versao nova"
+  ],
+  "related_tools": [
+   "lionchat_captain_documents_show",
+   "lionchat_captain_documents_create_1",
+   "lionchat_captain_documents_update"
   ]
  },
  {
