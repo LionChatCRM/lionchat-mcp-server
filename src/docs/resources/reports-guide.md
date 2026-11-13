@@ -524,6 +524,10 @@ gente?", "quem veio da campanha X navegou por onde antes de chamar?".
 ONDE vieram os leads, cruzando os campos `origin_*` das conversas com os leads órfãos (que ainda não
 viraram conversa). É um relatório de LEITURA puro — não cria nem altera nada.
 
+**Contato importado por planilha (13/11):** ganha origem `import` / tipo `importacao` ("Importação de planilha"), mas
+fica FORA dos leads órfãos — só entra no relatório quando tiver conversa (decisão do dono). Uma planilha importada não
+aparece como leads no dia da importação.
+
 **Filtros (query, todos opcionais):** `since` / `until` (ISO 8601; default = 30 dias atrás → agora),
 `funnel_id`, `platform`, `kind`, `paid`, `campaign`, `adset`, `inbox_id`, `assignee_id`, `group_by`.
 `campaign`/`adset` aceitam `__none__` para filtrar so os leads SEM aquele nome (campanha/conjunto vazio).

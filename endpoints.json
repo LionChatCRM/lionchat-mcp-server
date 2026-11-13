@@ -123,7 +123,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts",
   "title": "Listar Contatos",
-  "description": "Lista contatos. meta usa count/current_page. Ordene com sort (ex sort=-name).",
+  "description": "Lista contatos. meta usa count/current_page. Ordene com sort (ex sort=-name). Com contact_import_id lista só os contatos de uma importação (created ou updated via import_result) — nunca use essa lista para excluir em massa sem conferir: 'updated' são clientes que já existiam.",
   "category": "Contatos",
   "params": [
    {
@@ -154,6 +154,20 @@
     "location": "query",
     "required": false,
     "description": "Incluir inboxes do contato"
+   },
+   {
+    "name": "contact_import_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Só os contatos de UMA importação (id de lionchat_contact_imports_list). Padrão: os que a planilha CRIOU. Importação de outra conta ou número inválido = lista vazia."
+   },
+   {
+    "name": "import_result",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Junto com contact_import_id: created (padrão, os que a planilha criou) ou updated (os que já existiam e foram atualizados)."
    }
   ],
   "returns": "meta (contadores globais) + payload (array de contatos)",
@@ -919,7 +933,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/import",
   "title": "Importar Contatos",
-  "description": "Importa contatos em lote via CSV. **Requer perfil Administrador.**. Cria novo contato. Obrigatórios: import_file. Valida unicidade quando aplicável. Retorna o contato criado com ID atribuído. REGRA DO DDI (18/08): o telefone precisa vir COM o codigo do pais (5511988887777 ou +351912345678; o + e opcional). O sistema NAO completa mais 55: sem DDI ou numero que nao existe em pais nenhum = ERRO na linha (o contato nao e criado; o relatorio de erros mostra linha a linha); comecando com 0 = recusado; brasileiro com 55 e 12-13 digitos e aceito mesmo no formato antigo sem o 9o digito. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): linha com telefone que ja e de outro contato da conta e recusada 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe.",
+  "description": "Importa contatos em lote via CSV. **Requer perfil Administrador.**. Cria novo contato. Obrigatórios: import_file. Valida unicidade quando aplicável. Retorna o contato criado com ID atribuído. REGRA DO DDI (18/08): o telefone precisa vir COM o codigo do pais (5511988887777 ou +351912345678; o + e opcional). O sistema NAO completa mais 55: sem DDI ou numero que nao existe em pais nenhum = ERRO na linha (o contato nao e criado; o relatorio de erros mostra linha a linha); comecando com 0 = recusado; brasileiro com 55 e 12-13 digitos e aceito mesmo no formato antigo sem o 9o digito. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): linha com telefone que ja e de outro contato da conta e recusada 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe. NOVO (2026-11): toda importação entra no histórico (lionchat_contact_imports_list) e o contato CRIADO por ela ganha a origem 'Importação de planilha' (origin_first_platform/origin_last_platform = import, kind importacao); contato que já existia não muda a origem.",
   "category": "Contatos",
   "params": [
    {
@@ -943,7 +957,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/export",
   "title": "Exportar Contatos",
-  "description": "Exporta contatos (gera CSV em job async). NOVO (2026-06): exportacao COMPLETA por padrao — cadastral (16 colunas), etiquetas, empresa/cidade/pais, atributos do contato e da conversa (prefixos contato_/conversa_), ultima conversa e card do Kanban. Passar column_names mantem o formato antigo (so as colunas pedidas).",
+  "description": "Exporta contatos (gera CSV em job async). NOVO (2026-06): exportacao COMPLETA por padrao — cadastral (16 colunas), etiquetas, empresa/cidade/pais, atributos do contato e da conversa (prefixos contato_/conversa_), ultima conversa e card do Kanban. Passar column_names mantem o formato antigo (so as colunas pedidas). NOVO (2026-11): cada exportação fica no histórico (lionchat_contact_exports_list) com arquivo próprio por 30 dias; o e-mail leva à tela do histórico e o download é por lionchat_contact_exports_download (endereço de 5 min).",
   "category": "Contatos",
   "params": [
    {
@@ -4638,7 +4652,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/import_csv",
   "title": "Importar Contatos (Wizard CSV)",
-  "description": "Importa contatos via wizard CSV (assincrono). **Requer perfil Administrador.** Obrigatórios: file, mappings. Retorna { import_id } para acompanhar o progresso via import_status.",
+  "description": "Importa contatos via wizard CSV (assincrono). **Requer perfil Administrador.** Obrigatórios: file, mappings. Retorna { import_id } para acompanhar o progresso via import_status. NOVO (2026-11): toda importação entra no histórico (lionchat_contact_imports_list) e o contato CRIADO por ela ganha a origem 'Importação de planilha' (origin_first_platform/origin_last_platform = import, kind importacao); contato que já existia não muda a origem.",
   "category": "Contatos",
   "params": [
    {
@@ -4673,6 +4687,110 @@
    "lionchat_contacts_create_7",
    "lionchat_contacts_show_1",
    "lionchat_contacts_import"
+  ]
+ },
+ {
+  "id": "lionchat_contact_imports_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contact_imports",
+  "title": "Listar Histórico de Importações de Contatos",
+  "description": "Histórico de TODA importação de contatos da conta (planilha de Contatos, planilha de campanha e importação pela API), mais recente primeiro, 20 por página. Cada item: id, source (contacts | campaign | kanban | api), file_name (a planilha NÃO é guardada, só o nome), status (processing | completed | failed | interrupted), total_records, created_count, updated_count, error_count, user_name (vazio = sistema/API), created_at e finished_at (unix). Criados/atualizados são contados por quem de fato entrou (lote que roda de novo não conta duas vezes). Exige administrador ou cargo com contact_export_import.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (padrão 1, 20 por página)"
+   }
+  ],
+  "returns": "meta {count, current_page, per_page} + payload (array de importações)",
+  "common_use_cases": [
+   "Saber quem importou uma lista e quando",
+   "Conferir quantos contatos uma planilha criou ou atualizou",
+   "Achar a importação para ver os contatos dela"
+  ],
+  "related_tools": [
+   "lionchat_contact_imports_show",
+   "lionchat_contacts_list",
+   "lionchat_contacts_create_8"
+  ]
+ },
+ {
+  "id": "lionchat_contact_imports_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contact_imports/{import_id}",
+  "title": "Ver Importação de Contatos",
+  "description": "Detalhe de UMA importação de contatos: os mesmos campos da lista + errors_sample (até 50 linhas com erro, cada uma {row, message}; row = linha da planilha). Para ver os contatos dela use lionchat_contacts_list com contact_import_id (criados) e import_result=updated (os que já existiam). Importação de outra conta responde 404. Exige administrador ou cargo com contact_export_import.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "import_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da importação (campo id da lista)"
+   }
+  ],
+  "returns": "Objeto da importação com errors_sample",
+  "common_use_cases": [
+   "Ver por que linhas de uma planilha deram erro",
+   "Montar o resumo de uma importação"
+  ],
+  "related_tools": [
+   "lionchat_contact_imports_list",
+   "lionchat_contacts_list"
+  ]
+ },
+ {
+  "id": "lionchat_contact_exports_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contact_exports",
+  "title": "Listar Histórico de Exportações de Contatos",
+  "description": "Histórico das exportações de contatos da conta, mais recente primeiro, 20 por página. Cada item: id, status (queued | completed | failed), exported_count, filter_summary ({label, conditions}), user_name, file_available (o arquivo vale 30 dias), expires_at, created_at, finished_at (unix). Cada exportação tem arquivo PRÓPRIO (uma não apaga a outra). Exige administrador ou cargo com contact_export_import.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (padrão 1, 20 por página)"
+   }
+  ],
+  "returns": "meta {count, current_page, per_page} + payload (array de exportações)",
+  "common_use_cases": [
+   "Saber quem exportou a lista de contatos e quando",
+   "Pegar o arquivo de uma exportação recente"
+  ],
+  "related_tools": [
+   "lionchat_contact_exports_download",
+   "lionchat_contacts_create_5"
+  ]
+ },
+ {
+  "id": "lionchat_contact_exports_download",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contact_exports/{export_id}/download",
+  "title": "Baixar Exportação de Contatos",
+  "description": "Devolve {url} para baixar o CSV de UMA exportação. O endereço vale 5 MINUTOS — usar na hora, nunca guardar nem repassar como link permanente (é a lista de contatos da conta, dado pessoal). Arquivo com mais de 30 dias responde 410 (exportar de novo). Exige administrador ou cargo com contact_export_import.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "export_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da exportação (campo id da lista)"
+   }
+  ],
+  "returns": "{ url } (válido por 5 minutos) ou 410 se o arquivo venceu",
+  "common_use_cases": [
+   "Baixar o CSV de uma exportação recente"
+  ],
+  "related_tools": [
+   "lionchat_contact_exports_list"
   ]
  },
  {

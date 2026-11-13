@@ -1075,6 +1075,10 @@ Custom attribute em lugar errado vira:
 - **Import de contatos: o DDI é da planilha.** O sistema não completa 55; sem DDI = erro na linha;
   `contacts_import_validate` NÃO valida telefone. No import do Kanban, telefone inválido cria card
   SEM contato em silêncio. Oriente o cliente a subir `5511988887777` ou `+351912345678`.
+- **Histórico de importação (13/11):** toda importação de contatos fica em `lionchat_contact_imports_list`
+  (quem, quando, arquivo, criados/atualizados/erros). Para "desfazer uma planilha", liste SÓ os criados
+  (`lionchat_contacts_list` com `contact_import_id`) e confirme com o cliente antes de excluir: os de
+  `import_result=updated` são clientes que JÁ existiam. Contato criado por planilha tem origem `import`.
 - **Caixa oficial com aviso de bloqueio por pagamento** (`whatsapp_send_blocked_billing`):
   `GET /inboxes/{id}/health` consulta a Meta e LIMPA o aviso se o envio voltou — além de sucesso
   de template, é o único jeito de limpar.
