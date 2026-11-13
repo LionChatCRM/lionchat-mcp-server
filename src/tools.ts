@@ -1098,7 +1098,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       caixa da conversa, a execucao e RECUSADA e o passo fica com ERRO no historico
       (inbox_mismatch) — antes rodava no lugar errado em silencio. Flow-alvo do tipo 'action' e
       SEMPRE aceito, de qualquer origem, porque nao pertence a caixa nenhuma.
-      Flow de IA (ai_tool) nunca pode ser alvo), deactivate_flow({}),
+      Flow de IA (ai_tool) nunca pode ser alvo), stop_flow({flow_id}) — NOVO 13/11: encerra a execucao
+      VIVA (ativa, esperando resposta ou pausada) do flow escolhido NESTA conversa, inclusive a parada numa
+      espera (o despertador nao a acorda mais); deixa pilula na conversa. Nada rodando = passo verde com
+      aviso; flow_id do PROPRIO flow ou de flow fora da conta = passo com ERRO. deactivate_flow({}),
       send_conversion({destinations:['meta'|'ga4'|'google_ads'], event_names:{meta?,google_ads?,ga4?},
         messaging_event_names:{meta?}, event_name, value?}) — NOVO 01/09, evento POR DESTINO desde 02/09,
         evento de ANUNCIO DE WHATSAPP desde 10/09: manda o evento de conversao pro

@@ -26,6 +26,7 @@ Como criar fluxos do LionChat (FlowBuilder) que abrem certinhos no canvas, sem n
 | Dividir na proporção entre branches (A/B) | `randomizer` | - |
 | Gerir grupo WhatsApp: criar/buscar, nome/foto/descrição, participantes, admins, convite (WAHA) | `update_group` (uma operação por bloco via `groupOperation`) | - |
 | Iniciar outro fluxo | `action` com `key: 'start_flow'` OU node `activate_flow` | - |
+| Encerrar a execução de outro fluxo nesta conversa | `action` com `key: 'stop_flow'` | - |
 | Encerrar ramo / definir retorno de ai_tool | `end` | - |
 | Anotação visual no canvas (não executa) | `note` | - |
 
@@ -601,6 +602,7 @@ o botão "Usar variável" ao lado do campo alterna lista fixa ↔ variável.
 | `add_card_offer` | `{ offer_id, use_custom_value?, custom_value?, funnel_id?, card_source? }` | Adiciona uma OFERTA (produto/serviço) ao card. `offer_id` de `offers_list`. `use_custom_value: true` + `custom_value` grava um valor personalizado na oferta; senão usa o valor cadastrado. O total do card recalcula sozinho (soma das ofertas). Respeita `card_source` (funnel só localiza o card) |
 | `send_webhook` | `{ url, headers?, body? }` | Dispara webhook externo |
 | `start_flow` | `{ flow_id }` | Inicia outro fluxo. **NÃO encerra o fluxo de origem** (desde 31/08): se houver bloco ligado depois dele, o fluxo SEGUE normalmente. Sendo o último do desenho, o fluxo termina ali como sempre. |
+| `stop_flow` (novo 2026-11-13) | `{ flow_id }` | Encerra a execução VIVA (ativa, esperando resposta ou pausada) do fluxo escolhido NESTA conversa — inclusive a que está parada numa espera, que não volta a andar. Deixa uma pílula na conversa. Nada rodando = passo verde avisando; `flow_id` do PRÓPRIO fluxo ou de fluxo que não é da conta = passo com ERRO. Aba Sistema (só flow `conversation` e `action`; não existe em `ai_tool`). |
 | `send_conversion` (novo 2026-09-01; `event_names` 2026-09-02; `messaging_event_names` 2026-09-10) | `{ destinations: ['meta'\|'ga4'\|'google_ads'], event_names: { meta?, google_ads?, ga4? }, messaging_event_names: { meta? }, event_name (reserva), value? }` | Manda o evento de conversão pro Meta (CAPI), Google Ads e/ou GA4 — o mesmo caminho do Funil, de dentro do fluxo. Aba Sistema (só flow `conversation`). Ver bloco próprio abaixo |
 | `deactivate_flow` ou `disable_flow` | `{}` | Encerra fluxo atual |
 | `set_booking_situation` (novo 2026-09-14) | `{ situation: 'cancelled' \| 'completed' \| 'attended' \| 'no_show' \| 'confirmed' }` | Muda a situação do agendamento **que disparou o fluxo** (gatilho de agendamento do bloco Início, ou fluxo ligado na configuração do tipo de agendamento). Aba **Agenda** (só flow `conversation`, só com a Agenda ligada na conta). Disparado por outra coisa: **não faz efeito e o passo fica com erro visível** (não há como adivinhar o agendamento). Já no estado pedido = passo PULADO, sem escrita (sem evento, sem laço). `cancelled` cancela o **agendamento** (desarma lembretes, invalida o link de gerenciar). Origem gravada = `fluxo`, ator = o próprio flow. Sem `rescheduled`/`snoozed`: o bloco não mexe em data |
