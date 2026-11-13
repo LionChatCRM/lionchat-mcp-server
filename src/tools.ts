@@ -1080,6 +1080,17 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         PASSAGEM do bloco (repeticao do mesmo passo nao duplica). Freio de 1 tarefa por segundo por conta (passo com
         vaga futura fica verde "nasce as HH:MM:SS"). Quem agendou = o Fluxo (booking_source 'fluxo'); o historico do
         card diz "Fluxo X criou uma tarefa ..." / "Fluxo X nao criou a tarefa: motivo".
+      complete_account_task({}), cancel_account_task({}),
+      set_account_task_attendance({attendance:'attended'|'no_show'}) — NOVO 13/11/2026: operacoes sobre a
+        tarefa que o fluxo CRIOU (num passo create_account_task anterior do mesmo flow) ou sobre o
+        AGENDAMENTO que o disparou (trigger_booking_id) — NAO "qualquer tarefa da conversa". Mesma aba
+        Agenda e mesmo gate do create_account_task (exige a Agenda unificada; nao roda em ai_tool nem em
+        grupo). Reusam o motor do set_booking_situation: idempotente (ja no estado pedido = PULADO sem
+        escrita, sem laco); CANCELAR numa tarefa COM agendamento desarma o agendamento (lembrete + link),
+        igual ao 'cancelled' do set_booking_situation; marcar presenca grava Compareceu/Faltou. Sem tarefa
+        alvo = PULADO nomeando a operacao ("nenhuma tarefa deste fluxo para concluir"), nao erro. Marcar
+        presenca numa sessao de um PROGRAMA DE TRATAMENTO consome aquela sessao (igual ao painel; a ultima
+        sessao fecha o programa). Adiar + recorrencia/varios responsaveis/retorno do ID = fase 2 (ainda nao).
     Sistema (SO flow conversation e flow action): send_webhook({url,headers?,body?}), start_flow({flow_id}
       — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save, mas na execucao
       o passo fica com ERRO visivel no historico (self_reference) e o fluxo para ali.
