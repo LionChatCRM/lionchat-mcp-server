@@ -381,6 +381,12 @@ conflitantes e não-migráveis; contato sem conversa é ignorado, e os baldes fe
   gravou "0 migradas" por causa de um grupo, e na prática teria falhado em 100% dos contatos, porque o
   formato de identificador do QR Code não estava sendo convertido. Se o cliente tentou migrar antes
   dessa data e não deu certo, mande tentar de novo.
+- **Desde 13/11 a caixa Oficial também pode ser a ORIGEM** (Oficial → QR Code e Oficial → Oficial). As
+  tools sempre aceitaram; o que faltava era a aba na tela.
+- **Destino Oficial de OUTRO número: a conversa chega com a janela de 24h fechada.** A última fala do
+  cliente foi para o número antigo, e a Meta recusa texto livre até ele escrever para o número novo.
+  Responder exige modelo aprovado; quando o cliente escreve, a janela abre na mesma conversa. No mesmo
+  número nada muda.
 
 ## Receitas de ação (qual tool usar pra cada coisa)
 

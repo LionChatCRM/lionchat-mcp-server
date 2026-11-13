@@ -206,8 +206,8 @@ depois some. A lista é fonte única (`LeadForm::NODE_DATA_KEYS` no servidor, es
 
 **`field_type`** (do `question`): `short_text`, `long_text`, `email`, `phone`, `date`, `time`,
 `datetime`, `number`, `rating` (usa `scale`), `url`, `file_upload` (usa `accept`), e os documentos
-com validação de verdade: `cpf`, `cnpj`, `cep` (dígito verificador/8 dígitos; gravam só números;
-erros `invalid_cpf`/`invalid_cnpj`/`invalid_cep`).
+com validação de verdade: `cpf`, `cnpj`, `cep` (dígito verificador/8 dígitos; CPF e CEP gravam só números; o CNPJ aceita o formato com letras da Receita
+e grava sem pontuação, letras em maiúscula; erros `invalid_cpf`/`invalid_cnpj`/`invalid_cep`).
 - `time` grava `HH:MM` (24h; erro `invalid_time`).
 - `datetime` grava `AAAA-MM-DDTHH:MM` — hora local de quem preencheu, SEM fuso; o fuso de leitura é
   o da definição do atributo de destino (erro `invalid_datetime`).

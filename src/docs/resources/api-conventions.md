@@ -514,7 +514,7 @@ administrador ou atendente com o menu Empresas visível cria, edita e apaga; mó
 público de campanha. A lista filtrada é `POST companies/filter` com o mesmo `payload` do filtro de contatos; campos:
 `name`, `domain`, `legal_name`, `cnpj`, `phone`, `email`, `city`, `state`, `contacts_count`, `created_at`,
 `last_activity_at` e atributos de empresa com `custom_attribute_type: company_attribute`. Texto é comparado sem maiúscula
-e sem acento; CNPJ e telefone só pelos números; "diferente de" traz a empresa sem o campo. Campo/operador desconhecido = 422.
+e sem acento; telefone só pelos números; CNPJ por letras e números, sem pontuação e sem diferença de maiúscula (aceita o CNPJ com letras da Receita); "diferente de" traz a empresa sem o campo. Campo/operador desconhecido = 422.
 
 ### Pasta de conversa compartilhada (2026-10-27)
 

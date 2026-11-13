@@ -204,7 +204,7 @@ card com `contacts[{id,name}]`, so os que o usuario ve no quadro). No card do qu
 `conversation.contact.company_id`/`company_name` dizem a empresa do contato do card. Contratos dos contatos: `lionchat_signature_envelopes_list` com `company_id`.
 Anotacao da empresa: `lionchat_companies_notes_create` / `_update` / `_destroy` (`{note:{content}}`; qualquer
 atendente). Cadastro da empresa (25/09): `lionchat_companies_create`/`_update` aceitam
-`additional_attributes` com `legal_name`, `cnpj` (validado; grava so digitos), `phone`, `email`,
+`additional_attributes` com `legal_name`, `cnpj` (validado; grava sem pontuacao, com letras em maiuscula — aceita o CNPJ com letras da Receita, ex. `12.ABC.345/01DE-35` vira `12ABC34501DE35`; CNPJ so de numeros continua so numeros), `phone`, `email`,
 `address{cep,street,number,complement,neighborhood,city,state,country}` e
 `social_profiles{linkedin,facebook,instagram,telegram,tiktok,twitter,github}`. MESCLA: mande so o que muda;
 valor vazio apaga aquela chave. CNPJ UNICO por empresa na conta (11/11/2026): CNPJ que ja e de outra empresa = 422
@@ -234,7 +234,7 @@ quarto tipo de definicao, separado de conversa, contato e variavel de conta:
   tem no maximo UMA empresa (`contacts.company_id`); a conversa nao tem empresa propria. Com o modulo Empresas ligado:
   - **Variavel** em mensagem, resposta pronta, automacao, fluxo, campanha e mensagem agendada:
     `{{contact.company.custom_attribute.<chave>}}` (data sai DD/MM/AAAA) e o cadastro `{{contact.company.name}}`,
-    `{{contact.company.legal_name}}`, `{{contact.company.cnpj}}` (so digitos), `{{contact.company.phone}}`,
+    `{{contact.company.legal_name}}`, `{{contact.company.cnpj}}` (sem pontuacao), `{{contact.company.phone}}`,
     `{{contact.company.email}}`, `{{contact.company.address.city}}`, `{{contact.company.address.state}}`.
     `{{contact.company}}` sozinho imprime o nome. Contato sem empresa = vazio, sem erro.
   - **Modelo oficial do WhatsApp** (`variable_mapping`): campo personalizado com
@@ -243,7 +243,7 @@ quarto tipo de definicao, separado de conversa, contato e variavel de conta:
     `address.city`, `address.state`). O nome da empresa ja e `contact.company_name`.
   - **Condicao do bloco Condicao do fluxo:** regra `{"valueType": "attr_config", "attrSource": "company",
     "attr_key": "<chave>", "operator": "...", "value": "", "values": [...]}`. `attr_key` = chave personalizada OU
-    cadastro com prefixo: `company.name`, `company.legal_name`, `company.cnpj` (comparado por digitos),
+    cadastro com prefixo: `company.name`, `company.legal_name`, `company.cnpj` (comparado por letras e numeros, sem pontuacao),
     `company.phone`, `company.email`, `company.address.city`, `company.address.state`. Contato sem empresa = valor
     vazio (os negativos casam).
   - **Condicao de automacao e filtro da lista de contatos** (`lionchat_contacts_filter`, segmento salvo, acao em

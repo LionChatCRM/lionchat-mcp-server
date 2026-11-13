@@ -502,7 +502,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-11)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-13)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -564,13 +564,18 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     atributo pro valor que casa, RE-ENTRAM a cada mudanca; config {logic:'and'|'or', rules:[{attr_key,
     operator, value | values:[...]}]}; attrSource IMPLICITO pela chave do gatilho (conversa vs card),
     NAO informe; operadores da condition EXCETO is_empty/is_not_empty (removidos do contexto reativo
-    09/07 — use so no node condition); card_attribute_changed aceita funnel_id/card_source
-    opcionais na rule),
+    09/07 — use so no node condition) + became_filled|became_empty|value_replaced (12/11: 'Foi
+    preenchido' = estava vazio e recebeu valor, dispara de novo se apagado e preenchido, conversa que NASCE
+    com o campo conta; 'Foi apagado'; 'Trocou de valor' = de um valor pra outro, nunca saindo/indo pro vazio
+    — olham o ANTES e o DEPOIS, SEM value; vazio = nulo, texto em branco, campo ausente, lista vazia; ex. 1o
+    agendamento so: {attr_key:'meet_link', operator:'became_filled'}); card_attribute_changed aceita
+    funnel_id/card_source opcionais na rule),
     contact_attribute_changed (NOVO 2026-07-22 — 'Atributo do contato muda': dispara quando um
     custom_attribute do CONTATO muda e a condicao casa, mesmo com o contato fora de flow. Item:
     {key:'contact_attribute_changed', config:{logic:'and'|'or', rules:[{attrSource:'contact',
     attr_key, operator, value | values:[...]}]}} — 1 a 10 regras; DIFERENTE dos irmaos de 08/07,
-    aqui o attrSource VAI na rule e e SEMPRE 'contact'; operadores iguais aos do node condition.
+    aqui o attrSource VAI na rule e e SEMPRE 'contact'; operadores iguais aos do node condition
+    + os 3 de mudanca (became_filled/became_empty/value_replaced, sem value).
     VERSAO SEGURA por decisao de produto: dispara SO na conversa mais recente que JA EXISTE numa
     caixa do flow (reabre se resolvida); contato sem conversa NAO dispara e NUNCA cria conversa.
     Dedup 30s por contato, anti-loop por profundidade de cadeia; so flows de conversa),
@@ -824,8 +829,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     saveTo: "variable"|"contact_name"|"contact_email"|"contact_phone"|"contact_cpf"|"contact_cnpj"|"contact_document"|"contact_birthdate"|"contact_rg"|"contact_profession"|"contact_attr"|"conversation_attr"|"",
     saveVariable, saveAttrKey        // saveAttrKey obrigatorio p/ contact_attr e conversation_attr
   }
-  CPF/CNPJ validam digito verificador (documento falso -> invalidMessage). Alvos cadastrais so com a validation
-    correspondente: cpf=>contact_cpf, cnpj=>contact_cnpj, cpf_cnpj=>contact_document (decide pelos digitos),
+  CPF/CNPJ validam digito verificador (documento falso -> invalidMessage; aceita o CNPJ com letras da Receita). Alvos cadastrais so com a validation
+    correspondente: cpf=>contact_cpf, cnpj=>contact_cnpj, cpf_cnpj=>contact_document (CPF valido vai pro CPF, senao CNPJ),
     date=>contact_birthdate (dd/mm/aaaa->ISO), rg=>contact_rg, profession=>contact_profession. Campo cadastral
     ja preenchido NAO e sobrescrito (imutavel). saveTo contact_attr/conversation_attr: se o atributo tiver tipo
     (number/currency/percent/date/list ou text+regex), a resposta tambem e validada/formatada por esse tipo.
@@ -872,7 +877,7 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   EMPRESA DO CONTATO (NOVO 16/10 — card "Atributo da empresa", so com o modulo Empresas): regra
     { id, valueType:'attr_config', attrSource:'company', attr_key, operator, value:'', values:[...] }.
     attr_key = chave do campo PERSONALIZADO da empresa OU cadastro com prefixo: company.name,
-    company.legal_name, company.cnpj (comparado so por digitos), company.phone, company.email,
+    company.legal_name, company.cnpj (letras e numeros, sem pontuacao), company.phone, company.email,
     company.address.city, company.address.state. Empresa = a do contato da conversa (no maximo UMA).
     Contato sem empresa = valor vazio (not_equal/is_empty casam). Modulo desligado = NUNCA casa, nem a
     negativa. attrSource fora de contact/conversation/card/company NAO casa. Variaveis da empresa em
@@ -1075,6 +1080,17 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
         PASSAGEM do bloco (repeticao do mesmo passo nao duplica). Freio de 1 tarefa por segundo por conta (passo com
         vaga futura fica verde "nasce as HH:MM:SS"). Quem agendou = o Fluxo (booking_source 'fluxo'); o historico do
         card diz "Fluxo X criou uma tarefa ..." / "Fluxo X nao criou a tarefa: motivo".
+      complete_account_task({}), cancel_account_task({}),
+      set_account_task_attendance({attendance:'attended'|'no_show'}) — NOVO 13/11/2026: operacoes sobre a
+        tarefa que o fluxo CRIOU (num passo create_account_task anterior do mesmo flow) ou sobre o
+        AGENDAMENTO que o disparou (trigger_booking_id) — NAO "qualquer tarefa da conversa". Mesma aba
+        Agenda e mesmo gate do create_account_task (exige a Agenda unificada; nao roda em ai_tool nem em
+        grupo). Reusam o motor do set_booking_situation: idempotente (ja no estado pedido = PULADO sem
+        escrita, sem laco); CANCELAR numa tarefa COM agendamento desarma o agendamento (lembrete + link),
+        igual ao 'cancelled' do set_booking_situation; marcar presenca grava Compareceu/Faltou. Sem tarefa
+        alvo = PULADO nomeando a operacao ("nenhuma tarefa deste fluxo para concluir"), nao erro. Marcar
+        presenca numa sessao de um PROGRAMA DE TRATAMENTO consome aquela sessao (igual ao painel; a ultima
+        sessao fecha o programa). Adiar + recorrencia/varios responsaveis/retorno do ID = fase 2 (ainda nao).
     Sistema (SO flow conversation e flow action): send_webhook({url,headers?,body?}), start_flow({flow_id}
       — flow_id tem que ser de OUTRO flow: apontar pro proprio flow e aceito no save, mas na execucao
       o passo fica com ERRO visivel no historico (self_reference) e o fluxo para ali.
@@ -1082,7 +1098,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       caixa da conversa, a execucao e RECUSADA e o passo fica com ERRO no historico
       (inbox_mismatch) — antes rodava no lugar errado em silencio. Flow-alvo do tipo 'action' e
       SEMPRE aceito, de qualquer origem, porque nao pertence a caixa nenhuma.
-      Flow de IA (ai_tool) nunca pode ser alvo), deactivate_flow({}),
+      Flow de IA (ai_tool) nunca pode ser alvo), stop_flow({flow_id}) — NOVO 13/11: encerra a execucao
+      VIVA (ativa, esperando resposta ou pausada) do flow escolhido NESTA conversa, inclusive a parada numa
+      espera (o despertador nao a acorda mais); deixa pilula na conversa. Nada rodando = passo verde com
+      aviso; flow_id do PROPRIO flow ou de flow fora da conta = passo com ERRO. deactivate_flow({}),
       send_conversion({destinations:['meta'|'ga4'|'google_ads'], event_names:{meta?,google_ads?,ga4?},
         messaging_event_names:{meta?}, event_name, value?}) — NOVO 01/09, evento POR DESTINO desde 02/09,
         evento de ANUNCIO DE WHATSAPP desde 10/09: manda o evento de conversao pro

@@ -123,7 +123,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts",
   "title": "Listar Contatos",
-  "description": "Lista contatos. meta usa count/current_page. Ordene com sort (ex sort=-name).",
+  "description": "Lista contatos. meta usa count/current_page. Ordene com sort (ex sort=-name). Com contact_import_id lista só os contatos de uma importação (created ou updated via import_result) — nunca use essa lista para excluir em massa sem conferir: 'updated' são clientes que já existiam.",
   "category": "Contatos",
   "params": [
    {
@@ -154,6 +154,20 @@
     "location": "query",
     "required": false,
     "description": "Incluir inboxes do contato"
+   },
+   {
+    "name": "contact_import_id",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Só os contatos de UMA importação (id de lionchat_contact_imports_list). Padrão: os que a planilha CRIOU. Importação de outra conta ou número inválido = lista vazia."
+   },
+   {
+    "name": "import_result",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Junto com contact_import_id: created (padrão, os que a planilha criou) ou updated (os que já existiam e foram atualizados)."
    }
   ],
   "returns": "meta (contadores globais) + payload (array de contatos)",
@@ -919,7 +933,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/import",
   "title": "Importar Contatos",
-  "description": "Importa contatos em lote via CSV. **Requer perfil Administrador.**. Cria novo contato. Obrigatórios: import_file. Valida unicidade quando aplicável. Retorna o contato criado com ID atribuído. REGRA DO DDI (18/08): o telefone precisa vir COM o codigo do pais (5511988887777 ou +351912345678; o + e opcional). O sistema NAO completa mais 55: sem DDI ou numero que nao existe em pais nenhum = ERRO na linha (o contato nao e criado; o relatorio de erros mostra linha a linha); comecando com 0 = recusado; brasileiro com 55 e 12-13 digitos e aceito mesmo no formato antigo sem o 9o digito. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): linha com telefone que ja e de outro contato da conta e recusada 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe.",
+  "description": "Importa contatos em lote via CSV. **Requer perfil Administrador.**. Cria novo contato. Obrigatórios: import_file. Valida unicidade quando aplicável. Retorna o contato criado com ID atribuído. REGRA DO DDI (18/08): o telefone precisa vir COM o codigo do pais (5511988887777 ou +351912345678; o + e opcional). O sistema NAO completa mais 55: sem DDI ou numero que nao existe em pais nenhum = ERRO na linha (o contato nao e criado; o relatorio de erros mostra linha a linha); comecando com 0 = recusado; brasileiro com 55 e 12-13 digitos e aceito mesmo no formato antigo sem o 9o digito. TELEFONE UNICO POR CONTA (trava no BANCO desde 01/09/2026, como e-mail e identifier): linha com telefone que ja e de outro contato da conta e recusada 'phone_number has already been taken' — inclusive em chamadas paralelas. Procure antes com contacts_search (acha com e sem o 9o digito) e use contacts_update no que existe. NOVO (2026-11): toda importação entra no histórico (lionchat_contact_imports_list) e o contato CRIADO por ela ganha a origem 'Importação de planilha' (origin_first_platform/origin_last_platform = import, kind importacao); contato que já existia não muda a origem.",
   "category": "Contatos",
   "params": [
    {
@@ -943,7 +957,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/export",
   "title": "Exportar Contatos",
-  "description": "Exporta contatos (gera CSV em job async). NOVO (2026-06): exportacao COMPLETA por padrao — cadastral (16 colunas), etiquetas, empresa/cidade/pais, atributos do contato e da conversa (prefixos contato_/conversa_), ultima conversa e card do Kanban. Passar column_names mantem o formato antigo (so as colunas pedidas).",
+  "description": "Exporta contatos (gera CSV em job async). NOVO (2026-06): exportacao COMPLETA por padrao — cadastral (16 colunas), etiquetas, empresa/cidade/pais, atributos do contato e da conversa (prefixos contato_/conversa_), ultima conversa e card do Kanban. Passar column_names mantem o formato antigo (so as colunas pedidas). NOVO (2026-11): cada exportação fica no histórico (lionchat_contact_exports_list) com arquivo próprio por 30 dias; o e-mail leva à tela do histórico e o download é por lionchat_contact_exports_download (endereço de 5 min).",
   "category": "Contatos",
   "params": [
    {
@@ -4638,7 +4652,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/contacts/import_csv",
   "title": "Importar Contatos (Wizard CSV)",
-  "description": "Importa contatos via wizard CSV (assincrono). **Requer perfil Administrador.** Obrigatórios: file, mappings. Retorna { import_id } para acompanhar o progresso via import_status.",
+  "description": "Importa contatos via wizard CSV (assincrono). **Requer perfil Administrador.** Obrigatórios: file, mappings. Retorna { import_id } para acompanhar o progresso via import_status. NOVO (2026-11): toda importação entra no histórico (lionchat_contact_imports_list) e o contato CRIADO por ela ganha a origem 'Importação de planilha' (origin_first_platform/origin_last_platform = import, kind importacao); contato que já existia não muda a origem.",
   "category": "Contatos",
   "params": [
    {
@@ -4673,6 +4687,110 @@
    "lionchat_contacts_create_7",
    "lionchat_contacts_show_1",
    "lionchat_contacts_import"
+  ]
+ },
+ {
+  "id": "lionchat_contact_imports_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contact_imports",
+  "title": "Listar Histórico de Importações de Contatos",
+  "description": "Histórico de TODA importação de contatos da conta (planilha de Contatos, planilha de campanha e importação pela API), mais recente primeiro, 20 por página. Cada item: id, source (contacts | campaign | kanban | api), file_name (a planilha NÃO é guardada, só o nome), status (processing | completed | failed | interrupted), total_records, created_count, updated_count, error_count, user_name (vazio = sistema/API), created_at e finished_at (unix). Criados/atualizados são contados por quem de fato entrou (lote que roda de novo não conta duas vezes). Exige administrador ou cargo com contact_export_import.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (padrão 1, 20 por página)"
+   }
+  ],
+  "returns": "meta {count, current_page, per_page} + payload (array de importações)",
+  "common_use_cases": [
+   "Saber quem importou uma lista e quando",
+   "Conferir quantos contatos uma planilha criou ou atualizou",
+   "Achar a importação para ver os contatos dela"
+  ],
+  "related_tools": [
+   "lionchat_contact_imports_show",
+   "lionchat_contacts_list",
+   "lionchat_contacts_create_8"
+  ]
+ },
+ {
+  "id": "lionchat_contact_imports_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contact_imports/{import_id}",
+  "title": "Ver Importação de Contatos",
+  "description": "Detalhe de UMA importação de contatos: os mesmos campos da lista + errors_sample (até 50 linhas com erro, cada uma {row, message}; row = linha da planilha). Para ver os contatos dela use lionchat_contacts_list com contact_import_id (criados) e import_result=updated (os que já existiam). Importação de outra conta responde 404. Exige administrador ou cargo com contact_export_import.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "import_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da importação (campo id da lista)"
+   }
+  ],
+  "returns": "Objeto da importação com errors_sample",
+  "common_use_cases": [
+   "Ver por que linhas de uma planilha deram erro",
+   "Montar o resumo de uma importação"
+  ],
+  "related_tools": [
+   "lionchat_contact_imports_list",
+   "lionchat_contacts_list"
+  ]
+ },
+ {
+  "id": "lionchat_contact_exports_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contact_exports",
+  "title": "Listar Histórico de Exportações de Contatos",
+  "description": "Histórico das exportações de contatos da conta, mais recente primeiro, 20 por página. Cada item: id, status (queued | completed | failed), exported_count, filter_summary ({label, conditions}), user_name, file_available (o arquivo vale 30 dias), expires_at, created_at, finished_at (unix). Cada exportação tem arquivo PRÓPRIO (uma não apaga a outra). Exige administrador ou cargo com contact_export_import.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (padrão 1, 20 por página)"
+   }
+  ],
+  "returns": "meta {count, current_page, per_page} + payload (array de exportações)",
+  "common_use_cases": [
+   "Saber quem exportou a lista de contatos e quando",
+   "Pegar o arquivo de uma exportação recente"
+  ],
+  "related_tools": [
+   "lionchat_contact_exports_download",
+   "lionchat_contacts_create_5"
+  ]
+ },
+ {
+  "id": "lionchat_contact_exports_download",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/contact_exports/{export_id}/download",
+  "title": "Baixar Exportação de Contatos",
+  "description": "Devolve {url} para baixar o CSV de UMA exportação. O endereço vale 5 MINUTOS — usar na hora, nunca guardar nem repassar como link permanente (é a lista de contatos da conta, dado pessoal). Arquivo com mais de 30 dias responde 410 (exportar de novo). Exige administrador ou cargo com contact_export_import.",
+  "category": "Contatos",
+  "params": [
+   {
+    "name": "export_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da exportação (campo id da lista)"
+   }
+  ],
+  "returns": "{ url } (válido por 5 minutos) ou 410 se o arquivo venceu",
+  "common_use_cases": [
+   "Baixar o CSV de uma exportação recente"
+  ],
+  "related_tools": [
+   "lionchat_contact_exports_list"
   ]
  },
  {
@@ -12468,7 +12586,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/companies",
   "title": "Criar Empresa",
-  "description": "Cria uma empresa. Body exige wrapper company. Aceita name, domain, description, avatar, additional_attributes (cadastro) e custom_attributes (atributos personalizados). custom_attributes (2026-10-15): atributos personalizados da EMPRESA, objeto {chave: valor} de valores SIMPLES (texto, numero, verdadeiro/falso ou null; lista ou objeto dentro = 422). MESCLA: mande so o que muda; null ou texto vazio LIMPA a chave. So chave que ja existe como definicao company_attribute da conta (lionchat_custom_attributes_list com attribute_model=company_attribute); chave desconhecida = 422 com a lista das validas e NADA do pedido e gravado. Teto de 1.500 caracteres por valor; data aceita DD/MM/AAAA. ONDE MAIS APARECE (2026-10-16): o campo personalizado vira variavel {{contact.company.custom_attribute.CHAVE}} (e o cadastro {{contact.company.name|legal_name|cnpj|phone|email|address.city|address.state}}) em mensagem, fluxo, automacao, campanha e modelo oficial; condicao do bloco Condicao do fluxo (attrSource 'company'); condicao de automacao e filtro de contatos (custom_attribute_type 'company_attribute'); a IA (Agente e Copiloto) le a empresa do contato. Modulo Empresas desligado = tudo isso para. ENTERPRISE-only. Empresa so nasce assim (manual): o sistema nao cria empresa pelo dominio do e-mail dos contatos. Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava so digitos), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado). CNPJ UNICO POR EMPRESA NA CONTA (2026-11-11): additional_attributes.cnpj que ja e de OUTRA empresa da conta = 422 \"Ja existe a empresa X com este CNPJ.\" e NADA do pedido e gravado. Nao crie outra: atualize a empresa X (ache pelo nome com lionchat_companies_search; a busca nao acha por CNPJ). Empresa antiga ja repetida continua salvando os outros campos. Filial tem CNPJ proprio e entra normalmente. CPF/CNPJ na ficha do CONTATO podem repetir.",
+  "description": "Cria uma empresa. Body exige wrapper company. Aceita name, domain, description, avatar, additional_attributes (cadastro) e custom_attributes (atributos personalizados). custom_attributes (2026-10-15): atributos personalizados da EMPRESA, objeto {chave: valor} de valores SIMPLES (texto, numero, verdadeiro/falso ou null; lista ou objeto dentro = 422). MESCLA: mande so o que muda; null ou texto vazio LIMPA a chave. So chave que ja existe como definicao company_attribute da conta (lionchat_custom_attributes_list com attribute_model=company_attribute); chave desconhecida = 422 com a lista das validas e NADA do pedido e gravado. Teto de 1.500 caracteres por valor; data aceita DD/MM/AAAA. ONDE MAIS APARECE (2026-10-16): o campo personalizado vira variavel {{contact.company.custom_attribute.CHAVE}} (e o cadastro {{contact.company.name|legal_name|cnpj|phone|email|address.city|address.state}}) em mensagem, fluxo, automacao, campanha e modelo oficial; condicao do bloco Condicao do fluxo (attrSource 'company'); condicao de automacao e filtro de contatos (custom_attribute_type 'company_attribute'); a IA (Agente e Copiloto) le a empresa do contato. Modulo Empresas desligado = tudo isso para. ENTERPRISE-only. Empresa so nasce assim (manual): o sistema nao cria empresa pelo dominio do e-mail dos contatos. Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava sem pontuacao, letras em maiuscula — aceita o CNPJ com letras da Receita, ex. 12.ABC.345/01DE-35), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado). CNPJ UNICO POR EMPRESA NA CONTA (2026-11-11): additional_attributes.cnpj que ja e de OUTRA empresa da conta = 422 \"Ja existe a empresa X com este CNPJ.\" e NADA do pedido e gravado. Nao crie outra: atualize a empresa X (ache pelo nome com lionchat_companies_search; a busca nao acha por CNPJ). Empresa antiga ja repetida continua salvando os outros campos. Filial tem CNPJ proprio e entra normalmente. CPF/CNPJ na ficha do CONTATO podem repetir.",
   "category": "Empresas",
   "params": [
    {
@@ -12521,7 +12639,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/companies/{id}",
   "title": "Atualizar Empresa",
-  "description": "Atualiza dados da empresa. Suporta atualizacao parcial (PATCH) — so campos enviados sao alterados. Campos suportados: name, domain, description, avatar, additional_attributes (cadastro) e custom_attributes (atributos personalizados). custom_attributes (2026-10-15): atributos personalizados da EMPRESA, objeto {chave: valor} de valores SIMPLES (texto, numero, verdadeiro/falso ou null; lista ou objeto dentro = 422). MESCLA: mande so o que muda; null ou texto vazio LIMPA a chave. So chave que ja existe como definicao company_attribute da conta (lionchat_custom_attributes_list com attribute_model=company_attribute); chave desconhecida = 422 com a lista das validas e NADA do pedido e gravado. Teto de 1.500 caracteres por valor; data aceita DD/MM/AAAA. ONDE MAIS APARECE (2026-10-16): o campo personalizado vira variavel {{contact.company.custom_attribute.CHAVE}} (e o cadastro {{contact.company.name|legal_name|cnpj|phone|email|address.city|address.state}}) em mensagem, fluxo, automacao, campanha e modelo oficial; condicao do bloco Condicao do fluxo (attrSource 'company'); condicao de automacao e filtro de contatos (custom_attribute_type 'company_attribute'); a IA (Agente e Copiloto) le a empresa do contato. Modulo Empresas desligado = tudo isso para. Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava so digitos), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado). CNPJ UNICO POR EMPRESA NA CONTA (2026-11-11): additional_attributes.cnpj que ja e de OUTRA empresa da conta = 422 \"Ja existe a empresa X com este CNPJ.\" e NADA do pedido e gravado. Nao crie outra: atualize a empresa X (ache pelo nome com lionchat_companies_search; a busca nao acha por CNPJ). Empresa antiga ja repetida continua salvando os outros campos. Filial tem CNPJ proprio e entra normalmente. CPF/CNPJ na ficha do CONTATO podem repetir.",
+  "description": "Atualiza dados da empresa. Suporta atualizacao parcial (PATCH) — so campos enviados sao alterados. Campos suportados: name, domain, description, avatar, additional_attributes (cadastro) e custom_attributes (atributos personalizados). custom_attributes (2026-10-15): atributos personalizados da EMPRESA, objeto {chave: valor} de valores SIMPLES (texto, numero, verdadeiro/falso ou null; lista ou objeto dentro = 422). MESCLA: mande so o que muda; null ou texto vazio LIMPA a chave. So chave que ja existe como definicao company_attribute da conta (lionchat_custom_attributes_list com attribute_model=company_attribute); chave desconhecida = 422 com a lista das validas e NADA do pedido e gravado. Teto de 1.500 caracteres por valor; data aceita DD/MM/AAAA. ONDE MAIS APARECE (2026-10-16): o campo personalizado vira variavel {{contact.company.custom_attribute.CHAVE}} (e o cadastro {{contact.company.name|legal_name|cnpj|phone|email|address.city|address.state}}) em mensagem, fluxo, automacao, campanha e modelo oficial; condicao do bloco Condicao do fluxo (attrSource 'company'); condicao de automacao e filtro de contatos (custom_attribute_type 'company_attribute'); a IA (Agente e Copiloto) le a empresa do contato. Modulo Empresas desligado = tudo isso para. Cadastro da empresa em additional_attributes: { legal_name (razao social), cnpj (validado; grava sem pontuacao, letras em maiuscula — aceita o CNPJ com letras da Receita, ex. 12.ABC.345/01DE-35), phone, email, address: {cep, street, number, complement, neighborhood, city, state, country}, social_profiles: {linkedin, facebook, instagram, telegram, tiktok, twitter, github} }. A gravacao MESCLA: mande so o que muda; valor vazio (\"\") apaga aquela chave; chave ausente nao mexe. CNPJ ou e-mail invalido = 422. additional_attributes, address e social_profiles precisam ser OBJETOS (texto ou lista = 422, nada e apagado). CNPJ UNICO POR EMPRESA NA CONTA (2026-11-11): additional_attributes.cnpj que ja e de OUTRA empresa da conta = 422 \"Ja existe a empresa X com este CNPJ.\" e NADA do pedido e gravado. Nao crie outra: atualize a empresa X (ache pelo nome com lionchat_companies_search; a busca nao acha por CNPJ). Empresa antiga ja repetida continua salvando os outros campos. Filial tem CNPJ proprio e entra normalmente. CPF/CNPJ na ficha do CONTATO podem repetir.",
   "category": "Empresas",
   "params": [
    {
@@ -12631,7 +12749,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/companies/filter",
   "title": "Filtrar Empresas",
-  "description": "[2026-11-11] Lista as empresas da conta que atendem as condicoes (aba Empresas > filtro). Mesmo formato do filtro de contatos: payload = lista de condicoes {attribute_key, filter_operator, values, query_operator ('and'/'or', a ultima sem), custom_attribute_type}. 25 por pagina; meta.total_count = total filtrado.\n\nCAMPOS: name (equal_to, not_equal_to, contains, does_not_contain); domain (site), legal_name (razao social), cnpj, phone, email, city, state (os quatro acima + is_present, is_not_present); contacts_count (equal_to, not_equal_to, is_greater_than, is_less_than; valor inteiro); created_at, last_activity_at (today, yesterday, last_days, days_ago, days_before com numero de dias; is_greater_than/is_less_than com data AAAA-MM-DD). Atributo personalizado da EMPRESA: custom_attribute_type 'company_attribute' + a chave do atributo (operadores pelo tipo: texto como os de texto; lista e sim/nao: equal_to/not_equal_to/is_present/is_not_present; numero/data/hora: + is_greater_than/is_less_than). Um atributo de empresa chamado city e OUTRO campo, nunca o endereco.\n\nREGRAS: texto sem maiuscula e sem acento ('sao paulo' acha 'São Paulo'); CNPJ e telefone comparados so pelos numeros (valor sem nenhum numero = 422); 'diferente de' e 'nao contem' trazem tambem a empresa SEM o campo. Campo, operador ou valor que o filtro nao conhece = 422 com o motivo (nunca devolve a lista inteira); payload vazio = 422. Menu Empresas oculto pelo cargo = 401; modulo Empresas desligado = 403.\n\nSEGMENTO SALVO: para listar as empresas de um segmento de empresas, leia o segmento (lionchat_custom_filters_show ou _list com filter_type company) e mande o query.payload dele aqui. Para salvar um filtro como segmento use lionchat_custom_filters_create com filter_type 'company' e query {payload: [...]}.",
+  "description": "[2026-11-11] Lista as empresas da conta que atendem as condicoes (aba Empresas > filtro). Mesmo formato do filtro de contatos: payload = lista de condicoes {attribute_key, filter_operator, values, query_operator ('and'/'or', a ultima sem), custom_attribute_type}. 25 por pagina; meta.total_count = total filtrado.\n\nCAMPOS: name (equal_to, not_equal_to, contains, does_not_contain); domain (site), legal_name (razao social), cnpj, phone, email, city, state (os quatro acima + is_present, is_not_present); contacts_count (equal_to, not_equal_to, is_greater_than, is_less_than; valor inteiro); created_at, last_activity_at (today, yesterday, last_days, days_ago, days_before com numero de dias; is_greater_than/is_less_than com data AAAA-MM-DD). Atributo personalizado da EMPRESA: custom_attribute_type 'company_attribute' + a chave do atributo (operadores pelo tipo: texto como os de texto; lista e sim/nao: equal_to/not_equal_to/is_present/is_not_present; numero/data/hora: + is_greater_than/is_less_than). Um atributo de empresa chamado city e OUTRO campo, nunca o endereco.\n\nREGRAS: texto sem maiuscula e sem acento ('sao paulo' acha 'São Paulo'); telefone comparado so pelos numeros; CNPJ por letras e numeros, sem pontuacao e sem diferenca de maiuscula (valor so com pontuacao = 422); 'diferente de' e 'nao contem' trazem tambem a empresa SEM o campo. Campo, operador ou valor que o filtro nao conhece = 422 com o motivo (nunca devolve a lista inteira); payload vazio = 422. Menu Empresas oculto pelo cargo = 401; modulo Empresas desligado = 403.\n\nSEGMENTO SALVO: para listar as empresas de um segmento de empresas, leia o segmento (lionchat_custom_filters_show ou _list com filter_type company) e mande o query.payload dele aqui. Para salvar um filtro como segmento use lionchat_custom_filters_create com filter_type 'company' e query {payload: [...]}.",
   "category": "Empresas",
   "params": [
    {
@@ -21694,7 +21812,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/captain/documents/{id}/recrawl",
   "title": "Re-indexar Documento",
-  "description": "Reprocessa e reindexa um documento JA EXISTENTE da base de conhecimento (recrawl). NAO cria um documento novo. Reseta o status do documento e dispara o reprocessamento (crawl/chunks/FAQs). Retorna o mesmo documento atualizado.",
+  "description": "Reprocessa e reindexa um documento JA EXISTENTE da base de conhecimento (recrawl). NAO cria um documento novo. Reseta o status do documento e dispara o reprocessamento (crawl/chunks/FAQs). Retorna o mesmo documento atualizado. Para trocar o ARQUIVO de um PDF/.md, use lionchat_captain_documents_replace_file (o re-indexar le o arquivo que ja esta no documento).",
   "category": "Base de Conhecimento",
   "params": [
    {
@@ -21715,6 +21833,40 @@
    "lionchat_captain_documents_list",
    "lionchat_captain_documents_create",
    "lionchat_captain_documents_destroy"
+  ]
+ },
+ {
+  "id": "lionchat_captain_documents_replace_file",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/documents/{id}/replace_file",
+  "title": "Trocar Arquivo do Documento",
+  "description": "Troca o arquivo (PDF ou .md) de um documento JA EXISTENTE da base de conhecimento e refaz a leitura do zero: apaga a copia antiga guardada na OpenAI, envia o arquivo novo e regera as perguntas e respostas a partir dele. As perguntas antigas so saem quando as novas ficam prontas (se a geracao falhar ou voltar vazia, as antigas continuam). Perguntas editadas a mao sao refeitas. So documento que tem arquivo: documento escrito a mao (use update) ou de site (use o re-indexar) responde 422. Mesma permissao do re-indexar.",
+  "category": "Base de Conhecimento",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do documento existente (PDF ou .md)"
+   },
+   {
+    "name": "pdf_file",
+    "type": "file",
+    "location": "body",
+    "required": true,
+    "description": "Arquivo novo, PDF ou .md, ate 10 MB (multipart upload)"
+   }
+  ],
+  "returns": "documento atualizado (mesmo ID, status in_progress, external_link com o nome do arquivo novo)",
+  "common_use_cases": [
+   "Atualizar tabela de precos ou regras em PDF sem apagar o documento",
+   "Trocar o manual por uma versao nova"
+  ],
+  "related_tools": [
+   "lionchat_captain_documents_show",
+   "lionchat_captain_documents_create_1",
+   "lionchat_captain_documents_update"
   ]
  },
  {
@@ -24203,7 +24355,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/flow_tools/{id}/executions",
   "title": "Execuções da Ferramenta da IA",
-  "description": "Últimas 50 execuções (manuais e via LLM) com status e duração. ADMIN-ONLY.",
+  "description": "Últimas 50 execuções (manuais e via LLM) com status e duração. ADMIN-ONLY. Cada item traz `conversation: {display_id, contact_name}` (de qual conversa e contato veio a execução); `null` quando foi teste pelo painel.",
   "category": "Ferramentas da IA",
   "params": [
    {
@@ -24214,7 +24366,7 @@
     "description": "ID do flow tool"
    }
   ],
-  "returns": "[{ id, status, started_at, completed_at, duration_ms, error_message }]",
+  "returns": "[{ id, status, started_at, completed_at, duration_ms, error_message, conversation: { display_id, contact_name } | null }]",
   "common_use_cases": [
    "Monitorar saúde da ferramenta",
    "Achar execuções com falha"
@@ -24228,7 +24380,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/flow_tool_executions/{id}",
   "title": "Detalhe de Execução da Ferramenta",
-  "description": "Detalhe completo de UMA execução: entrada, saída, log passo a passo, variáveis, nós visitados e a resposta da IA na sequência (se houver). PII é redigida automaticamente. ADMIN-ONLY.",
+  "description": "Detalhe completo de UMA execução: entrada, saída, log passo a passo, variáveis, nós visitados e a resposta da IA na sequência (se houver). PII é redigida automaticamente. ADMIN-ONLY. Traz `origin` com a conversa (id, display_id, status, inbox_name, channel_type) e o contato (id, name, phone_number, email) que acionou a ferramenta; `null` sem conversa.",
   "category": "Ferramentas da IA",
   "params": [
    {
@@ -24239,7 +24391,7 @@
     "description": "ID da execução (FlowToolExecution)"
    }
   ],
-  "returns": "{ id, flow_id, status, input_params, output_result, execution_log, variables, canvas_detail, ai_response, duration_ms, error_message }",
+  "returns": "{ id, flow_id, status, input_params, output_result, execution_log, variables, canvas_detail, ai_response, duration_ms, error_message, origin }",
   "common_use_cases": [
    "Depurar por que a ferramenta retornou errado pro LLM"
   ],
@@ -33827,7 +33979,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/flow_sessions/{id}",
   "title": "Detalhe de uma Execução de Flow (passo a passo)",
-  "description": "SÓ LEITURA, ADMIN-ONLY, rate limit 30/min por usuário. O detalhe de UMA execução (sessão) de fluxo de conversa: log passo a passo enriquecido (execution_steps, com status e erro por bloco — inclusive falha de entrega assíncrona registrada no passo do bloco), variáveis no fim (variables_snapshot, filtradas), blocos visitados, setas percorridas (traversed_edges) e a conversa. Resolve a FOTO da versão do fluxo da época (flow_snapshot); flow_snapshot_stale=true avisa que o fluxo foi editado durante a execução. execution_log_truncated=true quando o log passou do teto. Os ids vêm de lionchat_flows_executions_list. 404 {error:'Nao encontrado'}.",
+  "description": "SÓ LEITURA, ADMIN-ONLY, rate limit 30/min por usuário. O detalhe de UMA execução (sessão) de fluxo de conversa: log passo a passo enriquecido (execution_steps, com status e erro por bloco — inclusive falha de entrega assíncrona registrada no passo do bloco), variáveis no fim (variables_snapshot, filtradas), blocos visitados, setas percorridas (traversed_edges) e a conversa. Resolve a FOTO da versão do fluxo da época (flow_snapshot); flow_snapshot_stale=true avisa que o fluxo foi editado durante a execução. execution_log_truncated=true quando o log passou do teto. Os ids vêm de lionchat_flows_executions_list. 404 {error:'Nao encontrado'}. Traz também `origin`: conversa (display_id, status, caixa, canal) e contato (id, nome, telefone, e-mail), no mesmo formato da ferramenta de IA.",
   "category": "Flows",
   "params": [
    {
