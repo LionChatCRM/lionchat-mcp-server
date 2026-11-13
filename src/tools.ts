@@ -502,7 +502,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-12)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-13)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -564,13 +564,18 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     atributo pro valor que casa, RE-ENTRAM a cada mudanca; config {logic:'and'|'or', rules:[{attr_key,
     operator, value | values:[...]}]}; attrSource IMPLICITO pela chave do gatilho (conversa vs card),
     NAO informe; operadores da condition EXCETO is_empty/is_not_empty (removidos do contexto reativo
-    09/07 — use so no node condition); card_attribute_changed aceita funnel_id/card_source
-    opcionais na rule),
+    09/07 — use so no node condition) + became_filled|became_empty|value_replaced (12/11: 'Foi
+    preenchido' = estava vazio e recebeu valor, dispara de novo se apagado e preenchido, conversa que NASCE
+    com o campo conta; 'Foi apagado'; 'Trocou de valor' = de um valor pra outro, nunca saindo/indo pro vazio
+    — olham o ANTES e o DEPOIS, SEM value; vazio = nulo, texto em branco, campo ausente, lista vazia; ex. 1o
+    agendamento so: {attr_key:'meet_link', operator:'became_filled'}); card_attribute_changed aceita
+    funnel_id/card_source opcionais na rule),
     contact_attribute_changed (NOVO 2026-07-22 — 'Atributo do contato muda': dispara quando um
     custom_attribute do CONTATO muda e a condicao casa, mesmo com o contato fora de flow. Item:
     {key:'contact_attribute_changed', config:{logic:'and'|'or', rules:[{attrSource:'contact',
     attr_key, operator, value | values:[...]}]}} — 1 a 10 regras; DIFERENTE dos irmaos de 08/07,
-    aqui o attrSource VAI na rule e e SEMPRE 'contact'; operadores iguais aos do node condition.
+    aqui o attrSource VAI na rule e e SEMPRE 'contact'; operadores iguais aos do node condition
+    + os 3 de mudanca (became_filled/became_empty/value_replaced, sem value).
     VERSAO SEGURA por decisao de produto: dispara SO na conversa mais recente que JA EXISTE numa
     caixa do flow (reabre se resolvida); contato sem conversa NAO dispara e NUNCA cria conversa.
     Dedup 30s por contato, anti-loop por profundidade de cadeia; so flows de conversa),
