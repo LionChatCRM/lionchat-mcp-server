@@ -17115,7 +17115,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates",
   "title": "Criar Template WhatsApp",
-  "description": "Cria um template de WhatsApp. SOMENTE Channel::Whatsapp (Cloud API) — WAHA/QR retorna 400. Exige Admin.",
+  "description": "Cria um template de WhatsApp. SOMENTE Channel::Whatsapp (Cloud API) — WAHA/QR retorna 400. Exige Admin. COLCHETE NAO E VARIAVEL (14/11/2026): nunca escreva o nome do dado entre colchetes no texto (\"Ola, [Primeiro nome]\") — a Meta aprova como texto e o cliente recebe os colchetes escritos. A API recusa (422) colchete no corpo ou no cabecalho de texto. Se o texto do usuario tiver colchete (ou <nome>, {nome}), liste cada um, diga qual dado do sistema voce acha que e e PERGUNTE antes de criar; so depois troque por {{1}}, {{2}}... com example e variable_mapping. Sem dado do sistema que sirva, pergunte se e preenchido na hora do envio (sem mapping).",
   "category": "Templates WhatsApp",
   "params": [
    {
@@ -17255,7 +17255,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inboxes/{inbox_id}/whatsapp_templates/{id}",
   "title": "Atualizar Template WhatsApp",
-  "description": "Atualiza um template de WhatsApp. SOMENTE Channel::Whatsapp Cloud. REENVIA o modelo a Meta (status volta para revisao). Para mudar SO o variable_mapping de um modelo aprovado, use lionchat_inboxes_whatsapp_templates_update.",
+  "description": "Atualiza um template de WhatsApp. SOMENTE Channel::Whatsapp Cloud. REENVIA o modelo a Meta (status volta para revisao). Para mudar SO o variable_mapping de um modelo aprovado, use lionchat_inboxes_whatsapp_templates_update. COLCHETE NAO E VARIAVEL (14/11/2026): nunca escreva o nome do dado entre colchetes no texto (\"Ola, [Primeiro nome]\") — a Meta aprova como texto e o cliente recebe os colchetes escritos. A API recusa (422) colchete no corpo ou no cabecalho de texto. Se o texto do usuario tiver colchete (ou <nome>, {nome}), liste cada um, diga qual dado do sistema voce acha que e e PERGUNTE antes de criar; so depois troque por {{1}}, {{2}}... com example e variable_mapping. Sem dado do sistema que sirva, pergunte se e preenchido na hora do envio (sem mapping).",
   "category": "Templates WhatsApp",
   "params": [
    {

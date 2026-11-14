@@ -327,6 +327,8 @@ teams, conversations_summary) exigem as DUAS pontas; nos demais, `since` ou `unt
 4. lionchat_campaigns_create (inbox_id define o tipo: WhatsApp oficial, QR Code/WAHA, SMS, Website)
    Modelo oficial com variáveis: `template_params.processed_params.body` precisa ter TODAS as
    posições (`"1"`, `"2"`...) preenchidas — posição vazia NÃO falha, sai como "." pra todo mundo.
+   ANTES de criar: leia o corpo do modelo. Texto entre colchetes (`[Primeiro nome]`) NÃO é variável —
+   o cliente recebe os colchetes escritos. Avise o usuário e ofereça corrigir o modelo antes do disparo.
 5. Acompanhar com lionchat_campaigns_statistics (sent/delivered/read/failed)
 ```
 Estrutura do audience: `[{type:'Label', id}, {type:'Funnel', id, stages:[], include_won, include_lost}, {type:'ConversationAttribute', key, value}]`.
