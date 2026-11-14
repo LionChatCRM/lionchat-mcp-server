@@ -502,7 +502,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-13)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-14)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -869,11 +869,15 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
   CRITICO (2026-07-10, aprendido em flow real de producao):
     1. field SEMPRE com chaves: "{{contact.custom_attribute.plano}}", "{{minha_var}}", "{{last_response}}".
        Sem chaves o motor compara o TEXTO LITERAL do caminho — a saida NUNCA casa (tudo cai no default).
-    2. Inclua "valueType": "variable" em CADA regra de expressao. O motor roda sem, mas o EDITOR VISUAL
-       identifica o tipo da regra por esse campo — sem ele a saida aparece VAZIA na tela e, se alguem
-       salvar o flow pela tela nesse estado, a regra e PERDIDA. (Excecoes que nao usam field/valueType
-       "variable": regras por attr_key/attrSource="attr_config", business_hours, can_reply, sla_check,
-       kanban_*, conversation_has_agent/no_agent, pagetrack_*.)
+    2. Inclua "valueType": "variable" em CADA regra de expressao. O motor NAO le valueType; o EDITOR VISUAL
+       usa esse campo para escolher o seletor da regra. (Excecoes que nao usam field/valueType "variable":
+       regras por attr_key/attrSource -> valueType "attr_config" (NUNCA o tipo do dado, como "text");
+       business_hours -> "time_range"; kanban_exists/kanban_in_stage -> "funnel_stage"; kanban_won/lost/
+       snoozed -> "funnel_only"; conversation_has_label -> "labels_multi"; conversation_has_agent -> "agent";
+       conversation_no_agent / conversation_no_ai_agent / can_reply -> null (nunca ""); pagetrack_* ->
+       "pagetrack".) Desde 2026-11-14 a tela tambem reconhece a regra gravada com valueType vazio ou errado
+       (descobre pelo operador, pelo field e pelo attrSource) e salvar pela tela NAO apaga a regra — mas
+       mande o valueType certo: e ele que a tela usa primeiro.
   EMPRESA DO CONTATO (NOVO 16/10 — card "Atributo da empresa", so com o modulo Empresas): regra
     { id, valueType:'attr_config', attrSource:'company', attr_key, operator, value:'', values:[...] }.
     attr_key = chave do campo PERSONALIZADO da empresa OU cadastro com prefixo: company.name,
