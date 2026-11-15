@@ -761,6 +761,28 @@ opcional `variable_mapping` junto.
 - Só entram no mapping as que devem auto-preencher; as demais `{{N}}` continuam manuais.
 - O `variable_mapping` é salvo localmente (NÃO vai pra Meta) e usado no momento do envio.
 
+**Colchete NÃO é variável (2026-11-14).** Nunca escreva o nome do dado entre colchetes no texto do
+modelo (`"Olá, [Primeiro nome]"`, `"[Nome]"`, `"[Variável 2]"`). A Meta aprova como TEXTO COMUM e o
+cliente recebe os colchetes escritos, sem o dado — caso real em 14/11/2026: uma campanha entregou
+"Olá, [Primeiro nome do contato]" a 928 pacientes. Desde 14/11 a API RECUSA (422) criar ou editar modelo
+com colchete no corpo ou no cabeçalho de texto, e a resposta lista cada colchete encontrado.
+
+Quando o texto que o usuário escreveu ou colou tiver colchete (ou qualquer marcação parecida, como
+`<nome>`, `{nome}`, `NOME_DO_CLIENTE`), o procedimento é OBRIGATÓRIO:
+
+1. Liste para o usuário CADA marcação encontrada.
+2. Para cada uma, diga qual dado do sistema você acha que é (tabela abaixo) e PERGUNTE se é isso:
+   "o [Primeiro nome] é o primeiro nome do contato?". Não decida sozinho — "Nome" pode ser o nome
+   inteiro ou só o primeiro.
+3. Se nenhum dado do sistema serve (ex.: código de acesso, link do dia), pergunte se o valor será
+   preenchido na hora do envio — aí a posição fica SEM `variable_mapping` e quem dispara preenche.
+4. Só então troque cada marcação por `{{1}}`, `{{2}}`... (na ordem do texto), com `example.body_text`
+   e o `variable_mapping` combinado.
+
+Antes de usar um modelo já aprovado numa campanha ou envio, leia o corpo: se tiver colchete, avise que
+o cliente vai receber os colchetes escritos e ofereça corrigir o modelo (`_create_2`, que reenvia à Meta —
+enquanto a Meta analisa, continua valendo a versão antiga).
+
 **Variável sem mapping tem preço (2026-08-04).** Placeholder que ninguém disse como preencher:
 
 1. **Tira o modelo do alcance do AI Agente.** Basta UMA variável sem mapping para o modelo inteiro

@@ -732,5 +732,13 @@ APARECE errada pro cliente. Pares corretos:
 | Card perdido | `_kanban_status` | `kanban_lost` | `funnel_only` |
 | Resposta do cliente | `{{last_response}}` | `equal_any` (e variações `_any`) | `response_multi` |
 | Resposta do atendente | `{{last_agent_response}}` | `equal_any` (e variações `_any`) | `response_multi` |
+| Atributo do contato / conversa / card | (sem `field`) | `equal`, `contains`... + `attrSource` (`contact`/`conversation`/`card`) e `attr_key` | `attr_config` — NUNCA o tipo do dado (`text`, `number`) |
+| Sem agente de IA | `_ai_agent_check` | `conversation_no_ai_agent` | `null` (não mande `""`) |
+| Sem agente humano | `_agent_check` | `conversation_no_agent` | `null` (não mande `""`) |
+
+Desde 14/11/2026 a tela reconhece sozinha a regra gravada com `valueType` vazio ou com o tipo do dado (descobre
+pelo operador, pelo campo e pelo `attrSource`) — antes ela abria a linha EM BRANCO, com o fluxo funcionando. Mesmo
+assim grave o `valueType` desta tabela: é ele que a tela usa primeiro. Salvar pela tela uma regra em branco NÃO a
+apaga.
 
 Nas condições de etiqueta, `values` aceita array de títulos ou string separada por vírgula.
