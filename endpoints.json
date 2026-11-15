@@ -675,7 +675,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts/search",
   "title": "Buscar Contatos",
-  "description": "Busca contatos por texto (insensivel a acento) em nome/email/telefone/identifier. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).\n\nTELEFONE COM E SEM O 9 (desde 05/09/2026): quando 'q' e um celular brasileiro completo (com ou sem o nono digito, com ou sem '+', formatado ou nao), a busca acha o contato salvo em QUALQUER das duas formas. Nao precisa buscar duas vezes. Uma pessoa com ficha duplicada pode voltar como 2 resultados — nunca pegue o primeiro as cegas para contacts_update; confira nome/e-mail. A lupa geral (lionchat_search_list) NAO tem essa tolerancia: para telefone, use esta.",
+  "description": "Busca contatos por texto (insensivel a acento) em nome/email/telefone/identifier. Obrigatorio: q.\n\nO texto e procurado INTEIRO, como frase (nao sao palavras soltas unidas por E).\n\nTELEFONE COM E SEM O 9 (desde 05/09/2026): quando 'q' e um celular brasileiro completo (com ou sem o nono digito, com ou sem '+', formatado ou nao), a busca acha o contato salvo em QUALQUER das duas formas. Nao precisa buscar duas vezes. Uma pessoa com ficha duplicada pode voltar como 2 resultados — nunca pegue o primeiro as cegas para contacts_update; confira nome/e-mail. A lupa geral (lionchat_search_list) NAO tem essa tolerancia: para telefone, use esta.",
   "category": "Contatos",
   "params": [
    {
@@ -2225,7 +2225,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/search",
   "title": "Buscar Mensagens",
-  "description": "Busca mensagens por texto dentro de uma conversa. Suporta private_only e file_type.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha.",
+  "description": "Busca mensagens por texto dentro de uma conversa. Suporta private_only e file_type.\n\nO texto e procurado INTEIRO, como frase (nao sao palavras soltas unidas por E). NOVO (2026-06-16): casa por TRECHO/substring (ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha.",
   "category": "Mensagens",
   "params": [
    {
@@ -3884,7 +3884,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/search",
   "title": "Buscar Items",
-  "description": "Busca items por título, descrição, nome ou email do cliente. Busca itens Kanban por texto livre. Suporta query parcial em nome/email/telefone. Use para \"encontrar X\" rapidamente.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). Desde 11/10/2026: Cada card traz effective_status (open|snoozed|won|lost) e snoozed_until (ISO ou null). No card adiado item_details.status CONTINUA \"open\": a situacao real e o effective_status.",
+  "description": "Busca items por título, descrição, nome ou email do cliente. Busca itens Kanban por texto livre. Suporta query parcial em nome/email/telefone. Use para \"encontrar X\" rapidamente.\n\nO texto e procurado INTEIRO, como frase (nao sao palavras soltas unidas por E). Telefone do contato casa por digitos (3+), ignorando pontuacao. Desde 11/10/2026: Cada card traz effective_status (open|snoozed|won|lost) e snoozed_until (ISO ou null). No card adiado item_details.status CONTINUA \"open\": a situacao real e o effective_status.",
   "category": "Itens",
   "params": [
    {
@@ -8669,7 +8669,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search",
   "title": "Busca Global",
-  "description": "RAPIDO, e a opcao mais segura quando nao se sabe se o termo e o nome de alguem ou algo dito no papo — cobre os dois casos numa chamada. Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nPara saber EM QUANTAS conversas algo foi dito, no historico inteiro, use lionchat_conversations_search.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). Sempre retorna todos os tipos: conversations, contacts, messages, articles e kanban_items. Mensagens trazem previous_message/next_message.",
+  "description": "RAPIDO, e a opcao mais segura quando nao se sabe se o termo e o nome de alguem ou algo dito no papo — cobre os dois casos numa chamada. Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nPara saber EM QUANTAS conversas algo foi dito, no historico inteiro, use lionchat_conversations_search.\n\nFRASE UNICA (desde 15/11/2026): 'q' e procurado INTEIRO, como esta e na ordem — 'maria silva' acha 'Maria Silva Santos' e NAO acha 'Maria Aparecida da Silva' nem 'Silva Maria'. Nao mande palavras soltas esperando E: mande o trecho que espera ver escrito, ou so o primeiro nome ou so o sobrenome, e confira o nome completo nos resultados. Telefone com espaco, traco ou parenteses e um numero so; CPF/CNPJ/RG casam por digitos, ignorando pontuacao. Frase com espaco precisa de 3 letras ou numeros seguidos em algum ponto ('jo s' nao procura). NUMERO DE 1 OU 2 DIGITOS sozinho acha so a conversa e o card com aquele numero: contatos, mensagens e artigos NAO procuram. A resposta traz contacts_min_term, messages_min_term, articles_min_term, conversations_min_term e kanban_min_term: true = AQUELA secao nao procurou — vazio ali NAO quer dizer que nao existe. Sempre retorna todos os tipos: conversations, contacts, messages, articles e kanban_items. Mensagens trazem previous_message/next_message.",
   "category": "Busca",
   "params": [
    {
@@ -8677,7 +8677,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo de busca"
+    "description": "Texto procurado como UMA frase, na ordem (desde 15/11/2026). Nao e partido por espaco"
    },
    {
     "name": "from",
@@ -8756,7 +8756,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/conversations",
   "title": "Buscar Conversas",
-  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Acha a conversa PELA PESSOA/EMPRESA: nome, e-mail, telefone, identificador, CPF/CNPJ por digitos, atributos personalizados da conversa e numero da conversa.\n\nNAO procura dentro do texto das mensagens — para isso use lionchat_search_list_2 (ou lionchat_search_search para as duas coisas). lionchat_conversations_search procura so no texto das mensagens: para achar a conversa de alguem, use esta.\n\nDevolve payload.conversations[], 15 por pagina. Termo de texto com menos de 3 caracteres e descartado (so-digitos e isento); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Acha a conversa PELA PESSOA/EMPRESA: nome, e-mail, telefone, identificador, CPF/CNPJ por digitos, atributos personalizados da conversa e numero da conversa.\n\nNAO procura dentro do texto das mensagens — para isso use lionchat_search_list_2 (ou lionchat_search_search para as duas coisas). lionchat_conversations_search procura so no texto das mensagens: para achar a conversa de alguem, use esta.\n\nDevolve payload.conversations[], 15 por pagina. Termo de texto com menos de 3 caracteres e descartado (so-digitos e isento); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nFRASE UNICA (desde 15/11/2026): 'q' e procurado INTEIRO, como esta e na ordem — 'maria silva' acha 'Maria Silva Santos' e NAO acha 'Maria Aparecida da Silva' nem 'Silva Maria'. Nao mande palavras soltas esperando E: mande o trecho que espera ver escrito, ou so o primeiro nome ou so o sobrenome, e confira o nome completo nos resultados. Telefone com espaco, traco ou parenteses e um numero so; CPF/CNPJ/RG casam por digitos, ignorando pontuacao. Frase com espaco precisa de 3 letras ou numeros seguidos em algum ponto ('jo s' nao procura). Numero de 1 ou 2 digitos sozinho acha so a conversa com aquele numero (3+ digitos procura tambem telefone, CPF e campos). conversations_min_term: true = a busca nao rodou (texto abaixo do piso).",
   "category": "Busca",
   "params": [
    {
@@ -8764,7 +8764,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo"
+    "description": "Texto procurado como UMA frase, na ordem (desde 15/11/2026). Nao e partido por espaco"
    },
    {
     "name": "from",
@@ -8832,7 +8832,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/contacts",
   "title": "Buscar Contatos",
-  "description": "Busca apenas em contatos por texto.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "Busca apenas em contatos por texto.\n\nFRASE UNICA (desde 15/11/2026): 'q' e procurado INTEIRO, como esta e na ordem — 'maria silva' acha 'Maria Silva Santos' e NAO acha 'Maria Aparecida da Silva' nem 'Silva Maria'. Nao mande palavras soltas esperando E: mande o trecho que espera ver escrito, ou so o primeiro nome ou so o sobrenome, e confira o nome completo nos resultados. Telefone com espaco, traco ou parenteses e um numero so; CPF/CNPJ/RG casam por digitos, ignorando pontuacao. Frase com espaco precisa de 3 letras ou numeros seguidos em algum ponto ('jo s' nao procura). Numero de 1 ou 2 digitos sozinho NAO procura contatos: volta vazio com contacts_min_term: true (use 3+ digitos, ou lionchat_contacts_search para telefone). contacts_min_term: true = nao procurou; nao quer dizer que nao existe.",
   "category": "Busca",
   "params": [
    {
@@ -8840,7 +8840,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo"
+    "description": "Texto procurado como UMA frase, na ordem (desde 15/11/2026). Nao e partido por espaco"
    },
    {
     "name": "since",
@@ -8894,7 +8894,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/messages",
   "title": "Buscar Mensagens",
-  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nSo os ULTIMOS 3 MESES, por palavras soltas e sem agrupar por conversa; serve para ver mensagens recentes com o contexto em volta. Indice trigram proprio e teto de tempo em duas fases (2 s + 2 s). Para saber EM QUANTAS conversas algo foi dito no historico inteiro, use lionchat_conversations_search. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha. Leia message_search_interrupted no retorno antes de afirmar 'nao encontrado'.",
+  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nSo os ULTIMOS 3 MESES, pelo TRECHO digitado e sem agrupar por conversa; serve para ver mensagens recentes com o contexto em volta. Indice trigram proprio e teto de tempo em duas fases (2 s + 2 s). Para saber EM QUANTAS conversas algo foi dito no historico inteiro, use lionchat_conversations_search. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nFRASE UNICA (desde 15/11/2026): 'q' e procurado INTEIRO, como esta e na ordem ('deseja agendar' acha so a mensagem com essas duas palavras juntas). Nao mande palavras soltas esperando E. Numero de 1 ou 2 digitos sozinho e frase sem 3 letras ou numeros seguidos NAO procuram: lista vazia com messages_min_term: true (nao quer dizer que nao existe). NOVO (2026-06-16): casa por TRECHO/substring (ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha. Leia message_search_interrupted no retorno antes de afirmar 'nao encontrado'.",
   "category": "Busca",
   "params": [
    {
@@ -8902,7 +8902,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo"
+    "description": "Texto procurado como UMA frase, na ordem (desde 15/11/2026). Nao e partido por espaco"
    },
    {
     "name": "from",
@@ -12695,7 +12695,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/companies/search",
   "title": "Buscar Empresas",
-  "description": "Busca empresas por NOME ou DOMINIO. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "Busca empresas por NOME ou DOMINIO. Obrigatorio: q.\n\nO texto e procurado INTEIRO, como frase (nao sao palavras soltas unidas por E).",
   "category": "Empresas",
   "params": [
    {
@@ -13232,7 +13232,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/offers/search",
   "title": "Buscar Ofertas",
-  "description": "Busca ofertas por TITULO. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "Busca ofertas por TITULO. Obrigatorio: q.\n\nO texto e procurado INTEIRO, como frase (nao sao palavras soltas unidas por E).",
   "category": "Ofertas",
   "params": [
    {
@@ -29794,7 +29794,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/kanban_items",
   "title": "Buscar Cards do Kanban",
-  "description": "Busca cards do Kanban por texto ou pelo numero do card. Procura em titulo, descricao, nome e e-mail do cliente, nos atributos personalizados do card (menos os do tipo secreto) e tambem na conversa/contato vinculados; com UM termo so de numeros, tenta antes casar o ID exato do card. Varios termos separados por espaco funcionam como E (todos precisam bater, ate 5). PISO DE 3 LETRAS (desde 04/08/2026): termo com letra e menos de 3 caracteres e recusado e a resposta vem VAZIA sem nenhum aviso — se todos os termos forem curtos, isso NAO quer dizer que o card nao existe, quer dizer que a busca nem rodou; refaca com 3+ letras. Termo so de digitos e isento do piso. Devolve no maximo 15 cards e NAO tem paginacao — pra listar de verdade use lionchat_kanban_items_filter. Quem nao e administrador so enxerga cards em que e responsavel. FILTRO DE DATA (02/09/2026): quatro eixos, cada um com janela fixa (_start/_end ISO) ou atalho relativo (_relative + _relative_days): criacao (date_*), entrada na etapa atual (stage_date_*), atualizacao (updated_date_*) e ganho/perdido em (closed_date_*). Operadores do atalho: today, yesterday (estes DOIS sem numero), last_days (ultimos N incluindo hoje), days_ago (o dia exato de N atras), days_before (mais de N atras). N inteiro 1..998; janela no fuso da CONTA. CUIDADO: operador invalido ou N invalido NAO da erro — o atalho e ignorado e a resposta volta MAIOR (ate 5.000 cards) com cara de filtrada; confira a contagem antes de qualquer acao em massa. Ver o resource de filtros. Desde 11/10/2026: em kanban_filters, statuses [\"open\"] = aberto e NAO adiado e [\"snoozed\"] = adiados; cada card traz effective_status e snoozed_until.",
+  "description": "Busca cards do Kanban por texto ou pelo numero do card. Procura em titulo, descricao, nome e e-mail do cliente, nos atributos personalizados do card (menos os do tipo secreto) e tambem na conversa/contato vinculados; com UM termo so de numeros, tenta antes casar o ID exato do card. FRASE UNICA (desde 15/11/2026): 'q' e procurado INTEIRO, como esta e na ordem ('18 alexandre' procura esse texto junto, nao as duas palavras separadas); telefone com espaco e um numero so. PISO DE 3 LETRAS (desde 04/08/2026): termo com letra e menos de 3 caracteres (ou frase com espaco sem 3 letras ou numeros seguidos) e recusado e a resposta vem VAZIA com kanban_min_term: true — isso NAO quer dizer que o card nao existe, quer dizer que a busca nem rodou; refaca com 3+ letras. Numero de 1 ou 2 digitos sozinho procura so o NUMERO do card (kanban_min_term: true); com 3+ digitos procura tambem no texto e no telefone. Devolve no maximo 15 cards e NAO tem paginacao — pra listar de verdade use lionchat_kanban_items_filter. Quem nao e administrador so enxerga cards em que e responsavel. FILTRO DE DATA (02/09/2026): quatro eixos, cada um com janela fixa (_start/_end ISO) ou atalho relativo (_relative + _relative_days): criacao (date_*), entrada na etapa atual (stage_date_*), atualizacao (updated_date_*) e ganho/perdido em (closed_date_*). Operadores do atalho: today, yesterday (estes DOIS sem numero), last_days (ultimos N incluindo hoje), days_ago (o dia exato de N atras), days_before (mais de N atras). N inteiro 1..998; janela no fuso da CONTA. CUIDADO: operador invalido ou N invalido NAO da erro — o atalho e ignorado e a resposta volta MAIOR (ate 5.000 cards) com cara de filtrada; confira a contagem antes de qualquer acao em massa. Ver o resource de filtros. Desde 11/10/2026: em kanban_filters, statuses [\"open\"] = aberto e NAO adiado e [\"snoozed\"] = adiados; cada card traz effective_status e snoozed_until.",
   "category": "Busca",
   "params": [
    {
@@ -29809,7 +29809,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo de busca. Espacos separam termos e valem como E (cap 5). Termo com letra precisa de 3+ caracteres, senao e descartado e a busca devolve vazio; termo so de digitos vale com qualquer tamanho e tenta casar o ID do card"
+    "description": "Texto procurado como UMA frase, na ordem (desde 15/11/2026). Nao e partido por espaco. Palavra com letra precisa de 3+ caracteres e frase com espaco de 3 letras ou numeros seguidos, senao a busca devolve vazio com kanban_min_term: true; numero so de digitos tenta casar o ID do card (com 1 ou 2 digitos, so o ID)"
    },
    {
     "name": "kanban_filters",
@@ -35706,7 +35706,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/articles",
   "title": "Buscar Artigos da Base de Conhecimento",
-  "description": "Busca por texto nos artigos dos portais (central de ajuda) da conta — irmã de search/conversations, contacts e messages. 15 por página. Termos muito curtos devolvem lista vazia. since/until (timestamp UNIX em segundos) filtram por updated_at do artigo e só valem com a 'Busca avançada' ligada na conta.",
+  "description": "Busca por texto nos artigos dos portais (central de ajuda) da conta — irmã de search/conversations, contacts e messages. 15 por página. Termos muito curtos devolvem lista vazia. since/until (timestamp UNIX em segundos) filtram por updated_at do artigo e só valem com a 'Busca avançada' ligada na conta. Desde 15/11/2026: numero de 1 ou 2 digitos sozinho e texto abaixo do piso NAO procuram — lista vazia com articles_min_term: true (nao quer dizer que nao existe). Artigos acham as palavras em qualquer ordem (nao viraram frase unica).",
   "category": "Busca",
   "params": [
    {

@@ -222,17 +222,24 @@ Feature flag específica (ex: `feature_kanban`, `feature_captain`) está OFF.
 ### "A busca não acha o contato, mas ele existe" (novo 2026-08-04)
 
 Primeira coisa a conferir: **o termo tem menos de 3 letras?** Desde 04/08 termo com letra precisa
-de 3 caracteres; abaixo disso a busca é recusada e volta **vazia, sem erro**. Termo só de dígitos
-é isento.
+de 3 caracteres; abaixo disso a busca é recusada e volta **vazia, sem erro**.
+
+Segunda (desde 15/11/2026, busca geral `/search/*`): **você mandou várias palavras em `q`?** O texto
+é procurado como UMA frase, na ordem. `q=maria silva` não acha "Maria Aparecida da Silva". Tente só o
+primeiro nome ou só o sobrenome e confira o nome completo nos resultados.
 
 ```
-q=Bo   -> payload: []   (recusado, NÃO significa que não existe)
-q=Bor  -> busca normal
-q=42   -> busca normal (dígito é isento)
+q=Bo            -> vazio, <secao>_min_term: true   (NÃO significa que não existe)
+q=Bor           -> busca normal
+q=42            -> só a conversa 42 e o card 42; contatos/mensagens/artigos vazios com <secao>_min_term: true
+q=424           -> busca normal em tudo
+q=maria silva   -> só onde está escrito "maria silva", junto e nessa ordem
+q=jo s          -> vazio (frase precisa de 3 letras ou números seguidos)
 ```
 
-Vale nas cinco buscas: contato, conversa, mensagem, card e artigo. Um termo curto **invalida a
-busca inteira**, mesmo com filtro estruturado junto.
+Vale nas cinco buscas: contato, conversa, mensagem, card e artigo (artigos continuam achando as
+palavras em qualquer ordem). Um termo abaixo do piso **invalida a busca inteira**, mesmo com filtro
+estruturado junto.
 
 O que fazer: complete o termo, peça o nome inteiro, ou use `lionchat_contacts_filter` com
 `filter_operator: "contains"` — o `/filter` não tem esse piso.
