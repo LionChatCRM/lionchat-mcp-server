@@ -18279,7 +18279,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/webhooks",
   "title": "Criar Webhook",
-  "description": "Cria um webhook. Body exige wrapper webhook. subscriptions restrito a allow-list. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada).",
+  "description": "Cria um webhook. Body exige wrapper webhook. subscriptions restrito a allow-list. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada). A resposta desta criacao e a UNICA vez em que o segredo de assinatura (secret) aparece — entregue ao usuario na hora. Depois so has_secret; perdeu = lionchat_webhooks_regenerate_secret.",
   "category": "Webhooks",
   "params": [
    {
@@ -18325,7 +18325,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/webhooks/{id}",
   "title": "Atualizar Webhook",
-  "description": "Atualiza um webhook existente. Atualiza campos do webhook existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: url, subscriptions. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada).",
+  "description": "Atualiza um webhook existente. Atualiza campos do webhook existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: url, subscriptions. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada). O segredo de assinatura (secret) NAO e devolvido aqui (so has_secret): ele aparece uma vez na criacao e em lionchat_webhooks_regenerate_secret.",
   "category": "Webhooks",
   "params": [
    {
@@ -20949,7 +20949,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/kanban_config",
   "title": "Atualizar Configuracao Kanban",
-  "description": "Atualiza a configuracao do Kanban da conta. Atualizacao parcial — so os campos enviados mudam. Use para criar/editar checklist_templates (templates de checklist dos cards), win_reasons/loss_reasons (motivos de ganho/perda), global_custom_attributes (atributos dos cards), config (preferencias) e webhook (url/secret/events).",
+  "description": "Atualiza a configuracao do Kanban da conta. Atualizacao parcial — so os campos enviados mudam. Use para criar/editar checklist_templates (templates de checklist dos cards), win_reasons/loss_reasons (motivos de ganho/perda), global_custom_attributes (atributos dos cards), config (preferencias) e webhook (url/secret/events). CHAVE SALVA NAO VOLTA (17/11/2026): a resposta nunca traz chave, senha ou token ja salvos; traz so indicadores (has_<campo> true/false). No salvar, campo de segredo AUSENTE, vazio ou '[REDACTED]' MANTEM o valor gravado — NUNCA reenvie '[REDACTED]' como valor novo nem peca a chave ao usuario so para salvar outro campo. Vale para webhook_secret (indicador has_webhook_secret); apagar: remove_webhook_secret: true.",
   "category": "Config Kanban",
   "params": [
    {
@@ -27194,7 +27194,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/integrations/hooks/{id}",
   "title": "Atualizar Hook de Integração",
-  "description": "Atualiza settings/status do hook (chaves OpenAI revalidadas ao trocar). ADMIN-ONLY. Confirme com o usuário.",
+  "description": "Atualiza settings/status do hook (chaves OpenAI revalidadas ao trocar). ADMIN-ONLY. Confirme com o usuário. CHAVE SALVA NAO VOLTA (17/11/2026): a resposta nunca traz chave, senha ou token ja salvos; traz so indicadores (has_<campo> true/false). No salvar, campo de segredo AUSENTE, vazio ou '[REDACTED]' MANTEM o valor gravado — NUNCA reenvie '[REDACTED]' como valor novo nem peca a chave ao usuario so para salvar outro campo. Indicadores em settings_secrets ({has_api_key, fallback_api_keys: [impressao digital]}). Chaves reserva da OpenAI (settings.fallback_api_keys): omitir = mantem todas; lista = troca — item 'kept:<impressao digital>' mantem aquela reserva, texto = chave nova, [] = apaga todas. Apagar um segredo: remove_secrets (lista de nomes, ex.: [\"api_key\"]).",
   "category": "Integracoes",
   "params": [
    {
@@ -27744,7 +27744,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/inboxes/{id}",
   "title": "Atualizar Caixa de Entrada",
-  "description": "Atualiza configurações da caixa (nome, saudação, atribuição automática, atributos extras). MUDANÇA DE CONFIG — confirme com o usuário antes. channel.additional_attributes.mark_as_seen (bool, default true, WhatsApp oficial, 2026-06-11): envia o visto/check azul quando o agente abre a conversa — desligar em coexistência app+API. channel.additional_attributes SOMA no 1o nivel nas caixas de WhatsApp/Instagram/Facebook/TikTok (troca inteiro so na caixa de API); no QR Code mande SO as chaves da tela (accept_*, reject_calls, reject_calls_message, mark_as_seen) com true/false de verdade — o resto e interno do sistema. Email (sincronizacao de mao dupla, admin, via objeto channel): two_way_sync_enabled, sync_sent, sync_deletions, sync_read, delete_strategy. CAIXA OFICIAL CRIADA A MAO (26/08): channel.provider_config aceita phone_number_id, business_account_id e api_key — mas o objeto SUBSTITUI o salvo: SEMPRE mande o provider_config INTEIRO (leia o atual antes e reenvie tudo com o campo alterado), senao webhook_verify_token e a marca source sao APAGADOS em silencio e a caixa para de receber. Os 3 campos sao validados JUNTOS na Meta a cada gravacao (422 'Invalid Credentials' = algum dos tres errado ou chave vencida). O telefone da caixa e somente leitura. portal_id tem de ser da conta: fora disso responde 422.",
+  "description": "Atualiza configurações da caixa (nome, saudação, atribuição automática, atributos extras). MUDANÇA DE CONFIG — confirme com o usuário antes. channel.additional_attributes.mark_as_seen (bool, default true, WhatsApp oficial, 2026-06-11): envia o visto/check azul quando o agente abre a conversa — desligar em coexistência app+API. channel.additional_attributes SOMA no 1o nivel nas caixas de WhatsApp/Instagram/Facebook/TikTok (troca inteiro so na caixa de API); no QR Code mande SO as chaves da tela (accept_*, reject_calls, reject_calls_message, mark_as_seen) com true/false de verdade — o resto e interno do sistema. Email (sincronizacao de mao dupla, admin, via objeto channel): two_way_sync_enabled, sync_sent, sync_deletions, sync_read, delete_strategy. CAIXA OFICIAL CRIADA A MAO (26/08): channel.provider_config aceita phone_number_id, business_account_id e api_key — mas o objeto SUBSTITUI o salvo: SEMPRE mande o provider_config INTEIRO (leia o atual antes e reenvie tudo com o campo alterado), senao webhook_verify_token e a marca source sao APAGADOS em silencio e a caixa para de receber. Os 3 campos sao validados JUNTOS na Meta a cada gravacao (422 'Invalid Credentials' = algum dos tres errado ou chave vencida). O telefone da caixa e somente leitura. portal_id tem de ser da conta: fora disso responde 422. CHAVE SALVA NAO VOLTA (17/11/2026): a resposta nunca traz chave, senha ou token ja salvos; traz so indicadores (has_<campo> true/false). No salvar, campo de segredo AUSENTE, vazio ou '[REDACTED]' MANTEM o valor gravado — NUNCA reenvie '[REDACTED]' como valor novo nem peca a chave ao usuario so para salvar outro campo. Vale para channel.provider_config.api_key e verification_pin (WhatsApp oficial; indicadores em provider_config_secrets), imap_password/smtp_password (e-mail; has_imap_password/has_smtp_password) e auth_token (Twilio). Mandar provider_config sem api_key e seguro: a chave gravada e reposta antes da conferencia na Meta. hmac_token (chave de identidade de caixa de site e de API) nao e mais devolvido: para obter uma, use lionchat_inboxes_regenerate_hmac_token (invalida a anterior).",
   "category": "Caixas de Entrada",
   "params": [
    {
@@ -38081,5 +38081,59 @@
    "lionchat_companies_contacts_list",
    "lionchat_kanban_items_show"
   ]
+ },
+ {
+  "id": "lionchat_webhooks_regenerate_secret",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/webhooks/{id}/regenerate_secret",
+  "title": "Gerar novo segredo de assinatura do webhook",
+  "description": "Gera OUTRO segredo de assinatura para o webhook de saida e o devolve UMA vez nesta resposta. O segredo anterior deixa de valer NA HORA: o sistema do cliente que confere a assinatura precisa ser atualizado com o novo, senao passa a recusar os avisos. ADMIN-ONLY. Confirme com o usuario antes. Use so quando o segredo foi perdido ou exposto.",
+  "category": "Webhooks",
+  "params": [
+   {
+    "name": "id",
+    "type": "number",
+    "location": "path",
+    "required": true,
+    "description": "ID do webhook"
+   }
+  ],
+  "returns": "{ id, secret } — o segredo novo, mostrado so aqui",
+  "common_use_cases": [
+   "Segredo de assinatura perdido",
+   "Trocar segredo exposto"
+  ],
+  "related_tools": [
+   "lionchat_webhooks_list",
+   "lionchat_webhooks_update"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_inboxes_regenerate_hmac_token",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/regenerate_hmac_token",
+  "title": "Gerar nova chave de identidade da caixa",
+  "description": "Gera OUTRA chave de verificacao de identidade (hmac_token) para caixa de chat do site ou de API e a devolve UMA vez nesta resposta. A chave anterior deixa de valer NA HORA: o site ou sistema que assina a identidade dos visitantes precisa ser atualizado, senao (com verificacao obrigatoria ligada) os visitantes identificados passam a ser recusados. ADMIN-ONLY. Confirme com o usuario antes. Caixa de outro tipo = 422.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "number",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa (site ou API)"
+   }
+  ],
+  "returns": "{ hmac_token } — a chave nova, mostrada so aqui",
+  "common_use_cases": [
+   "Chave de identidade perdida",
+   "Programador novo precisa da chave"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_show",
+   "lionchat_inboxes_update"
+  ],
+  "confirm_required": true
  }
 ]

@@ -200,6 +200,18 @@ Detalhes completos em `lionchat://docs/api-conventions` → "Wrapper de body".
 - **Chave que volta escondida** (`••••••••` ou `[REDACTED]`): é o valor de leitura, não a chave. Desde 27/10 mandar
   esse valor de volta MANTÉM a chave gravada (chave da TopSend da conta, Hotmart, Kiwify, Ticto, Eduzz, Monetizze e
   Greenn). Só mande o campo quando for trocar por uma chave nova de verdade.
+- **Chave salva não volta mais (17/11)**: integrações (OpenAI, Groq, ElevenLabs, Dyte, Google Tradutor), caixas
+  (chave e PIN do WhatsApp oficial, senhas de e-mail, token da Twilio), webhook do Kanban e TopSend não devolvem o
+  valor depois de salvo, para ninguém. A resposta traz só indicadores `has_<campo>` (true/false) e os objetos
+  `settings_secrets` / `provider_config_secrets` / `auth_config_secrets`. Para saber se há chave, leia o indicador;
+  nunca peça a chave ao usuário só para salvar outro campo: segredo **ausente, vazio ou `[REDACTED]` mantém o
+  gravado**. Chaves reserva da OpenAI: omitir `fallback_api_keys` mantém todas; para tirar uma, mande a lista com
+  `kept:<impressão digital>` das que ficam. Apagar um segredo é pedido explícito (`remove_secrets`,
+  `remove_channel_secrets`, `remove_auth_secrets`, `remove_webhook_secret`).
+- **Segredo gerado pelo sistema aparece uma vez**: o segredo de assinatura do webhook de saída só vem na criação, e
+  a chave de identidade do chat do site/caixa de API não vem mais na leitura. Perdeu? `lionchat_webhooks_regenerate_secret`
+  e `lionchat_inboxes_regenerate_hmac_token` geram outro e **invalidam o anterior na hora** — confirme com o usuário
+  antes e avise que o site ou sistema dele precisa ser atualizado.
 
 ### Gravação: TROCA inteira × SOMA (conferido no código em 18/09/2026)
 
