@@ -1188,9 +1188,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     aiModel,                         // opcional: modelo LLM SO deste node (ex "gpt-4.1-mini");
                                      // vazio/ausente = modelo padrao da conta; vale em TODOS os
                                      // modos e tambem com assistente (sobrepoe o modelo dele)
-                                     // gpt-5.6-luna/terra/sol aceitos desde 08/09 e gpt-6-luna/sol desde
-                                     // 23/09 (os cinco sem temperatura, pela porta /v1/responses);
-                                     // modelo fora da lista de 22 = 422 na hora de salvar o assistente
+                                     // gpt-5.6-luna/terra/sol aceitos desde 08/09, gpt-6-luna/sol desde
+                                     // 23/09 e gpt-6.1-terra / gpt-6.2-sol desde 17/11 (os sete sem
+                                     // temperatura, pela porta /v1/responses); gpt-6.2-astra, gpt-6-astra
+                                     // e gpt-6.1-sol NAO sao aceitos; modelo fora da lista de 24 = 422
+                                     // na hora de salvar o assistente
     aiModelExplicit: true,           // OBRIGATORIO junto do aiModel — sem esta flag o backend
                                      // IGNORA o aiModel (protecao de nodes antigos)
     aiIntents: [{name}],            // se intent — ARRAY DE OBJETOS (NAO array de strings)

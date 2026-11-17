@@ -812,13 +812,15 @@ aiModel nos modos novos (proteção de nós antigos que carregam aiModel de defa
 padrão da conta).
 Exemplo: `{"aiMode":"sentiment","aiModel":"gpt-4.1-mini","aiModelExplicit":true}`.
 
-**A whitelist (`FlowBuilder::RawLlmService::SUPPORTED_MODELS`) é uma lista FECHADA de 19 nomes, SEM
+**A whitelist (`FlowBuilder::RawLlmService::SUPPORTED_MODELS`) é uma lista FECHADA de 23 nomes, SEM
 curinga** — não existe "a família gpt-5 inteira":
 `gpt-4o-mini`, `gpt-4o`, `gpt-4.1-nano`, `gpt-4.1-mini`, `gpt-4.1`, `gpt-5-mini`, `gpt-5`,
 `gpt-5.2`, `gpt-5.4-nano`, `gpt-5.4-mini`, `gpt-5.4`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-terra`,
-`gpt-5.6-sol`, `gpt-6-luna`, `gpt-6-sol`, `o1`, `o3`, `o3-mini`, `o4-mini`.
+`gpt-5.6-sol`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-terra`, `gpt-6.2-sol`, `o1`, `o3`, `o3-mini`, `o4-mini`.
 A família **`gpt-6` (luna/sol) entrou em 23/09/2026** pelo mesmo trilho do `gpt-5.6` (porta `/v1/responses`,
 sem temperatura, fora do Formulário de Lead).
+**`gpt-6.2-sol` e `gpt-6.1-terra` entraram em 17/11/2026** pelo mesmo trilho. `gpt-6.2-astra`, `gpt-6-astra` e
+`gpt-6.1-sol` NÃO estão na lista.
 A família **`gpt-5.6` (luna/terra/sol) voltou em 09/2026** (tinha sido removida em 2026-07-29 porque
 recusa function tools no canal antigo): o servidor fala com esses três pela porta `/v1/responses`.
 Eles ignoram a temperatura do bloco (só o padrão) e **NÃO valem no bloco de IA do Formulário de Lead**
