@@ -48,7 +48,9 @@ Inbox
 ├── channel_id (FK polimórfico)
 ├── enable_auto_assignment (bool)
 ├── working_hours_enabled (bool)
-└── greeting_enabled (bool)
+├── greeting_enabled (bool)
+├── deactivated_at / deactivated_by_id / deactivation_finished_at (caixa DESATIVADA, 17/11/2026)
+└── reactivation_requested_at / reactivated_at (reativacao em andamento / ultima reativacao)
 
 Channel::Waha / Channel::Whatsapp / Channel::WebWidget / ...
 ├── id (PK, table específica)
@@ -990,6 +992,10 @@ Account.feature_enabled?('captain_v2')  # checa bitfield
 
 - Conversation NUNCA é deletada — só muda `status` (snoozed, resolved)
 - Inbox quando deletada → conversations ficam com `inbox_id = NULL` (dependent: :nullify)
+- Inbox DESATIVADA (17/11/2026, botao Desativar da tela com a chave ligada) → sai da lista de caixas, para de
+  receber e enviar e nao conta na vaga do plano; as conversas ficam com `inbox_id = NULL` e o carimbo
+  `original_inbox_deactivated_at`. Reativar devolve as conversas no mesmo status. A API (`DELETE`) continua apagando
+  de vez; desativar e reativar sao `POST .../inboxes/:id/deactivate` e `.../reactivate` (so administrador)
 - Contact pode ser deletado (raro) — destroi conversations em cascata (cuidado)
 - KanbanItem pode ser deletado livremente
 - Funnel `archived = true` → não aparece na UI mas dados permanecem

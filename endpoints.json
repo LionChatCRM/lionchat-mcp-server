@@ -1106,6 +1106,13 @@
     "required": false,
     "query_name": "labels[]",
     "description": "Labels (tags) — array de titulos. Conta conversas marcadas com a etiqueta E conversas cujo CONTATO tem a etiqueta (uniao)."
+   },
+   {
+    "name": "detached_group",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Conversas guardadas de UMA caixa excluída/desativada: mande inbox_id=0 e detached_group=<key> (key de lionchat_inboxes_detached_groups_list)."
    }
   ],
   "returns": "{ meta: { mine_count, assigned_count, unassigned_count, all_count } }",
@@ -1114,7 +1121,9 @@
    "Header de dashboard (contadores rápidos)",
    "Verificar carga antes de listar"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_inboxes_detached_groups_list"
+  ]
  },
  {
   "id": "lionchat_conversations_mentionable_users",
@@ -1234,6 +1243,13 @@
     "location": "query",
     "required": false,
     "description": "So conversas atualizadas nos ultimos N segundos (ex.: 3600 = ultima hora). Util para polling de atividade recente. TETOS (desde 09/11/2026): no maximo 3 horas (10800 s; pedido maior e cortado para 3 h) e no maximo as 1.000 conversas atualizadas mais recentemente. A resposta traz meta.updated_within_applied (segundos de fato usados) e meta.truncated (true = havia mais de 1.000 e as mais antigas ficaram fora). Com updated_within NAO ha paginacao: page 2 em diante volta vazia. Precisa de mais? Faca janelas menores (ex.: de hora em hora) ou use a lista paginada sem updated_within."
+   },
+   {
+    "name": "detached_group",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Conversas guardadas de UMA caixa excluída/desativada: mande inbox_id=0 e detached_group=<key> (key de lionchat_inboxes_detached_groups_list)."
    }
   ],
   "returns": "Objeto com envelope DUPLO: { data: { meta: {...}, payload: [conversas] } }. A lista fica em data.payload (NAO em payload direto). O meta traz exatamente: mine_count, assigned_count, unassigned_count, all_count, groups_count. Cada conversa vem com um array extra `kanban_items` (cards do Kanban visiveis pro usuario). Paginacao real: 25/pagina.",
@@ -1245,7 +1261,8 @@
   "related_tools": [
    "lionchat_conversations_list_1",
    "lionchat_conversations_list_2",
-   "lionchat_conversations_list_3"
+   "lionchat_conversations_list_3",
+   "lionchat_inboxes_detached_groups_list"
   ]
  },
  {
@@ -8022,7 +8039,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/inboxes",
   "title": "Listar Inboxes",
-  "description": "Lista todas as inboxes da conta. Lista inboxes/caixas de entrada paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de inbox/caixa de entrada).",
+  "description": "Lista todas as inboxes da conta. Lista inboxes/caixas de entrada paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de inbox/caixa de entrada). Caixas DESATIVADAS e com exclusão em andamento NÃO aparecem aqui: para elas use lionchat_inboxes_detached_groups_list.",
   "category": "Caixas de Entrada",
   "params": [],
   "returns": "{ payload: [ ...caixas ] } — SO payload, SEM meta e SEM paginacao: vem todas as caixas que o usuario enxerga, ordenadas por nome. Campos da distribuicao automatica presentes em CADA caixa (todo tipo de canal, sem trava): has_assignment_policy (booleano) diz QUAL dos dois caminhos esta ativo naquela caixa — true = a caixa segue uma POLITICA de atribuicao (os numeros do freio estao na politica, nao aqui) e, nesse caso, o auto_assignment_config da propria caixa e IGNORADO (a secao 'Distribuicao Automatica' inclusive some da tela da caixa); false = vale a distribuicao simples da propria caixa, ligada/desligada por enable_auto_assignment e configurada em auto_assignment_config { assign_offline_agents, fair_distribution_limit, fair_distribution_window }. Significado: fair_distribution_limit = quantas conversas o robo entrega a CADA atendente dentro da janela (a vaga volta quando a conversa deixa de estar aberta); fair_distribution_window = tamanho da janela em SEGUNDOS (600 = 10 minutos); assign_offline_agents = entrega tambem para quem nao esta com o painel aberto. Para ver os numeros de uma caixa com has_assignment_policy = true, chame lionchat_inboxes_assignment_policies_list (politica vinculada aquela caixa). OBRIGATORIO: leia o valor da conta antes de responder — NUNCA recite o padrao de fabrica (10 a cada 600 segundos) como se fosse o numero do cliente; o padrao so vale quando NAO ha politica e a caixa nao escolheu numero (e nesse caso, caixa com assign_offline_agents ligado e sem numero escolhido fica SEM freio). Atencao ao ZERO: na CAIXA, fair_distribution_limit = 0 significa 'sem freio' de proposito (o freio so liga com limite maior que zero) — logo a caixa fica sem teto tanto com o campo vazio + offline ligado quanto com 0 escrito. Na POLITICA o 0 nao e aceito (cadastro exige maior que zero), entao caixa com politica vinculada SEMPRE tem freio.",
@@ -8051,7 +8068,7 @@
     "description": "ID da inbox"
    }
   ],
-  "returns": "Objeto PURO da caixa (sem envelope meta/payload), com os mesmos campos da listagem. Campos da distribuicao automatica: has_assignment_policy (booleano) diz QUAL dos dois caminhos esta ativo nesta caixa — true = a caixa segue uma POLITICA de atribuicao (os numeros do freio estao na politica, nao aqui) e o auto_assignment_config desta caixa e IGNORADO (a secao 'Distribuicao Automatica' some da tela da caixa; o valor antigo continua gravado e so volta a valer se a politica for desvinculada); false = vale a distribuicao simples da propria caixa, ligada/desligada por enable_auto_assignment e configurada em auto_assignment_config { assign_offline_agents, fair_distribution_limit, fair_distribution_window }. Significado: fair_distribution_limit = quantas conversas o robo entrega a CADA atendente dentro da janela (a vaga volta quando a conversa deixa de estar aberta); fair_distribution_window = tamanho da janela em SEGUNDOS (600 = 10 minutos); assign_offline_agents = entrega tambem para quem nao esta com o painel aberto. Com has_assignment_policy = true, busque os numeros com lionchat_inboxes_assignment_policies_list. OBRIGATORIO: leia o valor da conta antes de responder — NUNCA recite o padrao de fabrica (10 a cada 600 segundos) como se fosse o numero do cliente; o padrao so vale quando NAO ha politica e a caixa nao escolheu numero (e caixa com assign_offline_agents ligado e sem numero escolhido fica SEM freio). Atencao ao ZERO: na CAIXA, fair_distribution_limit = 0 significa 'sem freio' de proposito (o freio so liga com limite maior que zero) — logo a caixa fica sem teto tanto com o campo vazio + offline ligado quanto com 0 escrito. Na POLITICA o 0 nao e aceito (cadastro exige maior que zero), entao caixa com politica vinculada SEMPRE tem freio.",
+  "returns": "Objeto PURO da caixa (sem envelope meta/payload), com os mesmos campos da listagem. Campos da distribuicao automatica: has_assignment_policy (booleano) diz QUAL dos dois caminhos esta ativo nesta caixa — true = a caixa segue uma POLITICA de atribuicao (os numeros do freio estao na politica, nao aqui) e o auto_assignment_config desta caixa e IGNORADO (a secao 'Distribuicao Automatica' some da tela da caixa; o valor antigo continua gravado e so volta a valer se a politica for desvinculada); false = vale a distribuicao simples da propria caixa, ligada/desligada por enable_auto_assignment e configurada em auto_assignment_config { assign_offline_agents, fair_distribution_limit, fair_distribution_window }. Significado: fair_distribution_limit = quantas conversas o robo entrega a CADA atendente dentro da janela (a vaga volta quando a conversa deixa de estar aberta); fair_distribution_window = tamanho da janela em SEGUNDOS (600 = 10 minutos); assign_offline_agents = entrega tambem para quem nao esta com o painel aberto. Com has_assignment_policy = true, busque os numeros com lionchat_inboxes_assignment_policies_list. OBRIGATORIO: leia o valor da conta antes de responder — NUNCA recite o padrao de fabrica (10 a cada 600 segundos) como se fosse o numero do cliente; o padrao so vale quando NAO ha politica e a caixa nao escolheu numero (e caixa com assign_offline_agents ligado e sem numero escolhido fica SEM freio). Atencao ao ZERO: na CAIXA, fair_distribution_limit = 0 significa 'sem freio' de proposito (o freio so liga com limite maior que zero) — logo a caixa fica sem teto tanto com o campo vazio + offline ligado quanto com 0 escrito. Na POLITICA o 0 nao e aceito (cadastro exige maior que zero), entao caixa com politica vinculada SEMPRE tem freio. Estado de uso: deactivation_state ('active' | 'deactivating' | 'deactivated' | 'reactivating') e deactivated_at (preenchido = caixa fora de uso; ela não recebe nem envia).",
   "common_use_cases": [
    "Ver dados completos antes de editar",
    "Verificar estado atual antes de uma ação",
@@ -9946,7 +9963,7 @@
     "description": "Display ID"
    }
   ],
-  "returns": "Objeto com UMA chave: { payload: [ mensagens agendadas da conversa ] }. NAO existe meta. Cada item: id, message (texto), title, scheduled_at (timestamp Unix), created_at (Unix), status, inbox_id, conversation_id, is_recurrent, period, recurrence_count, recurrence_sent, template_params e blocks (com URLs dos arquivos). Sem paginacao — todas as agendadas da conversa, de qualquer status. Conversa inexistente devolve 404 com {error}.",
+  "returns": "Objeto com UMA chave: { payload: [ mensagens agendadas da conversa ] }. NAO existe meta. Cada item: id, message (texto), title, scheduled_at (timestamp Unix), created_at (Unix), status, inbox_id, conversation_id, is_recurrent, period, recurrence_count, recurrence_sent, template_params e blocks (com URLs dos arquivos). Sem paginacao — todas as agendadas da conversa, de qualquer status. Conversa inexistente devolve 404 com {error}. failure_reason: motivo da falha quando status = failed, no idioma da conta.",
   "common_use_cases": [
    "Dashboard: contar/exibir mensagens agendadas",
    "Buscar com filtros antes de outra operação",
@@ -10170,7 +10187,7 @@
     "description": "Responsavel da CONVERSA do disparo (id do agente). Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma. Quem nao e administrador ja ve so os disparos das proprias conversas."
    }
   ],
-  "returns": "array de mensagens agendadas",
+  "returns": "array de mensagens agendadas failure_reason: motivo da falha quando status = failed (ex.: 'A caixa X está desativada'), no idioma da conta.",
   "common_use_cases": [
    "Dashboard: contar/exibir mensagens agendadas",
    "Buscar com filtros antes de outra operação",
@@ -10523,7 +10540,7 @@
     "description": "true = cada flow vem com session_stats{total,active,waiting,completed,exited,error} (conta as sessoes no banco — mais lento em conta grande). Sem o param o campo NAO aparece."
    }
   ],
-  "returns": "Objeto { data: [flows] } — a lista fica em data, sem meta e sem paginacao. Campos de cada item: id, name, description, tool_name, tool_description, flow_type, conversation_mode, active, inbox_ids, inboxes[{id,name,channel_type}], tags, session_stats{total,active,waiting,completed,exited,error}, created_at, updated_at. LISTA LEVE (desde 20/08/2026): o index NAO traz flow_data, node_metrics, waiting_counts nem variables — so os campos acima mais trigger_types (array com as chaves dos gatilhos do bloco Inicio, ex. [\"card_created\",\"campaign_trigger\"]; vazio = sem gatilho). session_stats{total,active,waiting,completed,exited,error} so vem quando a chamada manda with_session_stats=true (param opcional desta tool — sem ele o campo NAO vem). executions_count e errors_count sao colunas mortas (sempre 0): ignore. Pra ler o desenho (blocos, conexoes, variaveis) use flows_show; pra conferir gatilho duplicado use flows_check_conflicts.",
+  "returns": "Objeto { data: [flows] } — a lista fica em data, sem meta e sem paginacao. Campos de cada item: id, name, description, tool_name, tool_description, flow_type, conversation_mode, active, inbox_ids, inboxes[{id,name,channel_type}], tags, session_stats{total,active,waiting,completed,exited,error}, created_at, updated_at. LISTA LEVE (desde 20/08/2026): o index NAO traz flow_data, node_metrics, waiting_counts nem variables — so os campos acima mais trigger_types (array com as chaves dos gatilhos do bloco Inicio, ex. [\"card_created\",\"campaign_trigger\"]; vazio = sem gatilho). session_stats{total,active,waiting,completed,exited,error} so vem quando a chamada manda with_session_stats=true (param opcional desta tool — sem ele o campo NAO vem). executions_count e errors_count sao colunas mortas (sempre 0): ignore. Pra ler o desenho (blocos, conexoes, variaveis) use flows_show; pra conferir gatilho duplicado use flows_check_conflicts. inboxes[].deactivated (booleano): true = caixa ligada desativada.",
   "common_use_cases": [
    "Dashboard: contar/exibir flows",
    "Buscar com filtros antes de outra operação",
@@ -10629,7 +10646,7 @@
     "description": "ID do flow"
    }
   ],
-  "returns": "flow (objeto completo com associações)",
+  "returns": "flow (objeto completo com associações) inboxes[].deactivated (booleano): true = a caixa ligada ao fluxo está desativada (o fluxo não dispara por ela até reativar).",
   "common_use_cases": [
    "Ver dados completos antes de editar",
    "Verificar estado atual antes de uma ação",
@@ -24975,7 +24992,7 @@
     "description": "ID da caixa de entrada WAHA"
    }
   ],
-  "returns": "{ status, connected, phone_number, qr_code_available, phone_number_changed, previous_phone_number, qr_link_active, qr_link_expires_at, contacts_quota, reachout_timelock }. contacts_quota vem do WhatsApp (nao da Meta) e traz cappingStatus/totalQuota/usedQuota/cycleStart/cycleEnd; totalQuota -1 = sem limite (o caso de quase toda caixa). reachout_timelock null = pode iniciar conversas; presente = o WhatsApp bloqueou temporariamente abordagem fria por esse numero. Os dois podem vir AUSENTES (servidor WAHA que nao reporta saude) — ausencia nao significa \"sem limite\".",
+  "returns": "{ status, connected, phone_number, qr_code_available, phone_number_changed, previous_phone_number, qr_link_active, qr_link_expires_at, contacts_quota, reachout_timelock }. contacts_quota vem do WhatsApp (nao da Meta) e traz cappingStatus/totalQuota/usedQuota/cycleStart/cycleEnd; totalQuota -1 = sem limite (o caso de quase toda caixa). reachout_timelock null = pode iniciar conversas; presente = o WhatsApp bloqueou temporariamente abordagem fria por esse numero. Os dois podem vir AUSENTES (servidor WAHA que nao reporta saude) — ausencia nao significa \"sem limite\". deactivated_same_number e active_same_number ({ inbox_id, name } ou null): o número conectado também é de uma caixa DESATIVADA da conta (dá para trazer as conversas dela com o Mover) ou de outra caixa de QR Code EM USO (as duas vão receber as mensagens).",
   "common_use_cases": [
    "Diagnosticar 'mensagens não estão saindo' (sessão caiu?)"
   ],
@@ -38169,5 +38186,173 @@
    "lionchat_inboxes_update"
   ],
   "confirm_required": true
+ },
+ {
+  "id": "lionchat_inboxes_detached_groups_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/detached_groups",
+  "title": "Caixas excluídas e desativadas (grupos de conversas guardadas)",
+  "description": "Lista os grupos de conversas guardadas de caixas EXCLUÍDAS e DESATIVADAS, um grupo por caixa de origem (as caixas desativadas NÃO aparecem em lionchat_inboxes_list). Qualquer atendente pode ler; o grupo de uma caixa DESATIVADA só aparece para administrador e para membro daquela caixa. Use para responder \"onde estão as conversas da caixa que excluí/desativei?\" e para pegar a `key` do grupo antes de mover ou o `deactivation.inbox_id` antes de reativar.",
+  "category": "Caixas de Entrada",
+  "params": [],
+  "returns": "{ payload: [{ key, name, channel_type, medium, conversations_count, deleted_at, last_activity_at, state, movable, deactivation }] }. `key` identifica o grupo (ex.: 'i:123' = caixa de id 123; 'n:<tipo>|<nome>' = caixa antiga identificada pelo nome; 'x' = sem identificação, não pode ser movido). `state`: excluded (caixa excluída), inbox_exists (o carimbo aponta para uma caixa que existe), unidentified, deactivated (caixa desativada pronta), deactivating (desativando agora) ou reactivating (reativando agora). `movable` diz se o Mover aceita esse grupo. `deactivation` (só nas desativadas): { inbox_id, deactivated_at (data em segundos desde 1970), deactivated_by_name }. Para listar as CONVERSAS de um grupo: lionchat_conversations_list com inbox_id=0 e detached_group=<key>.",
+  "common_use_cases": [
+   "Achar as conversas de uma caixa excluída ou desativada",
+   "Pegar a key do grupo antes de mover as conversas",
+   "Pegar o inbox_id de uma caixa desativada antes de reativar"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_detached_groups_move_preview",
+   "lionchat_inboxes_detached_groups_move_execute",
+   "lionchat_inboxes_reactivate",
+   "lionchat_conversations_list"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_detached_groups_move_preview",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/detached_groups/move/preview",
+  "title": "Prévia de mover as conversas de uma caixa excluída/desativada",
+  "description": "Mostra o que aconteceria ao mover as conversas de um grupo (caixa excluída ou desativada) para outra caixa de WhatsApp (QR Code ou oficial), sem mover nada. Só administrador. SEMPRE rode a prévia e mostre os números ao usuário ANTES de lionchat_inboxes_detached_groups_move_execute.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "group",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "key do grupo (de lionchat_inboxes_detached_groups_list), ex.: 'i:123'"
+   },
+   {
+    "name": "target_inbox_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "ID da caixa de WhatsApp de destino (em uso, da mesma conta)"
+   }
+  ],
+  "returns": "{ movable, conflicting, archived_as_history, groups_skipped }: movable = conversas que vão para o destino; conflicting = de contatos que já conversam no destino (entram encerradas ao lado da conversa viva, o card passa a apontar para a viva); archived_as_history = de contatos sem telefone (entram como histórico encerrado); groups_skipped = conversas de grupo de WhatsApp (não são movidas). Erro 422 { error } com o motivo quando o Mover é recusado (destino desativado, origem em transição, grupo sem identificação).",
+  "common_use_cases": [
+   "Conferir quantas conversas vão e para onde antes de mover"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_detached_groups_list",
+   "lionchat_inboxes_detached_groups_move_execute"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_detached_groups_move_execute",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/detached_groups/move/execute",
+  "title": "Mover as conversas de uma caixa excluída/desativada para outra caixa",
+  "description": "Move TODAS as conversas do grupo para a caixa de WhatsApp de destino, em segundo plano. As conversas entram ENCERRADAS e NADA é enviado aos contatos. Só administrador. Ação que muda dados do cliente: confirme com o usuário depois de mostrar a prévia (lionchat_inboxes_detached_groups_move_preview). Acompanhe com lionchat_inboxes_detached_groups_move_status.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "group",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "key do grupo, ex.: 'i:123'"
+   },
+   {
+    "name": "target_inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID da caixa de WhatsApp de destino"
+   }
+  ],
+  "returns": "{ status: 'started' }. 409 { error } se outro Mover já está rodando neste grupo; 422 { error } quando recusado.",
+  "common_use_cases": [
+   "Levar o histórico de uma caixa excluída para a caixa nova do mesmo número"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_detached_groups_move_preview",
+   "lionchat_inboxes_detached_groups_move_status"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_detached_groups_move_status",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/detached_groups/move/status",
+  "title": "Andamento do Mover conversas",
+  "description": "Andamento do Mover de um grupo. Só administrador. Consulte de tempos em tempos (uma consulta por vez, a cada poucos segundos), nunca em rajada.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "group",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "key do grupo, ex.: 'i:123'"
+   }
+  ],
+  "returns": "{ status, processed, total, percent, moved, resolved_conflicts, archived_no_phone, errors_total, errors, target_name }. status: idle (nada rodando), queued, in_progress, completed, failed ou interrupted (o trabalho parou no meio, ex.: atualização do sistema; rodar o execute de novo continua de onde parou).",
+  "common_use_cases": [
+   "Saber se o Mover terminou e quantas conversas foram"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_detached_groups_move_execute"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_deactivate",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/deactivate",
+  "title": "Desativar caixa de entrada",
+  "description": "Desativa a caixa sem apagar nada: ela sai da lista de caixas, para de receber e de enviar, as campanhas dela param e a vaga do plano é liberada; as conversas ficam guardadas e voltam como estavam ao reativar. Mensagens que chegarem enquanto estiver desativada NÃO são recebidas. Só administrador e só com a função ligada na instalação (desligada: 409 com code disabled). Ação que muda a operação do cliente: confirme com o usuário antes. É o caminho recomendado no lugar de excluir.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa"
+   }
+  ],
+  "returns": "202 { deactivation_state, token } (deactivation_state 'deactivating' → 'deactivated' em segundos). Pedido repetido devolve o mesmo token. 409 { message } quando não pode agora: exclusão em andamento, migração ou Mover com ela como origem/destino, importação de histórico em andamento ou pausada, histórico da Meta pendente.",
+  "common_use_cases": [
+   "Tirar uma caixa de uso sem perder as conversas",
+   "Liberar a vaga do plano sem excluir"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_reactivate",
+   "lionchat_inboxes_detached_groups_list",
+   "lionchat_inboxes_show"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_reactivate",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/reactivate",
+  "title": "Reativar caixa de entrada desativada",
+  "description": "Reativa uma caixa desativada: as conversas voltam para ela com a mesma situação (abertas continuam abertas, encerradas continuam encerradas; adiadas que venceram enquanto estava desativada são reabertas). Exige vaga no plano. WhatsApp por código QR volta pedindo para ler o código de novo; oficial, Instagram e Facebook tentam voltar sozinhos. O id vem de deactivation.inbox_id em lionchat_inboxes_detached_groups_list (a caixa desativada não aparece em lionchat_inboxes_list). Só administrador; funciona mesmo com a função de desativar desligada.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa desativada"
+   },
+   {
+    "name": "confirm_same_number",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "true para confirmar quando outra caixa de QR Code EM USO tem o mesmo número (as duas vão receber as mensagens). Sem ele, esse caso responde 409 com code same_number_active — pergunte ao usuário antes de mandar true."
+   }
+  ],
+  "returns": "202 { deactivation_state, token } ('reactivating' → 'active'). 409 { message, code }: not_deactivated, reactivation_running, deactivation_running, deletion_pending, move_running, no_slot (sem vaga no plano), same_number_active.",
+  "common_use_cases": [
+   "Voltar a usar uma caixa desativada com as conversas como estavam"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_deactivate",
+   "lionchat_inboxes_detached_groups_list"
+  ]
  }
 ]
