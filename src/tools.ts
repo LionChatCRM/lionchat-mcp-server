@@ -502,7 +502,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-14)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-17)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -1235,6 +1235,13 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     todo node configurado pela tela quebrava. Hoje o motor le percent e aceita weight so como dado
     antigo. Escreva SEMPRE percent: com weight o node roda, mas abre com as porcentagens EM BRANCO
     na tela do cliente.
+  NOME DA VARIANTE (17/11/2026): "label" e o nome que a pessoa ve — na janela do bloco (campo editavel),
+    na saida do bloco no desenho e em "Caminho sorteado" no historico. "id" e so o identificador da
+    saida: e ele que vai no sourceHandle da aresta e no contador da divisao. Escreva SEMPRE os dois.
+    id curto, unico no bloco e ESTAVEL (A, B, C... como a tela faz, ou um slug sem espaco nem acento);
+    o nome legivel vai SO em label (a tela aceita ate 24 caracteres). Para RENOMEAR uma variante mude
+    so o label: trocar o id solta a aresta ja ligada (teria de trocar o sourceHandle junto) e zera a
+    contagem da divisao. Sem label a tela mostra o id.
   DIVISAO EXATA, NAO SORTEIO (desde 20/08/2026, nos 2 modos): o bloco divide o que passa por ele na
     proporcao configurada — 50/50 alterna A,B,A,B; 70/30 da 7 de cada 10 intercalados. Contador por
     fluxo+bloco+impressao digital da configuracao (ids + percentuais): mexer em ramo/agente/porcentagem

@@ -965,6 +965,14 @@ Corrigido em 30/07: o motor lê `percent` e aceita `weight` só como dado antigo
 `percent`** — randomizador criado com `weight` até roda, mas abre com as porcentagens EM BRANCO na
 tela do cliente (a tela lê só `percent`).
 
+**Nome da variante (17/11/2026):** `label` é o nome que a pessoa vê — na janela do bloco (campo
+editável), na saída do bloco no desenho e em "Caminho sorteado" no histórico. `id` é só o
+identificador da saída: é ele que vai no `sourceHandle` da aresta e no contador da divisão. Escreva
+sempre os dois. `id` curto, único no bloco e ESTÁVEL (`A`, `B`, `C`... como a tela faz, ou um slug sem
+espaço nem acento); o nome legível vai SÓ em `label` (a tela aceita até 24 caracteres). **Para renomear
+uma variante, mude só o `label`**: trocar o `id` solta a aresta já ligada (teria de trocar o
+`sourceHandle` junto) e zera a contagem da divisão. Sem `label` a tela mostra o `id`.
+
 **Divisão EXATA, não sorteio (desde 20/08/2026):** nos DOIS modos o bloco divide o que passa por ele na proporção configurada — 50/50 alterna A,B,A,B; 70/30 dá 7 de cada 10 intercalados. Contador por fluxo+bloco; mexer em agente/porcentagem zera a contagem. (Até 20/08 era cara-ou-coroa — 5 leads seguidos pra mesma pessoa num "50/50" era normal.)
 
 **Modo `distribute_agents` (divisão PONDERADA):** `data.mode: 'distribute_agents'` + `data.agents: [{ agent_id, percent }]` — escolhe o agente da vez (percentuais somando 100) e atribui automaticamente. Diferença pra AÇÃO `distribute_agents` do node `action` (seção 2.5): a ação é rodízio SIMPLES (1,2,3 sem porcentagem); este modo aceita pesos diferentes (70/30). Com pesos iguais os dois dão o mesmo resultado.
