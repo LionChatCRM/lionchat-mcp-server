@@ -564,6 +564,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     equal_any | not_equal_any | starts_with_any | ends_with_any | is_empty | is_not_empty) + values:[]
     palavras OPCIONAIS sobre o texto do comentario (vazio = qualquer comentario); post_ids:[] STRINGS, vazio
     = qualquer post; aceita tambem o formato antigo keywords:[] + match_type 'contains'|'exact'}.
+    POSTS (2026-11-17): o id do post NAO e o codigo do link do Instagram. Descubra com
+    lionchat_inboxes_instagram_posts (lista os posts da caixa: id, legenda, link, data) e grave o id em
+    post_ids (pode ser mais de um). Opcional: post_meta {"<id>": {caption, permalink}} so para a TELA mostrar
+    o post escolhido ao reabrir; o motor ignora.
     A resposta do flow sai como DM PRIVADO automatico: a 1a mensagem do no de mensagem vira Private Reply da
     Meta (so Channel::Instagram; one-shot por comentario; janela de 7 dias do comentario). A 2a+ mensagem so
     sai se a pessoa responder no Direct (ou tocar num BOTAO da 1a mensagem, que abre a janela de 24h) — senao
@@ -1026,6 +1030,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       mute_conversation({}), mark_unread({}), add_private_note({text}), send_email_transcript({email}),
       reply_comment({text}),  // NOVO 2026-11-17: resposta PUBLICA no post do Instagram. Usa o comentario que
       //   disparou o flow (gatilho instagram_comment_received); fora de flow-de-comentario, pula. text aceita {{var}}.
+      //   MARCAR QUEM COMENTOU (2026-11-17): escreva a palavra @nome no text — na publicacao ela vira o @ da
+      //   pessoa (ex.: "Oi @nome, te chamei no direct"). NAO use @{{contact.name}}: o nome do contato nao e o @.
       add_conversation_label({labels:[...]}), remove_conversation_label({labels:[...]}),  // etiqueta NA CONVERSA
       // remove_*_label com labels:['__all__'] = tira TODAS as etiquetas (NOVO 09/11/2026; vale tambem
       //   em automacao/macro: action_params ['__all__']). Nome de etiqueta nunca comeca com '_'.

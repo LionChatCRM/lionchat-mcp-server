@@ -1612,3 +1612,14 @@ Antes de chamar `flows_create` ou `flows_update`, valide mentalmente:
 - [ ] `wait_response` que salva e-mail/telefone do contato usa a validação correspondente (`email`/`phone`)
 - [ ] Antes de ATIVAR: nenhum outro flow ativo no mesmo gatilho+inbox+modo (senão vem 422 `flow_trigger_conflict`)
 - [ ] Layout: nodes em ordem visual da esquerda pra direita, sem sobreposição
+
+## Comentario do Instagram: escolher o post e marcar quem comentou (17/11/2026)
+
+- **Post do gatilho.** `post_ids` do gatilho `instagram_comment_received` recebe o id que a Meta usa, que NAO e o
+  codigo do link do Instagram. Descubra com `lionchat_inboxes_instagram_posts` (posts da caixa: id, legenda,
+  link, data; `after` pagina) e grave o id. Pode ser mais de um; vazio = qualquer post. `post_meta`
+  (`{"<id>": {caption, permalink}}`) e opcional e serve so para a tela mostrar o post escolhido.
+- **Marcar quem comentou.** No `text` da acao `reply_comment`, a palavra `@nome` vira o @ da pessoa na hora de
+  publicar ("Oi @nome, te chamei no direct"). Nao use `@{{contact.name}}`: o nome do contato nao e o @ dela.
+  Se o sistema nao souber o @, a palavra e retirada do texto.
+

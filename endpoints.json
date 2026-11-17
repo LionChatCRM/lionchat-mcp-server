@@ -35093,6 +35093,40 @@
   ]
  },
  {
+  "id": "lionchat_inboxes_instagram_posts",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/instagram_posts",
+  "title": "Posts do Instagram da Caixa (para o gatilho de comentário do fluxo)",
+  "description": "Lista os posts recentes da conta do Instagram ligada à caixa: id, começo da legenda, tipo, miniatura, link e data. Use para descobrir o id do post que vai em post_ids do gatilho instagram_comment_received do fluxo — o código que aparece no link do Instagram NÃO é esse id. 24 posts por página; passe after com o next_cursor da resposta para ver os mais antigos. Só caixa de Instagram (Channel::Instagram); em outra caixa devolve error not_instagram. Se a Meta recusar (caixa precisa ser reconectada), devolve posts vazio e error unavailable, sempre com 200. Somente leitura; exige ser administrador ou membro da caixa.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa de Instagram"
+   },
+   {
+    "name": "after",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Cursor da página seguinte (next_cursor da resposta anterior)"
+   }
+  ],
+  "returns": "{ posts: [{id, caption, media_type, media_product_type, thumbnail_url, permalink, timestamp}], next_cursor, error }",
+  "common_use_cases": [
+   "Achar o id de um post para o fluxo disparar só nos comentários dele",
+   "Listar os posts recentes da conta do Instagram"
+  ],
+  "related_tools": [
+   "lionchat_flows_schema_reference",
+   "lionchat_flows_update",
+   "lionchat_inboxes_list"
+  ]
+ },
+ {
   "id": "lionchat_inboxes_register_webhook",
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inboxes/{id}/register_webhook",
