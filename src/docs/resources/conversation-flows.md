@@ -110,6 +110,26 @@ SENÃO:
   → assignee_id fica null (atribuição manual)
 ```
 
+**Atribuir a quem responder (18/11/2026).** Chave `auto_assignment_config.assign_on_reply` da caixa: a conversa sem
+responsável e sem time vira do **Agente da caixa** que a responder pelo painel ou pelo app (pílula "X assumiu a conversa
+ao responder").
+
+Só VALE com as DUAS condições (regra do dono, `Inbox#assign_on_reply_active?`):
+1. **Distribuição Automática desligada** (`enable_auto_assignment = false`);
+2. **nenhuma política de atribuição vinculada à caixa** (`has_assignment_policy = false`; as políticas ficam em
+   Configurações > Políticas de atribuição).
+Com qualquer uma das duas, a chave fica gravada mas não age, e a tela a mostra apagada com o motivo.
+
+Para ligar a pedido do usuário: ler a caixa (`lionchat_inboxes_show`); se houver política, desvincular com
+`lionchat_inboxes_assignment_policies_destroy` só depois de confirmar com ele; se a distribuição estiver ligada,
+desligar só depois de confirmar (as conversas novas passam a chegar sem responsável e só ganham dono quando alguém
+responde); por fim `lionchat_inboxes_update` com `enable_auto_assignment: false` e o `auto_assignment_config` inteiro
+mais `assign_on_reply: true`. Releia a caixa e confirme as duas condições antes de dizer que está ativa.
+
+Não atribuem: nota privada, resposta pelo MCP/API, agendada, macro, automação, fluxo, campanha, IA; supervisor da
+caixa não assume. Grupo do WhatsApp e conversa encerrada entram (a encerrada continua encerrada). Dispara "agente
+atribuído" em automações e fluxos, como o botão "Atribuir a mim"; colega com cargo "só sem responsável" perde a conversa.
+
 Os dois caminhos rodam no MESMO serviço (`AutoAssignment::AssignmentService`), usam o MESMO rodízio
 (`AutoAssignment::RoundRobinSelector` — só a política pode trocá-lo pelo modo `balanced`) e passam
 pelo MESMO freio de rajada
