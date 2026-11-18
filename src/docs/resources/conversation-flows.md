@@ -111,7 +111,7 @@ SENÃO:
 ```
 
 **Atribuir a quem responder (18/11/2026).** Chave `auto_assignment_config.assign_on_reply` da caixa: a conversa sem
-responsável e sem time vira do **Agente da caixa** que a responder pelo painel ou pelo app (pílula "X assumiu a conversa
+responsável vira do **Agente da caixa** que a responder pelo painel ou pelo app (pílula "X assumiu a conversa
 ao responder").
 
 Só VALE com as DUAS condições (regra do dono, `Inbox#assign_on_reply_active?`):
@@ -125,6 +125,10 @@ Para ligar a pedido do usuário: ler a caixa (`lionchat_inboxes_show`); se houve
 desligar só depois de confirmar (as conversas novas passam a chegar sem responsável e só ganham dono quando alguém
 responde); por fim `lionchat_inboxes_update` com `enable_auto_assignment: false` e o `auto_assignment_config` inteiro
 mais `assign_on_reply: true`. Releia a caixa e confirme as duas condições antes de dizer que está ativa.
+
+Conversa COM time: só atribui se o time estiver com a distribuição automática desligada (`allow_auto_assign = false` em
+`lionchat_teams_show`) E quem respondeu for membro do time. Time com distribuição ligada continua mandando; pessoa fora do
+time não assume.
 
 Não atribuem: nota privada, resposta pelo MCP/API, agendada, macro, automação, fluxo, campanha, IA; supervisor da
 caixa não assume. Grupo do WhatsApp e conversa encerrada entram (a encerrada continua encerrada). Dispara "agente
