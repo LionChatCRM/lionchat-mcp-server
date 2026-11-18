@@ -812,13 +812,15 @@ aiModel nos modos novos (proteção de nós antigos que carregam aiModel de defa
 padrão da conta).
 Exemplo: `{"aiMode":"sentiment","aiModel":"gpt-4.1-mini","aiModelExplicit":true}`.
 
-**A whitelist (`FlowBuilder::RawLlmService::SUPPORTED_MODELS`) é uma lista FECHADA de 19 nomes, SEM
+**A whitelist (`FlowBuilder::RawLlmService::SUPPORTED_MODELS`) é uma lista FECHADA de 23 nomes, SEM
 curinga** — não existe "a família gpt-5 inteira":
 `gpt-4o-mini`, `gpt-4o`, `gpt-4.1-nano`, `gpt-4.1-mini`, `gpt-4.1`, `gpt-5-mini`, `gpt-5`,
 `gpt-5.2`, `gpt-5.4-nano`, `gpt-5.4-mini`, `gpt-5.4`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-terra`,
-`gpt-5.6-sol`, `gpt-6-luna`, `gpt-6-sol`, `o1`, `o3`, `o3-mini`, `o4-mini`.
+`gpt-5.6-sol`, `gpt-6-luna`, `gpt-6-sol`, `gpt-6.1-terra`, `gpt-6.2-sol`, `o1`, `o3`, `o3-mini`, `o4-mini`.
 A família **`gpt-6` (luna/sol) entrou em 23/09/2026** pelo mesmo trilho do `gpt-5.6` (porta `/v1/responses`,
 sem temperatura, fora do Formulário de Lead).
+**`gpt-6.2-sol` e `gpt-6.1-terra` entraram em 17/11/2026** pelo mesmo trilho. `gpt-6.2-astra`, `gpt-6-astra` e
+`gpt-6.1-sol` NÃO estão na lista.
 A família **`gpt-5.6` (luna/terra/sol) voltou em 09/2026** (tinha sido removida em 2026-07-29 porque
 recusa function tools no canal antigo): o servidor fala com esses três pela porta `/v1/responses`.
 Eles ignoram a temperatura do bloco (só o padrão) e **NÃO valem no bloco de IA do Formulário de Lead**
@@ -964,6 +966,14 @@ do FlowNodeConfigModal) e o motor lia só `weight` — nenhum node configurado p
 Corrigido em 30/07: o motor lê `percent` e aceita `weight` só como dado antigo. **Escreva sempre
 `percent`** — randomizador criado com `weight` até roda, mas abre com as porcentagens EM BRANCO na
 tela do cliente (a tela lê só `percent`).
+
+**Nome da variante (17/11/2026):** `label` é o nome que a pessoa vê — na janela do bloco (campo
+editável), na saída do bloco no desenho e em "Caminho sorteado" no histórico. `id` é só o
+identificador da saída: é ele que vai no `sourceHandle` da aresta e no contador da divisão. Escreva
+sempre os dois. `id` curto, único no bloco e ESTÁVEL (`A`, `B`, `C`... como a tela faz, ou um slug sem
+espaço nem acento); o nome legível vai SÓ em `label` (a tela aceita até 24 caracteres). **Para renomear
+uma variante, mude só o `label`**: trocar o `id` solta a aresta já ligada (teria de trocar o
+`sourceHandle` junto) e zera a contagem da divisão. Sem `label` a tela mostra o `id`.
 
 **Divisão EXATA, não sorteio (desde 20/08/2026):** nos DOIS modos o bloco divide o que passa por ele na proporção configurada — 50/50 alterna A,B,A,B; 70/30 dá 7 de cada 10 intercalados. Contador por fluxo+bloco; mexer em agente/porcentagem zera a contagem. (Até 20/08 era cara-ou-coroa — 5 leads seguidos pra mesma pessoa num "50/50" era normal.)
 
@@ -1602,3 +1612,14 @@ Antes de chamar `flows_create` ou `flows_update`, valide mentalmente:
 - [ ] `wait_response` que salva e-mail/telefone do contato usa a validação correspondente (`email`/`phone`)
 - [ ] Antes de ATIVAR: nenhum outro flow ativo no mesmo gatilho+inbox+modo (senão vem 422 `flow_trigger_conflict`)
 - [ ] Layout: nodes em ordem visual da esquerda pra direita, sem sobreposição
+
+## Comentario do Instagram: escolher o post e marcar quem comentou (17/11/2026)
+
+- **Post do gatilho.** `post_ids` do gatilho `instagram_comment_received` recebe o id que a Meta usa, que NAO e o
+  codigo do link do Instagram. Descubra com `lionchat_inboxes_instagram_posts` (posts da caixa: id, legenda,
+  link, data; `after` pagina) e grave o id. Pode ser mais de um; vazio = qualquer post. `post_meta`
+  (`{"<id>": {caption, permalink}}`) e opcional e serve so para a tela mostrar o post escolhido.
+- **Marcar quem comentou.** No `text` da acao `reply_comment`, a palavra `@nome` vira o @ da pessoa na hora de
+  publicar ("Oi @nome, te chamei no direct"). Nao use `@{{contact.name}}`: o nome do contato nao e o @ dela.
+  Se o sistema nao souber o @, a palavra e retirada do texto.
+

@@ -502,7 +502,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-14)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-17)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -553,8 +553,26 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     clique em "Concluir" naquele modal apagava o gatilho em silencio. Alem do editor, o disparo por
     webhook, o filtro de Campanha de Fluxo, o gatilho LionTrack e o historico de execucao tambem so
     entendem "items". O app normaliza o formato antigo na gravacao, mas nao conte com isso.
-  Triggers: message_received (keywords[] min 3 chars + match_type 'contains'|'exact' — dispara em
-    QUALQUER msg do cliente que case), conversation_created/conversation_reopened (match_mode +
+  Triggers: message_received (keywords[] min 3 chars + match_type — dispara em QUALQUER msg do cliente
+    que case. match_type aceita 'contains'/'exact' (ANTIGOS, intocados byte a byte) E o conjunto RICO novo
+    2026-11-17: 'not_contains_any' | 'not_equal_any' | 'starts_with_any' | 'ends_with_any' | 'is_empty' |
+    'is_not_empty' (os 2 ultimos ignoram keywords). Mesma familia da condicao "Resposta do cliente"; so
+    acrescenta, formato antigo segue funcionando sem migracao),
+    instagram_comment_received (NOVO 2026-11-17: COMENTARIO do Instagram, SEPARADO de message_received —
+    comentario deixou de disparar message_received. SO aparece na tela em fluxo de caixa Instagram. config
+    {operator (conjunto RICO, igual a condicao "Resposta do cliente": contains_any | not_contains_any |
+    equal_any | not_equal_any | starts_with_any | ends_with_any | is_empty | is_not_empty) + values:[]
+    palavras OPCIONAIS sobre o texto do comentario (vazio = qualquer comentario); post_ids:[] STRINGS, vazio
+    = qualquer post; aceita tambem o formato antigo keywords:[] + match_type 'contains'|'exact'}.
+    POSTS (2026-11-17): o id do post NAO e o codigo do link do Instagram. Descubra com
+    lionchat_inboxes_instagram_posts (lista os posts da caixa: id, legenda, link, data) e grave o id em
+    post_ids (pode ser mais de um). Opcional: post_meta {"<id>": {caption, permalink}} so para a TELA mostrar
+    o post escolhido ao reabrir; o motor ignora.
+    A resposta do flow sai como DM PRIVADO automatico: a 1a mensagem do no de mensagem vira Private Reply da
+    Meta (so Channel::Instagram; one-shot por comentario; janela de 7 dias do comentario). A 2a+ mensagem so
+    sai se a pessoa responder no Direct (ou tocar num BOTAO da 1a mensagem, que abre a janela de 24h) — senao
+    o no trava com aviso. Acao irma: reply_comment (resposta PUBLICA no post)),
+    conversation_created/conversation_reopened (match_mode +
     keywords opcionais), conversation_resolved, label_added/label_removed (label_names[] — NAO
     'label' singular), card_created/card_moved (funnel_ids[] de STRINGS ex ["37"] — numero puro [37]
     NAO casa; + funnel_stages[] no formato 'funnel_id:chave_interna_da_etapa' ex '37:agendamento_pendente'
@@ -748,7 +766,8 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     vazio/ausente = qualquer formulario. Dispara na conversa da resposta, DEPOIS do "Salvar em" do formulario
     (o fluxo ja le o dado gravado); repetir o processamento nao abre o fluxo duas vezes.
     NOVO message_sent (2026-06-11): par do message_received pra mensagens de
-    SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type; cuidado: acao
+    SAIDA (atendente, celular/eco, IA — nota privada NAO) com keywords+match_type (mesmo conjunto RICO do
+    message_received desde 2026-11-17); cuidado: acao
     'desativar IA' com esse trigger sem keywords = a propria resposta da IA dispara o flow.
     group_participant_joined / group_participant_left (NOVO 07/08 — 'Entrou no grupo' / 'Saiu do
     grupo', evento de grupo WhatsApp QR Code). Item {key:'group_participant_joined'|
@@ -1009,6 +1028,10 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
       // change_status com 'snoozed' aceita snooze_option: an_hour_from_now|until_tomorrow|until_next_week|
       //   until_next_month|until_next_reply (ausente = adiada ate a proxima mensagem do cliente)
       mute_conversation({}), mark_unread({}), add_private_note({text}), send_email_transcript({email}),
+      reply_comment({text}),  // NOVO 2026-11-17: resposta PUBLICA no post do Instagram. Usa o comentario que
+      //   disparou o flow (gatilho instagram_comment_received); fora de flow-de-comentario, pula. text aceita {{var}}.
+      //   MARCAR QUEM COMENTOU (2026-11-17): escreva a palavra @nome no text — na publicacao ela vira o @ da
+      //   pessoa (ex.: "Oi @nome, te chamei no direct"). NAO use @{{contact.name}}: o nome do contato nao e o @.
       add_conversation_label({labels:[...]}), remove_conversation_label({labels:[...]}),  // etiqueta NA CONVERSA
       // remove_*_label com labels:['__all__'] = tira TODAS as etiquetas (NOVO 09/11/2026; vale tambem
       //   em automacao/macro: action_params ['__all__']). Nome de etiqueta nunca comeca com '_'.
@@ -1171,9 +1194,11 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     aiModel,                         // opcional: modelo LLM SO deste node (ex "gpt-4.1-mini");
                                      // vazio/ausente = modelo padrao da conta; vale em TODOS os
                                      // modos e tambem com assistente (sobrepoe o modelo dele)
-                                     // gpt-5.6-luna/terra/sol aceitos desde 08/09 e gpt-6-luna/sol desde
-                                     // 23/09 (os cinco sem temperatura, pela porta /v1/responses);
-                                     // modelo fora da lista de 22 = 422 na hora de salvar o assistente
+                                     // gpt-5.6-luna/terra/sol aceitos desde 08/09, gpt-6-luna/sol desde
+                                     // 23/09 e gpt-6.1-terra / gpt-6.2-sol desde 17/11 (os sete sem
+                                     // temperatura, pela porta /v1/responses); gpt-6.2-astra, gpt-6-astra
+                                     // e gpt-6.1-sol NAO sao aceitos; modelo fora da lista de 24 = 422
+                                     // na hora de salvar o assistente
     aiModelExplicit: true,           // OBRIGATORIO junto do aiModel — sem esta flag o backend
                                      // IGNORA o aiModel (protecao de nodes antigos)
     aiIntents: [{name}],            // se intent — ARRAY DE OBJETOS (NAO array de strings)
@@ -1218,6 +1243,13 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     todo node configurado pela tela quebrava. Hoje o motor le percent e aceita weight so como dado
     antigo. Escreva SEMPRE percent: com weight o node roda, mas abre com as porcentagens EM BRANCO
     na tela do cliente.
+  NOME DA VARIANTE (17/11/2026): "label" e o nome que a pessoa ve — na janela do bloco (campo editavel),
+    na saida do bloco no desenho e em "Caminho sorteado" no historico. "id" e so o identificador da
+    saida: e ele que vai no sourceHandle da aresta e no contador da divisao. Escreva SEMPRE os dois.
+    id curto, unico no bloco e ESTAVEL (A, B, C... como a tela faz, ou um slug sem espaco nem acento);
+    o nome legivel vai SO em label (a tela aceita ate 24 caracteres). Para RENOMEAR uma variante mude
+    so o label: trocar o id solta a aresta ja ligada (teria de trocar o sourceHandle junto) e zera a
+    contagem da divisao. Sem label a tela mostra o id.
   DIVISAO EXATA, NAO SORTEIO (desde 20/08/2026, nos 2 modos): o bloco divide o que passa por ele na
     proporcao configurada — 50/50 alterna A,B,A,B; 70/30 da 7 de cada 10 intercalados. Contador por
     fluxo+bloco+impressao digital da configuracao (ids + percentuais): mexer em ramo/agente/porcentagem

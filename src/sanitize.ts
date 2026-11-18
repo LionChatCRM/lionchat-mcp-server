@@ -36,12 +36,26 @@ const REDACT_EXACT = new Set([
   'consumer_secret',
   'app_secret',
   'secret',
+  // [chave-nao-volta-ao-navegador 2026-11-17] arquivo de conta de servico (Google Tradutor) saia inteiro.
+  'credential',
+  'private_key',
 ]);
 const REDACT_SUFFIXES = ['_password', '_secret', '_api_key', '_auth_token', '_access_token'];
 // AIDEV-NOTE: website_token e publico por design (vai inline no HTML do site do cliente pro
 // widget) — unica excecao da redacao. NAO adicionar excecoes sem decisao explicita do dono
 // (politica 2026-07-24: censura total de credencial em resposta de robo).
 const REDACT_EXCEPTIONS = new Set(['website_token']);
+// AIDEV-NOTE: [chave-nao-volta-ao-navegador 2026-11-17] o servidor deixou de devolver chave salva e passou a
+// devolver so INDICADORES de presenca. Eles nao sao segredo e a IA precisa deles pra saber se a chave existe:
+// - `has_<campo>` com valor BOOLEANO (has_api_key, has_smtp_password, has_secret...) passa como esta. So
+//   booleano: `has_x` com texto continua na regra normal.
+// - os tres objetos de indicadores passam inteiros (o sufixo `_secrets` os censurava). Dentro deles so ha
+//   booleano e a impressao digital das chaves reserva (`kept:<impressao>` no salvar), nunca a chave.
+const PRESENCE_OBJECTS = new Set(['settings_secrets', 'provider_config_secrets', 'auth_config_secrets']);
+function isPresenceFlag(key: string, val: unknown): boolean {
+  const k = key.toLowerCase();
+  return PRESENCE_OBJECTS.has(k) || (k.startsWith('has_') && typeof val === 'boolean');
+}
 
 // AIDEV-NOTE: chaves PESADAS podadas pelo slim. NUNCA incluir aqui data_url/download_url/
 // file_url/thumb_url — sao de ANEXO de mensagem (baixar midia e caso de uso legitimo).
@@ -148,6 +162,10 @@ export function sanitizeResponse(value: unknown, opts: SanitizeOptions): unknown
     if (node && typeof node === 'object') {
       const out: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(node as Record<string, unknown>)) {
+        if (isPresenceFlag(key, val)) {
+          out[key] = val;
+          continue;
+        }
         if (shouldRedact(key)) {
           // AIDEV-SECURITY: valor vazio/null passa como esta (informativo); qualquer valor
           // presente vira o placeholder — nunca o conteudo.

@@ -174,10 +174,13 @@ valores desta lista:
 | Raciocínio | `o3-mini`, `o4-mini` |
 | Premium | `gpt-5`, `gpt-5.2`, `gpt-5.5`, `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, `gpt-6-sol`, `o1`, `o3` |
 | Custo-benefício (nova geração) | `gpt-6-luna` — US$ 0,10/0,50 por 1M tokens, raciocínio, sem temperatura; liberado em 23/09/2026 |
+| Lançamentos de 17/11/2026 | `gpt-6.2-sol` — US$ 2/10 por 1M tokens, o mais novo da linha Sol; `gpt-6.1-terra` — US$ 1/5 por 1M tokens, mais lento por resposta (raciocina em todo pedido). Os dois sem temperatura |
 
 **`GPT-5.2 Pro` não existe.** O valor válido é `gpt-5.2`, sem "Pro".
 
 > **Família `gpt-6` (`gpt-6-luna`, `gpt-6-sol`) — LIBERADA em 23/09/2026**, pelo mesmo trilho do `gpt-5.6`: sem temperatura e fora do bloco de IA do Formulário de Lead. `gpt-6-astra` NÃO está disponível.
+>
+> **`gpt-6.2-sol` e `gpt-6.1-terra` — LIBERADOS em 17/11/2026**, pelo mesmo trilho: sem temperatura e fora do bloco de IA do Formulário de Lead. `gpt-6.2-astra`, `gpt-6-astra` e `gpt-6.1-sol` NÃO estão disponíveis: gravar um deles no agente é recusado pelo servidor.
 >
 > **Família `gpt-5.6` (`gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`) — LIBERADA em 09/2026.**
 > Foi removida em 29/07/2026 porque recusa function tools no canal antigo da OpenAI e deixava a IA MUDA.

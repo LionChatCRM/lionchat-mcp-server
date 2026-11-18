@@ -448,25 +448,36 @@ falha silenciosa, sem erro na tela. Conversa se altera por `fields` (+ `labels: 
 
 `GET /search/contacts?q=texto` — só contatos (idem `/search/conversations`, `/search/messages`, `/search/articles`, `/search/kanban_items`)
 
-**Multi-termo com E:** `q` aceita String (espaços = AND implícito) ou Array (`q[]=joao&q[]=silva`),
-cap de 5 termos — cada termo precisa bater (cada um mantém seu OR entre campos).
+**FRASE ÚNICA (desde 2026-11-15) — `q` em texto NÃO é mais partido por espaço.** O texto é procurado
+inteiro, como está e na ordem: `q=maria silva` acha "Maria Silva Santos"; NÃO acha "Maria Aparecida
+da Silva" (nome no meio) nem "Silva Maria" (ordem trocada). Não monte `q` com palavras soltas
+esperando E. Mande o trecho que você espera ver escrito, ou só o primeiro nome / só o sobrenome.
+Telefone com espaço, traço ou parênteses é um número só (`62 99999-1234`). Frase com letra E número
+(`maria 2026`) procura só o texto; a comparação "só pelos dígitos" vale quando toda palavra tem número.
 
-**PISO DE 3 LETRAS (novo 2026-08-04) — leia antes de concluir "não existe".**
+**Vários trechos com E:** só pela lista `q[]` da API direta (`q[]=maria&q[]=silva`), cap de 5 itens —
+cada item é uma frase e todos precisam bater (cada um mantém seu OU entre campos). As ferramentas
+`lionchat_search_*` do conector mandam `q` como TEXTO (uma frase): para achar "Maria Aparecida da
+Silva" por elas, busque só `maria` ou só `silva` e confira o nome completo nos resultados.
 
-Termo com LETRA precisa de **3 caracteres ou mais**. Termo **só de dígitos** é isento (é assim
-que se busca pelo número da conversa ou do card, e conta nova tem todos com 1-2 dígitos).
+Artigos (`/search/articles`) são a exceção: continuam achando as palavras em qualquer ordem.
+
+**PISO E NÚMERO CURTO — leia antes de concluir "não existe".**
 
 | Busca | O que acontece |
 |---|---|
-| `q=Bo` | Devolve **vazio**. Não é erro, não é 422 — vem `payload: []` |
+| `q=Bo` | **Vazio** (palavra com menos de 3 caracteres). Não é erro: vem a lista vazia e `<seção>_min_term: true` |
 | `q=Bor` | Busca normal |
-| `q=42` | Busca normal (só dígitos, isento) |
-| `q=jo silva` | Vale: basta **um** termo utilizável na frase |
-| `q=zq` + `contact_filters=[...]` | Vazio. O termo curto **invalida a busca inteira**, mesmo com filtro junto |
+| `q=jo s`, `q=a b`, `q=62 99` | **Vazio**: frase com espaço precisa de 3 letras ou números SEGUIDOS em algum ponto |
+| `q=424` | Busca normal em tudo (3+ dígitos) |
+| `q=42` | Acha **só a conversa nº 42 e o card nº 42**. Contatos, mensagens e artigos voltam vazios com `contacts_min_term` / `messages_min_term` / `articles_min_term` = `true` |
+| `q=zq` + `contact_filters=[...]` | Vazio. O texto abaixo do piso **invalida a busca inteira**, mesmo com filtro junto |
 
-Vale nas CINCO buscas (contato, conversa, mensagem, card e artigo).
+**Sinal por seção (novo 2026-11-15):** cada resposta traz `contacts_min_term`, `messages_min_term`,
+`articles_min_term`, `conversations_min_term` e/ou `kanban_min_term`. `true` = AQUELA seção **não
+procurou**. `/search` (tudo) traz os cinco.
 
-**Consequência prática:** resultado vazio com termo de 1-2 letras **não significa que o registro
+**Consequência prática:** resultado vazio com `<seção>_min_term: true` **não significa que o registro
 não existe** — significa que a busca não rodou. Nunca responda "não encontrei esse contato" nessa
 situação. Ou complete o termo, ou pergunte o nome inteiro, ou use `/contacts/filter` com
 `filter_operator: "contains"`, que não tem esse piso.

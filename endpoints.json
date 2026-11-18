@@ -675,7 +675,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts/search",
   "title": "Buscar Contatos",
-  "description": "Busca contatos por texto (insensivel a acento) em nome/email/telefone/identifier. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).\n\nTELEFONE COM E SEM O 9 (desde 05/09/2026): quando 'q' e um celular brasileiro completo (com ou sem o nono digito, com ou sem '+', formatado ou nao), a busca acha o contato salvo em QUALQUER das duas formas. Nao precisa buscar duas vezes. Uma pessoa com ficha duplicada pode voltar como 2 resultados — nunca pegue o primeiro as cegas para contacts_update; confira nome/e-mail. A lupa geral (lionchat_search_list) NAO tem essa tolerancia: para telefone, use esta.",
+  "description": "Busca contatos por texto (insensivel a acento) em nome/email/telefone/identifier. Obrigatorio: q.\n\nO texto e procurado INTEIRO, como frase (nao sao palavras soltas unidas por E).\n\nTELEFONE COM E SEM O 9 (desde 05/09/2026): quando 'q' e um celular brasileiro completo (com ou sem o nono digito, com ou sem '+', formatado ou nao), a busca acha o contato salvo em QUALQUER das duas formas. Nao precisa buscar duas vezes. Uma pessoa com ficha duplicada pode voltar como 2 resultados — nunca pegue o primeiro as cegas para contacts_update; confira nome/e-mail. A lupa geral (lionchat_search_list) NAO tem essa tolerancia: para telefone, use esta.",
   "category": "Contatos",
   "params": [
    {
@@ -1106,6 +1106,13 @@
     "required": false,
     "query_name": "labels[]",
     "description": "Labels (tags) — array de titulos. Conta conversas marcadas com a etiqueta E conversas cujo CONTATO tem a etiqueta (uniao)."
+   },
+   {
+    "name": "detached_group",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Conversas guardadas de UMA caixa excluída/desativada: mande inbox_id=0 e detached_group=<key> (key de lionchat_inboxes_detached_groups_list)."
    }
   ],
   "returns": "{ meta: { mine_count, assigned_count, unassigned_count, all_count } }",
@@ -1114,7 +1121,9 @@
    "Header de dashboard (contadores rápidos)",
    "Verificar carga antes de listar"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_inboxes_detached_groups_list"
+  ]
  },
  {
   "id": "lionchat_conversations_mentionable_users",
@@ -1234,6 +1243,13 @@
     "location": "query",
     "required": false,
     "description": "So conversas atualizadas nos ultimos N segundos (ex.: 3600 = ultima hora). Util para polling de atividade recente. TETOS (desde 09/11/2026): no maximo 3 horas (10800 s; pedido maior e cortado para 3 h) e no maximo as 1.000 conversas atualizadas mais recentemente. A resposta traz meta.updated_within_applied (segundos de fato usados) e meta.truncated (true = havia mais de 1.000 e as mais antigas ficaram fora). Com updated_within NAO ha paginacao: page 2 em diante volta vazia. Precisa de mais? Faca janelas menores (ex.: de hora em hora) ou use a lista paginada sem updated_within."
+   },
+   {
+    "name": "detached_group",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Conversas guardadas de UMA caixa excluída/desativada: mande inbox_id=0 e detached_group=<key> (key de lionchat_inboxes_detached_groups_list)."
    }
   ],
   "returns": "Objeto com envelope DUPLO: { data: { meta: {...}, payload: [conversas] } }. A lista fica em data.payload (NAO em payload direto). O meta traz exatamente: mine_count, assigned_count, unassigned_count, all_count, groups_count. Cada conversa vem com um array extra `kanban_items` (cards do Kanban visiveis pro usuario). Paginacao real: 25/pagina.",
@@ -1245,7 +1261,8 @@
   "related_tools": [
    "lionchat_conversations_list_1",
    "lionchat_conversations_list_2",
-   "lionchat_conversations_list_3"
+   "lionchat_conversations_list_3",
+   "lionchat_inboxes_detached_groups_list"
   ]
  },
  {
@@ -2225,7 +2242,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/conversations/{conversation_id}/messages/search",
   "title": "Buscar Mensagens",
-  "description": "Busca mensagens por texto dentro de uma conversa. Suporta private_only e file_type.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha.",
+  "description": "Busca mensagens por texto dentro de uma conversa. Suporta private_only e file_type.\n\nO texto e procurado INTEIRO, como frase (nao sao palavras soltas unidas por E). NOVO (2026-06-16): casa por TRECHO/substring (ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha.",
   "category": "Mensagens",
   "params": [
    {
@@ -3884,7 +3901,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/search",
   "title": "Buscar Items",
-  "description": "Busca items por título, descrição, nome ou email do cliente. Busca itens Kanban por texto livre. Suporta query parcial em nome/email/telefone. Use para \"encontrar X\" rapidamente.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). Desde 11/10/2026: Cada card traz effective_status (open|snoozed|won|lost) e snoozed_until (ISO ou null). No card adiado item_details.status CONTINUA \"open\": a situacao real e o effective_status.",
+  "description": "Busca items por título, descrição, nome ou email do cliente. Busca itens Kanban por texto livre. Suporta query parcial em nome/email/telefone. Use para \"encontrar X\" rapidamente.\n\nO texto e procurado INTEIRO, como frase (nao sao palavras soltas unidas por E). Telefone do contato casa por digitos (3+), ignorando pontuacao. Desde 11/10/2026: Cada card traz effective_status (open|snoozed|won|lost) e snoozed_until (ISO ou null). No card adiado item_details.status CONTINUA \"open\": a situacao real e o effective_status.",
   "category": "Itens",
   "params": [
    {
@@ -4880,7 +4897,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Modelo LLM do assistente. VALIDADO no servidor desde 08/09/2026: valor fora da lista devolve 422 (message 'Model is not included in the list') e nada e gravado. Valores validos — os mesmos 19 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3, gpt-5.6-luna, gpt-5.6-terra, gpt-5.6-sol. Familia gpt-5.6 (luna/terra/sol) LIBERADA em 08/09/2026: o servidor fala com esses tres por um canal proprio da OpenAI (/v1/responses, so pra eles; os outros 16 seguem como sempre). Regras dela: nao aceita temperatura (o campo some na tela e e ignorado), custo premium, e o Formulario publico (bloco de IA) NAO usa esses tres — la o servidor cai no modelo padrao da conta. Nao existe 'gpt-5.6' sem sufixo. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL. Assistente antigo com modelo fora da lista continua salvando o resto do config; so a TROCA de modelo e conferida."
+    "description": "Modelo LLM do assistente. VALIDADO no servidor desde 08/09/2026: valor fora da lista devolve 422 (message 'Model is not included in the list') e nada e gravado. Valores validos — os mesmos 23 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3, gpt-5.6-luna, gpt-5.6-terra, gpt-5.6-sol, gpt-6-luna, gpt-6-sol, gpt-6.1-terra, gpt-6.2-sol. Sete deles falam com a OpenAI por um canal proprio (/v1/responses): a familia gpt-5.6 (luna/terra/sol, liberada em 08/09/2026), gpt-6-luna e gpt-6-sol (23/09/2026) e gpt-6.1-terra e gpt-6.2-sol (17/11/2026); os outros 16 seguem como sempre. Regras desses sete: nao aceitam temperatura (o campo some na tela e e ignorado) e o Formulario publico (bloco de IA) NAO os usa — la o servidor cai no modelo padrao da conta. Preco por 1M de tokens (entrada/saida): gpt-6-luna US$ 0,10/0,50; gpt-6.1-terra US$ 1/5; gpt-6-sol e gpt-6.2-sol US$ 2/10; a familia gpt-5.6 e premium. NAO estao disponiveis (422): gpt-6.2-astra, gpt-6-astra e gpt-6.1-sol. Nao existe 'gpt-5.6' sem sufixo. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL. Assistente antigo com modelo fora da lista continua salvando o resto do config; so a TROCA de modelo e conferida."
    },
    {
     "name": "config.instructions",
@@ -5105,7 +5122,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Modelo LLM do assistente. VALIDADO no servidor desde 08/09/2026: valor fora da lista devolve 422 (message 'Model is not included in the list') e nada e gravado. Valores validos — os mesmos 19 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3, gpt-5.6-luna, gpt-5.6-terra, gpt-5.6-sol. Familia gpt-5.6 (luna/terra/sol) LIBERADA em 08/09/2026: o servidor fala com esses tres por um canal proprio da OpenAI (/v1/responses, so pra eles; os outros 16 seguem como sempre). Regras dela: nao aceita temperatura (o campo some na tela e e ignorado), custo premium, e o Formulario publico (bloco de IA) NAO usa esses tres — la o servidor cai no modelo padrao da conta. Nao existe 'gpt-5.6' sem sufixo. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL. Assistente antigo com modelo fora da lista continua salvando o resto do config; so a TROCA de modelo e conferida."
+    "description": "Modelo LLM do assistente. VALIDADO no servidor desde 08/09/2026: valor fora da lista devolve 422 (message 'Model is not included in the list') e nada e gravado. Valores validos — os mesmos 23 da tela: gpt-4.1-nano, gpt-4o-mini, gpt-4.1-mini, gpt-5.4-nano, gpt-5.4-mini, gpt-4o, gpt-4.1, gpt-5-mini, gpt-5.4, o3-mini, o4-mini, gpt-5, gpt-5.2, gpt-5.5, o1, o3, gpt-5.6-luna, gpt-5.6-terra, gpt-5.6-sol, gpt-6-luna, gpt-6-sol, gpt-6.1-terra, gpt-6.2-sol. Sete deles falam com a OpenAI por um canal proprio (/v1/responses): a familia gpt-5.6 (luna/terra/sol, liberada em 08/09/2026), gpt-6-luna e gpt-6-sol (23/09/2026) e gpt-6.1-terra e gpt-6.2-sol (17/11/2026); os outros 16 seguem como sempre. Regras desses sete: nao aceitam temperatura (o campo some na tela e e ignorado) e o Formulario publico (bloco de IA) NAO os usa — la o servidor cai no modelo padrao da conta. Preco por 1M de tokens (entrada/saida): gpt-6-luna US$ 0,10/0,50; gpt-6.1-terra US$ 1/5; gpt-6-sol e gpt-6.2-sol US$ 2/10; a familia gpt-5.6 e premium. NAO estao disponiveis (422): gpt-6.2-astra, gpt-6-astra e gpt-6.1-sol. Nao existe 'gpt-5.6' sem sufixo. Default: openai_model da conta ou LlmConstants::DEFAULT_MODEL. Assistente antigo com modelo fora da lista continua salvando o resto do config; so a TROCA de modelo e conferida."
    },
    {
     "name": "config.instructions",
@@ -8022,7 +8039,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/inboxes",
   "title": "Listar Inboxes",
-  "description": "Lista todas as inboxes da conta. Lista inboxes/caixas de entrada paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de inbox/caixa de entrada).",
+  "description": "Lista todas as inboxes da conta. Lista inboxes/caixas de entrada paginados (per_page padrão 25, máximo 100). Retorna meta (contadores) + payload (array de inbox/caixa de entrada). Caixas DESATIVADAS e com exclusão em andamento NÃO aparecem aqui: para elas use lionchat_inboxes_detached_groups_list.",
   "category": "Caixas de Entrada",
   "params": [],
   "returns": "{ payload: [ ...caixas ] } — SO payload, SEM meta e SEM paginacao: vem todas as caixas que o usuario enxerga, ordenadas por nome. Campos da distribuicao automatica presentes em CADA caixa (todo tipo de canal, sem trava): has_assignment_policy (booleano) diz QUAL dos dois caminhos esta ativo naquela caixa — true = a caixa segue uma POLITICA de atribuicao (os numeros do freio estao na politica, nao aqui) e, nesse caso, o auto_assignment_config da propria caixa e IGNORADO (a secao 'Distribuicao Automatica' inclusive some da tela da caixa); false = vale a distribuicao simples da propria caixa, ligada/desligada por enable_auto_assignment e configurada em auto_assignment_config { assign_offline_agents, fair_distribution_limit, fair_distribution_window }. Significado: fair_distribution_limit = quantas conversas o robo entrega a CADA atendente dentro da janela (a vaga volta quando a conversa deixa de estar aberta); fair_distribution_window = tamanho da janela em SEGUNDOS (600 = 10 minutos); assign_offline_agents = entrega tambem para quem nao esta com o painel aberto. Para ver os numeros de uma caixa com has_assignment_policy = true, chame lionchat_inboxes_assignment_policies_list (politica vinculada aquela caixa). OBRIGATORIO: leia o valor da conta antes de responder — NUNCA recite o padrao de fabrica (10 a cada 600 segundos) como se fosse o numero do cliente; o padrao so vale quando NAO ha politica e a caixa nao escolheu numero (e nesse caso, caixa com assign_offline_agents ligado e sem numero escolhido fica SEM freio). Atencao ao ZERO: na CAIXA, fair_distribution_limit = 0 significa 'sem freio' de proposito (o freio so liga com limite maior que zero) — logo a caixa fica sem teto tanto com o campo vazio + offline ligado quanto com 0 escrito. Na POLITICA o 0 nao e aceito (cadastro exige maior que zero), entao caixa com politica vinculada SEMPRE tem freio.",
@@ -8051,7 +8068,7 @@
     "description": "ID da inbox"
    }
   ],
-  "returns": "Objeto PURO da caixa (sem envelope meta/payload), com os mesmos campos da listagem. Campos da distribuicao automatica: has_assignment_policy (booleano) diz QUAL dos dois caminhos esta ativo nesta caixa — true = a caixa segue uma POLITICA de atribuicao (os numeros do freio estao na politica, nao aqui) e o auto_assignment_config desta caixa e IGNORADO (a secao 'Distribuicao Automatica' some da tela da caixa; o valor antigo continua gravado e so volta a valer se a politica for desvinculada); false = vale a distribuicao simples da propria caixa, ligada/desligada por enable_auto_assignment e configurada em auto_assignment_config { assign_offline_agents, fair_distribution_limit, fair_distribution_window }. Significado: fair_distribution_limit = quantas conversas o robo entrega a CADA atendente dentro da janela (a vaga volta quando a conversa deixa de estar aberta); fair_distribution_window = tamanho da janela em SEGUNDOS (600 = 10 minutos); assign_offline_agents = entrega tambem para quem nao esta com o painel aberto. Com has_assignment_policy = true, busque os numeros com lionchat_inboxes_assignment_policies_list. OBRIGATORIO: leia o valor da conta antes de responder — NUNCA recite o padrao de fabrica (10 a cada 600 segundos) como se fosse o numero do cliente; o padrao so vale quando NAO ha politica e a caixa nao escolheu numero (e caixa com assign_offline_agents ligado e sem numero escolhido fica SEM freio). Atencao ao ZERO: na CAIXA, fair_distribution_limit = 0 significa 'sem freio' de proposito (o freio so liga com limite maior que zero) — logo a caixa fica sem teto tanto com o campo vazio + offline ligado quanto com 0 escrito. Na POLITICA o 0 nao e aceito (cadastro exige maior que zero), entao caixa com politica vinculada SEMPRE tem freio.",
+  "returns": "Objeto PURO da caixa (sem envelope meta/payload), com os mesmos campos da listagem. Campos da distribuicao automatica: has_assignment_policy (booleano) diz QUAL dos dois caminhos esta ativo nesta caixa — true = a caixa segue uma POLITICA de atribuicao (os numeros do freio estao na politica, nao aqui) e o auto_assignment_config desta caixa e IGNORADO (a secao 'Distribuicao Automatica' some da tela da caixa; o valor antigo continua gravado e so volta a valer se a politica for desvinculada); false = vale a distribuicao simples da propria caixa, ligada/desligada por enable_auto_assignment e configurada em auto_assignment_config { assign_offline_agents, fair_distribution_limit, fair_distribution_window }. Significado: fair_distribution_limit = quantas conversas o robo entrega a CADA atendente dentro da janela (a vaga volta quando a conversa deixa de estar aberta); fair_distribution_window = tamanho da janela em SEGUNDOS (600 = 10 minutos); assign_offline_agents = entrega tambem para quem nao esta com o painel aberto. Com has_assignment_policy = true, busque os numeros com lionchat_inboxes_assignment_policies_list. OBRIGATORIO: leia o valor da conta antes de responder — NUNCA recite o padrao de fabrica (10 a cada 600 segundos) como se fosse o numero do cliente; o padrao so vale quando NAO ha politica e a caixa nao escolheu numero (e caixa com assign_offline_agents ligado e sem numero escolhido fica SEM freio). Atencao ao ZERO: na CAIXA, fair_distribution_limit = 0 significa 'sem freio' de proposito (o freio so liga com limite maior que zero) — logo a caixa fica sem teto tanto com o campo vazio + offline ligado quanto com 0 escrito. Na POLITICA o 0 nao e aceito (cadastro exige maior que zero), entao caixa com politica vinculada SEMPRE tem freio. Estado de uso: deactivation_state ('active' | 'deactivating' | 'deactivated' | 'reactivating') e deactivated_at (preenchido = caixa fora de uso; ela não recebe nem envia).",
   "common_use_cases": [
    "Ver dados completos antes de editar",
    "Verificar estado atual antes de uma ação",
@@ -8669,7 +8686,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search",
   "title": "Busca Global",
-  "description": "RAPIDO, e a opcao mais segura quando nao se sabe se o termo e o nome de alguem ou algo dito no papo — cobre os dois casos numa chamada. Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nPara saber EM QUANTAS conversas algo foi dito, no historico inteiro, use lionchat_conversations_search.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). Sempre retorna todos os tipos: conversations, contacts, messages, articles e kanban_items. Mensagens trazem previous_message/next_message.",
+  "description": "RAPIDO, e a opcao mais segura quando nao se sabe se o termo e o nome de alguem ou algo dito no papo — cobre os dois casos numa chamada. Busca global por texto (conversas, contatos, mensagens, artigos) — sempre retorna todos os tipos. Para um tipo unico use /search/conversations|contacts|messages.\n\nPara saber EM QUANTAS conversas algo foi dito, no historico inteiro, use lionchat_conversations_search.\n\nFRASE UNICA (desde 15/11/2026): 'q' e procurado INTEIRO, como esta e na ordem — 'maria silva' acha 'Maria Silva Santos' e NAO acha 'Maria Aparecida da Silva' nem 'Silva Maria'. Nao mande palavras soltas esperando E: mande o trecho que espera ver escrito, ou so o primeiro nome ou so o sobrenome, e confira o nome completo nos resultados. Telefone com espaco, traco ou parenteses e um numero so; CPF/CNPJ/RG casam por digitos, ignorando pontuacao. Frase com espaco precisa de 3 letras ou numeros seguidos em algum ponto ('jo s' nao procura). NUMERO DE 1 OU 2 DIGITOS sozinho acha so a conversa e o card com aquele numero: contatos, mensagens e artigos NAO procuram. A resposta traz contacts_min_term, messages_min_term, articles_min_term, conversations_min_term e kanban_min_term: true = AQUELA secao nao procurou — vazio ali NAO quer dizer que nao existe. Sempre retorna todos os tipos: conversations, contacts, messages, articles e kanban_items. Mensagens trazem previous_message/next_message.",
   "category": "Busca",
   "params": [
    {
@@ -8677,7 +8694,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo de busca"
+    "description": "Texto procurado como UMA frase, na ordem (desde 15/11/2026). Nao e partido por espaco"
    },
    {
     "name": "from",
@@ -8756,7 +8773,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/conversations",
   "title": "Buscar Conversas",
-  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Acha a conversa PELA PESSOA/EMPRESA: nome, e-mail, telefone, identificador, CPF/CNPJ por digitos, atributos personalizados da conversa e numero da conversa.\n\nNAO procura dentro do texto das mensagens — para isso use lionchat_search_list_2 (ou lionchat_search_search para as duas coisas). lionchat_conversations_search procura so no texto das mensagens: para achar a conversa de alguem, use esta.\n\nDevolve payload.conversations[], 15 por pagina. Termo de texto com menos de 3 caracteres e descartado (so-digitos e isento); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Acha a conversa PELA PESSOA/EMPRESA: nome, e-mail, telefone, identificador, CPF/CNPJ por digitos, atributos personalizados da conversa e numero da conversa.\n\nNAO procura dentro do texto das mensagens — para isso use lionchat_search_list_2 (ou lionchat_search_search para as duas coisas). lionchat_conversations_search procura so no texto das mensagens: para achar a conversa de alguem, use esta.\n\nDevolve payload.conversations[], 15 por pagina. Termo de texto com menos de 3 caracteres e descartado (so-digitos e isento); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nFRASE UNICA (desde 15/11/2026): 'q' e procurado INTEIRO, como esta e na ordem — 'maria silva' acha 'Maria Silva Santos' e NAO acha 'Maria Aparecida da Silva' nem 'Silva Maria'. Nao mande palavras soltas esperando E: mande o trecho que espera ver escrito, ou so o primeiro nome ou so o sobrenome, e confira o nome completo nos resultados. Telefone com espaco, traco ou parenteses e um numero so; CPF/CNPJ/RG casam por digitos, ignorando pontuacao. Frase com espaco precisa de 3 letras ou numeros seguidos em algum ponto ('jo s' nao procura). Numero de 1 ou 2 digitos sozinho acha so a conversa com aquele numero (3+ digitos procura tambem telefone, CPF e campos). conversations_min_term: true = a busca nao rodou (texto abaixo do piso).",
   "category": "Busca",
   "params": [
    {
@@ -8764,7 +8781,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo"
+    "description": "Texto procurado como UMA frase, na ordem (desde 15/11/2026). Nao e partido por espaco"
    },
    {
     "name": "from",
@@ -8832,7 +8849,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/contacts",
   "title": "Buscar Contatos",
-  "description": "Busca apenas em contatos por texto.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "Busca apenas em contatos por texto.\n\nFRASE UNICA (desde 15/11/2026): 'q' e procurado INTEIRO, como esta e na ordem — 'maria silva' acha 'Maria Silva Santos' e NAO acha 'Maria Aparecida da Silva' nem 'Silva Maria'. Nao mande palavras soltas esperando E: mande o trecho que espera ver escrito, ou so o primeiro nome ou so o sobrenome, e confira o nome completo nos resultados. Telefone com espaco, traco ou parenteses e um numero so; CPF/CNPJ/RG casam por digitos, ignorando pontuacao. Frase com espaco precisa de 3 letras ou numeros seguidos em algum ponto ('jo s' nao procura). Numero de 1 ou 2 digitos sozinho NAO procura contatos: volta vazio com contacts_min_term: true (use 3+ digitos, ou lionchat_contacts_search para telefone). contacts_min_term: true = nao procurou; nao quer dizer que nao existe.",
   "category": "Busca",
   "params": [
    {
@@ -8840,7 +8857,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo"
+    "description": "Texto procurado como UMA frase, na ordem (desde 15/11/2026). Nao e partido por espaco"
    },
    {
     "name": "since",
@@ -8894,7 +8911,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/messages",
   "title": "Buscar Mensagens",
-  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nSo os ULTIMOS 3 MESES, por palavras soltas e sem agrupar por conversa; serve para ver mensagens recentes com o contexto em volta. Indice trigram proprio e teto de tempo em duas fases (2 s + 2 s). Para saber EM QUANTAS conversas algo foi dito no historico inteiro, use lionchat_conversations_search. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao). NOVO (2026-06-16): casa por TRECHO/substring (multi-termo AND — ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha. Leia message_search_interrupted no retorno antes de afirmar 'nao encontrado'.",
+  "description": "RAPIDO. E uma BUSCA, nao uma listagem — o sufixo _list no id e historico, ignore. Procura o termo DENTRO DO TEXTO das mensagens.\n\nSo os ULTIMOS 3 MESES, pelo TRECHO digitado e sem agrupar por conversa; serve para ver mensagens recentes com o contexto em volta. Indice trigram proprio e teto de tempo em duas fases (2 s + 2 s). Para saber EM QUANTAS conversas algo foi dito no historico inteiro, use lionchat_conversations_search. Devolve payload.messages[], 15 por pagina.\n\nTermo de texto com menos de 3 caracteres e descartado (so-digitos e isento, protegido pelo limite da primeira fase); se todos os termos forem curtos a resposta vem VAZIA — isso nao significa que nao existe, significa que a busca nao rodou.\n\nFRASE UNICA (desde 15/11/2026): 'q' e procurado INTEIRO, como esta e na ordem ('deseja agendar' acha so a mensagem com essas duas palavras juntas). Nao mande palavras soltas esperando E. Numero de 1 ou 2 digitos sozinho e frase sem 3 letras ou numeros seguidos NAO procuram: lista vazia com messages_min_term: true (nao quer dizer que nao existe). NOVO (2026-06-16): casa por TRECHO/substring (ex.: 'época d' acha 'época do'); e cada resultado de mensagem inclui previous_message e next_message (as mensagens anterior e seguinte da MESMA conversa, em ordem cronológica, ignorando eventos de sistema) como objeto {id, content, sender_name, message_type, private, created_at} ou null quando não há vizinha. Leia message_search_interrupted no retorno antes de afirmar 'nao encontrado'.",
   "category": "Busca",
   "params": [
    {
@@ -8902,7 +8919,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo"
+    "description": "Texto procurado como UMA frase, na ordem (desde 15/11/2026). Nao e partido por espaco"
    },
    {
     "name": "from",
@@ -9946,7 +9963,7 @@
     "description": "Display ID"
    }
   ],
-  "returns": "Objeto com UMA chave: { payload: [ mensagens agendadas da conversa ] }. NAO existe meta. Cada item: id, message (texto), title, scheduled_at (timestamp Unix), created_at (Unix), status, inbox_id, conversation_id, is_recurrent, period, recurrence_count, recurrence_sent, template_params e blocks (com URLs dos arquivos). Sem paginacao — todas as agendadas da conversa, de qualquer status. Conversa inexistente devolve 404 com {error}.",
+  "returns": "Objeto com UMA chave: { payload: [ mensagens agendadas da conversa ] }. NAO existe meta. Cada item: id, message (texto), title, scheduled_at (timestamp Unix), created_at (Unix), status, inbox_id, conversation_id, is_recurrent, period, recurrence_count, recurrence_sent, template_params e blocks (com URLs dos arquivos). Sem paginacao — todas as agendadas da conversa, de qualquer status. Conversa inexistente devolve 404 com {error}. failure_reason: motivo da falha quando status = failed, no idioma da conta.",
   "common_use_cases": [
    "Dashboard: contar/exibir mensagens agendadas",
    "Buscar com filtros antes de outra operação",
@@ -10170,7 +10187,7 @@
     "description": "Responsavel da CONVERSA do disparo (id do agente). Aceita VARIAS opcoes separadas por virgula (11/11/2026): a lista traz o que bate com QUALQUER uma. Quem nao e administrador ja ve so os disparos das proprias conversas."
    }
   ],
-  "returns": "array de mensagens agendadas",
+  "returns": "array de mensagens agendadas failure_reason: motivo da falha quando status = failed (ex.: 'A caixa X está desativada'), no idioma da conta.",
   "common_use_cases": [
    "Dashboard: contar/exibir mensagens agendadas",
    "Buscar com filtros antes de outra operação",
@@ -10523,7 +10540,7 @@
     "description": "true = cada flow vem com session_stats{total,active,waiting,completed,exited,error} (conta as sessoes no banco — mais lento em conta grande). Sem o param o campo NAO aparece."
    }
   ],
-  "returns": "Objeto { data: [flows] } — a lista fica em data, sem meta e sem paginacao. Campos de cada item: id, name, description, tool_name, tool_description, flow_type, conversation_mode, active, inbox_ids, inboxes[{id,name,channel_type}], tags, session_stats{total,active,waiting,completed,exited,error}, created_at, updated_at. LISTA LEVE (desde 20/08/2026): o index NAO traz flow_data, node_metrics, waiting_counts nem variables — so os campos acima mais trigger_types (array com as chaves dos gatilhos do bloco Inicio, ex. [\"card_created\",\"campaign_trigger\"]; vazio = sem gatilho). session_stats{total,active,waiting,completed,exited,error} so vem quando a chamada manda with_session_stats=true (param opcional desta tool — sem ele o campo NAO vem). executions_count e errors_count sao colunas mortas (sempre 0): ignore. Pra ler o desenho (blocos, conexoes, variaveis) use flows_show; pra conferir gatilho duplicado use flows_check_conflicts.",
+  "returns": "Objeto { data: [flows] } — a lista fica em data, sem meta e sem paginacao. Campos de cada item: id, name, description, tool_name, tool_description, flow_type, conversation_mode, active, inbox_ids, inboxes[{id,name,channel_type}], tags, session_stats{total,active,waiting,completed,exited,error}, created_at, updated_at. LISTA LEVE (desde 20/08/2026): o index NAO traz flow_data, node_metrics, waiting_counts nem variables — so os campos acima mais trigger_types (array com as chaves dos gatilhos do bloco Inicio, ex. [\"card_created\",\"campaign_trigger\"]; vazio = sem gatilho). session_stats{total,active,waiting,completed,exited,error} so vem quando a chamada manda with_session_stats=true (param opcional desta tool — sem ele o campo NAO vem). executions_count e errors_count sao colunas mortas (sempre 0): ignore. Pra ler o desenho (blocos, conexoes, variaveis) use flows_show; pra conferir gatilho duplicado use flows_check_conflicts. inboxes[].deactivated (booleano): true = caixa ligada desativada.",
   "common_use_cases": [
    "Dashboard: contar/exibir flows",
    "Buscar com filtros antes de outra operação",
@@ -10629,7 +10646,7 @@
     "description": "ID do flow"
    }
   ],
-  "returns": "flow (objeto completo com associações)",
+  "returns": "flow (objeto completo com associações) inboxes[].deactivated (booleano): true = a caixa ligada ao fluxo está desativada (o fluxo não dispara por ela até reativar).",
   "common_use_cases": [
    "Ver dados completos antes de editar",
    "Verificar estado atual antes de uma ação",
@@ -11234,7 +11251,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Modelo LLM (gpt-4o-mini, gpt-4.1-mini, gpt-5.4, gpt-5.6-luna/terra/sol etc. — a mesma lista de 19 do assistente). A familia gpt-5.6 e aceita no bloco de IA do fluxo desde 08/09/2026 e nao usa temperatura."
+    "description": "Modelo LLM (gpt-4o-mini, gpt-4.1-mini, gpt-5.4, gpt-6-luna, gpt-6.2-sol etc. — a mesma lista de 23 do assistente). A familia gpt-5.6 (desde 08/09/2026), gpt-6-luna e gpt-6-sol (23/09/2026) e gpt-6.1-terra e gpt-6.2-sol (17/11/2026) sao aceitos no bloco de IA do fluxo e nao usam temperatura."
    },
    {
     "name": "instructions",
@@ -12695,7 +12712,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/companies/search",
   "title": "Buscar Empresas",
-  "description": "Busca empresas por NOME ou DOMINIO. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "Busca empresas por NOME ou DOMINIO. Obrigatorio: q.\n\nO texto e procurado INTEIRO, como frase (nao sao palavras soltas unidas por E).",
   "category": "Empresas",
   "params": [
    {
@@ -13232,7 +13249,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/offers/search",
   "title": "Buscar Ofertas",
-  "description": "Busca ofertas por TITULO. Obrigatorio: q.\n\nNOVO (2026-06): 'q' aceita multiplos termos (espacos = E/AND, cap 5; cada termo precisa bater) e dados cadastrais (CPF/CNPJ/RG por digitos, ignora pontuacao).",
+  "description": "Busca ofertas por TITULO. Obrigatorio: q.\n\nO texto e procurado INTEIRO, como frase (nao sao palavras soltas unidas por E).",
   "category": "Ofertas",
   "params": [
    {
@@ -18279,7 +18296,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/webhooks",
   "title": "Criar Webhook",
-  "description": "Cria um webhook. Body exige wrapper webhook. subscriptions restrito a allow-list. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada).",
+  "description": "Cria um webhook. Body exige wrapper webhook. subscriptions restrito a allow-list. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada). A resposta desta criacao e a UNICA vez em que o segredo de assinatura (secret) aparece — entregue ao usuario na hora. Depois so has_secret; perdeu = lionchat_webhooks_regenerate_secret.",
   "category": "Webhooks",
   "params": [
    {
@@ -18325,7 +18342,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/webhooks/{id}",
   "title": "Atualizar Webhook",
-  "description": "Atualiza um webhook existente. Atualiza campos do webhook existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: url, subscriptions. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada).",
+  "description": "Atualiza um webhook existente. Atualiza campos do webhook existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: url, subscriptions. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada). O segredo de assinatura (secret) NAO e devolvido aqui (so has_secret): ele aparece uma vez na criacao e em lionchat_webhooks_regenerate_secret.",
   "category": "Webhooks",
   "params": [
    {
@@ -20949,7 +20966,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/kanban_config",
   "title": "Atualizar Configuracao Kanban",
-  "description": "Atualiza a configuracao do Kanban da conta. Atualizacao parcial — so os campos enviados mudam. Use para criar/editar checklist_templates (templates de checklist dos cards), win_reasons/loss_reasons (motivos de ganho/perda), global_custom_attributes (atributos dos cards), config (preferencias) e webhook (url/secret/events).",
+  "description": "Atualiza a configuracao do Kanban da conta. Atualizacao parcial — so os campos enviados mudam. Use para criar/editar checklist_templates (templates de checklist dos cards), win_reasons/loss_reasons (motivos de ganho/perda), global_custom_attributes (atributos dos cards), config (preferencias) e webhook (url/secret/events). CHAVE SALVA NAO VOLTA (17/11/2026): a resposta nunca traz chave, senha ou token ja salvos; traz so indicadores (has_<campo> true/false). No salvar, campo de segredo AUSENTE, vazio ou '[REDACTED]' MANTEM o valor gravado — NUNCA reenvie '[REDACTED]' como valor novo nem peca a chave ao usuario so para salvar outro campo. Vale para webhook_secret (indicador has_webhook_secret); apagar: remove_webhook_secret: true.",
   "category": "Config Kanban",
   "params": [
    {
@@ -24975,7 +24992,7 @@
     "description": "ID da caixa de entrada WAHA"
    }
   ],
-  "returns": "{ status, connected, phone_number, qr_code_available, phone_number_changed, previous_phone_number, qr_link_active, qr_link_expires_at, contacts_quota, reachout_timelock }. contacts_quota vem do WhatsApp (nao da Meta) e traz cappingStatus/totalQuota/usedQuota/cycleStart/cycleEnd; totalQuota -1 = sem limite (o caso de quase toda caixa). reachout_timelock null = pode iniciar conversas; presente = o WhatsApp bloqueou temporariamente abordagem fria por esse numero. Os dois podem vir AUSENTES (servidor WAHA que nao reporta saude) — ausencia nao significa \"sem limite\".",
+  "returns": "{ status, connected, phone_number, qr_code_available, phone_number_changed, previous_phone_number, qr_link_active, qr_link_expires_at, contacts_quota, reachout_timelock }. contacts_quota vem do WhatsApp (nao da Meta) e traz cappingStatus/totalQuota/usedQuota/cycleStart/cycleEnd; totalQuota -1 = sem limite (o caso de quase toda caixa). reachout_timelock null = pode iniciar conversas; presente = o WhatsApp bloqueou temporariamente abordagem fria por esse numero. Os dois podem vir AUSENTES (servidor WAHA que nao reporta saude) — ausencia nao significa \"sem limite\". deactivated_same_number e active_same_number ({ inbox_id, name } ou null): o número conectado também é de uma caixa DESATIVADA da conta (dá para trazer as conversas dela com o Mover) ou de outra caixa de QR Code EM USO (as duas vão receber as mensagens).",
   "common_use_cases": [
    "Diagnosticar 'mensagens não estão saindo' (sessão caiu?)"
   ],
@@ -27194,7 +27211,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/integrations/hooks/{id}",
   "title": "Atualizar Hook de Integração",
-  "description": "Atualiza settings/status do hook (chaves OpenAI revalidadas ao trocar). ADMIN-ONLY. Confirme com o usuário.",
+  "description": "Atualiza settings/status do hook (chaves OpenAI revalidadas ao trocar). ADMIN-ONLY. Confirme com o usuário. CHAVE SALVA NAO VOLTA (17/11/2026): a resposta nunca traz chave, senha ou token ja salvos; traz so indicadores (has_<campo> true/false). No salvar, campo de segredo AUSENTE, vazio ou '[REDACTED]' MANTEM o valor gravado — NUNCA reenvie '[REDACTED]' como valor novo nem peca a chave ao usuario so para salvar outro campo. Indicadores em settings_secrets ({has_api_key, fallback_api_keys: [impressao digital]}). Chaves reserva da OpenAI (settings.fallback_api_keys): omitir = mantem todas; lista = troca — item 'kept:<impressao digital>' mantem aquela reserva, texto = chave nova, [] = apaga todas. Apagar um segredo: remove_secrets (lista de nomes, ex.: [\"api_key\"]).",
   "category": "Integracoes",
   "params": [
    {
@@ -27744,7 +27761,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/inboxes/{id}",
   "title": "Atualizar Caixa de Entrada",
-  "description": "Atualiza configurações da caixa (nome, saudação, atribuição automática, atributos extras). MUDANÇA DE CONFIG — confirme com o usuário antes. channel.additional_attributes.mark_as_seen (bool, default true, WhatsApp oficial, 2026-06-11): envia o visto/check azul quando o agente abre a conversa — desligar em coexistência app+API. channel.additional_attributes SOMA no 1o nivel nas caixas de WhatsApp/Instagram/Facebook/TikTok (troca inteiro so na caixa de API); no QR Code mande SO as chaves da tela (accept_*, reject_calls, reject_calls_message, mark_as_seen) com true/false de verdade — o resto e interno do sistema. Email (sincronizacao de mao dupla, admin, via objeto channel): two_way_sync_enabled, sync_sent, sync_deletions, sync_read, delete_strategy. CAIXA OFICIAL CRIADA A MAO (26/08): channel.provider_config aceita phone_number_id, business_account_id e api_key — mas o objeto SUBSTITUI o salvo: SEMPRE mande o provider_config INTEIRO (leia o atual antes e reenvie tudo com o campo alterado), senao webhook_verify_token e a marca source sao APAGADOS em silencio e a caixa para de receber. Os 3 campos sao validados JUNTOS na Meta a cada gravacao (422 'Invalid Credentials' = algum dos tres errado ou chave vencida). O telefone da caixa e somente leitura. portal_id tem de ser da conta: fora disso responde 422.",
+  "description": "Atualiza configurações da caixa (nome, saudação, atribuição automática, atributos extras). MUDANÇA DE CONFIG — confirme com o usuário antes. channel.additional_attributes.mark_as_seen (bool, default true, WhatsApp oficial, 2026-06-11): envia o visto/check azul quando o agente abre a conversa — desligar em coexistência app+API. channel.additional_attributes SOMA no 1o nivel nas caixas de WhatsApp/Instagram/Facebook/TikTok (troca inteiro so na caixa de API); no QR Code mande SO as chaves da tela (accept_*, reject_calls, reject_calls_message, mark_as_seen) com true/false de verdade — o resto e interno do sistema. Email (sincronizacao de mao dupla, admin, via objeto channel): two_way_sync_enabled, sync_sent, sync_deletions, sync_read, delete_strategy. CAIXA OFICIAL CRIADA A MAO (26/08): channel.provider_config aceita phone_number_id, business_account_id e api_key — mas o objeto SUBSTITUI o salvo: SEMPRE mande o provider_config INTEIRO (leia o atual antes e reenvie tudo com o campo alterado), senao webhook_verify_token e a marca source sao APAGADOS em silencio e a caixa para de receber. Os 3 campos sao validados JUNTOS na Meta a cada gravacao (422 'Invalid Credentials' = algum dos tres errado ou chave vencida). O telefone da caixa e somente leitura. portal_id tem de ser da conta: fora disso responde 422. CHAVE SALVA NAO VOLTA (17/11/2026): a resposta nunca traz chave, senha ou token ja salvos; traz so indicadores (has_<campo> true/false). No salvar, campo de segredo AUSENTE, vazio ou '[REDACTED]' MANTEM o valor gravado — NUNCA reenvie '[REDACTED]' como valor novo nem peca a chave ao usuario so para salvar outro campo. Vale para channel.provider_config.api_key e verification_pin (WhatsApp oficial; indicadores em provider_config_secrets), imap_password/smtp_password (e-mail; has_imap_password/has_smtp_password) e auth_token (Twilio). Mandar provider_config sem api_key e seguro: a chave gravada e reposta antes da conferencia na Meta. hmac_token (chave de identidade de caixa de site e de API) nao e mais devolvido: para obter uma, use lionchat_inboxes_regenerate_hmac_token (invalida a anterior).",
   "category": "Caixas de Entrada",
   "params": [
    {
@@ -29794,7 +29811,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/kanban_items",
   "title": "Buscar Cards do Kanban",
-  "description": "Busca cards do Kanban por texto ou pelo numero do card. Procura em titulo, descricao, nome e e-mail do cliente, nos atributos personalizados do card (menos os do tipo secreto) e tambem na conversa/contato vinculados; com UM termo so de numeros, tenta antes casar o ID exato do card. Varios termos separados por espaco funcionam como E (todos precisam bater, ate 5). PISO DE 3 LETRAS (desde 04/08/2026): termo com letra e menos de 3 caracteres e recusado e a resposta vem VAZIA sem nenhum aviso — se todos os termos forem curtos, isso NAO quer dizer que o card nao existe, quer dizer que a busca nem rodou; refaca com 3+ letras. Termo so de digitos e isento do piso. Devolve no maximo 15 cards e NAO tem paginacao — pra listar de verdade use lionchat_kanban_items_filter. Quem nao e administrador so enxerga cards em que e responsavel. FILTRO DE DATA (02/09/2026): quatro eixos, cada um com janela fixa (_start/_end ISO) ou atalho relativo (_relative + _relative_days): criacao (date_*), entrada na etapa atual (stage_date_*), atualizacao (updated_date_*) e ganho/perdido em (closed_date_*). Operadores do atalho: today, yesterday (estes DOIS sem numero), last_days (ultimos N incluindo hoje), days_ago (o dia exato de N atras), days_before (mais de N atras). N inteiro 1..998; janela no fuso da CONTA. CUIDADO: operador invalido ou N invalido NAO da erro — o atalho e ignorado e a resposta volta MAIOR (ate 5.000 cards) com cara de filtrada; confira a contagem antes de qualquer acao em massa. Ver o resource de filtros. Desde 11/10/2026: em kanban_filters, statuses [\"open\"] = aberto e NAO adiado e [\"snoozed\"] = adiados; cada card traz effective_status e snoozed_until.",
+  "description": "Busca cards do Kanban por texto ou pelo numero do card. Procura em titulo, descricao, nome e e-mail do cliente, nos atributos personalizados do card (menos os do tipo secreto) e tambem na conversa/contato vinculados; com UM termo so de numeros, tenta antes casar o ID exato do card. FRASE UNICA (desde 15/11/2026): 'q' e procurado INTEIRO, como esta e na ordem ('18 alexandre' procura esse texto junto, nao as duas palavras separadas); telefone com espaco e um numero so. PISO DE 3 LETRAS (desde 04/08/2026): termo com letra e menos de 3 caracteres (ou frase com espaco sem 3 letras ou numeros seguidos) e recusado e a resposta vem VAZIA com kanban_min_term: true — isso NAO quer dizer que o card nao existe, quer dizer que a busca nem rodou; refaca com 3+ letras. Numero de 1 ou 2 digitos sozinho procura so o NUMERO do card (kanban_min_term: true); com 3+ digitos procura tambem no texto e no telefone. Devolve no maximo 15 cards e NAO tem paginacao — pra listar de verdade use lionchat_kanban_items_filter. Quem nao e administrador so enxerga cards em que e responsavel. FILTRO DE DATA (02/09/2026): quatro eixos, cada um com janela fixa (_start/_end ISO) ou atalho relativo (_relative + _relative_days): criacao (date_*), entrada na etapa atual (stage_date_*), atualizacao (updated_date_*) e ganho/perdido em (closed_date_*). Operadores do atalho: today, yesterday (estes DOIS sem numero), last_days (ultimos N incluindo hoje), days_ago (o dia exato de N atras), days_before (mais de N atras). N inteiro 1..998; janela no fuso da CONTA. CUIDADO: operador invalido ou N invalido NAO da erro — o atalho e ignorado e a resposta volta MAIOR (ate 5.000 cards) com cara de filtrada; confira a contagem antes de qualquer acao em massa. Ver o resource de filtros. Desde 11/10/2026: em kanban_filters, statuses [\"open\"] = aberto e NAO adiado e [\"snoozed\"] = adiados; cada card traz effective_status e snoozed_until.",
   "category": "Busca",
   "params": [
    {
@@ -29809,7 +29826,7 @@
     "type": "string",
     "location": "query",
     "required": true,
-    "description": "Termo de busca. Espacos separam termos e valem como E (cap 5). Termo com letra precisa de 3+ caracteres, senao e descartado e a busca devolve vazio; termo so de digitos vale com qualquer tamanho e tenta casar o ID do card"
+    "description": "Texto procurado como UMA frase, na ordem (desde 15/11/2026). Nao e partido por espaco. Palavra com letra precisa de 3+ caracteres e frase com espaco de 3 letras ou numeros seguidos, senao a busca devolve vazio com kanban_min_term: true; numero so de digitos tenta casar o ID do card (com 1 ou 2 digitos, so o ID)"
    },
    {
     "name": "kanban_filters",
@@ -35093,6 +35110,40 @@
   ]
  },
  {
+  "id": "lionchat_inboxes_instagram_posts",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/instagram_posts",
+  "title": "Posts do Instagram da Caixa (para o gatilho de comentário do fluxo)",
+  "description": "Lista os posts recentes da conta do Instagram ligada à caixa: id, começo da legenda, tipo, miniatura, link e data. Use para descobrir o id do post que vai em post_ids do gatilho instagram_comment_received do fluxo — o código que aparece no link do Instagram NÃO é esse id. 24 posts por página; passe after com o next_cursor da resposta para ver os mais antigos. Só caixa de Instagram (Channel::Instagram); em outra caixa devolve error not_instagram. Se a Meta recusar (caixa precisa ser reconectada), devolve posts vazio e error unavailable, sempre com 200. Somente leitura; exige ser administrador ou membro da caixa.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa de Instagram"
+   },
+   {
+    "name": "after",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Cursor da página seguinte (next_cursor da resposta anterior)"
+   }
+  ],
+  "returns": "{ posts: [{id, caption, media_type, media_product_type, thumbnail_url, permalink, timestamp}], next_cursor, error }",
+  "common_use_cases": [
+   "Achar o id de um post para o fluxo disparar só nos comentários dele",
+   "Listar os posts recentes da conta do Instagram"
+  ],
+  "related_tools": [
+   "lionchat_flows_schema_reference",
+   "lionchat_flows_update",
+   "lionchat_inboxes_list"
+  ]
+ },
+ {
   "id": "lionchat_inboxes_register_webhook",
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/inboxes/{id}/register_webhook",
@@ -35706,7 +35757,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/search/articles",
   "title": "Buscar Artigos da Base de Conhecimento",
-  "description": "Busca por texto nos artigos dos portais (central de ajuda) da conta — irmã de search/conversations, contacts e messages. 15 por página. Termos muito curtos devolvem lista vazia. since/until (timestamp UNIX em segundos) filtram por updated_at do artigo e só valem com a 'Busca avançada' ligada na conta.",
+  "description": "Busca por texto nos artigos dos portais (central de ajuda) da conta — irmã de search/conversations, contacts e messages. 15 por página. Termos muito curtos devolvem lista vazia. since/until (timestamp UNIX em segundos) filtram por updated_at do artigo e só valem com a 'Busca avançada' ligada na conta. Desde 15/11/2026: numero de 1 ou 2 digitos sozinho e texto abaixo do piso NAO procuram — lista vazia com articles_min_term: true (nao quer dizer que nao existe). Artigos acham as palavras em qualquer ordem (nao viraram frase unica).",
   "category": "Busca",
   "params": [
    {
@@ -38080,6 +38131,228 @@
    "lionchat_contacts_kanban_items_list",
    "lionchat_companies_contacts_list",
    "lionchat_kanban_items_show"
+  ]
+ },
+ {
+  "id": "lionchat_webhooks_regenerate_secret",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/webhooks/{id}/regenerate_secret",
+  "title": "Gerar novo segredo de assinatura do webhook",
+  "description": "Gera OUTRO segredo de assinatura para o webhook de saida e o devolve UMA vez nesta resposta. O segredo anterior deixa de valer NA HORA: o sistema do cliente que confere a assinatura precisa ser atualizado com o novo, senao passa a recusar os avisos. ADMIN-ONLY. Confirme com o usuario antes. Use so quando o segredo foi perdido ou exposto.",
+  "category": "Webhooks",
+  "params": [
+   {
+    "name": "id",
+    "type": "number",
+    "location": "path",
+    "required": true,
+    "description": "ID do webhook"
+   }
+  ],
+  "returns": "{ id, secret } — o segredo novo, mostrado so aqui",
+  "common_use_cases": [
+   "Segredo de assinatura perdido",
+   "Trocar segredo exposto"
+  ],
+  "related_tools": [
+   "lionchat_webhooks_list",
+   "lionchat_webhooks_update"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_inboxes_regenerate_hmac_token",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/regenerate_hmac_token",
+  "title": "Gerar nova chave de identidade da caixa",
+  "description": "Gera OUTRA chave de verificacao de identidade (hmac_token) para caixa de chat do site ou de API e a devolve UMA vez nesta resposta. A chave anterior deixa de valer NA HORA: o site ou sistema que assina a identidade dos visitantes precisa ser atualizado, senao (com verificacao obrigatoria ligada) os visitantes identificados passam a ser recusados. ADMIN-ONLY. Confirme com o usuario antes. Caixa de outro tipo = 422.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "number",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa (site ou API)"
+   }
+  ],
+  "returns": "{ hmac_token } — a chave nova, mostrada so aqui",
+  "common_use_cases": [
+   "Chave de identidade perdida",
+   "Programador novo precisa da chave"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_show",
+   "lionchat_inboxes_update"
+  ],
+  "confirm_required": true
+ },
+ {
+  "id": "lionchat_inboxes_detached_groups_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/detached_groups",
+  "title": "Caixas excluídas e desativadas (grupos de conversas guardadas)",
+  "description": "Lista os grupos de conversas guardadas de caixas EXCLUÍDAS e DESATIVADAS, um grupo por caixa de origem (as caixas desativadas NÃO aparecem em lionchat_inboxes_list). Qualquer atendente pode ler; o grupo de uma caixa DESATIVADA só aparece para administrador e para membro daquela caixa. Use para responder \"onde estão as conversas da caixa que excluí/desativei?\" e para pegar a `key` do grupo antes de mover ou o `deactivation.inbox_id` antes de reativar.",
+  "category": "Caixas de Entrada",
+  "params": [],
+  "returns": "{ payload: [{ key, name, channel_type, medium, conversations_count, deleted_at, last_activity_at, state, movable, deactivation }] }. `key` identifica o grupo (ex.: 'i:123' = caixa de id 123; 'n:<tipo>|<nome>' = caixa antiga identificada pelo nome; 'x' = sem identificação, não pode ser movido). `state`: excluded (caixa excluída), inbox_exists (o carimbo aponta para uma caixa que existe), unidentified, deactivated (caixa desativada pronta), deactivating (desativando agora) ou reactivating (reativando agora). `movable` diz se o Mover aceita esse grupo. `deactivation` (só nas desativadas): { inbox_id, deactivated_at (data em segundos desde 1970), deactivated_by_name }. Para listar as CONVERSAS de um grupo: lionchat_conversations_list com inbox_id=0 e detached_group=<key>.",
+  "common_use_cases": [
+   "Achar as conversas de uma caixa excluída ou desativada",
+   "Pegar a key do grupo antes de mover as conversas",
+   "Pegar o inbox_id de uma caixa desativada antes de reativar"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_detached_groups_move_preview",
+   "lionchat_inboxes_detached_groups_move_execute",
+   "lionchat_inboxes_reactivate",
+   "lionchat_conversations_list"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_detached_groups_move_preview",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/detached_groups/move/preview",
+  "title": "Prévia de mover as conversas de uma caixa excluída/desativada",
+  "description": "Mostra o que aconteceria ao mover as conversas de um grupo (caixa excluída ou desativada) para outra caixa de WhatsApp (QR Code ou oficial), sem mover nada. Só administrador. SEMPRE rode a prévia e mostre os números ao usuário ANTES de lionchat_inboxes_detached_groups_move_execute.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "group",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "key do grupo (de lionchat_inboxes_detached_groups_list), ex.: 'i:123'"
+   },
+   {
+    "name": "target_inbox_id",
+    "type": "integer",
+    "location": "query",
+    "required": true,
+    "description": "ID da caixa de WhatsApp de destino (em uso, da mesma conta)"
+   }
+  ],
+  "returns": "{ movable, conflicting, archived_as_history, groups_skipped }: movable = conversas que vão para o destino; conflicting = de contatos que já conversam no destino (entram encerradas ao lado da conversa viva, o card passa a apontar para a viva); archived_as_history = de contatos sem telefone (entram como histórico encerrado); groups_skipped = conversas de grupo de WhatsApp (não são movidas). Erro 422 { error } com o motivo quando o Mover é recusado (destino desativado, origem em transição, grupo sem identificação).",
+  "common_use_cases": [
+   "Conferir quantas conversas vão e para onde antes de mover"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_detached_groups_list",
+   "lionchat_inboxes_detached_groups_move_execute"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_detached_groups_move_execute",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/detached_groups/move/execute",
+  "title": "Mover as conversas de uma caixa excluída/desativada para outra caixa",
+  "description": "Move TODAS as conversas do grupo para a caixa de WhatsApp de destino, em segundo plano. As conversas entram ENCERRADAS e NADA é enviado aos contatos. Só administrador. Ação que muda dados do cliente: confirme com o usuário depois de mostrar a prévia (lionchat_inboxes_detached_groups_move_preview). Acompanhe com lionchat_inboxes_detached_groups_move_status.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "group",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "key do grupo, ex.: 'i:123'"
+   },
+   {
+    "name": "target_inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID da caixa de WhatsApp de destino"
+   }
+  ],
+  "returns": "{ status: 'started' }. 409 { error } se outro Mover já está rodando neste grupo; 422 { error } quando recusado.",
+  "common_use_cases": [
+   "Levar o histórico de uma caixa excluída para a caixa nova do mesmo número"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_detached_groups_move_preview",
+   "lionchat_inboxes_detached_groups_move_status"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_detached_groups_move_status",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/inboxes/detached_groups/move/status",
+  "title": "Andamento do Mover conversas",
+  "description": "Andamento do Mover de um grupo. Só administrador. Consulte de tempos em tempos (uma consulta por vez, a cada poucos segundos), nunca em rajada.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "group",
+    "type": "string",
+    "location": "query",
+    "required": true,
+    "description": "key do grupo, ex.: 'i:123'"
+   }
+  ],
+  "returns": "{ status, processed, total, percent, moved, resolved_conflicts, archived_no_phone, errors_total, errors, target_name }. status: idle (nada rodando), queued, in_progress, completed, failed ou interrupted (o trabalho parou no meio, ex.: atualização do sistema; rodar o execute de novo continua de onde parou).",
+  "common_use_cases": [
+   "Saber se o Mover terminou e quantas conversas foram"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_detached_groups_move_execute"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_deactivate",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/deactivate",
+  "title": "Desativar caixa de entrada",
+  "description": "Desativa a caixa sem apagar nada: ela sai da lista de caixas, para de receber e de enviar, as campanhas dela param e a vaga do plano é liberada; as conversas ficam guardadas e voltam como estavam ao reativar. Mensagens que chegarem enquanto estiver desativada NÃO são recebidas. Só administrador e só com a função ligada na instalação (desligada: 409 com code disabled). Ação que muda a operação do cliente: confirme com o usuário antes. É o caminho recomendado no lugar de excluir.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa"
+   }
+  ],
+  "returns": "202 { deactivation_state, token } (deactivation_state 'deactivating' → 'deactivated' em segundos). Pedido repetido devolve o mesmo token. 409 { message } quando não pode agora: exclusão em andamento, migração ou Mover com ela como origem/destino, importação de histórico em andamento ou pausada, histórico da Meta pendente.",
+  "common_use_cases": [
+   "Tirar uma caixa de uso sem perder as conversas",
+   "Liberar a vaga do plano sem excluir"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_reactivate",
+   "lionchat_inboxes_detached_groups_list",
+   "lionchat_inboxes_show"
+  ]
+ },
+ {
+  "id": "lionchat_inboxes_reactivate",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/inboxes/{id}/reactivate",
+  "title": "Reativar caixa de entrada desativada",
+  "description": "Reativa uma caixa desativada: as conversas voltam para ela com a mesma situação (abertas continuam abertas, encerradas continuam encerradas; adiadas que venceram enquanto estava desativada são reabertas). Exige vaga no plano. WhatsApp por código QR volta pedindo para ler o código de novo; oficial, Instagram e Facebook tentam voltar sozinhos. O id vem de deactivation.inbox_id em lionchat_inboxes_detached_groups_list (a caixa desativada não aparece em lionchat_inboxes_list). Só administrador; funciona mesmo com a função de desativar desligada.",
+  "category": "Caixas de Entrada",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da caixa desativada"
+   },
+   {
+    "name": "confirm_same_number",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "true para confirmar quando outra caixa de QR Code EM USO tem o mesmo número (as duas vão receber as mensagens). Sem ele, esse caso responde 409 com code same_number_active — pergunte ao usuário antes de mandar true."
+   }
+  ],
+  "returns": "202 { deactivation_state, token } ('reactivating' → 'active'). 409 { message, code }: not_deactivated, reactivation_running, deactivation_running, deletion_pending, move_running, no_slot (sem vaga no plano), same_number_active.",
+  "common_use_cases": [
+   "Voltar a usar uma caixa desativada com as conversas como estavam"
+  ],
+  "related_tools": [
+   "lionchat_inboxes_deactivate",
+   "lionchat_inboxes_detached_groups_list"
   ]
  }
 ]
