@@ -1775,7 +1775,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/conversations/{id}/assignments",
   "title": "Atribuir Agente/Time",
-  "description": "Atribui agente (assignee_id) ou time (team_id) a conversa. Valor null/0 desatribui.",
+  "description": "Atribui agente (assignee_id) ou time (team_id) a conversa. Valor null/0 desatribui. Cards: com kanban_item_ids, escolha kanban_sync_mode 'replace' (troca no card) ou 'add' (adiciona e mantem quem esta). So cards abertos/adiados, ligados a conversa e de funil que o novo alcanca.",
   "category": "Conversas",
   "params": [
    {
@@ -1798,6 +1798,20 @@
     "location": "body",
     "required": false,
     "description": "ID do time"
+   },
+   {
+    "name": "kanban_item_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Junto com assignee_id: IDs dos cards do Kanban ligados a esta conversa que acompanham a troca. Sem ele, so card SEM nenhum responsavel adota o novo."
+   },
+   {
+    "name": "kanban_sync_mode",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "'replace' (padrao: sai do card quem entrou por ser responsavel desta conversa, e a saida fica no historico) ou 'add' (o novo responsavel entra e quem ja estava no card fica). Use 'add' quando o usuario quiser colocar mais alguem sem tirar ninguem."
    }
   ],
   "returns": "agente ou time atribuido",

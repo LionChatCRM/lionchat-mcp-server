@@ -816,3 +816,10 @@ Lista autoritativa de nomes validos: `AutomationRule#actions_attributes` no back
 fora dessa lista e recusado com 422 ao salvar — isso a API valida. O que ela **nao** valida e o
 conteudo do `action_params`. `apply_kanban_checklist_template` existe no motor mas **nao** e uma
 acao de automacao valida (e so do FlowBuilder) — usar aqui devolve 422.
+
+## Trocar o responsavel e os cards (18/11/2026)
+
+`lionchat_conversations_assignments` com `assignee_id` aceita `kanban_item_ids` (quais cards ligados acompanham a troca)
+e `kanban_sync_mode`: `replace` (padrao — sai do card quem entrou por ser responsavel desta conversa) ou `add` (o novo
+entra e quem estava fica). Sem `kanban_item_ids`, so o card SEM nenhum responsavel adota o novo. Se o usuario quer
+"colocar mais alguem sem tirar ninguem", use `add`. Card de funil que o novo nao alcanca, ganho ou perdido nao muda.
