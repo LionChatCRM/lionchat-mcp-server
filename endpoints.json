@@ -31883,7 +31883,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/conversations/{id}/reporting_events",
   "title": "Eventos de Métrica da Conversa",
-  "description": "Lista, em ordem cronológica, os eventos de métrica que esta conversa gerou — primeira resposta, tempo de resposta, resolução — cada um com o valor em segundos e também o valor contado só dentro do horário de atendimento. Use para explicar de onde saiu um número do relatório numa conversa específica. Recurso Enterprise.",
+  "description": "Lista, em ordem cronológica, os eventos de métrica que esta conversa gerou — primeira resposta, tempo de resposta, resolução — cada um com o valor em segundos e também o valor contado só dentro do horário de atendimento. Use para explicar de onde saiu um número do relatório numa conversa específica. Recurso Enterprise. `conversation_assigned` e `conversation_transferred` NÃO são tempo (não entram em média de resposta nem de resolução): marcam de quem a conversa passou a ser. No `conversation_transferred` (transferência de carteira), `value` é o NÚMERO (id) de quem passou e `user_id` o de quem recebeu, e o início do evento pode ser de meses antes (é quando a conversa chegou a quem passou).",
   "category": "Conversas",
   "params": [
    {
@@ -33010,6 +33010,143 @@
    "lionchat_agents_list"
   ],
   "confirm_required": true
+ },
+ {
+  "id": "lionchat_agent_transfers_preview",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/agent_transfers",
+  "title": "Transferir Carteira — Conferência (prévia)",
+  "description": "SOMENTE ADMINISTRADOR. Monta a CONFERÊNCIA de uma transferência de carteira entre atendentes e grava um RASCUNHO (nada muda ainda). Passa as conversas, os cards do Kanban, os compromissos da Agenda (com os agendamentos) e os tipos de agendamento de UMA pessoa para outra (`person`), dividindo igualmente entre várias (`split`, mínimo 2) ou devolvendo as conversas à fila do time (`team`, sem pessoas, exige `conversations`). Compromissos e tipos de agendamento só no modo `person`. Use ISTO para mover a carteira de alguém (férias, saída, redistribuição): nunca atribua conversa a conversa. O retorno traz em `preview` os números (conversas por situação, cards abertos, compromissos que passam/ficam, tipos) e em `preview.review` o que muda para cada pessoa que recebe (caixas em que entra como Supervisor, aviso de conversa nova, rodízio de time, linha de ligação, funis e agendas que ganha), o que continua indo para quem sai (rodízios, automações, fluxos, campanhas, mensagens agendadas — só contagem) e, no `team`, quanto tempo as conversas ficam na frente dos clientes novos. `preview.nothing_to_move: true` = não há o que passar. MOSTRE a conferência ao usuário antes de executar. O rascunho vale 15 minutos. Recusas 422 {error, code} com o texto em português (mostre o error ao usuário): disabled (desligada nesta instalação), invalid_people (pessoa fora da conta ou modo errado), same_person, repeated_target, split_needs_two, invalid_scope (time ou caixa fora da conta, situação inexistente), kinds_not_allowed (compromissos e tipos de agendamento só para uma pessoa; devolver ao time exige conversas), nothing_to_move.",
+  "category": "Agentes",
+  "params": [
+   {
+    "name": "source_user_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do atendente que PASSA a carteira (membro da conta)"
+   },
+   {
+    "name": "target_mode",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "person (uma pessoa) | split (dividir igualmente, 2 ou mais) | team (devolver ao time)"
+   },
+   {
+    "name": "target_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "IDs de quem RECEBE: exatamente 1 em person, 2 ou mais em split, vazio em team. Sem repetir, sem quem passa"
+   },
+   {
+    "name": "kinds",
+    "type": "array",
+    "location": "body",
+    "required": true,
+    "description": "O que levar: conversations, cards, tasks (compromissos e agendamentos), booking_types. tasks e booking_types só em person; team exige conversations"
+   },
+   {
+    "name": "statuses",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Situações das conversas: open, pending, snoozed, resolved. Vazio = todas (resolvidas incluídas)"
+   },
+   {
+    "name": "team_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Só conversas destes times (IDs da conta). Vazio = todos"
+   },
+   {
+    "name": "no_team",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "true = só conversas sem time"
+   },
+   {
+    "name": "inbox_ids",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Só conversas destas caixas em uso (IDs da conta). Vazio = todas"
+   }
+  ],
+  "returns": "{id, state:'draft', target_mode, source:{id,name}, targets:[{id,name}], scope, preview:{conversations:{open,pending,snoozed,resolved,muted,detached,total}, cards:{open}, tasks:{movable,kept}, booking_types:{total}, review:{totals,nothing_to_move, per_target:[{user_id,name,admin,inboxes:[{id,name,supervisor,new_conversation_notice,team_rotations,voice}],funnels,agendas}], tap:{...}, team_return:{groups:[...],stay_with_source}, video_without_google, access_stays}}}",
+  "common_use_cases": [
+   "Atendente saiu de férias: passar a carteira dele para um colega",
+   "Redistribuir a carteira de alguém igualmente entre várias pessoas",
+   "Devolver as conversas de alguém à fila do time"
+  ],
+  "related_tools": [
+   "lionchat_agent_transfers_execute",
+   "lionchat_agent_transfers_show",
+   "lionchat_agents_list",
+   "lionchat_agents_replace"
+  ]
+ },
+ {
+  "id": "lionchat_agent_transfers_execute",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/agent_transfers/{id}/confirm",
+  "title": "Transferir Carteira — Executar",
+  "description": "AÇÃO DE ESCRITA IRREVERSÍVEL, SOMENTE ADMINISTRADOR — mostre a conferência (prévia) ao usuário, espere o sim e reenvie com confirm:true. Começa a transferência do RASCUNHO `id` gerado por lionchat_agent_transfers_preview. Roda em segundo plano, em fatias, sem mensagem ao cliente; uma por vez por conta (as outras esperam na fila, até 3). O que já passou não volta, e o acesso dado a quem recebeu fica mesmo se cancelar. `override_reason` é OBRIGATÓRIO quando alguém da transferência recebeu ou devolveu uma carteira nas últimas 24 horas (recusa round_trip_needs_reason): pergunte o motivo ao usuário e reenvie com ele (fica no registro de atividades). Recusas 422 {error, code}: draft_expired (passou de 15 minutos: gere outra prévia), nothing_to_move, queue_full, daily_limit, person_in_live_transfer, person_busy (sendo excluído ou substituído), round_trip_needs_reason, invalid_state, disabled. Acompanhe com lionchat_agent_transfers_show. Pausar e cancelar ficam na aba Transferir.",
+  "category": "Agentes",
+  "confirm_required": true,
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID do rascunho devolvido pela prévia"
+   },
+   {
+    "name": "override_reason",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Motivo, só quando a recusa round_trip_needs_reason pedir (alguém recebeu ou devolveu carteira nas últimas 24 horas)"
+   }
+  ],
+  "returns": "{id, state:'running'|'queued', phase, ...} (mesmo formato da prévia, sem mudar o preview)",
+  "common_use_cases": [
+   "Confirmar a transferência de carteira depois de o usuário aprovar a conferência"
+  ],
+  "related_tools": [
+   "lionchat_agent_transfers_preview",
+   "lionchat_agent_transfers_show"
+  ]
+ },
+ {
+  "id": "lionchat_agent_transfers_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/agent_transfers/{id}",
+  "title": "Transferir Carteira — Andamento",
+  "description": "SÓ LEITURA, SOMENTE ADMINISTRADOR. Andamento de uma transferência de carteira: `state` (draft, queued, running, paused, completed, partial, cancelled), `phase` (access, conversations, cards, tasks, booking_types), `counters` com o número REAL que já passou (`conversations_moved`, `cards_moved`, `tasks_moved`, `booking_types_moved`) e, ao terminar pela metade ou cancelada, `end_reason` + `end_reason_text` (o motivo em português). Na fila da conta (`queued`), `queue_ahead` diz quantas estão na frente. Em `running`, `waiting` diz por que ela não está andando agora: `capacity` = aguardando a vez (a plataforma atende poucas transferências por vez, em ordem de chegada; começa sozinha, NÃO está travada), `switch_off` = transferências em espera na plataforma, `account` = conta suspensa; nulo = andando. Se houver instabilidade no meio, ela continua sozinha de onde parou, sem passar nada em dobro. Os números da conferência ficam em `preview`. Não consulte em laço: transferências grandes levam minutos; pergunte de novo quando o usuário pedir.",
+  "category": "Agentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da transferência"
+   }
+  ],
+  "returns": "{id, state, phase, target_mode, source:{id,name}, targets, scope, preview, counters, requested_by:{id,name}, override_reason, end_reason, end_reason_text, created_at, started_at, finished_at, last_progress_at}",
+  "common_use_cases": [
+   "Saber quanto da carteira já passou",
+   "Explicar por que a transferência terminou pela metade"
+  ],
+  "related_tools": [
+   "lionchat_agent_transfers_preview",
+   "lionchat_agent_transfers_execute"
+  ]
  },
  {
   "id": "lionchat_contacts_form_entries_list",
@@ -35730,7 +35867,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/reporting_events",
   "title": "Eventos de Métrica da Conta (primeira resposta, resolução...)",
-  "description": "SÓ LEITURA, SOMENTE ADMINISTRADOR, recurso Enterprise. Lista os eventos brutos que alimentam os relatórios — first_response, reply_time, conversation_resolved, conversation_opened, conversation_bot_handoff — da conta inteira, 25 por página, mais novos primeiro, com valor em segundos e valor só dentro do horário de atendimento. since/until são timestamp UNIX em SEGUNDOS (data por extenso não é aceita); mandar só um dos dois vale como janela aberta. Versão por conversa: lionchat_conversations_reporting_events.",
+  "description": "SÓ LEITURA, SOMENTE ADMINISTRADOR, recurso Enterprise. Lista os eventos brutos que alimentam os relatórios — first_response, reply_time, conversation_resolved, conversation_opened, conversation_bot_handoff — da conta inteira, 25 por página, mais novos primeiro, com valor em segundos e valor só dentro do horário de atendimento. since/until são timestamp UNIX em SEGUNDOS (data por extenso não é aceita); mandar só um dos dois vale como janela aberta. Versão por conversa: lionchat_conversations_reporting_events. `conversation_assigned` e `conversation_transferred` NÃO são tempo (não entram em média de resposta nem de resolução): marcam de quem a conversa passou a ser. No `conversation_transferred` (transferência de carteira), `value` é o NÚMERO (id) de quem passou e `user_id` o de quem recebeu, e o início do evento pode ser de meses antes (é quando a conversa chegou a quem passou).",
   "category": "Relatorios",
   "params": [
    {
