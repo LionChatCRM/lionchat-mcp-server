@@ -4875,7 +4875,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/captain/assistants",
   "title": "Criar Assistente IA",
-  "description": "Cria um assistente de IA. Obrigatorios: name, description. Exige Admin; sujeito ao limite do plano (403 se atingir).\n\nCONFIG (2026-06): config faz MERGE PARCIAL no update. Chaves novas: follow_up_steps (ate 3 etapas [{after_minutes>=5, prompt}], soma<=1380min (23h)), disabled_tools, offer_ids, media_asset_ids, booking_event_type_ids, activation_label, min/max_response_time. instructions ate 20.000 chars.",
+  "description": "Cria um assistente de IA. Obrigatorios: name, description. Exige Admin; sujeito ao limite do plano (403 se atingir).\n\nCONFIG (2026-06): config faz MERGE PARCIAL no update. Chaves novas: follow_up_steps (ate 3 etapas [{after_minutes>=5, prompt}], soma<=1380min (23h)), disabled_tools, offer_ids, media_asset_ids, booking_event_type_ids, activation_label, min/max_response_time. instructions ate 25.000 chars (desde 18/11/2026; acima disso o servidor recusa com 422 e nada e gravado; a instruction de CENARIO continua ate 20.000).",
   "category": "Assistentes",
   "params": [
    {
@@ -5093,7 +5093,7 @@
   "method": "PATCH",
   "path": "/api/v1/accounts/{account_id}/captain/assistants/{id}",
   "title": "Atualizar Assistente IA",
-  "description": "Atualiza um assistente de IA. Exige Admin. Para pausar use paused:true (top-level).\n\nCONFIG (2026-06): config faz MERGE PARCIAL no update. Chaves novas: follow_up_steps (ate 3 etapas [{after_minutes>=5, prompt}], soma<=1380min (23h)), disabled_tools, offer_ids, media_asset_ids, booking_event_type_ids, activation_label, min/max_response_time. instructions ate 20.000 chars.",
+  "description": "Atualiza um assistente de IA. Exige Admin. Para pausar use paused:true (top-level).\n\nCONFIG (2026-06): config faz MERGE PARCIAL no update. Chaves novas: follow_up_steps (ate 3 etapas [{after_minutes>=5, prompt}], soma<=1380min (23h)), disabled_tools, offer_ids, media_asset_ids, booking_event_type_ids, activation_label, min/max_response_time. instructions ate 25.000 chars (desde 18/11/2026; acima disso o servidor recusa com 422 e nada e gravado; a instruction de CENARIO continua ate 20.000).",
   "category": "Assistentes",
   "params": [
    {
