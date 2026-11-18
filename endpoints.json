@@ -94,20 +94,6 @@
     "location": "body",
     "required": false,
     "description": "Nova senha"
-   },
-   {
-    "name": "working_hours_enabled",
-    "type": "boolean",
-    "location": "body",
-    "required": false,
-    "description": "Liga/desliga o horário comercial NO NÍVEL DA CONTA (novo 22/07). Quando ligado, vale para todas as caixas EXCETO Chat do Site (que mantém o horário individual da caixa)."
-   },
-   {
-    "name": "working_hours",
-    "type": "array",
-    "location": "body",
-    "required": false,
-    "description": "Grade de horário comercial da conta: array com os 7 dias, cada um {day_of_week: 0-6 (0=domingo), closed_all_day: bool, open_all_day: bool, open_hour, open_minutes, close_hour, close_minutes}. Mesmo formato do horário de caixa. Ex.: {\"day_of_week\":1,\"closed_all_day\":false,\"open_all_day\":false,\"open_hour\":9,\"open_minutes\":0,\"close_hour\":18,\"close_minutes\":0}. O show da conta retorna working_hours (somente leitura, [] se nunca configurado) e working_hours_enabled."
    }
   ],
   "returns": "perfil do usuário atualizado",
@@ -27840,6 +27826,27 @@
     "location": "body",
     "required": false,
     "description": "Texto da mensagem de ausencia"
+   },
+   {
+    "name": "working_hours_enabled",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Liga/desliga o horario de atendimento PROPRIO da caixa. Nas caixas que nao sao Chat do Site, com o horario comercial da CONTA ligado, vale o da conta."
+   },
+   {
+    "name": "timezone",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Fuso do horario da caixa (ex.: America/Sao_Paulo)."
+   },
+   {
+    "name": "working_hours",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Grade de horario da caixa: lista com os 7 dias, cada um {day_of_week: 0-6 (0=domingo), closed_all_day: bool, open_all_day: bool, open_hour, open_minutes, close_hour, close_minutes}. Ex.: {\"day_of_week\":1,\"closed_all_day\":false,\"open_all_day\":false,\"open_hour\":9,\"open_minutes\":0,\"close_hour\":18,\"close_minutes\":0}. A caixa NAO tem pausa de almoco (so a conta tem). Mande uma LISTA de objetos de verdade, nunca o texto da lista entre aspas (texto JSON ainda e aceito, mas e o formato que ja quebrou em 16/11). Mande os 7 dias; dia omitido nao muda. Formato errado volta 422 sem gravar nada, nem os outros campos do mesmo pedido."
    }
   ],
   "returns": "{ inbox }",
@@ -28940,6 +28947,20 @@
     "location": "body",
     "required": false,
     "description": "Provedor da transcricao: 'openai' ou 'groq'. So funciona se a conta tiver a chave daquele provedor. Sem escolher, usa a OpenAI se houver chave e depois a Groq."
+   },
+   {
+    "name": "working_hours_enabled",
+    "type": "boolean",
+    "location": "body",
+    "required": false,
+    "description": "Liga/desliga o horário comercial NO NÍVEL DA CONTA (novo 22/07). Quando ligado, vale para todas as caixas EXCETO Chat do Site (que mantém o horário individual da caixa)."
+   },
+   {
+    "name": "working_hours",
+    "type": "array",
+    "location": "body",
+    "required": false,
+    "description": "Grade de horario comercial da conta: lista com os 7 dias, cada um {day_of_week: 0-6 (0=domingo), closed_all_day: bool, open_all_day: bool, open_hour, open_minutes, close_hour, close_minutes}; a conta aceita tambem a pausa (break_start_hour, break_start_minutes, break_end_hour, break_end_minutes). Mesmo formato do horario de caixa. O show da conta retorna working_hours (somente leitura, [] se nunca configurado) e working_hours_enabled. Mande uma LISTA de objetos de verdade, nunca o texto da lista entre aspas (texto JSON ainda e aceito, mas e o formato que ja quebrou em 16/11). Mande os 7 dias; dia omitido nao muda. Formato errado volta 422 sem gravar nada, nem os outros campos do mesmo pedido."
    }
   ],
   "returns": "Conta atualizada (payload completo, com timezone no topo)",
