@@ -569,6 +569,27 @@ FlowBuilder) e o chat interno da equipe.
 `inbox_updated` entrou na lista de eventos assináveis (`webhooks_create/update`): dispara quando
 uma caixa de entrada é autorizada/reautorizada. Entrega só pra quem assinou o evento.
 
+### Webhooks de saída — avisos de erro (2026-11-18)
+
+Três eventos novos assináveis em `webhooks_create/update`:
+
+| Evento | Quando sai |
+|---|---|
+| `tool_execution_failed` | ferramenta da IA terminou com erro, tempo esgotado ou dado obrigatório faltando (também no Testar do editor, com `test: true`) |
+| `flow_execution_failed` | fluxo parou com erro |
+| `automation_execution_failed` | a regra falhou, uma ação falhou ou a mensagem da automação não foi entregue de vez |
+
+- O aviso sai **só para o webhook**: não existe gatilho de fluxo ou automação para erro (de propósito: um erro não
+  pode gerar outro erro dentro do LionChat). Para mandar a um grupo de WhatsApp, use um sistema de fora (n8n) ou uma
+  caixa sem IA, fluxo e automação ligados.
+- Pacote: `event`, `event_id` (estável; descarte repetido por ele), `test`, `account`, `source` (ferramenta, fluxo ou
+  automação), `execution` (com o bloco ou a ação que falhou), `error.message`, `input`, `variables`, `steps`,
+  `conversation` (`id` = número da tela), `contact`, `truncated`, `redacted`, `dashboard_url`.
+- Dados do cliente vão inteiros (CPF, telefone, endereço). Chaves secretas da conta nunca vão (viram
+  `[segredo da conta]`). Campo acima de 16 KB chega cortado e listado em `truncated`.
+- Mensagem da automação que o sistema ainda vai tentar de novo só gera aviso se continuar sem entrega depois das novas
+  tentativas (cerca de 70 min).
+
 ### Webhook Universal (entrada) — arrays no mapeamento (2026-06)
 
 O `field_mapping` do webhook personalizado aceita caminhos com índice de array:

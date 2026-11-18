@@ -18296,7 +18296,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/webhooks",
   "title": "Criar Webhook",
-  "description": "Cria um webhook. Body exige wrapper webhook. subscriptions restrito a allow-list. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada). A resposta desta criacao e a UNICA vez em que o segredo de assinatura (secret) aparece — entregue ao usuario na hora. Depois so has_secret; perdeu = lionchat_webhooks_regenerate_secret.",
+  "description": "Cria um webhook. Body exige wrapper webhook. subscriptions restrito a allow-list. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada). A resposta desta criacao e a UNICA vez em que o segredo de assinatura (secret) aparece — entregue ao usuario na hora. Depois so has_secret; perdeu = lionchat_webhooks_regenerate_secret. Avisos de erro (2026-11-18): tool_execution_failed (ferramenta da IA falhou), flow_execution_failed (fluxo parou com erro), automation_execution_failed (regra, acao ou entrega da automacao falhou) — saem SO para o webhook, com os detalhes da execucao e os dados do cliente inteiros (chaves secretas da conta nunca vao); testes chegam com test: true; event_id estavel para descartar repetido.",
   "category": "Webhooks",
   "params": [
    {
@@ -18325,7 +18325,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "Eventos (allow-list): conversation_status_changed, conversation_updated, conversation_created, contact_created, contact_updated, message_created, message_updated, webwidget_triggered, inbox_created, inbox_updated, conversation_typing_on, conversation_typing_off"
+    "description": "Eventos (allow-list): conversation_status_changed, conversation_updated, conversation_created, contact_created, contact_updated, message_created, message_updated, webwidget_triggered, inbox_created, inbox_updated, conversation_typing_on, conversation_typing_off, tool_execution_failed, flow_execution_failed, automation_execution_failed"
    }
   ],
   "returns": "webhook criado (com novo ID)",
@@ -18342,7 +18342,7 @@
   "method": "PUT",
   "path": "/api/v1/accounts/{account_id}/webhooks/{id}",
   "title": "Atualizar Webhook",
-  "description": "Atualiza um webhook existente. Atualiza campos do webhook existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: url, subscriptions. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada). O segredo de assinatura (secret) NAO e devolvido aqui (so has_secret): ele aparece uma vez na criacao e em lionchat_webhooks_regenerate_secret.",
+  "description": "Atualiza um webhook existente. Atualiza campos do webhook existente. Suporta atualização parcial (PATCH) — só campos enviados são alterados. Campos suportados: url, subscriptions. Evento novo (2026-06): 'inbox_updated' (dispara quando uma caixa de entrada e autorizada/reautorizada). O segredo de assinatura (secret) NAO e devolvido aqui (so has_secret): ele aparece uma vez na criacao e em lionchat_webhooks_regenerate_secret. Avisos de erro (2026-11-18): tool_execution_failed (ferramenta da IA falhou), flow_execution_failed (fluxo parou com erro), automation_execution_failed (regra, acao ou entrega da automacao falhou) — saem SO para o webhook, com os detalhes da execucao e os dados do cliente inteiros (chaves secretas da conta nunca vao); testes chegam com test: true; event_id estavel para descartar repetido.",
   "category": "Webhooks",
   "params": [
    {
@@ -18378,7 +18378,7 @@
     "type": "array",
     "location": "body",
     "required": false,
-    "description": "PUT substitui o conjunto inteiro. Allow-list: conversation_status_changed, conversation_updated, conversation_created, contact_created, contact_updated, message_created, message_updated, webwidget_triggered, inbox_created, inbox_updated, conversation_typing_on, conversation_typing_off"
+    "description": "PUT substitui o conjunto inteiro. Allow-list: conversation_status_changed, conversation_updated, conversation_created, contact_created, contact_updated, message_created, message_updated, webwidget_triggered, inbox_created, inbox_updated, conversation_typing_on, conversation_typing_off, tool_execution_failed, flow_execution_failed, automation_execution_failed"
    }
   ],
   "returns": "webhook atualizado",
