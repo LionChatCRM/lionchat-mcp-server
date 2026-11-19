@@ -76,7 +76,7 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
 
 ## Documentos de quem assina (28/10)
 - No modelo, `roles_layout.required_proofs`: lista com `id_document` (documento com foto — a pessoa escolhe entre os
-  aceitos, RG, CNH ou CPF; ver `accepted_types` abaixo), `selfie_with_document` e `address_proof` (comprovante, foto ou PDF). `[]` = nenhum. Outro valor = 422. O
+  aceitos, RG, CNH ou CPF; ver `accepted_types` abaixo), `selfie_with_document` e `address_proof` (comprovante, foto ou PDF). A selfie só do rosto (`selfie`, 19/11) só entra por `proof_requests`. `[]` = nenhum. Outro valor = 422. O
   contrato guarda uma cópia ao nascer: mudar o modelo depois não muda contrato já enviado (`required_proofs` vem no
   `list` e no `show` do contrato).
 - A pessoa manda os documentos na página, antes de assinar. Com algum documento pedido, o contrato NÃO fecha quando
@@ -96,7 +96,7 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
 ## Documentos pedidos com anexo e conferência por IA (29/10)
 - `roles_layout.proof_requests` é a lista completa (o que vale de verdade): itens `{key, label, accepts_pdf,
   attach_to_contract, from_witnesses}` (+ `accepted_types` no `id_document` e `description` nos criados). `key`: `id_document`, `rg`, `cnh`, `cpf`, `selfie_with_document`,
-  `address_proof` ou um documento CRIADO, `custom_<6 a 12 letras/números minúsculos>` com `label` obrigatório (1 a 60).
+  `selfie`, `address_proof` ou um documento CRIADO, `custom_<6 a 12 letras/números minúsculos>` com `label` obrigatório (1 a 60).
   **Você inventa a chave do criado** (ex.: `custom_oab2026`) e a mantém igual nas gravações seguintes — o servidor não
   cria chave, e trocar a chave vira outro documento. Aceita `["rg", "cnh"]` (texto solto = padrões). Máximo 12 itens.
 - **Documento com foto = `id_document` com `accepted_types`** (30/10): a lista dos documentos ACEITOS (`rg`, `cnh`, `cpf`;
@@ -125,6 +125,36 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
   volta a esperar a aprovação).
 - Gatilhos do Flow novos: `signature_awaiting_approval`, `signature_proofs_approved`, `signature_proofs_rejected`, com
   `{{contrato.documentos_situacao}}` e `{{contrato.assinante.documentos_situacao}}` para condicionar.
+
+## Vários documentos num contrato só e selfie do rosto (19/11)
+- **Selfie do rosto**: `proof_requests` aceita a chave fixa `selfie` (foto só do rosto, sem documento na mão; na página
+  a câmera da frente abre sozinha). `selfie_with_document` continua sendo a selfie SEGURANDO o documento. Não aceita
+  PDF. Com `attach_to_contract: true` a foto entra como página do contrato assinado.
+- **Documentos que vão junto** (`roles_layout.companions`): `[{"document_id": 12, "signers": "all" | "principals"}]` =
+  outros modelos da conta que saem no MESMO contrato, na ordem da lista. Máximo 5 (o principal é o 6º). `all` = todos do
+  contrato assinam aquele documento; `principals` = só os assinantes principais (a testemunha não vê nem assina, ex.: a
+  procuração). `[]` tira todos. Na leitura cada item volta também com `name` e `kind`. 422: modelo de outra conta ou
+  inexistente, o próprio modelo, `signers` desconhecido, mais de 5. O `signature_documents_list` traz
+  `package_available` (false logo depois de uma atualização do sistema: espere alguns minutos).
+- **Como fica para quem assina**: UM link, UM código, os documentos pedidos UMA vez e UMA assinatura. A página mostra
+  "Documento 1 de 3" e só libera assinar depois de a pessoa abrir todos os dela. Sai um PDF assinado POR documento,
+  cada um com a própria folha de assinaturas, o próprio código de conferência e só as fotos de quem o assina.
+- **O que vale é o modelo PRINCIPAL** (aquele que tem a lista): caixa, mensagens, documentos pedidos, validade, jeitos
+  de assinar e quantidade de pessoas. Dos outros entram só o texto e os lugares de assinatura. As variáveis de todos são
+  pedidas juntas (`signature_documents_fill_fields` do principal já traz as dos que vão junto).
+- **Conta como UM contrato** no limite do mês. Modelo que só vai junto não dispara gatilho próprio em fluxo/automação.
+- **No contrato** (`signature_envelopes_list`/`_show`): `documents_count` (1 no contrato comum) e, no pacote,
+  `documents` — na lista `[{position, title}]`; no detalhe também `signers`, `signature_document_id`,
+  `original_sha256`, `sealed_sha256`, `has_original_document`, `has_signed_document`. Posição 1 = o principal.
+  `has_signed_document` só é `true` com o contrato `signed`.
+- **Recusas novas ao enviar** (`signature_envelopes_create`): `pacote_indisponivel` (o servidor ainda está ligando a
+  função: repita em minutos) e `pacote_nao_coube_no_tempo` (os documentos de Word do pacote demoraram demais para virar
+  PDF: repita; se insistir, tire um documento da lista ou troque um Word por documento escrito na tela).
+- **A via de cada pessoa**: só os documentos que ELA assinou. WhatsApp por QR Code = um arquivo por mensagem; e-mail =
+  todos em anexo; caixa oficial com modelo de mensagem da cópia, ou anexos grandes demais para o e-mail = um link para a
+  página da via (sem prazo, sem código). Os PDFs continuam sem ferramenta que devolva os bytes.
+- **Folha de assinaturas** (todo contrato novo): um quadro por pessoa com os pontos de autenticação; no modelo escrito
+  na tela a assinatura também aparece em cima da linha do nome, com "Assinado eletronicamente em <data>".
 
 ## Confirmar pelo WhatsApp (28/10)
 Quem recebe o link pelo WhatsApp pode confirmar que é ela mandando uma frase pronta (com um código `CT-XXXXXX`) para o
