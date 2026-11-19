@@ -386,7 +386,7 @@ Captain::Assistant
 ├── description
 ├── paused (boolean, default false) — botao de panico (2026-05-22). true = pausa respostas, follow-up e callbacks. Auditado. Top-level, NAO mora em config.
 ├── config (jsonb) — chaves principais:
-│     model, temperature, instructions (max 20.000 chars), feature_memory, feature_faq,
+│     model, temperature, instructions (max 25.000 chars), feature_memory, feature_faq,
 │     feature_follow_up (bool), follow_up_steps (array de {after_minutes, prompt} — ATE 3 etapas,
 │       cada uma >= 5 min, soma <= 1380 min = 23h (2026-07-29 — NAO 1440: a janela de 24h do WhatsApp
 │       conta da MENSAGEM DO CLIENTE, nao do 1o follow-up, entao 1440 disparava com a janela ja fechada.

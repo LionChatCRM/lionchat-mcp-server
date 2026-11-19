@@ -281,7 +281,7 @@ comportamento intencional.
   nome do atendente numa conversa com IA ativa tira a IA dali quando ela for enviada
 - `config.model`: modelo OpenAI usado (gpt-4o, gpt-4o-mini)
 - `config.temperature`: 0.0-1.0
-- `config.instructions`: prompt sistema (Liquid template, até 20.000 chars)
+- `config.instructions`: prompt sistema (Liquid template, até 25.000 chars; o servidor recusa acima disso)
 - `config.activation_label`: etiqueta que ativa o agente na conversa (única por conta)
 - **Cenário (Captain::Scenario)**: instrução situacional inline do assistente; o raciocínio de
   aplicação fica no "caderninho do cenário" da conversa (scenario_checklist, card Raciocínio).

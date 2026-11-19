@@ -159,7 +159,7 @@ Travas que valem conhecer (não dá pra desligar):
 
 ## Limite do prompt e cache OpenAI (2026-05-22)
 
-- `config.instructions` (system prompt do agente) aceita até **20.000 caracteres** (antes 10k). Acima de 15k, o frontend mostra aviso "lost in the middle" — prefira colocar instruções críticas no início ou final.
+- `config.instructions` (system prompt do agente) aceita até **25.000 caracteres** (antes 20k; 10k antes disso). Desde 18/11/2026 o SERVIDOR confere: acima de 25.000 devolve 422 e nada é gravado (antes aceitava qualquer tamanho e a tela cortava o final em 20.000 sem avisar no próximo Salvar). A instrução de cada CENÁRIO tem outro limite: 20.000. Acima de 15k, o frontend mostra aviso "lost in the middle" — prefira colocar instruções críticas no início ou final.
 - **Cache automático** ativo em todos os 19 modelos oferecidos na plataforma. Desconto 50-75% no input cachado, sem configuração. Reuso do prompt do agente em múltiplas conversas maximiza a economia.
 
 ### Lista real de modelos (`config.model`)
@@ -410,7 +410,7 @@ Como a coleta de dados/cenários funciona hoje (importante pra diagnosticar "IA 
 
 ## Variáveis {{ }} nas instruções do AI Agente (2026-06)
 
-As instruções aceitam variáveis Liquid `{{ }}` que chegam JÁ PREENCHIDAS com os dados reais do contato/conversa do atendimento — vale pra instrução base do assistente (`config.instructions`) e pra instrução de cada cenário (`scenario.instruction`). O texto é gravado como está (sem sanitização); cap de 20.000 chars na base.
+As instruções aceitam variáveis Liquid `{{ }}` que chegam JÁ PREENCHIDAS com os dados reais do contato/conversa do atendimento — vale pra instrução base do assistente (`config.instructions`) e pra instrução de cada cenário (`scenario.instruction`). O texto é gravado como está (sem sanitização); cap de 25.000 chars na base e de 20.000 em cada cenário.
 
 - Contato: `{{contact.name}}`, `{{contact.first_name}}`, `{{contact.last_name}}`, `{{contact.email}}`, `{{contact.phone}}`, `{{contact.cpf}}`, `{{contact.cnpj}}`, `{{contact.rg}}`, `{{contact.date_of_birth}}`, `{{contact.profession}}`, `{{contact.company_name}}` (Empresa), `{{contact.job_title}}` (Cargo), `{{contact.address.city}}` (e `.cep`/`.street`/`.number`/`.neighborhood`/`.state`...), `{{contact.custom_attribute.<chave>}}`.
 - Conversa: `{{conversation.display_id}}`, `{{conversation.custom_attribute.<chave>}}`.

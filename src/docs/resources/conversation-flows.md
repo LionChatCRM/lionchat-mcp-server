@@ -110,6 +110,30 @@ SENÃO:
   → assignee_id fica null (atribuição manual)
 ```
 
+**Atribuir a quem responder (18/11/2026).** Chave `auto_assignment_config.assign_on_reply` da caixa: a conversa sem
+responsável vira do **Agente da caixa** que a responder pelo painel ou pelo app (pílula "X assumiu a conversa
+ao responder").
+
+Só VALE com as DUAS condições (regra do dono, `Inbox#assign_on_reply_active?`):
+1. **Distribuição Automática desligada** (`enable_auto_assignment = false`);
+2. **nenhuma política de atribuição vinculada à caixa** (`has_assignment_policy = false`; as políticas ficam em
+   Configurações > Políticas de atribuição).
+Com qualquer uma das duas, a chave fica gravada mas não age, e a tela a mostra apagada com o motivo.
+
+Para ligar a pedido do usuário: ler a caixa (`lionchat_inboxes_show`); se houver política, desvincular com
+`lionchat_inboxes_assignment_policies_destroy` só depois de confirmar com ele; se a distribuição estiver ligada,
+desligar só depois de confirmar (as conversas novas passam a chegar sem responsável e só ganham dono quando alguém
+responde); por fim `lionchat_inboxes_update` com `enable_auto_assignment: false` e o `auto_assignment_config` inteiro
+mais `assign_on_reply: true`. Releia a caixa e confirme as duas condições antes de dizer que está ativa.
+
+Conversa COM time: só atribui se o time estiver com a distribuição automática desligada (`allow_auto_assign = false` em
+`lionchat_teams_show`) E quem respondeu for membro do time. Time com distribuição ligada continua mandando; pessoa fora do
+time não assume.
+
+Não atribuem: nota privada, resposta pelo MCP/API, agendada, macro, automação, fluxo, campanha, IA; supervisor da
+caixa não assume. Grupo do WhatsApp e conversa encerrada entram (a encerrada continua encerrada). Dispara "agente
+atribuído" em automações e fluxos, como o botão "Atribuir a mim"; colega com cargo "só sem responsável" perde a conversa.
+
 Os dois caminhos rodam no MESMO serviço (`AutoAssignment::AssignmentService`), usam o MESMO rodízio
 (`AutoAssignment::RoundRobinSelector` — só a política pode trocá-lo pelo modo `balanced`) e passam
 pelo MESMO freio de rajada
@@ -792,3 +816,10 @@ Lista autoritativa de nomes validos: `AutomationRule#actions_attributes` no back
 fora dessa lista e recusado com 422 ao salvar — isso a API valida. O que ela **nao** valida e o
 conteudo do `action_params`. `apply_kanban_checklist_template` existe no motor mas **nao** e uma
 acao de automacao valida (e so do FlowBuilder) — usar aqui devolve 422.
+
+## Trocar o responsavel e os cards (18/11/2026)
+
+`lionchat_conversations_assignments` com `assignee_id` aceita `kanban_item_ids` (quais cards ligados acompanham a troca)
+e `kanban_sync_mode`: `replace` (padrao — sai do card quem entrou por ser responsavel desta conversa) ou `add` (o novo
+entra e quem estava fica). Sem `kanban_item_ids`, so o card SEM nenhum responsavel adota o novo. Se o usuario quer
+"colocar mais alguem sem tirar ninguem", use `add`. Card de funil que o novo nao alcanca, ganho ou perdido nao muda.
