@@ -502,7 +502,7 @@ function registerListCategoriesTool(
 // Helps LLMs build correct flow_data without hitting trial-and-error on
 // node types, action keys, source handles, etc.
 function registerFlowsSchemaReferenceTool(server: McpServer): void {
-  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-17)
+  const reference = `LIONCHAT FLOW BUILDER — SCHEMA REFERENCE (atualizado 2026-11-19)
 
 flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
 
@@ -1299,13 +1299,15 @@ flow_data tem o formato Vue Flow: { nodes: [...], edges: [...] }.
     groupInviteMessage: "<texto>"         // usado por send_invite E pelo convite automatico
   Teto de 20 participantes por execucao (create/add/remove/promote/demote) — trava ANTI-BANIMENTO.
   Operacoes -> chaves de data (+ campos que a resposta devolve em {{grupo.*}}):
-    create            -> groupName(obrig), groupDescription, groupPicture(url), groupInitialAdmins, groupParticipants, groupAttributes (opcional, NOVO 2026-08-08: linhas {attr_source,attr_key,attr_value} — grava atributos personalizados no contato-grupo recem-criado; {{grupo.id}}/{{grupo.conversation_id}} ja valem em attr_value; campos nativos name/email/card sao recusados) -> id,name,description,picture,participants,participants_count,conversation_id (numero da conversa do grupo aberta no painel, 08/08),added,added_count,not_added,not_added_count,no_whatsapp,invited,invite_status,extras_failed (so quando descricao/foto/admin/conversa falharam — o grupo JA existe e isso NUNCA vira erro)  [risco de banimento]
+    create            -> groupName(obrig), groupDescription, groupPicture(link direto da imagem OU {{variavel}} com o link — ver FOTO DO GRUPO abaixo), groupInitialAdmins, groupParticipants, groupAttributes (opcional, NOVO 2026-08-08: linhas {attr_source,attr_key,attr_value} — grava atributos personalizados no contato-grupo recem-criado; {{grupo.id}}/{{grupo.conversation_id}} ja valem em attr_value; campos nativos name/email/card sao recusados) -> id,name,description,picture,participants,participants_count,conversation_id (numero da conversa do grupo aberta no painel, 08/08),added,added_count,not_added,not_added_count,no_whatsapp,invited,invite_status,extras_failed (so quando descricao/foto/admin/conversa falharam — o grupo JA existe e isso NUNCA vira erro)  [risco de banimento]
                          DESDE 21/08 o create CONFERE quem foi colocado de verdade (duas leituras concordantes): faltou alguem -> handle "partial" com not_added preenchido. Numero BR ambiguo (com/sem o 9) e corrigido pelo WhatsApp ANTES de colocar (check-exists na sessao do canal, orcamento 8 s); numero que o WhatsApp diz nao existir segue no pedido e aparece em no_whatsapp (e aviso, nao erro)
     find_by_id        -> (groupTargetId) -> id,name,description,picture,participants,participants_count
     find_by_name      -> groupSearchName(obrig), groupSearchMode(contains[padrao]|does_not_contain|equal_to|not_equal_to|starts_with|ends_with) -> results,results_count  [TARGETLESS]
     update_subject    -> updateSubject(obrig) -> id,name
     update_description -> updateDescription -> id,description
-    update_picture    -> updatePicture(obrig, url) -> id
+    update_picture    -> updatePicture(obrig; link direto da imagem OU {{variavel}} com o link) -> id
+                         FOTO DO GRUPO (groupPicture no create / updatePicture no update_picture, NOVO 2026-11-19): o campo aceita link direto de imagem (https://site.com/foto.jpg) ou variavel que guarde o link ({{conversation.custom_attribute.foto_do_bangalo}}, {{api_fotos.url}}). A plataforma preenche a variavel e baixa a imagem antes de entregar ao WhatsApp (so imagem: pagina web, video, PDF e endereco interno sao recusados; JPEG/PNG/WebP funcionam).
+                         No create a foto e um EXTRA: link que falhou NAO impede o grupo de nascer (aparece em extras_failed contendo "picture"); variavel vazia cria o grupo sem foto. No update_picture a falha sai pelo handle "error" com o motivo em {{grupo.error.message}}. A tela grava imagem enviada como data:image/...;base64 no mesmo campo; pela API prefira o link.
     leave             -> (groupTargetId) -> id  [IRREVERSIVEL]
     list_participants -> (groupTargetId) -> id,participants(ate 100; participants_truncated=true se cortou),participants_count
     add_participants  -> groupParticipants(obrig; array de telefones/JIDs ex ['5511999999999@c.us'] ou lista por virgula; aceita {{var}}) -> id,added,not_added,added_count,not_added_count,no_whatsapp,invited,invite_status  [risco de banimento]
@@ -1378,6 +1380,14 @@ conversation.id — JA E o numero que aparece no app (o motor devolve o display_
   conversation.display_id e so um APELIDO, aceito desde 29/07, que devolve o mesmo numero — antes
   disso resolvia VAZIO, e todo link de conversa montado por flow saiu quebrado.
 conversation.status, conversation.team_id, conversation.custom_attribute.X
+conversation.created_at (NOVO 2026-11-19) = data e hora em que a conversa foi criada, ISO 8601 com o
+  fuso da conta (ex.: 2026-11-18T14:30:00-03:00). Vale em qualquer gatilho, com e sem filtro. A
+  plataforma entrega so o dado; conta de tempo se faz com Liquid. Tempo decorrido em MINUTOS (use num
+  set_variable no ponto do fluxo que quer medir): {% assign criada = conversation.created_at | date: "%s" %}
+  {% assign agora = "now" | date: "%s" %}{{ agora | minus: criada | divided_by: 60 }} — troque 60 por
+  3600 (horas) ou 86400 (dias). Legivel na hora da conta: {{ conversation.created_at | date: "%d/%m/%Y %H:%M" }}.
+  NAO use trigger.conversation.created_at pra isso: sai VAZIA em varios gatilhos (a conta devolve um
+  numero absurdo, sem erro) e vem em UTC.
 inbox.id, inbox.name, inbox.channel_type (o TIPO do canal: Channel::Waha, Channel::Whatsapp,
   Channel::Api...; NOVO 17/09/2026 — usado pela condicao "Tipo de caixa")
 conversation.label (SINGULAR — etiquetas da conversa em texto separado por virgula).
