@@ -610,7 +610,7 @@ Comuns a (quase) todas:
 
 | Operação | Chaves específicas | Retorno (`{{grupo.*}}`) |
 |---|---|---|
-| `create` | `groupName` (obrig), `groupDescription`, `groupPicture` (url), `groupInitialAdmins`, `groupParticipants`, `groupAttributes`; opcional `groupInviteOnFailure` + `groupInviteMessage` (com `{{link}}`) | `id`, `name`, `participants_count`, `conversation_id`, `added`, `added_count`, `not_added`, `not_added_count`, `no_whatsapp`, `invited`, `invite_status` — saída `partial` quando alguém ficou de fora |
+| `create` | `groupName` (obrig), `groupDescription`, `groupPicture` (link direto da imagem ou `{{variável}}` com o link — ver "Foto do grupo" abaixo), `groupInitialAdmins`, `groupParticipants`, `groupAttributes`; opcional `groupInviteOnFailure` + `groupInviteMessage` (com `{{link}}`) | `id`, `name`, `participants_count`, `conversation_id`, `added`, `added_count`, `not_added`, `not_added_count`, `no_whatsapp`, `invited`, `invite_status` — saída `partial` quando alguém ficou de fora |
 | `add_participants` | `groupParticipants` (obrig — ex.: `["5511999999999@c.us"]` ou lista); opcional `groupInviteOnFailure` + `groupInviteMessage` | `added`, `not_added`, `added_count`, `not_added_count`, `no_whatsapp`, `invited`, `invite_status` |
 | `send_invite` | `groupInviteTo` (obrig — telefone de destino), `groupInviteMessage` (opc) | `invite_link` |
 | `settings` | pelo menos uma de `infoAdminOnly` / `messagesAdminOnly` / `membersCanAddNewMember` (booleans) | `settings_updated` (lista do que aplicou), `settings_failed` (`[{setting, reason}]`), `settings_unsupported` |
@@ -619,6 +619,19 @@ Comuns a (quase) todas:
 
 Os campos `added`/`not_added`/`no_whatsapp`/`invited`/`invite_status` do `create` e `groupInviteOnFailure` são
 de 21/08/2026 (entram com o próximo deploy do app depois de 21/08/2026).
+
+**Foto do grupo (`groupPicture` no `create`, `updatePicture` no `update_picture`) — desde 19/11/2026:** o campo
+aceita o **link direto de uma imagem** (`"https://site.com/foto.jpg"`) ou uma **variável que guarde o link**
+(`"{{conversation.custom_attribute.foto_do_bangalo}}"`, `"{{api_fotos.url}}"`). A plataforma preenche a variável,
+baixa a imagem e entrega ao WhatsApp — JPEG, PNG e WebP funcionam.
+- O link precisa abrir **a própria imagem**. Link de página (Google Imagens, Drive em modo de visualização),
+  vídeo, PDF ou endereço interno é recusado.
+- No `create` a foto é um extra: link quebrado ou variável vazia **não impedem o grupo de nascer** — link que
+  falhou aparece em `{{grupo.extras_failed}}` (contém `picture`); variável vazia cria o grupo sem foto.
+- No `update_picture` a falha sai pelo handle `error`, com o motivo em `{{grupo.error.message}}` (link não abre
+  uma imagem / não foi possível baixar / imagem pesada demais / foto vazia).
+- A tela grava imagem enviada pelo computador como `data:image/...;base64,...` no mesmo campo; pela API prefira o
+  link (o base64 infla o `flow_data`).
 
 **ATENÇÃO na `settings` — semântica INVERTIDA de `membersCanAddNewMember`:** `true` = **TODOS** podem adicionar
 membros. Já `infoAdminOnly: true` e `messagesAdminOnly: true` = **SÓ admin** edita infos / manda mensagem.

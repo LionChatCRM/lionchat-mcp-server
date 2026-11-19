@@ -1026,7 +1026,12 @@ operação (menos `send_message`) também devolve `{{grupo.ok}}` (bool) e `{{gru
   `find_by_name` (`groupSearchName` obrig + `groupSearchMode`: `contains` padrão | `does_not_contain` |
   `equal_to` | `not_equal_to` | `starts_with` | `ends_with`) → `results`, `results_count`.
 - `update_subject` (`updateSubject`) → `id`, `name`; `update_description` (`updateDescription`) → `id`,
-  `description`; `update_picture` (`updatePicture`, url) → `id`; `leave` → `id` (IRREVERSÍVEL).
+  `description`; `update_picture` (`updatePicture` obrig — link direto da imagem ou `{{variável}}` com o
+  link) → `id`; `leave` → `id` (IRREVERSÍVEL).
+- **Foto do grupo (19/11/2026):** `groupPicture` (no `create`) e `updatePicture` aceitam link direto de imagem
+  ou variável com o link; a plataforma preenche a variável e baixa a imagem (só imagem — página, vídeo, PDF e
+  endereço interno são recusados). No `create`, link que falhou vira `extras_failed` com `picture` e o grupo
+  nasce do mesmo jeito; no `update_picture`, a falha sai pelo `error`.
 - `list_participants` → `id`, `participants` (até 100; `participants_truncated: true` se cortou),
   `participants_count`.
 - `add_participants` (`groupParticipants` obrig — array de telefones/JIDs ou lista por vírgula; aceita
@@ -1411,6 +1416,18 @@ vírgula), `{{conversation.team.name}}` (nome da equipe; `{{conversation.team}}`
 **Filtro Liquid (desde 20/08/2026):** `{{conversation.id}}`, `{{conversation.status}}` e
 `{{conversation.team_id}}` respondem o MESMO com e sem filtro (`|`) — antes um filtro em qualquer variável do
 texto trocava o protocolo pelo id interno do banco.
+
+**Data e hora de criação da conversa `{{conversation.created_at}}` (novo 2026-11-19):** devolve quando a
+conversa foi criada, em ISO 8601 com o fuso da conta (ex.: `2026-11-18T14:30:00-03:00`). Funciona em qualquer
+fluxo, com qualquer gatilho, com e sem filtro. A plataforma entrega só o dado; conta de tempo se faz com Liquid:
+- Mostrar de forma legível (hora da conta): `{{ conversation.created_at | date: "%d/%m/%Y %H:%M" }}`.
+- Tempo decorrido desde a criação, em minutos (use num `set_variable` no ponto do fluxo que quer medir —
+  qualificou, agendou, enviou contrato, assinou):
+  `{% assign criada = conversation.created_at | date: "%s" %}{% assign agora = "now" | date: "%s" %}{{ agora | minus: criada | divided_by: 60 }}`
+  — troque `60` por `3600` para horas ou `86400` para dias. Ex.: conversa criada há 2 dias, 3 h e 15 min →
+  `3075` (minutos), `51` (horas), `2` (dias).
+- NÃO use `{{trigger.conversation.created_at}}` para isso: ela só existe em execução com contexto de gatilho
+  gravado (em vários gatilhos sai VAZIA e a conta devolve um número absurdo, sem erro) e vem em UTC.
 
 ---
 
