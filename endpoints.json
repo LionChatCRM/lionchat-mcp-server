@@ -4812,6 +4812,141 @@
   ]
  },
  {
+  "id": "lionchat_conversation_exports_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/conversation_exports",
+  "title": "Exportar Conversas (arquivo)",
+  "description": "Gera, em segundo plano, um arquivo CSV com as conversas que a pessoa vê na lista (mesma regra de visibilidade da tela). É o caminho certo para ler MUITAS conversas: em vez de paginar a lista centenas de vezes, peça o arquivo e baixe quando ficar pronto. Responde 202 com a exportação na situação queued; confira com lionchat_conversation_exports_show e baixe com lionchat_conversation_exports_download. Colunas: conversa, caixa, contato, telefone, email, situacao, responsavel, time, etiquetas, criada_em, ultima_atividade, adiada_ate (horário da conta). Teto de 100.000 conversas: acima disso a exportação fica partial (exported_count de total_count). Limites: uma em andamento por conta (409 export_running) e 5 por pessoa por dia (429 daily_limit; as que falharam não contam). Filtro inválido ou de outra conta = 422 invalid_filter. Exige administrador ou cargo com contact_export_import (o arquivo leva telefone e e-mail).",
+  "category": "Conversas",
+  "params": [
+   {
+    "name": "status",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "all (padrão) | open | resolved | pending | snoozed"
+   },
+   {
+    "name": "inbox_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Só conversas desta caixa"
+   },
+   {
+    "name": "assignee_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Só conversas deste responsável"
+   },
+   {
+    "name": "team_id",
+    "type": "integer",
+    "location": "body",
+    "required": false,
+    "description": "Só conversas deste time"
+   },
+   {
+    "name": "since",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Criadas a partir desta data (AAAA-MM-DD)"
+   },
+   {
+    "name": "until",
+    "type": "string",
+    "location": "body",
+    "required": false,
+    "description": "Criadas até esta data, inclusive (AAAA-MM-DD)"
+   }
+  ],
+  "returns": "202 + a exportação {id, status: queued, filters, message}",
+  "common_use_cases": [
+   "Relatório com milhares de conversas sem paginar a lista",
+   "Planilha das conversas de uma caixa num período"
+  ],
+  "related_tools": [
+   "lionchat_conversation_exports_show",
+   "lionchat_conversation_exports_download",
+   "lionchat_conversation_exports_list"
+  ]
+ },
+ {
+  "id": "lionchat_conversation_exports_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/conversation_exports",
+  "title": "Listar Exportações de Conversas",
+  "description": "Exportações de conversas, mais recente primeiro, 20 por página. Cada pessoa vê só as que gerou; o administrador vê todas. Cada item: id, status (queued | running | completed | partial | failed), partial, exported_count, total_count, max_rows, filters, error, user_name, file_available (o arquivo vale 30 dias), expires_at, created_at, started_at, finished_at (unix). Exige administrador ou cargo com contact_export_import.",
+  "category": "Conversas",
+  "params": [
+   {
+    "name": "page",
+    "type": "integer",
+    "location": "query",
+    "required": false,
+    "description": "Página (padrão 1, 20 por página)"
+   }
+  ],
+  "returns": "meta {count, current_page, per_page} + payload (array de exportações)",
+  "common_use_cases": [
+   "Ver se a exportação pedida já ficou pronta"
+  ],
+  "related_tools": [
+   "lionchat_conversation_exports_create",
+   "lionchat_conversation_exports_download"
+  ]
+ },
+ {
+  "id": "lionchat_conversation_exports_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/conversation_exports/{export_id}",
+  "title": "Situação de uma Exportação de Conversas",
+  "description": "Situação de UMA exportação (mesmos campos da lista). Quando status for completed ou partial e file_available for true, baixe com lionchat_conversation_exports_download. Espere alguns minutos entre as consultas; failed traz o motivo em error.",
+  "category": "Conversas",
+  "params": [
+   {
+    "name": "export_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da exportação"
+   }
+  ],
+  "returns": "a exportação",
+  "common_use_cases": [
+   "Acompanhar uma exportação pedida"
+  ],
+  "related_tools": [
+   "lionchat_conversation_exports_download"
+  ]
+ },
+ {
+  "id": "lionchat_conversation_exports_download",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/conversation_exports/{export_id}/download",
+  "title": "Baixar Exportação de Conversas",
+  "description": "Devolve {url} para baixar o CSV de UMA exportação. O endereço vale 5 MINUTOS: usar na hora, nunca guardar nem repassar como link permanente (tem telefone e e-mail dos contatos). Arquivo vencido (30 dias) ou exportação sem arquivo responde 410. Só quem gerou baixa; o administrador baixa qualquer uma.",
+  "category": "Conversas",
+  "params": [
+   {
+    "name": "export_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da exportação"
+   }
+  ],
+  "returns": "{ url } (válido por 5 minutos) ou 410",
+  "common_use_cases": [
+   "Baixar o CSV de uma exportação pronta"
+  ],
+  "related_tools": [
+   "lionchat_conversation_exports_show"
+  ]
+ },
+ {
   "id": "lionchat_contacts_show_1",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contacts/import_status/{import_id}",
