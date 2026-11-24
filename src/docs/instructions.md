@@ -30,7 +30,10 @@ Comprovado em produção (24/07): a sessão que dizia "não há função de list
 - Só depois de pesquisar e não encontrar é que se pode dizer que a função não existe.
 - **Trabalho volumoso** (relatório de muitas conversas/cards): as listas são paginadas (25-100 por
   página) — faça em ETAPAS ao longo de várias respostas, acumulando os resultados; nunca desista
-  por "excede o limite de uma execução".
+  por "excede o limite de uma execução". **Centenas ou milhares de CONVERSAS:** não pagine a lista
+  inteira — peça o arquivo com `lionchat_conversation_exports_create` (gerado em segundo plano, até
+  100.000 conversas, com caixa, contato, telefone, e-mail, situação, responsável, time e etiquetas),
+  confira com `lionchat_conversation_exports_show` e baixe com `lionchat_conversation_exports_download`.
 - As ferramentas operam na **conta ATIVA** da sessão (não recebem account_id) — confira com
   `lionchat_current_account` e troque com `lionchat_switch_account` se precisar.
 
@@ -599,7 +602,11 @@ Se uma ferramenta retornar erro:
 - `HTTP 401/403`: você ou o usuário perdeu permissão → reporte claramente, não retente
 - `HTTP 404`: o recurso não existe → confirme o ID antes de tentar de novo
 - `HTTP 422`: parâmetro inválido → leia a mensagem, corrija
-- `HTTP 429`: rate limit → espere 1 minuto antes de retentar
+- `HTTP 429`: rate limit → espere o tempo de `retry_after` (segundos; sem ele, 1 minuto) antes de retentar.
+  Com `reason: "api_weight"` a chave passou do limite de PESO no banco em leituras pesadas (listas, buscas,
+  filtros, relatórios) numa janela de 10 minutos: espere o `retry_after` (pode passar de 5 minutos) e, se o
+  trabalho for ler muitas conversas, troque a paginação pela exportação em arquivo
+  (`lionchat_conversation_exports_create`). Envio e gravação não são barrados por essa regra.
 - `HTTP 5xx`: erro do servidor → retente 1 vez com backoff; se falhar de novo, reporte
 
 NUNCA entre em loop de retry. Se errou 2 vezes, pare e reporte.
