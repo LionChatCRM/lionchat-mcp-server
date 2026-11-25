@@ -24508,7 +24508,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/flow_tools/{id}/executions",
   "title": "Execuções da Ferramenta da IA",
-  "description": "Últimas 50 execuções (manuais e via LLM) com status e duração. ADMIN-ONLY. Cada item traz `conversation: {display_id, contact_name}` (de qual conversa e contato veio a execução); `null` quando foi teste pelo painel.",
+  "description": "Execuções da ferramenta (manuais e via LLM) com status e duração: as 50 mais recentes. Com `q`, pesquisa no histórico INTEIRO da ferramenta e devolve as 50 mais recentes que casam. ADMIN-ONLY. Cada item traz `conversation: {display_id, contact_name}` (de qual conversa e contato veio a execução); `null` quando foi teste pelo painel.",
   "category": "Ferramentas da IA",
   "params": [
    {
@@ -24517,12 +24517,20 @@
     "location": "path",
     "required": true,
     "description": "ID do flow tool"
+   },
+   {
+    "name": "q",
+    "type": "string",
+    "location": "query",
+    "required": false,
+    "description": "Pesquisa por nome do contato, telefone (com ou sem pontuação), e-mail, nº da conversa ou ID do contato. Texto: mín 2 caracteres. Só números: procura nº da conversa, ID do contato e, com 4 ou mais dígitos, pedaço do telefone."
    }
   ],
   "returns": "[{ id, status, started_at, completed_at, duration_ms, error_message, conversation: { display_id, contact_name } | null }]",
   "common_use_cases": [
    "Monitorar saúde da ferramenta",
-   "Achar execuções com falha"
+   "Achar execuções com falha",
+   "Achar as execuções de um contato específico (por nome, telefone, e-mail ou nº da conversa)"
   ],
   "related_tools": [
    "lionchat_flow_tool_executions_show"
@@ -24591,7 +24599,7 @@
     "type": "string",
     "location": "query",
     "required": false,
-    "description": "Busca por nome do contato ou nº da conversa (mín 2 chars)"
+    "description": "Pesquisa por nome do contato, telefone (com ou sem pontuação), e-mail, nº da conversa ou ID do contato. Texto: mín 2 caracteres. Só números: procura nº da conversa, ID do contato e, com 4 ou mais dígitos, pedaço do telefone."
    },
    {
     "name": "page",
@@ -24612,7 +24620,8 @@
   "common_use_cases": [
    "Diagnosticar 'o flow não disparou'",
    "Ver quantos clientes passaram pelo flow hoje",
-   "Ver agendados e envios pulados do Gatilho de Data (date_trigger_pending_count / date_trigger_skips)"
+   "Ver agendados e envios pulados do Gatilho de Data (date_trigger_pending_count / date_trigger_skips)",
+   "Achar a execução de um lead específico (q = nome, telefone, e-mail, nº da conversa ou ID do contato)"
   ],
   "related_tools": [
    "lionchat_flows_show"
