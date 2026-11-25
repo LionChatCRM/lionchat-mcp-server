@@ -22761,10 +22761,10 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/agents",
   "title": "Listar Agentes",
-  "description": "Lista todos os agentes (usuarios) da conta. Retorna id, name, email, availability_status, confirmed, role (agent ou administrator) e, no Enterprise, custom_role_id (ID do cargo personalizado aplicado ao agente, ou null). Use para descobrir os IDs dos agentes antes de atualizar papel/cargo, reatribuir recursos ou auditar a equipe.",
+  "description": "Lista todos os agentes (usuarios) da conta. Retorna id, name, email, availability_status, confirmed, role (agent ou administrator) e, no Enterprise, custom_role_id (ID do cargo personalizado aplicado ao agente, ou null). Use para descobrir os IDs dos agentes antes de atualizar papel/cargo, reatribuir recursos ou auditar a equipe. Para administrador, cada agente traz também email_change_locked (25/11/2026): true = a pessoa tem outros acessos e o e-mail dela só ela mesma troca (agents_update com email responde 422).",
   "category": "Agentes",
   "params": [],
-  "returns": "array de agentes (id, name, email, role, custom_role_id, availability_status, confirmed)",
+  "returns": "array de agentes (id, name, email, role, custom_role_id, availability_status, confirmed; para administrador, email_change_locked)",
   "common_use_cases": [
    "Descobrir o ID de um agente antes de atualizar ou remover",
    "Auditar quem e administrador, agente puro ou tem cargo personalizado",
@@ -22947,7 +22947,7 @@
     "type": "string",
     "location": "body",
     "required": false,
-    "description": "Novo e-mail do agente (2026-07-21). A troca exige confirmação: o link vai pro e-mail NOVO e o antigo continua valendo até confirmar (sem lockout). Agente ainda não confirmado troca direto."
+    "description": "Novo e-mail do agente (2026-07-21). A troca exige confirmação: o link vai pro e-mail NOVO e o antigo continua valendo até confirmar (sem lockout). Agente ainda não confirmado troca direto. OUTROS ACESSOS (25/11/2026): se o agente também participa de outra conta, a troca é recusada com 422 (\"Este usuário possui outros acessos. Apenas ele pode trocar o próprio e-mail, no perfil dele.\") e NADA do pedido é gravado; não repita. Só a própria pessoa troca, no perfil. Confira antes em agents_list: email_change_locked=true significa que este campo não deve ser enviado."
    }
   ],
   "returns": "agente atualizado",
