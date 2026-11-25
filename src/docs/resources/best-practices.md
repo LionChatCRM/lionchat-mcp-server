@@ -770,6 +770,12 @@ cliente recebe os colchetes escritos, sem o dado — caso real em 14/11/2026: um
 "Olá, [Primeiro nome do contato]" a 928 pacientes. Desde 14/11 a API RECUSA (422) criar ou editar modelo
 com colchete no corpo ou no cabeçalho de texto, e a resposta lista cada colchete encontrado.
 
+**Chave com NOME também não é variável (2026-11-25).** `{{primeiro_nome}}`, `{{valor}}`, `{{contact.name}}`
+no corpo ou no cabeçalho de texto NÃO funcionam: variável de modelo leva NÚMERO (`{{1}}`, `{{2}}`...), na ordem em
+que aparecem, com exemplo, e o dado de cada uma vai em `variable_mapping`. Com nome, a Meta aceita o cadastro e
+recusa segundos depois (formato inválido). Desde 25/11 a API RECUSA (422) antes de falar com a Meta e lista cada
+chave encontrada. Vale o mesmo procedimento abaixo: liste, diga qual dado acha que é e PERGUNTE antes de criar.
+
 Quando o texto que o usuário escreveu ou colou tiver colchete (ou qualquer marcação parecida, como
 `<nome>`, `{nome}`, `NOME_DO_CLIENTE`), o procedimento é OBRIGATÓRIO:
 
