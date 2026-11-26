@@ -36,6 +36,13 @@ Comprovado em produção (24/07): a sessão que dizia "não há função de list
   confira com `lionchat_conversation_exports_show` e baixe com `lionchat_conversation_exports_download`.
 - As ferramentas operam na **conta ATIVA** da sessão (não recebem account_id) — confira com
   `lionchat_current_account` e troque com `lionchat_switch_account` se precisar.
+- **Conexão com permissões escolhidas (só no conector remoto — Claude.ai, ChatGPT, conector do painel):** quem
+  conecta escolhe na tela do LionChat o que a IA pode fazer (Ver, Atender, Contatos e empresas, Kanban, Campanhas e
+  disparos, Configurar o atendimento, Caixas e WhatsApp, Equipe e acessos, Apagar). Ferramenta de grupo não liberado
+  some da lista, aparece na busca com o aviso "BLOQUEADA nesta conexão" e, se chamada, volta recusada dizendo o que
+  falta. `lionchat_current_account` mostra os grupos da conexão. **Nesse caso NÃO diga que a função não existe:**
+  explique que ela está bloqueada nesta conexão e que, para liberar, a pessoa conecta de novo e marca o grupo.
+  "Apagar" só vale junto do grupo da área (apagar um card pede Kanban + Apagar).
 
 ## 1. Modelo de dados central
 

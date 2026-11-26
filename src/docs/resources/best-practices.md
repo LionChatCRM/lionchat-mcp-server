@@ -686,6 +686,7 @@ Pra dados fixos que se repetem (slogans, endereços, horários):
 - `account_variables_create` UMA vez — campos: `attribute_display_name` (rótulo), `attribute_key` (a chave usada no `{{ }}`), `attribute_display_type`, `value`. Admin-only.
 - Tipos oferecidos na tela (2026-07-25): **Texto** (`text`), **Data** (`date`), **Hora** (`time`) e **Confidencial** (`secret`). Data e Hora gravam o valor já normalizado (`AAAA-MM-DD` e `HH:MM` em 24h) — antes a tela só tinha Texto e a data entrava como texto solto, sem validar formato. Os demais tipos do enum (`number`, `list`, `link`, `checkbox`, `currency`, `percent`, `datetime`) funcionam pela API, mas a tela os edita como texto.
 - O **tipo e a chave não mudam depois de criados** — `account_variables_update` só altera rótulo, descrição e valor. Pra trocar o tipo, apague e crie de novo.
+- **Nome do sistema é recusado (25/11/2026).** A chave não pode ser um nome que o sistema usa por dentro: os que começam com `subscription_`, `subscribed_`, `stripe_`, `suspension_`, `suspended_`, `purge_`, `reactivated_`, `grace_warning_`, `marked_for_deletion_`, `deletion_failed_`, `captain_`, `copilot_`, `waha_`, `lioncalls_`, `topsend_`, `liontrack_`, `meta_capi_`, `meta_lead_`, `ga4_`, `google_ads_`, e os soltos `plan_name`, `timezone`, `working_hours_enabled`, `is_creating_customer`, `allowed_countries`, `industry`, `company_size`, `logo`, `onboarding_step`. Criar, renomear (`custom_attributes_update`) ou gravar valor com um desses nomes devolve HTTP 422 "Este nome é usado pelo sistema. Escolha outro nome." — escolha outro nome (ex.: `plano_do_cliente`, `fuso_da_loja`). Esses nomes também saem vazios em `{{ account.custom_attribute.<nome> }}`.
 - Use em templates com a sintaxe COMPLETA `{{ account.custom_attribute.<attribute_key> }}` (ex: `{{ account.custom_attribute.slogan }}`). NÃO existe atalho `{{slogan}}` solto — sem o prefixo `account.custom_attribute.` não resolve.
 - Resolve em: mensagens, respostas prontas, campanhas e automações. NÃO resolve nas instruções do AI Agente (base/cenário) — ali só `contact.*` e `conversation.*`.
 - `secret` nunca aparece em template (sai vazio); só resolve em nós API Request do FlowBuilder.
@@ -769,6 +770,12 @@ modelo (`"Olá, [Primeiro nome]"`, `"[Nome]"`, `"[Variável 2]"`). A Meta aprova
 cliente recebe os colchetes escritos, sem o dado — caso real em 14/11/2026: uma campanha entregou
 "Olá, [Primeiro nome do contato]" a 928 pacientes. Desde 14/11 a API RECUSA (422) criar ou editar modelo
 com colchete no corpo ou no cabeçalho de texto, e a resposta lista cada colchete encontrado.
+
+**Chave com NOME também não é variável (2026-11-25).** `{{primeiro_nome}}`, `{{valor}}`, `{{contact.name}}`
+no corpo ou no cabeçalho de texto NÃO funcionam: variável de modelo leva NÚMERO (`{{1}}`, `{{2}}`...), na ordem em
+que aparecem, com exemplo, e o dado de cada uma vai em `variable_mapping`. Com nome, a Meta aceita o cadastro e
+recusa segundos depois (formato inválido). Desde 25/11 a API RECUSA (422) antes de falar com a Meta e lista cada
+chave encontrada. Vale o mesmo procedimento abaixo: liste, diga qual dado acha que é e PERGUNTE antes de criar.
 
 Quando o texto que o usuário escreveu ou colou tiver colchete (ou qualquer marcação parecida, como
 `<nome>`, `{nome}`, `NOME_DO_CLIENTE`), o procedimento é OBRIGATÓRIO:
@@ -1125,6 +1132,19 @@ administrador."* — a recusa é `before_action`, então NADA do resto do update
 Ao atualizar o próprio usuário: mande times e caixas à vontade; **não mande `role` nem
 `custom_role_id`** — se mandar, a chamada inteira falha e as outras alterações se perdem também.
 Para trocar o cargo de alguém, use a conta de OUTRO administrador.
+
+## Trocar o e-mail de um agente: quem tem outros acessos só troca o próprio (25/11/2026)
+
+`agents_update` com `email` continua valendo para o agente que é **só desta conta**: a troca fica pendente até a
+pessoa confirmar pelo link enviado ao e-mail novo.
+
+**A trava:** se o agente também participa de **outra conta**, o servidor recusa com 422 e a mensagem *"Este usuário
+possui outros acessos. Apenas ele pode trocar o próprio e-mail, no perfil dele."* A recusa vem antes de qualquer
+gravação: **nada do resto do pedido é aplicado**. Não adianta repetir.
+
+Como agir: `agents_list` traz `email_change_locked` em cada agente (só para administrador). Se vier `true`, **não mande
+`email`**; mande os outros campos normalmente e avise que só a própria pessoa troca o e-mail, em Configurações do
+Perfil. Mandar o mesmo e-mail que o agente já tem não é troca e passa.
 
 ## Cargo personalizado: descrição CURTA (16/09/2026)
 
