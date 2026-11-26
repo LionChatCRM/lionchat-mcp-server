@@ -610,7 +610,7 @@ Se uma ferramenta retornar erro:
 - `HTTP 404`: o recurso não existe → confirme o ID antes de tentar de novo
 - `HTTP 422`: parâmetro inválido → leia a mensagem, corrija
 - `HTTP 429`: rate limit → espere o tempo de `retry_after` (segundos; sem ele, 1 minuto) antes de retentar.
-  Com `reason: "api_weight"` a chave passou do limite de PESO no banco em leituras pesadas (listas, buscas,
+  Com `reason: "api_weight"` a pessoa (chave de API e login somados) passou do limite de PESO no banco em leituras pesadas (listas, buscas,
   filtros, relatórios) numa janela de 10 minutos: espere o `retry_after` (pode passar de 5 minutos) e, se o
   trabalho for ler muitas conversas, troque a paginação pela exportação em arquivo
   (`lionchat_conversation_exports_create`). Envio e gravação não são barrados por essa regra.

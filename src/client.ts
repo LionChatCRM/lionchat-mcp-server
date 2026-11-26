@@ -43,6 +43,15 @@ const MAX_RETRIES_429 = 3;
 const MAX_RETRIES_5XX = 1;
 const MAX_RETRIES_NETWORK = 1;
 
+// AIDEV-NOTE: [limite-de-peso 26/11] Segundos de espera quando o 429 e a recusa por PESO; null nos outros 429.
+function apiWeightRefusal(body: unknown): number | null {
+  if (!body || typeof body !== 'object') return null;
+  const data = body as Record<string, unknown>;
+  if (data.reason !== 'api_weight') return null;
+  const seconds = Number(data.retry_after);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(Math.ceil(seconds), 600) : 60;
+}
+
 // AIDEV-NOTE: Actionable error messages per HTTP status
 function getErrorMessage(status: number, body: unknown): string {
   switch (status) {
@@ -67,8 +76,19 @@ function getErrorMessage(status: number, body: unknown): string {
       const details = extractValidationDetails(body);
       return `Validation error: ${details}`;
     }
-    case 429:
+    case 429: {
+      // AIDEV-NOTE: [limite-de-peso 26/11] 429 com reason api_weight = a pessoa (chave + login somados) leu dados
+      // demais em leituras pesadas. A IA precisa do MOTIVO e do PRAZO; "Rate limited" sozinho fazia ela insistir.
+      const weight = apiWeightRefusal(body);
+      if (weight) {
+        const minutes = Math.max(1, Math.ceil(weight / 60));
+        return `Read limit reached (reason: api_weight): this person read too much data in heavy reads (lists, ` +
+          `searches, filters, reports). Wait about ${minutes} min (retry_after: ${weight}s) before any list/search ` +
+          `call and do NOT retry sooner. Sending messages and writes still work. To read many conversations use ` +
+          `the file export (lionchat_conversation_exports_create) instead of paging the list.`;
+      }
       return 'Rate limited. Wait and retry';
+    }
     default:
       if (status >= 500) {
         return 'LionChat server error. Try again later';
@@ -429,7 +449,9 @@ export class LionChatClient {
         }
 
         // AIDEV-NOTE: 429 — exponential backoff with Retry-After header support
-        if (response.status === 429 && retries429 < MAX_RETRIES_429) {
+        // AIDEV-NOTE: [limite-de-peso 26/11] A recusa por peso NUNCA e repetida aqui: o prazo chega a 600 s e dormir
+        // o Retry-After inteiro 3 vezes prendia a ferramenta por ate ~30 min sem dizer o motivo a IA.
+        if (response.status === 429 && apiWeightRefusal(responseBody) === null && retries429 < MAX_RETRIES_429) {
           retries429++;
           const retryAfter = response.headers.get('Retry-After');
           let delayMs: number;
