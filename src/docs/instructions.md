@@ -390,6 +390,20 @@ e pular evita que ela receba tudo em dobro. Quem está sendo atendido pela equip
 3. POST /flow_tools/{id}/assistants (assistant_ids) pra vincular ao AI Agente
 ```
 
+### Clonar um agente de IA para outra conta (novo 27/11/2026)
+```
+1. Na conta de ORIGEM: lionchat_captain_agent_transfers_export (assistant_id)
+2. lionchat_captain_agent_transfers_show até status completed
+3. lionchat_switch_account para a conta de DESTINO
+4. lionchat_captain_agent_transfers_import (source_transfer_id = id da exportação)
+5. lionchat_captain_agent_transfers_show até awaiting_confirmation -> MOSTRE a prévia e peça o OK
+6. lionchat_captain_agent_transfers_confirm (id da importação) -> _show até completed -> mostre report.notes
+```
+Vai o agente inteiro, menos chaves e senhas, usuários, caixas, times, número de WhatsApp, modelos da Meta, voz clonada e
+agente de ligação. O clone nasce PAUSADO com "(importado)" no nome. A pessoa precisa poder exportar agentes nas DUAS
+contas (senão o passo 4 responde 404). Nunca confirme sem mostrar a prévia: ela lista os sites externos que o agente
+chama e os fluxos que entram ligados.
+
 ### Mudar conta ativa (somente Conector OAuth)
 ```
 1. lionchat_list_my_accounts (ver todas)
@@ -497,6 +511,7 @@ Antes de escolher a ferramenta, cheque se a intenção bate com a coluna da dire
 | Só a contagem / números | `lionchat_conversations_meta` / `lionchat_reports_summary` | Não liste o conteúdo completo |
 | Criar contato | `lionchat_contacts_create` base (path `/contacts`) | NÃO use as variantes `_1` … `_9` |
 | Pausar a IA agora (botão de pânico) | `lionchat_captain_assistants_update` (`paused: true`, top-level) | — |
+| Clonar/copiar um agente de IA para outra conta | `lionchat_captain_agent_transfers_export` -> `_import` (source_transfer_id) -> `_confirm` | Ver "Clonar um agente de IA para outra conta" na seção 4; mostrar a prévia antes de confirmar |
 | Criar/editar **formulário público de captação** (página de captura própria) | `lionchat_lead_forms_create` / `_update` | Leia `lionchat://docs/formularios-publicos` ANTES — o desenho vai em `form_data` e só entra no ar depois do `publish` (que valida o desenho e pode voltar 422 com a lista de pendências). Caixa de WhatsApp vinculada (`inbox_id`) é obrigatória pra publicar. Escrita é só de administrador |
 | **Mandar um contrato pra assinar** / ver quem assinou / reenviar / cancelar / criar ou editar o modelo escrito | `lionchat_signature_envelopes_create` / `_list` / `_show` / `_resend` / `_cancel`; `lionchat_signature_documents_list` / `_create` / `_update`; `lionchat_signature_envelopes_sign_as_sender` (o remetente assina pelo painel) | Leia `lionchat://docs/assinatura-eletronica` ANTES. Modelo `text` a API cria e edita (texto com `{{contact.*}}`); PDF/Word só pela tela. Campo do modelo sem valor na ficha bloqueia o envio (422 `variaveis_sem_valor` com a lista); `422 escolher_caixa` = repita com `inbox_id`. Cada contrato consome 1 vaga do limite mensal. Modelo Word: `422 fila_cheia` = muita gente convertendo agora, repita em instantes; `422 conversor_indisponivel` = o serviço de conversão está fora (não é o arquivo) — avise o operador. Remetente assina pelo painel com `_sign_as_sender` (PNG em base64; `signature_method` drawn/typed + `typed_name`). Dois jeitos de mandar (27/10): `collection: 'ready'` (completa o que falta com `contact_data`; veja antes `lionchat_signature_documents_fill_fields`) ou `collection: 'form'` (a pessoa preenche pelo link); `message` vai junto. Documentos pedidos (`roles_layout.proof_requests` desde 29/10: documento com foto — `id_document` com `accepted_types` = os aceitos entre RG, CNH e CPF, a pessoa manda um deles (30/10) —, comprovante, selfie e documentos criados `custom_*`, cada um podendo ser anexado ao contrato e pedido das testemunhas; `ai_document_check` liga a conferência das fotos e dos PDFs de até 5 páginas pela IA da conta; documento criado aceita `description` só para a IA (30/10); o antigo `required_proofs` continua aceito): contrato fica `awaiting_approval` até a equipe aprovar — `lionchat_signature_envelopes_proofs` / `_approve_proofs` / `_reject_proofs` (as duas últimas mandam mensagem ao cliente: confirme antes; os arquivos só pela tela). Link do contrato para divulgar: `roles_layout.public_link` (29/10: a pessoa preenche um formulário e confirma o WhatsApp com um código). Caixa por onde saem todas as mensagens do contrato e o texto/modelo de cada uma (29/10): `roles_layout.communication`. Importar Word, pré-visualizar e baixar PDF: só pela tela (nesta área o conector não sobe o Word do modelo nem baixa o PDF) |
 | **Testar um formulário** antes de publicar | `lionchat_lead_forms_test_run` | Roda o RASCUNHO no motor real e desfaz tudo no fim — zero rastro. Mande `answers: [{node_id, value}]` (até 60) pra reproduzir um caminho; a resposta traz o bloco atual + o log do percurso |

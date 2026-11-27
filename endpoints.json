@@ -33551,6 +33551,150 @@
   ]
  },
  {
+  "id": "lionchat_captain_agent_transfers_export",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/agent_transfers/export",
+  "title": "Exportar Agente de IA (cópia inteira)",
+  "description": "Gera em segundo plano o pacote .zip com o agente INTEIRO: configuração, instruções, cenários, ferramentas personalizadas (sem a chave), fluxos-ferramenta e os fluxos que eles chamam, base de conhecimento pronta, perguntas e respostas (menos as nascidas de conversa), mídia, ofertas, funis, agendas e agendamentos, etiquetas e atributos usados. NÃO vão: chaves e senhas de ferramentas e fluxos, usuários, caixas, times, número de WhatsApp, modelos da Meta, voz clonada, agente de ligação. Responde 202 (status queued). Limite: 20 por conta por dia (429 daily_limit). Exige administrador ou cargo que gerencia o Agente de IA. Para CLONAR um agente de uma conta para outra pelo MCP: (1) na conta de ORIGEM (lionchat_switch_account), lionchat_captain_agent_transfers_export com o assistant_id; (2) acompanhe com lionchat_captain_agent_transfers_show até status completed; (3) troque para a conta de DESTINO e chame lionchat_captain_agent_transfers_import com source_transfer_id = id da exportação; (4) acompanhe com _show até awaiting_confirmation e MOSTRE a prévia à pessoa (sites externos que o agente chama, fluxos que entram ligados, efeito nos outros agentes, etiquetas que já existem, bloqueios); (5) só com o OK dela, lionchat_captain_agent_transfers_confirm; (6) acompanhe até completed e mostre a lista report.notes (o que preencher antes de despausar). O clone nasce PAUSADO e com '(importado)' no nome.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "assistant_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID do agente de IA a exportar (da conta ativa)"
+   }
+  ],
+  "returns": "a transferência (id, kind export, status queued)",
+  "common_use_cases": [
+   "Clonar um agente para outra conta",
+   "Guardar uma cópia do agente"
+  ],
+  "related_tools": [
+   "lionchat_captain_agent_transfers_show",
+   "lionchat_captain_agent_transfers_import",
+   "lionchat_captain_agent_transfers_download"
+  ]
+ },
+ {
+  "id": "lionchat_captain_agent_transfers_import",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/agent_transfers/import",
+  "title": "Importar Agente de IA (de outra conta)",
+  "description": "Começa a importação de um agente na conta ATIVA a partir de uma exportação feita em OUTRA conta (source_transfer_id). A pessoa conectada precisa poder exportar agentes também na conta de origem; senão responde 404 source_not_found (igual a não existir). O arquivo é copiado e conferido em segundo plano e vira uma PRÉVIA (status awaiting_confirmation): NADA é gravado até lionchat_captain_agent_transfers_confirm. Uma importação por vez por conta (409 import_running). Exige administrador ou cargo que gerencia o Agente de IA. Para CLONAR um agente de uma conta para outra pelo MCP: (1) na conta de ORIGEM (lionchat_switch_account), lionchat_captain_agent_transfers_export com o assistant_id; (2) acompanhe com lionchat_captain_agent_transfers_show até status completed; (3) troque para a conta de DESTINO e chame lionchat_captain_agent_transfers_import com source_transfer_id = id da exportação; (4) acompanhe com _show até awaiting_confirmation e MOSTRE a prévia à pessoa (sites externos que o agente chama, fluxos que entram ligados, efeito nos outros agentes, etiquetas que já existem, bloqueios); (5) só com o OK dela, lionchat_captain_agent_transfers_confirm; (6) acompanhe até completed e mostre a lista report.notes (o que preencher antes de despausar). O clone nasce PAUSADO e com '(importado)' no nome.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "source_transfer_id",
+    "type": "integer",
+    "location": "body",
+    "required": true,
+    "description": "ID da exportação (kind export, status completed) feita na conta de origem"
+   }
+  ],
+  "returns": "a transferência (id, kind import, status queued)",
+  "common_use_cases": [
+   "Clonar um agente de uma conta para outra"
+  ],
+  "related_tools": [
+   "lionchat_captain_agent_transfers_show",
+   "lionchat_captain_agent_transfers_confirm",
+   "lionchat_captain_agent_transfers_export"
+  ]
+ },
+ {
+  "id": "lionchat_captain_agent_transfers_confirm",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/captain/agent_transfers/{id}/confirm",
+  "title": "Confirmar Importação de Agente",
+  "description": "Grava o agente da prévia na conta ativa (só de status awaiting_confirmation; 422 not_awaiting_confirmation fora disso; 410 file_unavailable se o arquivo já venceu, 7 dias). Antes de chamar, MOSTRE a prévia à pessoa e peça o OK: o agente pode trazer fluxos que entram ligados com gatilhos e ferramentas que chamam sites externos. Roda em segundo plano; acompanhe com lionchat_captain_agent_transfers_show até completed (o agente criado fica em imported_assistant_id, PAUSADO) e mostre report.notes.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da importação"
+   }
+  ],
+  "returns": "a transferência (status importing)",
+  "common_use_cases": [
+   "Concluir a clonagem de um agente depois de conferir a prévia"
+  ],
+  "related_tools": [
+   "lionchat_captain_agent_transfers_show"
+  ]
+ },
+ {
+  "id": "lionchat_captain_agent_transfers_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/agent_transfers/{id}",
+  "title": "Situação de Exportação ou Importação de Agente",
+  "description": "Situação de UMA exportação ou importação de agente da conta ativa. Exportação: queued, running, completed ou failed (error = motivo); file_available diz se o arquivo ainda pode ser baixado. Importação: queued, running, awaiting_confirmation (preview pronto: counts, blocking = motivos que impedem, endpoints = sites externos e variáveis da conta que já têm valor e seriam enviadas, active_flows, other_agents, existing_labels), importing, completed (imported_assistant_id e report.notes = o que preencher) ou failed (error e report.errors). Espere alguns segundos entre as consultas.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da transferência"
+   }
+  ],
+  "returns": "a transferência com preview e report",
+  "common_use_cases": [
+   "Acompanhar uma exportação",
+   "Ler a prévia antes de confirmar",
+   "Ler a lista do fim"
+  ],
+  "related_tools": [
+   "lionchat_captain_agent_transfers_confirm",
+   "lionchat_captain_agent_transfers_list"
+  ]
+ },
+ {
+  "id": "lionchat_captain_agent_transfers_list",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/agent_transfers",
+  "title": "Exportações e Importações de Agente",
+  "description": "Últimas 20 exportações e importações de agente da conta ativa (sem prévia e sem lista do fim; para isso use lionchat_captain_agent_transfers_show).",
+  "category": "Assistentes",
+  "params": [],
+  "returns": "lista em payload",
+  "common_use_cases": [
+   "Achar uma exportação feita antes"
+  ],
+  "related_tools": [
+   "lionchat_captain_agent_transfers_show"
+  ]
+ },
+ {
+  "id": "lionchat_captain_agent_transfers_download",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/captain/agent_transfers/{id}/download",
+  "title": "Link do Arquivo do Agente Exportado",
+  "description": "Devolve um link de 5 minutos para baixar o .zip de uma exportação concluída (o arquivo vale 7 dias). Para clonar para outra conta pelo MCP NÃO precisa baixar: use lionchat_captain_agent_transfers_import com source_transfer_id.",
+  "category": "Assistentes",
+  "params": [
+   {
+    "name": "id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da exportação"
+   }
+  ],
+  "returns": "{ url }",
+  "common_use_cases": [
+   "Entregar à pessoa o arquivo do agente para guardar"
+  ],
+  "related_tools": [
+   "lionchat_captain_agent_transfers_export"
+  ]
+ },
+ {
   "id": "lionchat_captain_supervisor_show",
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/captain/supervisor",
