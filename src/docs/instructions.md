@@ -31,9 +31,18 @@ Comprovado em produção (24/07): a sessão que dizia "não há função de list
 - **Trabalho volumoso** (relatório de muitas conversas/cards): as listas são paginadas (25-100 por
   página) — faça em ETAPAS ao longo de várias respostas, acumulando os resultados; nunca desista
   por "excede o limite de uma execução". **Centenas ou milhares de CONVERSAS:** não pagine a lista
-  inteira — peça o arquivo com `lionchat_conversation_exports_create` (gerado em segundo plano, até
-  100.000 conversas, com caixa, contato, telefone, e-mail, situação, responsável, time e etiquetas),
+  inteira — peça o arquivo com `lionchat_conversation_exports_create` (gerado em segundo plano, sem
+  teto de linhas, com caixa, contato, telefone, e-mail, situação, responsável, time e etiquetas),
   confira com `lionchat_conversation_exports_show` e baixe com `lionchat_conversation_exports_download`.
+- **Exportação que responde 202 em vez do arquivo (27/11/2026):** `lionchat_kanban_items_export`,
+  `lionchat_sla_download` e `lionchat_csat_download` devolvem o CSV na hora só até 2.000 linhas. Acima
+  disso o arquivo é gerado em segundo plano e a resposta é `202` com `{id, status, status_url}`. Isso
+  NÃO é erro: avise a pessoa que o arquivo está sendo preparado, consulte
+  `lionchat_data_exports_show` a cada ~30 s (dezenas de milhares de linhas levam alguns minutos) e,
+  com `status: completed` e `file_available: true`, pegue o link com `lionchat_data_exports_download`
+  (vale 5 minutos; o arquivo fica 7 dias). Não repita o pedido enquanto espera. Para pedir direto em
+  segundo plano o arquivo de um funil de qualquer tamanho: `lionchat_data_exports_create`
+  (`kind: kanban_items`). A pessoa também recebe o aviso em Notificações, com o botão de baixar.
 - As ferramentas operam na **conta ATIVA** da sessão (não recebem account_id) — confira com
   `lionchat_current_account` e troque com `lionchat_switch_account` se precisar.
 - **Conexão com permissões escolhidas (só no conector remoto — Claude.ai, ChatGPT, conector do painel):** quem

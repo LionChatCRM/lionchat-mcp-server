@@ -4164,7 +4164,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/kanban_items/export",
   "title": "Exportar Items",
-  "description": "Exporta cards do Kanban em massa. **Requer perfil Administrador.**. Lista itens Kanban paginados (per_page padrão 25, máximo 100). Filtros disponíveis: priorities[], agent_id, value_min, value_max. Retorna meta (contadores) + payload (array de item Kanban). FILTRO DE DATA (02/09/2026): quatro eixos, cada um com janela fixa (_start/_end ISO) ou atalho relativo (_relative + _relative_days): criacao (date_*), entrada na etapa atual (stage_date_*), atualizacao (updated_date_*) e ganho/perdido em (closed_date_*). Operadores do atalho: today, yesterday (estes DOIS sem numero), last_days (ultimos N incluindo hoje), days_ago (o dia exato de N atras), days_before (mais de N atras). N inteiro 1..998; janela no fuso da CONTA. CUIDADO: operador invalido ou N invalido NAO da erro — o atalho e ignorado e a resposta volta MAIOR (ate 5.000 cards) com cara de filtrada; confira a contagem antes de qualquer acao em massa. Ver o resource de filtros.",
+  "description": "Exporta cards do Kanban em massa. **Requer perfil Administrador.**. Devolve um CSV com TODOS os cards do funil que passam nos filtros (não é paginado). Filtros disponíveis: priorities[], agent_id, value_min, value_max. Retorna meta (contadores) + payload (array de item Kanban). FILTRO DE DATA (02/09/2026): quatro eixos, cada um com janela fixa (_start/_end ISO) ou atalho relativo (_relative + _relative_days): criacao (date_*), entrada na etapa atual (stage_date_*), atualizacao (updated_date_*) e ganho/perdido em (closed_date_*). Operadores do atalho: today, yesterday (estes DOIS sem numero), last_days (ultimos N incluindo hoje), days_ago (o dia exato de N atras), days_before (mais de N atras). N inteiro 1..998; janela no fuso da CONTA. CUIDADO: operador invalido ou N invalido NAO da erro — o atalho e ignorado e a resposta volta MAIOR (ate 5.000 cards) com cara de filtrada; confira a contagem antes de qualquer acao em massa. Ver o resource de filtros. ARQUIVO GRANDE (27/11/2026): até 2.000 linhas a resposta é o CSV na hora, como sempre. Acima disso o arquivo é gerado em segundo plano e a resposta é 202 com {id, status, rows_done, rows_total, status_url} em vez do CSV: consulte com lionchat_data_exports_show (a cada ~30 s; arquivo de dezenas de milhares de linhas leva alguns minutos) e, com status completed e file_available true, baixe com lionchat_data_exports_download. Não repita o pedido enquanto espera: o mesmo pedido devolve a mesma exportação. Diga à pessoa que o arquivo está sendo preparado e que ela também recebe o aviso em Notificações.",
   "category": "Itens",
   "params": [
    {
@@ -4254,7 +4254,7 @@
     "description": "Agendamento ate (YYYY-MM-DD)"
    }
   ],
-  "returns": "NAO devolve JSON. Devolve um ARQUIVO CSV pra download (text/csv, anexo `kanban_items_<funil>_<data>.csv`), com cabecalho e uma linha por card: id, titulo, descricao, status, prioridade, valor, etapa (nome amigavel), funil, agentes, cliente, email, telefone, criado em, atualizado em, prazo, id da conversa, conversas vinculadas, ofertas e, desde 11/10/2026, \"Adiado ate\" (ultima coluna, data/hora no fuso da conta; na coluna status o card adiado sai como \"snoozed\"). Nao ha `meta` nem `payload` — o corpo e o CSV cru. `funnel_id` e OBRIGATORIO (sem ele volta 400 `{error}`). Filtros opcionais: priorities, statuses, value_min, value_max, agent_id, date_start/date_end (CRIACAO), stage_date_start/stage_date_end (quando o card ENTROU na etapa atual) e scheduled_date_start/scheduled_date_end. So exporta cards das caixas que o usuario pode ver.",
+  "returns": "CSV (até 2.000 cards) ou 202 + {id, status, status_url} quando o arquivo é gerado em segundo plano",
   "common_use_cases": [
    "Dashboard: contar/exibir itens Kanban",
    "Buscar com filtros antes de outra operação",
@@ -4263,7 +4263,9 @@
   "related_tools": [
    "lionchat_kanban_items_list",
    "lionchat_kanban_items_create",
-   "lionchat_kanban_items_show"
+   "lionchat_kanban_items_show",
+   "lionchat_data_exports_show",
+   "lionchat_data_exports_download"
   ]
  },
  {
@@ -4792,7 +4794,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/contact_exports/{export_id}/download",
   "title": "Baixar Exportação de Contatos",
-  "description": "Devolve {url} para baixar o CSV de UMA exportação. O endereço vale 5 MINUTOS — usar na hora, nunca guardar nem repassar como link permanente (é a lista de contatos da conta, dado pessoal). Arquivo com mais de 30 dias responde 410 (exportar de novo). Exige administrador ou cargo com contact_export_import.",
+  "description": "Devolve {url} para baixar o CSV de UMA exportação. O endereço vale 5 MINUTOS — usar na hora, nunca guardar nem repassar como link permanente (é a lista de contatos da conta, dado pessoal). Arquivo com mais de 7 dias (exportações a partir de 27/11/2026) responde 410 (exportar de novo). Exige administrador ou cargo com contact_export_import.",
   "category": "Contatos",
   "params": [
    {
@@ -4816,7 +4818,7 @@
   "method": "POST",
   "path": "/api/v1/accounts/{account_id}/conversation_exports",
   "title": "Exportar Conversas (arquivo)",
-  "description": "Gera, em segundo plano, um arquivo CSV com as conversas que a pessoa vê na lista (mesma regra de visibilidade da tela). É o caminho certo para ler MUITAS conversas: em vez de paginar a lista centenas de vezes, peça o arquivo e baixe quando ficar pronto. Responde 202 com a exportação na situação queued; confira com lionchat_conversation_exports_show e baixe com lionchat_conversation_exports_download. Colunas: conversa, caixa, contato, telefone, email, situacao, responsavel, time, etiquetas, criada_em, ultima_atividade, adiada_ate (horário da conta). Teto de 100.000 conversas: acima disso a exportação fica partial (exported_count de total_count). Limites: uma em andamento por conta (409 export_running) e 5 por pessoa por dia (429 daily_limit; as que falharam não contam). Filtro inválido ou de outra conta = 422 invalid_filter. Exige administrador ou cargo com contact_export_import (o arquivo leva telefone e e-mail).",
+  "description": "Gera, em segundo plano, um arquivo CSV com as conversas que a pessoa vê na lista (mesma regra de visibilidade da tela). É o caminho certo para ler MUITAS conversas: em vez de paginar a lista centenas de vezes, peça o arquivo e baixe quando ficar pronto. Responde 202 com a exportação na situação queued; confira com lionchat_conversation_exports_show e baixe com lionchat_conversation_exports_download. Colunas: conversa, caixa, contato, telefone, email, situacao, responsavel, time, etiquetas, criada_em, ultima_atividade, adiada_ate (horário da conta). Sem teto de linhas desde 27/11/2026: conta grande só demora mais (a situação partial não é mais produzida). Limites: uma em andamento por conta (409 export_running) e 5 por pessoa por dia (429 daily_limit; as que falharam não contam). Filtro inválido ou de outra conta = 422 invalid_filter. Exige administrador ou cargo com contact_export_import (o arquivo leva telefone e e-mail).",
   "category": "Conversas",
   "params": [
    {
@@ -4903,7 +4905,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/conversation_exports/{export_id}",
   "title": "Situação de uma Exportação de Conversas",
-  "description": "Situação de UMA exportação (mesmos campos da lista). Quando status for completed ou partial e file_available for true, baixe com lionchat_conversation_exports_download. Espere alguns minutos entre as consultas; failed traz o motivo em error.",
+  "description": "Situação de UMA exportação (mesmos campos da lista). Quando status for completed (ou partial, em exportação antiga) e file_available for true, baixe com lionchat_conversation_exports_download. Espere alguns minutos entre as consultas; failed traz o motivo em error.",
   "category": "Conversas",
   "params": [
    {
@@ -4927,7 +4929,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/conversation_exports/{export_id}/download",
   "title": "Baixar Exportação de Conversas",
-  "description": "Devolve {url} para baixar o CSV de UMA exportação. O endereço vale 5 MINUTOS: usar na hora, nunca guardar nem repassar como link permanente (tem telefone e e-mail dos contatos). Arquivo vencido (30 dias) ou exportação sem arquivo responde 410. Só quem gerou baixa; o administrador baixa qualquer uma.",
+  "description": "Devolve {url} para baixar o CSV de UMA exportação. O endereço vale 5 MINUTOS: usar na hora, nunca guardar nem repassar como link permanente (tem telefone e e-mail dos contatos). Arquivo vencido (7 dias nas exportações geradas a partir de 27/11/2026) ou exportação sem arquivo responde 410. Só quem gerou baixa; o administrador baixa qualquer uma.",
   "category": "Conversas",
   "params": [
    {
@@ -16106,16 +16108,19 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/applied_slas/download",
   "title": "Exportar SLAs",
-  "description": "Exporta CSV das conversas que estouraram SLA. ENTERPRISE-only, Admin.",
+  "description": "Exporta CSV das conversas que estouraram SLA. ENTERPRISE-only, Admin. ARQUIVO GRANDE (27/11/2026): até 2.000 linhas a resposta é o CSV na hora, como sempre. Acima disso o arquivo é gerado em segundo plano e a resposta é 202 com {id, status, rows_done, rows_total, status_url} em vez do CSV: consulte com lionchat_data_exports_show (a cada ~30 s; arquivo de dezenas de milhares de linhas leva alguns minutos) e, com status completed e file_available true, baixe com lionchat_data_exports_download. Não repita o pedido enquanto espera: o mesmo pedido devolve a mesma exportação. Diga à pessoa que o arquivo está sendo preparado e que ela também recebe o aviso em Notificações.",
   "category": "SLA",
   "params": [],
-  "returns": "arquivo CSV (breached_conversation.csv)",
+  "returns": "CSV (até 2.000 linhas) ou 202 + {id, status, status_url}",
   "common_use_cases": [
    "Dashboard: contar/exibir políticas SLA",
    "Buscar com filtros antes de outra operação",
    "Auditoria/relatório de políticas SLA ativas"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_data_exports_show",
+   "lionchat_data_exports_download"
+  ]
  },
  {
   "id": "lionchat_support_access_list",
@@ -23581,7 +23586,7 @@
   "method": "GET",
   "path": "/api/v1/accounts/{account_id}/csat_survey_responses/download",
   "title": "Exportar CSAT",
-  "description": "Exporta CSV das respostas de CSAT.",
+  "description": "Exporta CSV das respostas de CSAT. ARQUIVO GRANDE (27/11/2026): até 2.000 linhas a resposta é o CSV na hora, como sempre. Acima disso o arquivo é gerado em segundo plano e a resposta é 202 com {id, status, rows_done, rows_total, status_url} em vez do CSV: consulte com lionchat_data_exports_show (a cada ~30 s; arquivo de dezenas de milhares de linhas leva alguns minutos) e, com status completed e file_available true, baixe com lionchat_data_exports_download. Não repita o pedido enquanto espera: o mesmo pedido devolve a mesma exportação. Diga à pessoa que o arquivo está sendo preparado e que ela também recebe o aviso em Notificações.",
   "category": "CSAT",
   "params": [
    {
@@ -23599,13 +23604,16 @@
     "description": "Fim do periodo. Aceita: unix em SEGUNDOS (o mais seguro), unix em milissegundos, ISO 8601 (com Z ou offset; sem offset vale a hora da conta) e data pura AAAA-MM-DD (dia INTEIRO no fuso da conta: inicio 00:00:00, fim 23:59:59). Texto ilegivel devolve 400 com a explicacao do formato."
    }
   ],
-  "returns": "arquivo CSV (csat_report.csv)",
+  "returns": "CSV (até 2.000 linhas) ou 202 + {id, status, status_url}",
   "common_use_cases": [
    "Dashboard: contar/exibir respostas CSAT",
    "Buscar com filtros antes de outra operação",
    "Auditoria/relatório de respostas CSAT ativas"
   ],
-  "related_tools": []
+  "related_tools": [
+   "lionchat_data_exports_show",
+   "lionchat_data_exports_download"
+  ]
  },
  {
   "id": "lionchat_campaigns_list",
@@ -38821,6 +38829,89 @@
   "related_tools": [
    "lionchat_inboxes_deactivate",
    "lionchat_inboxes_detached_groups_list"
+  ]
+ },
+ {
+  "id": "lionchat_data_exports_show",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/data_exports/{export_id}",
+  "title": "Situação de uma Exportação em Segundo Plano",
+  "description": "Situação de UMA exportação em arquivo gerada em segundo plano (cards do Kanban, conversas com SLA estourado, respostas de CSAT, contatos, conversas). Use o id que veio no 202 de lionchat_kanban_items_export, lionchat_sla_download ou lionchat_csat_download, ou o de lionchat_data_exports_create. Campos: id, kind, status (queued | running | completed | failed), phase, rows_done, rows_total, file_available, expires_at, error. Consulte a cada ~30 s; não crie outra exportação enquanto esta estiver queued ou running. failed traz o motivo em error. Só quem pediu consulta; o administrador consulta qualquer uma.",
+  "category": "Exportacoes",
+  "params": [
+   {
+    "name": "export_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da exportação"
+   }
+  ],
+  "returns": "{id, kind, status, phase, rows_done, rows_total, file_available, expires_at, error}",
+  "common_use_cases": [
+   "Acompanhar a exportação de um funil grande",
+   "Saber se o arquivo já pode ser baixado"
+  ],
+  "related_tools": [
+   "lionchat_data_exports_download",
+   "lionchat_kanban_items_export"
+  ]
+ },
+ {
+  "id": "lionchat_data_exports_download",
+  "method": "GET",
+  "path": "/api/v1/accounts/{account_id}/data_exports/{export_id}/download",
+  "title": "Baixar Exportação em Segundo Plano",
+  "description": "Devolve {url} para baixar o CSV de UMA exportação pronta (status completed e file_available true). O endereço vale 5 MINUTOS: usar na hora, nunca guardar nem repassar como link permanente (o arquivo leva nome, telefone e e-mail). O arquivo fica guardado 7 dias; vencido ou ainda não pronto responde 410. Só quem pediu baixa; o administrador baixa qualquer uma.",
+  "category": "Exportacoes",
+  "params": [
+   {
+    "name": "export_id",
+    "type": "integer",
+    "location": "path",
+    "required": true,
+    "description": "ID da exportação"
+   }
+  ],
+  "returns": "{ url } (válido por 5 minutos) ou 410",
+  "common_use_cases": [
+   "Baixar o CSV de um funil grande depois que ficou pronto"
+  ],
+  "related_tools": [
+   "lionchat_data_exports_show"
+  ]
+ },
+ {
+  "id": "lionchat_data_exports_create",
+  "method": "POST",
+  "path": "/api/v1/accounts/{account_id}/data_exports",
+  "title": "Pedir Exportação do Kanban em Segundo Plano",
+  "description": "Pede o arquivo dos cards de um funil direto em segundo plano, de qualquer tamanho (é o que a tela faz). Responde 202 com a exportação; acompanhe com lionchat_data_exports_show e baixe com lionchat_data_exports_download. kind aceito: kanban_items. filters leva os MESMOS filtros de lionchat_kanban_items_export (funnel_id obrigatório, statuses, priorities, agent_id, value_min, value_max e os filtros de data). O mesmo pedido repetido em até 10 minutos devolve a mesma exportação. Relatórios de SLA e CSAT não entram aqui: use lionchat_sla_download e lionchat_csat_download. Requer permissão de exportar o Kanban.",
+  "category": "Exportacoes",
+  "params": [
+   {
+    "name": "kind",
+    "type": "string",
+    "location": "body",
+    "required": true,
+    "description": "kanban_items"
+   },
+   {
+    "name": "filters",
+    "type": "object",
+    "location": "body",
+    "required": true,
+    "description": "Filtros da exportação; para kanban_items: funnel_id (obrigatório) e os mesmos de lionchat_kanban_items_export"
+   }
+  ],
+  "returns": "202 + {id, kind, status: queued, rows_done, rows_total}",
+  "common_use_cases": [
+   "Exportar um funil com dezenas de milhares de cards sem esperar a resposta"
+  ],
+  "related_tools": [
+   "lionchat_data_exports_show",
+   "lionchat_data_exports_download",
+   "lionchat_kanban_items_export"
   ]
  }
 ]
