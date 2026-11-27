@@ -140,12 +140,19 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
   arquivo Word ou PDF enviado ali, que vira um documento ESCONDIDO daquele contrato. Pelo conector isso NÃO se cria
   (precisa do envio do arquivo pela tela): oriente o usuário a fazer pela tela. Esses arquivos NÃO aparecem em
   `signature_documents_list` (nem nos arquivados), não viram contrato sozinhos e `signature_documents_update`/`_destroy`
-  neles dão 422 ("pertence ao contrato X"). Na leitura do principal, a linha vem com `attached: true`. Ao COPIAR um
+  neles dão 422 ("pertence ao contrato X"), com UMA exceção: o update só das posições (`roles_layout` com apenas `fields`,
+  `signers`, `witnesses`, `sender_signs`) é aceito. Na leitura do principal, a linha vem com `attached: true`. Ao COPIAR um
   contrato (criar outro com o mesmo `companions`), as linhas de arquivo de outro contrato saem da cópia e a resposta traz
   `companions_dropped: [{position, name}]`: diga ao usuário quais faltaram, para ele enviar o arquivo pela tela. Mande a
   linha de arquivo de volta sempre com o mesmo `document_id` que veio na leitura.
-- **Como fica para quem assina**: UM link, UM código, os documentos pedidos UMA vez e UMA assinatura. A página mostra
-  "Documento 1 de 3" e só libera assinar depois de a pessoa abrir todos os dela. Sai um PDF assinado POR documento,
+- **Onde cada um assina (27/11)**: no painel é UMA tela para todos os documentos do contrato — o botão "Posicionar
+  assinaturas" da página do principal abre abas com o principal e os que vão junto (PDF ou Word; documento escrito no
+  LionChat não entra). Pelo conector, as posições de cada documento continuam sendo o `roles_layout.fields` DELE (o do
+  principal no principal, o de cada um que vai junto no próprio `document_id`). Documento com `signers: principals` não
+  tem lugar de testemunha nem de quem envia.
+- **Como fica para quem assina**: UM link, UM código, os documentos pedidos UMA vez e UMA assinatura. Desde 27/11 os
+  documentos aparecem em caixas na mesma página (abrir para ler e baixar); abrir NÃO é mais obrigatório para assinar —
+  cada abertura fica registrada no evento `document_opened`. Sai um PDF assinado POR documento,
   cada um com a própria folha de assinaturas, o próprio código de conferência e só as fotos de quem o assina.
 - **O que vale é o modelo PRINCIPAL** (aquele que tem a lista): caixa, mensagens, documentos pedidos, validade, jeitos
   de assinar e quantidade de pessoas. Dos outros entram só o texto e os lugares de assinatura. As variáveis de todos são
