@@ -373,6 +373,13 @@ QR Code desde 09/11/2026: sai UMA mensagem por vez por NUMERO, respeitando a esp
 vazio = 20/40). `daily_cap` = teto da campanha por dia, no maximo 1000 (vazio, zero ou acima = 1000; sem a chave = 500). O
 NUMERO nunca passa de 1000 mensagens de campanha por dia somando todas as campanhas dele: o excedente sai no dia seguinte, na
 hora em que a campanha comecou. Para mais de 1000 pessoas por dia, use a caixa oficial.
+O que a campanha de mensagem faz com a conversa (27/11/2026, oficial e QR Code): a mensagem entra na conversa que o
+contato já tem e a situação NÃO muda (resolvida continua resolvida; reabre quando o cliente responder); quem não tem
+conversa ganha uma `pending`. A campanha NÃO conta como resposta do atendimento (`waiting_since` não é zerado: quem
+esperava continua em não atendidas) e ENCERRA sem nota a pesquisa de satisfação pendente. Não diga ao usuário que "a
+campanha reabre as conversas". Disparo acima de 5.000 contatos é preparado em partes; se parar no meio,
+`trigger_rules.audience_error` vem com `kind: enqueue_interrupted`, `done` e `total` (avise o usuário e oriente a falar
+com o suporte; não recrie a campanha, quem já recebeu receberia de novo).
 
 ### Criar campanha de FLUXO (dispara um flow, não uma mensagem) — novo 28/07/2026
 ```
