@@ -34,7 +34,7 @@ Participante: `pending` → `viewed` → `verified` (confirmou o código) → `s
 estado em `delivery.copies[]`) · `data_filled` (27/10: a pessoa preencheu o formulário e o contrato foi gerado com os
 dados dela) · (28/10) `proof_sent` (a pessoa mandou um documento pedido: `kind`, `document_type`) ·
 `awaiting_approval` (o contrato passou a esperar a equipe, ou a pessoa reenviou depois de reprovada) · `proofs_approved`
-/ `proofs_rejected` (com `reason` e quem decidiu). `code_requested`/`code_verified` com `method: "whatsapp"` = a pessoa
+/ `proofs_rejected` (com `reason` e quem decidiu). (27/11) `document_opened` (a pessoa abriu um documento para ler: `position`, `title`); `proofs_approved` com `by: "system"` = modelo em "Sem aprovação". `code_requested`/`code_verified` com `method: "whatsapp"` = a pessoa
 confirmou mandando a frase pelo WhatsApp, não pelo código. Tudo append-only — é o relatório de evidências. `delivery.failed[]` também mostra a
 recusa que a Meta manda depois (caixa oficial fora da janela de 24 h, motivo `window_expired`) e some sozinha se a
 mensagem acabar entregue.
@@ -164,11 +164,25 @@ mão" ou "Assinatura digitada: <nome>"; contratos assinados antes de 28/10 não 
 - **Folha de assinaturas** (todo contrato novo): um quadro por pessoa com os pontos de autenticação; no modelo escrito
   na tela a assinatura também aparece em cima da linha do nome, com "Assinado eletronicamente em <data>".
 
-## Confirmar pelo WhatsApp (28/10)
-Quem recebe o link pelo WhatsApp pode confirmar que é ela mandando uma frase pronta (com um código `CT-XXXXXX`) para o
-WhatsApp do contrato, em vez de digitar o código de 6 dígitos — resolve a caixa oficial com a janela de 24 h fechada.
-Só vale do telefone da pessoa e na caixa do contrato. A mensagem aparece na conversa, mas a IA, os fluxos e as
-automações não respondem a ela. Não há ferramenta: é só a página da pessoa.
+## Confirmação de quem assina (27/11)
+A pessoa confirma SEMPRE com o código de 6 dígitos, que vai pelo canal escolhido no envio (`delivery_channel`:
+WhatsApp ou e-mail); a página mostra um botão grande "Receber o código pelo ...". A confirmação pela frase pronta
+(`CT-XXXXXX`, 28/10) saiu da página. Eventos antigos com `method: "whatsapp"` continuam válidos na linha do tempo. Na
+caixa oficial, o código fora da janela de 24 h só chega com o `code_template` aprovado (veja abaixo).
+
+## Ordem das perguntas, jeito do formulário e aprovação dos documentos (27/11)
+- `roles_layout.field_order`: lista de variáveis na ordem em que o formulário pergunta (ex.: `["contact.cpf",
+  "contact.name"]`). Ausente = nome primeiro e depois a ordem do texto. Variável que não está na lista vai para o fim.
+- `roles_layout.form_layout`: `"steps"` (uma pergunta por tela, padrão) ou `"single"` (todas numa tela). Vale para o
+  link do contrato e para o envio com formulário.
+- `roles_layout.proof_approval`: `"manual"` (a equipe aprova, padrão) ou `"none"` (os documentos são guardados, mas o
+  contrato sela quando todos assinam; o sistema grava `proofs_approved` com `by: "system"` e o gatilho "Documentos
+  aprovados" dispara). Gravado no contrato ao enviar: mudar o modelo depois não muda contrato já enviado.
+- Valor fora dessas listas = 422. Mande só o que muda.
+- Contrato com vários documentos: abrir os documentos não é mais obrigatório para assinar; o evento `document_opened`
+  (`position`, `title`) registra cada documento que a pessoa abriu.
+- Envio: `message` em `lionchat_signature_envelopes_create` continua aceito, mas o normal é a mensagem do modelo
+  (`communication.invite_message` / `invite_template`); a tela não tem mais o campo.
 
 ## Caixa do modelo e as mensagens (29/10)
 - `roles_layout.communication: {inbox_id, code_message, invite_message, copy_message, proofs_again_message,
